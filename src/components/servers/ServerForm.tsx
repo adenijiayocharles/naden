@@ -268,16 +268,18 @@ export default function ServerForm() {
 
           {/* Auth Method */}
           <Field label="Auth Method">
-            <select
-              id="authMethod"
-              value={form.authMethod}
-              onChange={set("authMethod")}
-              className={select()}
-            >
-              <option value="key">SSH Key</option>
-              <option value="password">Password</option>
-              <option value="agent">SSH Agent</option>
-            </select>
+            <SelectWrapper>
+              <select
+                id="authMethod"
+                value={form.authMethod}
+                onChange={set("authMethod")}
+                className={select()}
+              >
+                <option value="key">SSH Key</option>
+                <option value="password">Password</option>
+                <option value="agent">SSH Agent</option>
+              </select>
+            </SelectWrapper>
           </Field>
 
           {/* Identity File */}
@@ -305,18 +307,20 @@ export default function ServerForm() {
           {/* Group */}
           <Field label="Group" error={errors.group}>
             {!showNewGroup ? (
-              <select
-                id="groupId"
-                value={form.groupId}
-                onChange={handleGroupChange}
-                className={select()}
-              >
-                <option value="">No Group</option>
-                {groups.map((g) => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-                <option value="__create_new__">＋ Create new group…</option>
-              </select>
+              <SelectWrapper>
+                <select
+                  id="groupId"
+                  value={form.groupId}
+                  onChange={handleGroupChange}
+                  className={select()}
+                >
+                  <option value="">No Group</option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                  <option value="__create_new__">＋ Create new group…</option>
+                </select>
+              </SelectWrapper>
             ) : (
               <div className="flex gap-2">
                 <input
@@ -390,19 +394,21 @@ export default function ServerForm() {
           {/* Jump through */}
           {!form.isJumpHost && (
             <Field label="Jump Host (optional)">
-              <select
-                id="jumpHostId"
-                value={form.jumpHostId}
-                onChange={set("jumpHostId")}
-                className={select()}
-              >
-                <option value="">Direct connection</option>
-                {servers
-                  .filter((s) => s.isJumpHost && s.id !== editingServerId)
-                  .map((s) => (
-                    <option key={s.id} value={s.id}>{s.displayName}</option>
-                  ))}
-              </select>
+              <SelectWrapper>
+                <select
+                  id="jumpHostId"
+                  value={form.jumpHostId}
+                  onChange={set("jumpHostId")}
+                  className={select()}
+                >
+                  <option value="">Direct connection</option>
+                  {servers
+                    .filter((s) => s.isJumpHost && s.id !== editingServerId)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>{s.displayName}</option>
+                    ))}
+                </select>
+              </SelectWrapper>
             </Field>
           )}
 
@@ -474,8 +480,21 @@ function Field({
   );
 }
 
+function SelectWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative">
+      {children}
+      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+        <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 const input = (hasError: boolean) =>
   `w-full bg-gray-700 border ${hasError ? "border-red-500" : "border-gray-600"} rounded-md px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors`;
 
 const select = () =>
-  "w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-blue-500 transition-colors";
+  "w-full appearance-none bg-gray-700 border border-gray-600 rounded-md px-3 pr-10 py-2 text-sm text-gray-100 focus:outline-none focus:border-blue-500 transition-colors";
