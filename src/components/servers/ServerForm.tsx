@@ -203,15 +203,15 @@ export default function ServerForm() {
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) closeForm(); }}
     >
-      <div className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+      <div className="bg-[#111] border border-[#1e1e1e] rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e1e1e] shrink-0">
           <h2 className="text-lg font-semibold text-white">
             {isEdit ? "Edit Server" : "Add Server"}
           </h2>
           <button
             onClick={closeForm}
-            className="text-gray-400 hover:text-white p-1 rounded"
+            className="text-[#555] hover:text-white p-1 rounded"
             aria-label="Close"
           >
             ✕
@@ -296,7 +296,7 @@ export default function ServerForm() {
                 <button
                   type="button"
                   onClick={() => { void pickIdentityFile(); }}
-                  className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded-md border border-gray-600 transition-colors shrink-0"
+                  className="px-3 py-2 bg-[#1a1a1a] hover:bg-[#222] text-[#aaa] text-sm rounded border border-[#2a2a2a] transition-colors shrink-0"
                 >
                   Browse
                 </button>
@@ -334,14 +334,14 @@ export default function ServerForm() {
                 <button
                   type="button"
                   onClick={() => { void handleCreateGroup(); }}
-                  className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-md transition-colors shrink-0"
+                  className="px-3 py-2 bg-accent hover:bg-accent-hover text-black text-sm rounded font-semibold transition-colors shrink-0"
                 >
                   Add
                 </button>
                 <button
                   type="button"
                   onClick={() => { setShowNewGroup(false); setNewGroupName(""); }}
-                  className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded-md transition-colors shrink-0"
+                  className="px-3 py-2 bg-[#1a1a1a] hover:bg-[#222] text-[#aaa] text-sm rounded transition-colors shrink-0"
                 >
                   Cancel
                 </button>
@@ -354,12 +354,12 @@ export default function ServerForm() {
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-1 mb-2">
                 {tags.map((t) => (
-                  <span key={t.id} className="flex items-center gap-1 bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded-full">
+                  <span key={t.id} className="flex items-center gap-1 bg-[#1a1a1a] border border-[#2a2a2a] text-[#888] text-xs px-2 py-1 rounded-full">
                     #{t.name}
                     <button
                       type="button"
                       onClick={() => setTags((ts) => ts.filter((x) => x.id !== t.id))}
-                      className="text-gray-500 hover:text-white leading-none"
+                      className="text-[#555] hover:text-white leading-none"
                       aria-label={`Remove tag ${t.name}`}
                     >
                       ×
@@ -385,9 +385,9 @@ export default function ServerForm() {
                 type="checkbox"
                 checked={form.isJumpHost}
                 onChange={set("isJumpHost")}
-                className="rounded border-gray-600 bg-gray-700 text-blue-600"
+                className="rounded border-[#2a2a2a] bg-[#1a1a1a] text-accent"
               />
-              <span className="text-sm text-gray-300">This server is a jump host / bastion</span>
+              <span className="text-sm text-[#aaa]">This server is a jump host / bastion</span>
             </label>
           </Field>
 
@@ -432,18 +432,18 @@ export default function ServerForm() {
         </form>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-700 shrink-0">
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#1e1e1e] shrink-0">
           <button
             type="button"
             onClick={closeForm}
-            className="px-4 py-2 text-sm text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+            className="px-4 py-2 text-sm text-[#555] hover:text-white bg-[#1a1a1a] hover:bg-[#222] rounded transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={(e) => { void handleSubmit(e as unknown as React.FormEvent); }}
             disabled={submitting}
-            className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-500 rounded-md transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-sm text-black bg-accent hover:bg-accent-hover rounded font-semibold transition-colors disabled:opacity-50"
           >
             {submitting ? "Saving…" : isEdit ? "Save Changes" : "Add Server"}
           </button>
@@ -469,7 +469,7 @@ function Field({
   return (
     <div>
       {label && (
-        <label className="block text-sm font-medium text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-[#aaa] mb-1">
           {label}
           {required && <span className="text-red-400 ml-0.5">*</span>}
         </label>
@@ -484,7 +484,7 @@ function SelectWrapper({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative">
       {children}
-      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[#555]">
         <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
           <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
         </svg>
@@ -494,7 +494,7 @@ function SelectWrapper({ children }: { children: React.ReactNode }) {
 }
 
 const input = (hasError: boolean) =>
-  `w-full bg-gray-700 border ${hasError ? "border-red-500" : "border-gray-600"} rounded-md px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors`;
+  `w-full bg-[#1a1a1a] border ${hasError ? "border-red-500" : "border-[#2a2a2a]"} rounded px-3 py-2 text-sm text-white placeholder-[#444] focus:outline-none focus:border-accent transition-colors`;
 
 const select = () =>
-  "w-full appearance-none bg-gray-700 border border-gray-600 rounded-md px-3 pr-10 py-2 text-sm text-gray-100 focus:outline-none focus:border-blue-500 transition-colors";
+  "w-full appearance-none bg-[#1a1a1a] border border-[#2a2a2a] rounded px-3 pr-10 py-2 text-sm text-white focus:outline-none focus:border-accent transition-colors";

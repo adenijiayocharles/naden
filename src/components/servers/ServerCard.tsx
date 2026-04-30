@@ -55,22 +55,22 @@ export default function ServerCard({ server }: Props) {
   };
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 flex items-start gap-3 hover:border-gray-600 transition-colors">
+    <div className="bg-[#111] border border-[#1e1e1e] rounded-lg p-4 flex items-start gap-3 hover:border-[#2a2a2a] transition-colors">
       {/* Status dot */}
-      <div className="w-2.5 h-2.5 rounded-full bg-gray-600 mt-1.5 shrink-0" />
+      <div className="w-2 h-2 rounded-full bg-[#333] mt-1.5 shrink-0" />
 
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
           <span className="font-medium text-white truncate">{server.displayName}</span>
           {server.isJumpHost && (
-            <span className="text-xs bg-purple-900 text-purple-300 px-1.5 py-0.5 rounded-full">
+            <span className="text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded font-medium">
               Jump Host
             </span>
           )}
         </div>
 
-        <p className="text-sm text-gray-400 font-mono truncate">
+        <p className="text-sm text-[#666] font-mono truncate">
           {server.username ? `${server.username}@` : ""}
           {server.hostname}
           {server.port !== 22 ? `:${server.port}` : ""}
@@ -81,7 +81,7 @@ export default function ServerCard({ server }: Props) {
             {server.tags.map((tag) => (
               <span
                 key={tag.id}
-                className="text-xs bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded"
+                className="text-xs bg-[#1a1a1a] border border-[#2a2a2a] text-[#888] px-1.5 py-0.5 rounded"
               >
                 #{tag.name}
               </span>
@@ -97,7 +97,7 @@ export default function ServerCard({ server }: Props) {
         <button
           onClick={() => { void handleConnect(); }}
           disabled={connecting}
-          className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm px-3 py-1.5 rounded-md transition-colors"
+          className="bg-accent hover:bg-accent-hover disabled:opacity-40 text-black text-sm font-semibold px-3 py-1.5 rounded transition-colors"
         >
           {connecting ? "Opening…" : "Connect"}
         </button>
@@ -105,17 +105,17 @@ export default function ServerCard({ server }: Props) {
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setMenuOpen((o) => !o)}
-            className="text-gray-400 hover:text-white p-1.5 rounded hover:bg-gray-700 transition-colors text-lg leading-none"
+            className="text-[#555] hover:text-white p-1.5 rounded hover:bg-[#1a1a1a] transition-colors text-lg leading-none"
             aria-label="Server options"
           >
             ⋮
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-9 bg-gray-700 border border-gray-600 rounded-lg shadow-xl z-20 min-w-[140px] py-1">
+            <div className="absolute right-0 top-9 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-20 min-w-[140px] py-1">
               <button
                 onClick={() => { openEdit(server.id); setMenuOpen(false); }}
-                className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-600 transition-colors"
+                className="w-full text-left px-3 py-2 text-sm text-[#aaa] hover:bg-[#1e1e1e] hover:text-white transition-colors"
               >
                 Edit
               </button>
@@ -123,17 +123,17 @@ export default function ServerCard({ server }: Props) {
               {!confirmDelete ? (
                 <button
                   onClick={() => setConfirmDelete(true)}
-                  className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-gray-600 transition-colors"
+                  className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-[#1e1e1e] transition-colors"
                 >
                   Delete
                 </button>
               ) : (
-                <div className="px-3 py-2 border-t border-gray-600">
-                  <p className="text-xs text-gray-300 mb-2">Delete this server?</p>
+                <div className="px-3 py-2 border-t border-[#2a2a2a]">
+                  <p className="text-xs text-[#aaa] mb-2">Delete this server?</p>
                   <div className="flex gap-3">
                     <button
                       onClick={() => setConfirmDelete(false)}
-                      className="text-xs text-gray-400 hover:text-white"
+                      className="text-xs text-[#555] hover:text-white"
                     >
                       Cancel
                     </button>

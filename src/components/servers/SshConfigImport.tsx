@@ -89,27 +89,27 @@ export default function SshConfigImport({ onClose }: Props) {
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+      <div className="bg-[#111] border border-[#1e1e1e] rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e1e1e] shrink-0">
           <h2 className="text-lg font-semibold text-white">Import from SSH Config</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white p-1 rounded" aria-label="Close">✕</button>
+          <button onClick={onClose} className="text-[#555] hover:text-white p-1 rounded" aria-label="Close">✕</button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
           {/* Path picker */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Config file path</label>
+            <label className="block text-sm font-medium text-[#aaa] mb-1">Config file path</label>
             <div className="flex gap-2">
               <input
                 value={configPath}
                 onChange={(e) => setConfigPath(e.target.value)}
-                className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-blue-500"
+                className="flex-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
               />
               <button
                 type="button"
                 onClick={() => { void browseConfig(); }}
-                className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded-md border border-gray-600 transition-colors shrink-0"
+                className="px-3 py-2 bg-[#1a1a1a] hover:bg-[#222] text-[#aaa] text-sm rounded border border-[#2a2a2a] transition-colors shrink-0"
               >
                 Browse
               </button>
@@ -117,7 +117,7 @@ export default function SshConfigImport({ onClose }: Props) {
                 type="button"
                 onClick={() => { void loadPreviews(); }}
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm rounded-md transition-colors shrink-0"
+                className="px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-40 text-black font-semibold text-sm rounded transition-colors shrink-0"
               >
                 {loading ? "Reading…" : "Read"}
               </button>
@@ -136,7 +136,7 @@ export default function SshConfigImport({ onClose }: Props) {
 
           {/* Preview table */}
           {previews && previews.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-8">
+            <p className="text-sm text-[#555] text-center py-8">
               No Host entries found in this config file.
             </p>
           )}
@@ -144,26 +144,26 @@ export default function SshConfigImport({ onClose }: Props) {
           {previews && previews.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-[#555]">
                   {selected.size} of {previews.length} selected
                 </p>
                 <button
                   onClick={toggleAll}
-                  className="text-xs text-blue-400 hover:text-blue-300"
+                  className="text-xs text-accent hover:text-accent-hover"
                 >
                   {selected.size === previews.length ? "Deselect all" : "Select all"}
                 </button>
               </div>
 
-              <div className="border border-gray-700 rounded-lg overflow-hidden">
+              <div className="border border-[#1e1e1e] rounded-lg overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-750">
-                    <tr className="border-b border-gray-700">
+                  <thead className="bg-[#161616]">
+                    <tr className="border-b border-[#1e1e1e]">
                       <th className="w-10 px-3 py-2" />
-                      <th className="text-left px-3 py-2 text-gray-400 font-medium">Host</th>
-                      <th className="text-left px-3 py-2 text-gray-400 font-medium">Hostname</th>
-                      <th className="text-left px-3 py-2 text-gray-400 font-medium">User</th>
-                      <th className="text-left px-3 py-2 text-gray-400 font-medium">Port</th>
+                      <th className="text-left px-3 py-2 text-[#555] font-medium">Host</th>
+                      <th className="text-left px-3 py-2 text-[#555] font-medium">Hostname</th>
+                      <th className="text-left px-3 py-2 text-[#555] font-medium">User</th>
+                      <th className="text-left px-3 py-2 text-[#555] font-medium">Port</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -171,8 +171,8 @@ export default function SshConfigImport({ onClose }: Props) {
                       <tr
                         key={p.pattern}
                         onClick={() => toggle(p.pattern)}
-                        className={`cursor-pointer border-b border-gray-700 last:border-0 transition-colors ${
-                          selected.has(p.pattern) ? "bg-blue-900/20" : "hover:bg-gray-750"
+                        className={`cursor-pointer border-b border-[#1e1e1e] last:border-0 transition-colors ${
+                          selected.has(p.pattern) ? "bg-accent/5" : "hover:bg-[#161616]"
                         }`}
                       >
                         <td className="px-3 py-2 text-center">
@@ -181,13 +181,13 @@ export default function SshConfigImport({ onClose }: Props) {
                             checked={selected.has(p.pattern)}
                             onChange={() => toggle(p.pattern)}
                             onClick={(e) => e.stopPropagation()}
-                            className="rounded border-gray-600"
+                            className="rounded border-[#2a2a2a]"
                           />
                         </td>
-                        <td className="px-3 py-2 font-mono text-gray-200">{p.pattern}</td>
-                        <td className="px-3 py-2 text-gray-400">{p.hostname ?? <span className="text-gray-600 italic">same as host</span>}</td>
-                        <td className="px-3 py-2 text-gray-400">{p.username ?? "—"}</td>
-                        <td className="px-3 py-2 text-gray-400">{p.port ?? 22}</td>
+                        <td className="px-3 py-2 font-mono text-white">{p.pattern}</td>
+                        <td className="px-3 py-2 text-[#666]">{p.hostname ?? <span className="text-[#444] italic">same as host</span>}</td>
+                        <td className="px-3 py-2 text-[#666]">{p.username ?? "—"}</td>
+                        <td className="px-3 py-2 text-[#666]">{p.port ?? 22}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -198,10 +198,10 @@ export default function SshConfigImport({ onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-700 shrink-0">
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#1e1e1e] shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+            className="px-4 py-2 text-sm text-[#555] hover:text-white bg-[#1a1a1a] hover:bg-[#222] rounded transition-colors"
           >
             {imported !== null ? "Done" : "Cancel"}
           </button>
@@ -209,7 +209,7 @@ export default function SshConfigImport({ onClose }: Props) {
             <button
               onClick={() => { void handleImport(); }}
               disabled={importing || selected.size === 0}
-              className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-md transition-colors font-medium"
+              className="px-4 py-2 text-sm text-black bg-accent hover:bg-accent-hover disabled:opacity-40 rounded transition-colors font-semibold"
             >
               {importing ? "Importing…" : `Import ${selected.size} server${selected.size !== 1 ? "s" : ""}`}
             </button>

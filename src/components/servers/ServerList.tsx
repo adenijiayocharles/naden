@@ -11,19 +11,19 @@ export default function ServerList() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-500 text-sm">
+      <div className="flex items-center justify-center h-64 text-[#444] text-sm">
         Loading…
       </div>
     );
   }
 
-  // Search takes priority over sidebar filters
+  // Search results take priority over sidebar filters
   if (searchQuery.trim()) {
     const results = searchResults ?? [];
     return results.length === 0 ? (
       <div className="flex flex-col items-center justify-center h-64 text-center">
-        <p className="text-gray-400 text-lg font-medium mb-1">No matches</p>
-        <p className="text-gray-500 text-sm">No servers match "{searchQuery}"</p>
+        <p className="text-[#555] text-lg font-medium mb-1">No matches</p>
+        <p className="text-[#333] text-sm">No servers match "{searchQuery}"</p>
       </div>
     ) : (
       <div className="space-y-2">
@@ -41,8 +41,8 @@ export default function ServerList() {
   if (filtered.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
-        <p className="text-gray-400 text-lg font-medium mb-1">No servers yet</p>
-        <p className="text-gray-500 text-sm mb-4">
+        <p className="text-[#555] text-lg font-medium mb-1">No servers yet</p>
+        <p className="text-[#333] text-sm mb-4">
           {filterGroupId || filterTagId
             ? "No servers match the current filter."
             : "Add your first server or import from ~/.ssh/config"}
@@ -50,7 +50,7 @@ export default function ServerList() {
         {!filterGroupId && !filterTagId && (
           <button
             onClick={openAdd}
-            className="bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-md transition-colors"
+            className="bg-accent hover:bg-accent-hover text-black text-sm font-semibold px-4 py-2 rounded transition-colors"
           >
             + Add Server
           </button>
@@ -59,7 +59,6 @@ export default function ServerList() {
     );
   }
 
-  // Filtered view — flat list
   if (filterGroupId || filterTagId) {
     return (
       <div className="space-y-2">
@@ -68,7 +67,6 @@ export default function ServerList() {
     );
   }
 
-  // Default — grouped + ungrouped
   const ungrouped = filtered.filter((s) => !s.groupId);
   const sections = groups
     .map((g) => ({ group: g, items: filtered.filter((s) => s.groupId === g.id) }))
@@ -78,15 +76,15 @@ export default function ServerList() {
     <div className="space-y-6">
       {sections.map(({ group, items }) => (
         <section key={group.id}>
-          <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-2"
-              style={{ color: group.color ?? "#6b7280" }}>
+          <h2
+            className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-2"
+            style={{ color: group.color ?? "#444" }}
+          >
             {group.color && (
               <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
             )}
             {group.name}
-            <span className="text-gray-600 normal-case font-normal tracking-normal">
-              {items.length}
-            </span>
+            <span className="text-[#333] normal-case font-normal tracking-normal">{items.length}</span>
           </h2>
           <div className="space-y-2">
             {items.map((s) => <ServerCard key={s.id} server={s} />)}
@@ -96,7 +94,7 @@ export default function ServerList() {
 
       {ungrouped.length > 0 && (
         <section>
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+          <h2 className="text-xs font-semibold text-[#444] uppercase tracking-wider mb-2">
             Ungrouped
           </h2>
           <div className="space-y-2">

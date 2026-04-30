@@ -21,19 +21,16 @@ export default function AppShell() {
 
   if (isChecking) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-950 text-gray-500 text-sm">
+      <div className="flex h-screen items-center justify-center bg-black text-[#555] text-sm">
         Loading…
       </div>
     );
   }
 
-  // Vault is set up but locked — show blocking lock screen
-  if (isSetup && !isUnlocked) {
-    return <VaultLockScreen />;
-  }
+  if (isSetup && !isUnlocked) return <VaultLockScreen />;
 
   return (
-    <div className="flex h-screen bg-gray-900 text-gray-100 overflow-hidden">
+    <div className="flex h-screen bg-black text-white overflow-hidden">
       <Sidebar />
 
       <div className="flex flex-col flex-1 min-w-0">
@@ -44,8 +41,6 @@ export default function AppShell() {
       </div>
 
       {(activeView === "add" || activeView === "edit") && <ServerForm />}
-
-      {/* Offer vault setup on first launch; dismissible for the session */}
       {!isSetup && !setupDismissed && <VaultSetupModal />}
     </div>
   );

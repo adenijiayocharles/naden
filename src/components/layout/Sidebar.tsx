@@ -25,15 +25,15 @@ export default function Sidebar() {
   ) => (
     <button
       onClick={onClick}
-      className={`w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between transition-colors ${
+      className={`w-full text-left px-3 py-2 rounded text-sm flex items-center justify-between transition-colors ${
         active
-          ? "bg-blue-600 text-white"
-          : "text-gray-300 hover:bg-gray-700 hover:text-white"
+          ? "bg-accent text-black font-medium"
+          : "text-[#aaa] hover:bg-[#1a1a1a] hover:text-white"
       }`}
     >
       <span className="truncate">{label}</span>
       {count !== undefined && (
-        <span className={`text-xs ml-2 shrink-0 ${active ? "text-blue-200" : "text-gray-500"}`}>
+        <span className={`text-xs ml-2 shrink-0 ${active ? "text-black/60" : "text-[#555]"}`}>
           {count}
         </span>
       )}
@@ -41,9 +41,11 @@ export default function Sidebar() {
   );
 
   return (
-    <aside className="w-60 shrink-0 bg-gray-800 border-r border-gray-700 flex flex-col overflow-y-auto">
-      <div className="h-14 flex items-center px-4 border-b border-gray-700 shrink-0">
-        <span className="font-semibold text-white text-base tracking-tight">SSH Manager</span>
+    <aside className="w-60 shrink-0 bg-[#0d0d0d] border-r border-[#1e1e1e] flex flex-col overflow-y-auto">
+      <div className="h-14 flex items-center px-4 border-b border-[#1e1e1e] shrink-0">
+        <span className="font-bold text-white text-base tracking-tight">
+          SSH <span className="text-accent">Manager</span>
+        </span>
       </div>
 
       <nav className="flex-1 p-2 space-y-0.5">
@@ -56,7 +58,7 @@ export default function Sidebar() {
 
         {groups.length > 0 && (
           <div className="pt-3">
-            <p className="px-3 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <p className="px-3 pb-1 text-xs font-semibold text-[#444] uppercase tracking-wider">
               Groups
             </p>
             {groups.map((g) =>
@@ -80,7 +82,7 @@ export default function Sidebar() {
 
         {tags.length > 0 && (
           <div className="pt-3">
-            <p className="px-3 pb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <p className="px-3 pb-1 text-xs font-semibold text-[#444] uppercase tracking-wider">
               Tags
             </p>
             {tags.map((t) =>
