@@ -14,7 +14,10 @@
       "Bash(brew install *)",
       "Bash(npm install *)",
       "Bash(npm run *)",
-      "Bash(./node_modules/.bin/tauri *)"
+      "Bash(./node_modules/.bin/tauri *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }

@@ -31,6 +31,9 @@ ssh2 = "0.9"
 ssh2-config = "0"
 nucleo = "0"
 aes-gcm = "0.10"
+pbkdf2 = "0.12"
+sha2 = "0.10"
+getrandom = "0.2"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 anyhow = "1"
