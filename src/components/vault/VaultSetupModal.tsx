@@ -38,7 +38,7 @@ export default function VaultSetupModal() {
         <div className="text-center mb-6">
           <div className="text-3xl mb-2 text-accent">🔐</div>
           <h2 className="text-xl font-bold text-white mb-1">Set up your vault</h2>
-          <p className="text-[#555] text-sm">
+          <p className="text-[#777] text-sm">
             Encrypts SSH credentials stored on this machine.
             Choose a strong master password — it cannot be recovered if lost.
           </p>
@@ -52,14 +52,14 @@ export default function VaultSetupModal() {
               value={password}
               onChange={(e) => { setPassword(e.target.value); setError(null); }}
               placeholder="Master password"
-              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-4 py-2.5 text-white placeholder-[#444] focus:outline-none focus:border-accent transition-colors"
+              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-4 py-2.5 text-white placeholder-[#666] focus:outline-none focus:border-accent transition-colors"
             />
             {password.length > 0 && (
               <div className="mt-1.5 flex items-center gap-2">
                 <div className="flex-1 h-1 bg-[#222] rounded-full overflow-hidden">
                   <div className={`h-full rounded-full transition-all ${color} ${width}`} />
                 </div>
-                <span className="text-xs text-[#555] w-16 text-right">{label}</span>
+                <span className="text-xs text-[#777] w-16 text-right">{label}</span>
               </div>
             )}
           </div>
@@ -69,7 +69,7 @@ export default function VaultSetupModal() {
             value={confirm}
             onChange={(e) => { setConfirm(e.target.value); setError(null); }}
             placeholder="Confirm password"
-            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-4 py-2.5 text-white placeholder-[#444] focus:outline-none focus:border-accent transition-colors"
+            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-4 py-2.5 text-white placeholder-[#666] focus:outline-none focus:border-accent transition-colors"
           />
 
           {error && <p className="text-sm text-red-400">{error}</p>}
@@ -78,7 +78,7 @@ export default function VaultSetupModal() {
             <button
               type="button"
               onClick={dismissSetup}
-              className="flex-1 py-2.5 text-sm text-[#555] hover:text-white bg-[#1a1a1a] hover:bg-[#222] rounded transition-colors"
+              className="flex-1 py-2.5 text-sm text-[#777] hover:text-white bg-[#1a1a1a] hover:bg-[#222] rounded transition-colors"
             >
               Maybe later
             </button>

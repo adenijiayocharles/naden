@@ -21,7 +21,7 @@ export default function AppShell() {
 
   if (isChecking) {
     return (
-      <div className="flex h-screen items-center justify-center bg-black text-[#555] text-sm">
+      <div className="flex h-screen items-center justify-center bg-black text-[#777] text-sm">
         Loading…
       </div>
     );

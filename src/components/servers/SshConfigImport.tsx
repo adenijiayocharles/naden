@@ -93,13 +93,13 @@ export default function SshConfigImport({ onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e1e1e] shrink-0">
           <h2 className="text-lg font-semibold text-white">Import from SSH Config</h2>
-          <button onClick={onClose} className="text-[#555] hover:text-white p-1 rounded" aria-label="Close">✕</button>
+          <button onClick={onClose} className="text-[#777] hover:text-white p-1 rounded" aria-label="Close">✕</button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
           {/* Path picker */}
           <div>
-            <label className="block text-sm font-medium text-[#aaa] mb-1">Config file path</label>
+            <label className="block text-sm font-medium text-[#bbb] mb-1">Config file path</label>
             <div className="flex gap-2">
               <input
                 value={configPath}
@@ -109,7 +109,7 @@ export default function SshConfigImport({ onClose }: Props) {
               <button
                 type="button"
                 onClick={() => { void browseConfig(); }}
-                className="px-3 py-2 bg-[#1a1a1a] hover:bg-[#222] text-[#aaa] text-sm rounded border border-[#2a2a2a] transition-colors shrink-0"
+                className="px-3 py-2 bg-[#1a1a1a] hover:bg-[#222] text-[#bbb] text-sm rounded border border-[#2a2a2a] transition-colors shrink-0"
               >
                 Browse
               </button>
@@ -136,7 +136,7 @@ export default function SshConfigImport({ onClose }: Props) {
 
           {/* Preview table */}
           {previews && previews.length === 0 && (
-            <p className="text-sm text-[#555] text-center py-8">
+            <p className="text-sm text-[#777] text-center py-8">
               No Host entries found in this config file.
             </p>
           )}
@@ -144,7 +144,7 @@ export default function SshConfigImport({ onClose }: Props) {
           {previews && previews.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-[#555]">
+                <p className="text-sm text-[#777]">
                   {selected.size} of {previews.length} selected
                 </p>
                 <button
@@ -160,10 +160,10 @@ export default function SshConfigImport({ onClose }: Props) {
                   <thead className="bg-[#161616]">
                     <tr className="border-b border-[#1e1e1e]">
                       <th className="w-10 px-3 py-2" />
-                      <th className="text-left px-3 py-2 text-[#555] font-medium">Host</th>
-                      <th className="text-left px-3 py-2 text-[#555] font-medium">Hostname</th>
-                      <th className="text-left px-3 py-2 text-[#555] font-medium">User</th>
-                      <th className="text-left px-3 py-2 text-[#555] font-medium">Port</th>
+                      <th className="text-left px-3 py-2 text-[#777] font-medium">Host</th>
+                      <th className="text-left px-3 py-2 text-[#777] font-medium">Hostname</th>
+                      <th className="text-left px-3 py-2 text-[#777] font-medium">User</th>
+                      <th className="text-left px-3 py-2 text-[#777] font-medium">Port</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -185,9 +185,9 @@ export default function SshConfigImport({ onClose }: Props) {
                           />
                         </td>
                         <td className="px-3 py-2 font-mono text-white">{p.pattern}</td>
-                        <td className="px-3 py-2 text-[#666]">{p.hostname ?? <span className="text-[#444] italic">same as host</span>}</td>
-                        <td className="px-3 py-2 text-[#666]">{p.username ?? "—"}</td>
-                        <td className="px-3 py-2 text-[#666]">{p.port ?? 22}</td>
+                        <td className="px-3 py-2 text-[#888]">{p.hostname ?? <span className="text-[#666] italic">same as host</span>}</td>
+                        <td className="px-3 py-2 text-[#888]">{p.username ?? "—"}</td>
+                        <td className="px-3 py-2 text-[#888]">{p.port ?? 22}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -201,7 +201,7 @@ export default function SshConfigImport({ onClose }: Props) {
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#1e1e1e] shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm text-[#555] hover:text-white bg-[#1a1a1a] hover:bg-[#222] rounded transition-colors"
+            className="px-4 py-2 text-sm text-[#777] hover:text-white bg-[#1a1a1a] hover:bg-[#222] rounded transition-colors"
           >
             {imported !== null ? "Done" : "Cancel"}
           </button>

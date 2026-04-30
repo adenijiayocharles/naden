@@ -11,7 +11,7 @@ export default function ServerList() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64 text-[#444] text-sm">
+      <div className="flex items-center justify-center h-64 text-[#666] text-sm">
         Loading…
       </div>
     );
@@ -22,7 +22,7 @@ export default function ServerList() {
     const results = searchResults ?? [];
     return results.length === 0 ? (
       <div className="flex flex-col items-center justify-center h-64 text-center">
-        <p className="text-[#555] text-lg font-medium mb-1">No matches</p>
+        <p className="text-[#777] text-lg font-medium mb-1">No matches</p>
         <p className="text-[#333] text-sm">No servers match "{searchQuery}"</p>
       </div>
     ) : (
@@ -41,7 +41,7 @@ export default function ServerList() {
   if (filtered.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
-        <p className="text-[#555] text-lg font-medium mb-1">No servers yet</p>
+        <p className="text-[#777] text-lg font-medium mb-1">No servers yet</p>
         <p className="text-[#333] text-sm mb-4">
           {filterGroupId || filterTagId
             ? "No servers match the current filter."
@@ -78,7 +78,7 @@ export default function ServerList() {
         <section key={group.id}>
           <h2
             className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-2"
-            style={{ color: group.color ?? "#444" }}
+            style={{ color: group.color ?? "#666" }}
           >
             {group.color && (
               <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
@@ -94,7 +94,7 @@ export default function ServerList() {
 
       {ungrouped.length > 0 && (
         <section>
-          <h2 className="text-xs font-semibold text-[#444] uppercase tracking-wider mb-2">
+          <h2 className="text-xs font-semibold text-[#666] uppercase tracking-wider mb-2">
             Ungrouped
           </h2>
           <div className="space-y-2">

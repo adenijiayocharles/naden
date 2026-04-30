@@ -17,7 +17,10 @@
       "Bash(./node_modules/.bin/tauri *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(grep -rh 'text-\\\\[#[0-9a-f]\\\\{3,6\\\\}\\\\]\\\\|bg-\\\\[#[0-9a-f]\\\\{3,6\\\\}\\\\]\\\\|border-\\\\[#[0-9a-f]\\\\{3,6\\\\}\\\\]' /Users/adenijiayocharles/Projects/SSHManager/src --include=\"*.tsx\" --include=\"*.ts\" --include=\"*.css\")",
+      "Bash(grep -oE '#[0-9a-fA-F]{3,6}')",
+      "Bash(grep *)"
     ]
   }
 }

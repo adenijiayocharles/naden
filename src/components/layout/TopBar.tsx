@@ -17,11 +17,11 @@ export default function TopBar() {
           value={searchQuery}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search servers…"
-          className="flex-1 max-w-sm bg-[#1a1a1a] border border-[#2a2a2a] rounded px-3 py-1.5 text-sm text-white placeholder-[#444] focus:outline-none focus:border-accent transition-colors"
+          className="flex-1 max-w-sm bg-[#1a1a1a] border border-[#2a2a2a] rounded px-3 py-1.5 text-sm text-white placeholder-[#666] focus:outline-none focus:border-accent transition-colors"
         />
         <button
           onClick={() => setShowImport(true)}
-          className="text-[#666] hover:text-accent text-sm px-3 py-1.5 rounded hover:bg-[#1a1a1a] transition-colors shrink-0"
+          className="text-[#888] hover:text-accent text-sm px-3 py-1.5 rounded hover:bg-[#1a1a1a] transition-colors shrink-0"
         >
           Import SSH Config
         </button>

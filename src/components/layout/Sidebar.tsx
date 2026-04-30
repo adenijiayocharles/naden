@@ -28,12 +28,12 @@ export default function Sidebar() {
       className={`w-full text-left px-3 py-2 rounded text-sm flex items-center justify-between transition-colors ${
         active
           ? "bg-accent text-black font-medium"
-          : "text-[#aaa] hover:bg-[#1a1a1a] hover:text-white"
+          : "text-[#bbb] hover:bg-[#1a1a1a] hover:text-white"
       }`}
     >
       <span className="truncate">{label}</span>
       {count !== undefined && (
-        <span className={`text-xs ml-2 shrink-0 ${active ? "text-black/60" : "text-[#555]"}`}>
+        <span className={`text-xs ml-2 shrink-0 ${active ? "text-black/60" : "text-[#777]"}`}>
           {count}
         </span>
       )}
@@ -58,7 +58,7 @@ export default function Sidebar() {
 
         {groups.length > 0 && (
           <div className="pt-3">
-            <p className="px-3 pb-1 text-xs font-semibold text-[#444] uppercase tracking-wider">
+            <p className="px-3 pb-1 text-xs font-semibold text-[#666] uppercase tracking-wider">
               Groups
             </p>
             {groups.map((g) =>
@@ -82,7 +82,7 @@ export default function Sidebar() {
 
         {tags.length > 0 && (
           <div className="pt-3">
-            <p className="px-3 pb-1 text-xs font-semibold text-[#444] uppercase tracking-wider">
+            <p className="px-3 pb-1 text-xs font-semibold text-[#666] uppercase tracking-wider">
               Tags
             </p>
             {tags.map((t) =>

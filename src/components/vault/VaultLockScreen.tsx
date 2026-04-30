@@ -31,7 +31,7 @@ export default function VaultLockScreen() {
           <h1 className="text-2xl font-bold text-white mb-1">
             SSH <span className="text-accent">Manager</span>
           </h1>
-          <p className="text-[#555] text-sm">Enter your master password to continue</p>
+          <p className="text-[#777] text-sm">Enter your master password to continue</p>
         </div>
 
         <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-3">
@@ -41,7 +41,7 @@ export default function VaultLockScreen() {
             value={password}
             onChange={(e) => { setPassword(e.target.value); setError(null); }}
             placeholder="Master password"
-            className="w-full bg-[#111] border border-[#2a2a2a] rounded px-4 py-3 text-white placeholder-[#444] focus:outline-none focus:border-accent transition-colors"
+            className="w-full bg-[#111] border border-[#2a2a2a] rounded px-4 py-3 text-white placeholder-[#666] focus:outline-none focus:border-accent transition-colors"
           />
 
           {error && <p className="text-sm text-red-400 text-center">{error}</p>}
