@@ -11,8 +11,10 @@ mod vault;
 pub struct AppState {
     pub db: sqlx::SqlitePool,
     /// In-memory session key — `None` when the vault is locked.
-    /// Cleared on every app restart (OS keychain handles persistence).
     pub vault_key: tokio::sync::Mutex<Option<[u8; 32]>>,
+    /// Full server list cached in memory so fuzzy search never hits SQLite.
+    /// Invalidated after every create / update / delete mutation.
+    pub server_cache: tokio::sync::RwLock<Vec<models::server::ServerWithTags>>,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -32,6 +34,8 @@ pub fn run() {
             commands::server_commands::create_group,
             commands::server_commands::list_tags,
             commands::server_commands::create_tag,
+            // Search
+            commands::search_commands::fuzzy_search,
             // SSH
             commands::ssh_commands::launch_in_terminal,
             commands::ssh_commands::import_ssh_config,
@@ -54,9 +58,14 @@ pub fn run() {
                 .block_on(db::init_db(data_dir))
                 .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
+            let initial_cache = rt
+                .block_on(db::queries::list_servers_db(&pool))
+                .unwrap_or_default();
+
             app.manage(AppState {
                 db: pool,
                 vault_key: tokio::sync::Mutex::new(None),
+                server_cache: tokio::sync::RwLock::new(initial_cache),
             });
             Ok(())
         })

@@ -4388,6 +4388,7 @@ dependencies = [
  "keyring",
  "log",
  "nucleo",
+ "nucleo-matcher",
  "pbkdf2",
  "serde",
  "serde_json",

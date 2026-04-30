@@ -7,12 +7,27 @@ export default function ServerList() {
   const groups = useServerStore((s) => s.groups);
   const isLoading = useServerStore((s) => s.isLoading);
   const openAdd = useUiStore((s) => s.openAdd);
-  const { filterGroupId, filterTagId } = useUiStore();
+  const { filterGroupId, filterTagId, searchQuery, searchResults } = useUiStore();
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-500 text-sm">
         Loading…
+      </div>
+    );
+  }
+
+  // Search takes priority over sidebar filters
+  if (searchQuery.trim()) {
+    const results = searchResults ?? [];
+    return results.length === 0 ? (
+      <div className="flex flex-col items-center justify-center h-64 text-center">
+        <p className="text-gray-400 text-lg font-medium mb-1">No matches</p>
+        <p className="text-gray-500 text-sm">No servers match "{searchQuery}"</p>
+      </div>
+    ) : (
+      <div className="space-y-2">
+        {results.map((s) => <ServerCard key={s.id} server={s} />)}
       </div>
     );
   }

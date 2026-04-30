@@ -1,18 +1,23 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useUiStore } from "../../store/uiStore";
 import SshConfigImport from "../servers/SshConfigImport";
 
 export default function TopBar() {
   const openAdd = useUiStore((s) => s.openAdd);
+  const setSearch = useUiStore((s) => s.setSearch);
+  const searchQuery = useUiStore((s) => s.searchQuery);
   const [showImport, setShowImport] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   return (
     <>
       <header className="h-14 shrink-0 border-b border-gray-700 bg-gray-800 flex items-center px-4 gap-3">
         <input
-          className="flex-1 max-w-sm bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-sm text-gray-300 placeholder-gray-500 focus:outline-none cursor-not-allowed opacity-60"
-          placeholder="Search servers… (coming in Phase 1F)"
-          disabled
+          ref={inputRef}
+          value={searchQuery}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search servers…"
+          className="flex-1 max-w-sm bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
         />
         <button
           onClick={() => setShowImport(true)}
