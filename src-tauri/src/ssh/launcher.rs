@@ -29,17 +29,27 @@ pub async fn launch_in_system_terminal(server: &ServerWithTags) -> Result<(), Ap
 
     #[cfg(target_os = "macos")]
     {
-        // Wrap in single quotes inside the AppleScript string to avoid issues with
-        // double-quoted path components. The outer AppleScript string uses double quotes.
         let script = format!(
             r#"tell application "Terminal" to do script "{cmd}""#,
             cmd = cmd.replace('"', "'"),
         );
-        tokio::process::Command::new("osascript")
+        // Use output() instead of spawn() so we block until osascript exits and
+        // can surface real errors (e.g. macOS Automation permission denied).
+        let out = tokio::process::Command::new("osascript")
             .arg("-e")
             .arg(&script)
-            .spawn()
-            .map_err(|e| AppError::Ssh(format!("failed to open Terminal.app: {e}")))?;
+            .output()
+            .await
+            .map_err(|e| AppError::Ssh(format!("failed to run osascript: {e}")))?;
+
+        if !out.status.success() {
+            let msg = String::from_utf8_lossy(&out.stderr);
+            return Err(AppError::Ssh(format!(
+                "Terminal.app did not open — {}. \
+                 Grant Automation permission in System Settings → Privacy & Security → Automation.",
+                msg.trim()
+            )));
+        }
     }
 
     #[cfg(target_os = "windows")]
