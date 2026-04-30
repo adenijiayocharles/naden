@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { homeDir, join } from "@tauri-apps/api/path";
 import type { AuthMethod, Tag } from "../../types/server";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
@@ -94,7 +95,13 @@ export default function ServerForm() {
 
   const pickIdentityFile = async () => {
     try {
-      const result = await open({ multiple: false, title: "Select SSH Identity File" });
+      const home = await homeDir();
+      const sshDir = await join(home, ".ssh");
+      const result = await open({
+        multiple: false,
+        title: "Select SSH Identity File",
+        defaultPath: sshDir,
+      });
       if (typeof result === "string") {
         setForm((f) => ({ ...f, identityFilePath: result }));
       }
