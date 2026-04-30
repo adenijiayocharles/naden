@@ -5,6 +5,7 @@ import type {
   Tag,
   CreateServerPayload,
   UpdateServerPayload,
+  ImportPreview,
 } from "../types/server";
 
 export const serverCommands = {
@@ -34,4 +35,15 @@ export const serverCommands = {
 
   createTag: (name: string) =>
     invoke<Tag>("create_tag", { name }),
+};
+
+export const sshCommands = {
+  launchInTerminal: (serverId: string) =>
+    invoke<void>("launch_in_terminal", { serverId }),
+
+  importSshConfig: (path?: string) =>
+    invoke<ImportPreview[]>("import_ssh_config", { path: path ?? null }),
+
+  confirmSshConfigImport: (previews: ImportPreview[]) =>
+    invoke<Server[]>("confirm_ssh_config_import", { previews }),
 };

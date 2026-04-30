@@ -46,3 +46,11 @@ export interface CreateServerPayload {
 }
 
 export type UpdateServerPayload = Partial<CreateServerPayload>;
+
+export interface ImportPreview {
+  pattern: string;
+  hostname?: string;
+  port?: number;
+  username?: string;
+  identityFilePath?: string;
+}

@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import type { Server } from "../../types/server";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
+import { sshCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 
 interface Props {
@@ -14,6 +15,7 @@ export default function ServerCard({ server }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -28,6 +30,18 @@ export default function ServerCard({ server }: Props) {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    setError(null);
+    try {
+      await sshCommands.launchInTerminal(server.id);
+    } catch (e) {
+      setError(formatError(e));
+    } finally {
+      setConnecting(false);
+    }
+  };
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -81,11 +95,11 @@ export default function ServerCard({ server }: Props) {
       {/* Actions */}
       <div className="flex items-center gap-2 shrink-0">
         <button
-          disabled
-          title="SSH launch comes in Phase 1E"
-          className="bg-blue-600 text-white text-sm px-3 py-1.5 rounded-md opacity-40 cursor-not-allowed"
+          onClick={() => { void handleConnect(); }}
+          disabled={connecting}
+          className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm px-3 py-1.5 rounded-md transition-colors"
         >
-          Connect
+          {connecting ? "Opening…" : "Connect"}
         </button>
 
         <div className="relative" ref={menuRef}>

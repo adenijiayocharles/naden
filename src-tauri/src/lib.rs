@@ -32,6 +32,10 @@ pub fn run() {
             commands::server_commands::create_group,
             commands::server_commands::list_tags,
             commands::server_commands::create_tag,
+            // SSH
+            commands::ssh_commands::launch_in_terminal,
+            commands::ssh_commands::import_ssh_config,
+            commands::ssh_commands::confirm_ssh_config_import,
             // Vault
             commands::vault_commands::vault_is_setup,
             commands::vault_commands::vault_setup,
