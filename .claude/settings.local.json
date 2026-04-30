@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo --version)",
+      "Bash(rustc --version)",
+      "Bash(npm --version)",
+      "Bash(cargo search *)",
+      "Bash(npm list *)",
+      "Bash(cargo tauri *)",
+      "Bash(brew --version)",
+      "Bash(xcode-select -p)",
+      "Bash(curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs)",
+      "Bash(sh -s -- -y)",
+      "Bash(brew install *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(./node_modules/.bin/tauri *)"
+    ]
+  }
+}

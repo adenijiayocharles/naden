@@ -1,0 +1,4 @@
+# macOS Homebrew: helps pkg-config find libssh2 and openssl
+[env]
+PKG_CONFIG_PATH = "/opt/homebrew/lib/pkgconfig:/opt/homebrew/share/pkgconfig"
+OPENSSL_DIR = "/opt/homebrew/opt/openssl@3"
