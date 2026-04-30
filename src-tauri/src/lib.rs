@@ -17,6 +17,17 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_log::Builder::new().build())
+        .invoke_handler(tauri::generate_handler![
+            commands::server_commands::list_servers,
+            commands::server_commands::get_server,
+            commands::server_commands::create_server,
+            commands::server_commands::update_server,
+            commands::server_commands::delete_server,
+            commands::server_commands::list_groups,
+            commands::server_commands::create_group,
+            commands::server_commands::list_tags,
+            commands::server_commands::create_tag,
+        ])
         .setup(|app| {
             let data_dir = app.path().app_local_data_dir()?;
 

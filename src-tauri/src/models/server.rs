@@ -44,3 +44,37 @@ pub struct ServerWithTags {
     pub server: Server,
     pub tags: Vec<Tag>,
 }
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateServerPayload {
+    pub display_name: String,
+    pub hostname: String,
+    pub port: Option<i64>,
+    pub username: Option<String>,
+    pub auth_method: Option<String>,
+    pub identity_file_path: Option<String>,
+    pub group_id: Option<String>,
+    pub notes: Option<String>,
+    pub is_jump_host: Option<bool>,
+    pub jump_host_id: Option<String>,
+    pub tag_ids: Option<Vec<String>>,
+}
+
+/// All fields optional — only supplied fields are applied; None means "leave unchanged".
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateServerPayload {
+    pub display_name: Option<String>,
+    pub hostname: Option<String>,
+    pub port: Option<i64>,
+    pub username: Option<String>,
+    pub auth_method: Option<String>,
+    pub identity_file_path: Option<String>,
+    pub group_id: Option<String>,
+    pub notes: Option<String>,
+    pub is_jump_host: Option<bool>,
+    pub jump_host_id: Option<String>,
+    /// When Some, replaces the full tag list. Some(vec![]) clears all tags.
+    pub tag_ids: Option<Vec<String>>,
+}

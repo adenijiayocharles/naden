@@ -1,3 +1,5 @@
+pub mod queries;
+
 use crate::error::AppError;
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 use std::path::PathBuf;
