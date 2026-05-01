@@ -1,11 +1,16 @@
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use pbkdf2::pbkdf2_hmac;
 use sha2::{Digest, Sha256};
+use subtle::ConstantTimeEq;
 use sqlx::SqlitePool;
+use zeroize::Zeroizing;
 
 use crate::error::AppError;
 
-const ROUNDS: u32 = 100_000;
+// OWASP 2023 recommendation for PBKDF2-HMAC-SHA256.
+const ROUNDS: u32 = 600_000;
+// Accepted on upgrade path only — vaults hashed at this count are re-derived and re-stored.
+const LEGACY_ROUNDS: u32 = 100_000;
 const KEY_LEN: usize = 32;
 
 fn generate_salt() -> [u8; KEY_LEN] {
@@ -14,10 +19,14 @@ fn generate_salt() -> [u8; KEY_LEN] {
     salt
 }
 
-pub fn derive_key(password: &str, salt: &[u8]) -> [u8; KEY_LEN] {
-    let mut key = [0u8; KEY_LEN];
-    pbkdf2_hmac::<Sha256>(password.as_bytes(), salt, ROUNDS, &mut key);
+fn derive_key_with_rounds(password: &str, salt: &[u8], rounds: u32) -> Zeroizing<[u8; KEY_LEN]> {
+    let mut key = Zeroizing::new([0u8; KEY_LEN]);
+    pbkdf2_hmac::<Sha256>(password.as_bytes(), salt, rounds, key.as_mut());
     key
+}
+
+pub fn derive_key(password: &str, salt: &[u8]) -> Zeroizing<[u8; KEY_LEN]> {
+    derive_key_with_rounds(password, salt, ROUNDS)
 }
 
 fn verification_hash(key: &[u8; KEY_LEN]) -> [u8; 32] {
@@ -36,7 +45,7 @@ pub async fn is_setup(db: &SqlitePool) -> Result<bool, AppError> {
 }
 
 /// Initialises the vault with a new master password. Returns the unlocked session key.
-pub async fn setup(db: &SqlitePool, password: &str) -> Result<[u8; KEY_LEN], AppError> {
+pub async fn setup(db: &SqlitePool, password: &str) -> Result<Zeroizing<[u8; KEY_LEN]>, AppError> {
     let salt = generate_salt();
     let key = derive_key(password, &salt);
     let verification = verification_hash(&key);
@@ -55,7 +64,13 @@ pub async fn setup(db: &SqlitePool, password: &str) -> Result<[u8; KEY_LEN], App
 }
 
 /// Verifies the master password. Returns `Some(key)` on success, `None` on wrong password.
-pub async fn verify(db: &SqlitePool, password: &str) -> Result<Option<[u8; KEY_LEN]>, AppError> {
+///
+/// If the stored hash was derived with a legacy round count, the vault is transparently
+/// re-hashed at the current round count so the upgrade happens on first successful unlock.
+pub async fn verify(
+    db: &SqlitePool,
+    password: &str,
+) -> Result<Option<Zeroizing<[u8; KEY_LEN]>>, AppError> {
     let salt_b64: Option<String> =
         sqlx::query_scalar("SELECT value FROM vault_meta WHERE key = 'pbkdf2_salt'")
             .fetch_optional(db)
@@ -74,12 +89,25 @@ pub async fn verify(db: &SqlitePool, password: &str) -> Result<Option<[u8; KEY_L
         .decode(&stored_b64)
         .map_err(|e| AppError::Vault(e.to_string()))?;
 
+    // Try current round count first.
     let key = derive_key(password, &salt);
-    let computed = verification_hash(&key);
-
-    if computed.as_slice() == stored.as_slice() {
-        Ok(Some(key))
-    } else {
-        Ok(None)
+    if verification_hash(&key).ct_eq(stored.as_slice()).into() {
+        return Ok(Some(key));
     }
+
+    // Fall back to legacy round count to support vaults created before the upgrade.
+    let legacy_key = derive_key_with_rounds(password, &salt, LEGACY_ROUNDS);
+    if !bool::from(verification_hash(&legacy_key).ct_eq(stored.as_slice())) {
+        return Ok(None); // Wrong password.
+    }
+
+    // Correct password but legacy rounds — transparently re-hash at current strength.
+    let new_key = derive_key(password, &salt);
+    let new_verification = verification_hash(&new_key);
+    sqlx::query("INSERT OR REPLACE INTO vault_meta (key, value) VALUES ('verification', ?)")
+        .bind(STANDARD.encode(new_verification))
+        .execute(db)
+        .await?;
+
+    Ok(Some(new_key))
 }

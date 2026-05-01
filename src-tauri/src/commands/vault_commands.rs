@@ -27,12 +27,44 @@ pub async fn vault_unlock(
     master_password: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<bool, AppError> {
+    // Brute-force protection: check lockout before running the expensive KDF.
+    {
+        let mut failures = state.unlock_failures.lock().await;
+        let (_count, lockout_until) = &mut *failures;
+
+        if let Some(until) = *lockout_until {
+            if std::time::Instant::now() < until {
+                return Err(AppError::Vault(
+                    "too many failed attempts — please wait before trying again".into(),
+                ));
+            }
+            // Lockout window expired; reset so we can accept new attempts.
+            *lockout_until = None;
+        }
+        // Release the lock before the slow PBKDF2 call.
+        drop(failures);
+    }
+
     match crate::vault::master_password::verify(&state.db, &master_password).await? {
         Some(key) => {
+            // Reset failure counter on success.
+            *state.unlock_failures.lock().await = (0, None);
             *state.vault_key.lock().await = Some(key);
             Ok(true)
         }
-        None => Ok(false),
+        None => {
+            let mut failures = state.unlock_failures.lock().await;
+            let (count, lockout_until) = &mut *failures;
+            *count += 1;
+            // After 5 failures, apply exponential backoff: 30s × 2^(extra failures), max 1 h.
+            if *count >= 5 {
+                let extra = (*count - 5).min(7) as u32;
+                let secs = 30u64 * (1u64 << extra);
+                *lockout_until =
+                    Some(std::time::Instant::now() + std::time::Duration::from_secs(secs));
+            }
+            Ok(false)
+        }
     }
 }
 
@@ -43,6 +75,7 @@ pub async fn vault_is_unlocked(state: tauri::State<'_, AppState>) -> Result<bool
 
 #[tauri::command]
 pub async fn vault_lock(state: tauri::State<'_, AppState>) -> Result<(), AppError> {
+    // Assigning None drops the Zeroizing<[u8;32]>, which scrubs the key bytes.
     *state.vault_key.lock().await = None;
     Ok(())
 }
@@ -72,11 +105,14 @@ pub async fn retrieve_credential(
     vault::retrieve_credential(&vault_credential_id).await
 }
 
-/// Deletes a secret from the OS keychain. Does not require vault to be unlocked.
+/// Deletes a secret from the OS keychain. Vault must be unlocked.
 #[tauri::command]
 pub async fn delete_credential(
     vault_credential_id: String,
-    _state: tauri::State<'_, AppState>,
+    state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
+    if state.vault_key.lock().await.is_none() {
+        return Err(AppError::Vault("vault is locked".into()));
+    }
     vault::delete_credential(&vault_credential_id).await
 }

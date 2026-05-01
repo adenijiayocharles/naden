@@ -9,6 +9,42 @@ use uuid::Uuid;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
+/// Reject hostnames that contain shell metacharacters. Allows RFC 1123 names,
+/// IPv4, and bracketed IPv6 (e.g. [::1]). Blocks backticks, $, ;, &, |, etc.
+fn validate_hostname(hostname: &str) -> Result<(), AppError> {
+    if hostname.is_empty() {
+        return Err(AppError::Validation("hostname is required".into()));
+    }
+    if hostname.len() > 253 {
+        return Err(AppError::Validation("hostname must be 253 characters or fewer".into()));
+    }
+    if !hostname
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || ".-_:[]%".contains(c))
+    {
+        return Err(AppError::Validation(
+            "hostname contains invalid characters (allowed: letters, digits, . - _ : [ ] %)".into(),
+        ));
+    }
+    Ok(())
+}
+
+/// Reject usernames that contain shell metacharacters. Empty is allowed (system default).
+fn validate_username(username: &str) -> Result<(), AppError> {
+    if username.is_empty() {
+        return Ok(());
+    }
+    if username.len() > 64 {
+        return Err(AppError::Validation("username must be 64 characters or fewer".into()));
+    }
+    if !username.chars().all(|c| c.is_ascii_alphanumeric() || "-_.@".contains(c)) {
+        return Err(AppError::Validation(
+            "username contains invalid characters (allowed: letters, digits, - _ . @)".into(),
+        ));
+    }
+    Ok(())
+}
+
 async fn tags_for_server(db: &SqlitePool, server_id: &str) -> Result<Vec<Tag>, AppError> {
     Ok(sqlx::query_as(
         "SELECT t.id, t.name FROM tags t
@@ -77,8 +113,9 @@ pub async fn create_server_db(
     if payload.display_name.trim().is_empty() {
         return Err(AppError::Validation("display_name is required".into()));
     }
-    if payload.hostname.trim().is_empty() {
-        return Err(AppError::Validation("hostname is required".into()));
+    validate_hostname(&payload.hostname)?;
+    if let Some(ref u) = payload.username {
+        validate_username(u)?;
     }
     let port = payload.port.unwrap_or(22);
     if !(1..=65535).contains(&port) {
@@ -133,6 +170,12 @@ pub async fn update_server_db(
     let s = &existing.server;
     let now = Utc::now().to_rfc3339();
 
+    if let Some(ref h) = payload.hostname {
+        validate_hostname(h)?;
+    }
+    if let Some(ref u) = payload.username {
+        validate_username(u)?;
+    }
     let port = payload.port.unwrap_or(s.port);
     if !(1..=65535).contains(&port) {
         return Err(AppError::Validation("port must be between 1 and 65535".into()));

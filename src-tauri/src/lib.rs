@@ -10,8 +10,10 @@ mod vault;
 
 pub struct AppState {
     pub db: sqlx::SqlitePool,
-    /// In-memory session key — `None` when the vault is locked.
-    pub vault_key: tokio::sync::Mutex<Option<[u8; 32]>>,
+    /// In-memory session key — `None` when locked. `Zeroizing` scrubs bytes on drop.
+    pub vault_key: tokio::sync::Mutex<Option<zeroize::Zeroizing<[u8; 32]>>>,
+    /// Failed unlock attempt count and optional lockout expiry for brute-force protection.
+    pub unlock_failures: tokio::sync::Mutex<(u32, Option<std::time::Instant>)>,
     /// Full server list cached in memory so fuzzy search never hits SQLite.
     /// Invalidated after every create / update / delete mutation.
     pub server_cache: tokio::sync::RwLock<Vec<models::server::ServerWithTags>>,
@@ -65,6 +67,7 @@ pub fn run() {
             app.manage(AppState {
                 db: pool,
                 vault_key: tokio::sync::Mutex::new(None),
+                unlock_failures: tokio::sync::Mutex::new((0, None)),
                 server_cache: tokio::sync::RwLock::new(initial_cache),
             });
             Ok(())
