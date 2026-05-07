@@ -35,6 +35,7 @@ export default function ServerRow({ server }: Props) {
   }, [menuOpen]);
 
   const handleConnect = async () => {
+    if (connecting) return;
     setConnecting(true);
     setError(null);
     try {
@@ -47,6 +48,7 @@ export default function ServerRow({ server }: Props) {
   };
 
   const handleOpenTerminal = async () => {
+    setMenuOpen(false);
     setOpeningTerminal(true);
     setError(null);
     try {
@@ -71,9 +73,13 @@ export default function ServerRow({ server }: Props) {
   };
 
   return (
-    <div className="flex items-center gap-3 px-3 py-2 border-b border-[#1a1a1a] hover:bg-[#0f0f0f] transition-colors group">
+    <div
+      onClick={() => { void handleConnect(); }}
+      className={`group flex items-center gap-3 px-3 py-2.5 border-b border-[#1a1a1a] last:border-b-0 select-none transition-colors
+        ${connecting ? "opacity-60 cursor-wait bg-[#0d0d0d]" : "cursor-pointer hover:bg-[#0f0f0f]"}`}
+    >
       {/* Status dot */}
-      <div className="w-1.5 h-1.5 rounded-full bg-[#333] shrink-0" />
+      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${connecting ? "bg-accent animate-pulse" : "bg-[#333]"}`} />
 
       {/* Name */}
       <span className="w-40 shrink-0 truncate text-sm font-medium text-white">
@@ -105,70 +111,63 @@ export default function ServerRow({ server }: Props) {
         )}
       </div>
 
-      {/* Error */}
       {error && <span className="text-xs text-red-400 shrink-0 max-w-[160px] truncate">{error}</span>}
 
-      {/* Actions — visible on hover */}
-      <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Kebab — stops propagation so it doesn't trigger connect */}
+      <div
+        className="relative shrink-0"
+        ref={menuRef}
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
-          onClick={() => { void handleOpenTerminal(); }}
-          disabled={openingTerminal}
-          className="text-[#666] hover:text-[#ccc] disabled:opacity-40 text-xs px-2 py-1 rounded hover:bg-[#1a1a1a] transition-colors border border-transparent hover:border-[#2a2a2a]"
+          onClick={() => setMenuOpen((o) => !o)}
+          className="text-[#444] hover:text-white p-1 rounded hover:bg-[#1a1a1a] transition-colors text-base leading-none opacity-0 group-hover:opacity-100"
+          aria-label="Server options"
         >
-          {openingTerminal ? "…" : "Terminal"}
-        </button>
-        <button
-          onClick={() => { void handleConnect(); }}
-          disabled={connecting}
-          className="bg-accent hover:bg-accent-hover disabled:opacity-40 text-black text-xs font-semibold px-2.5 py-1 rounded transition-colors"
-        >
-          {connecting ? "…" : "Connect"}
+          ⋮
         </button>
 
-        <div className="relative" ref={menuRef}>
-          <button
-            onClick={() => setMenuOpen((o) => !o)}
-            className="text-[#555] hover:text-white p-1 rounded hover:bg-[#1a1a1a] transition-colors text-base leading-none"
-            aria-label="Server options"
-          >
-            ⋮
-          </button>
-
-          {menuOpen && (
-            <div className="absolute right-0 top-8 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-20 min-w-[130px] py-1">
+        {menuOpen && (
+          <div className="absolute right-0 top-8 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-20 min-w-[150px] py-1">
+            <button
+              onClick={() => { openEdit(server.id); setMenuOpen(false); }}
+              className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => { void handleOpenTerminal(); }}
+              disabled={openingTerminal}
+              className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors disabled:opacity-40"
+            >
+              {openingTerminal ? "Opening…" : "Open Terminal"}
+            </button>
+            {!confirmDelete ? (
               <button
-                onClick={() => { openEdit(server.id); setMenuOpen(false); }}
-                className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors"
+                onClick={() => setConfirmDelete(true)}
+                className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-[#1e1e1e] transition-colors"
               >
-                Edit
+                Delete
               </button>
-              {!confirmDelete ? (
-                <button
-                  onClick={() => setConfirmDelete(true)}
-                  className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-[#1e1e1e] transition-colors"
-                >
-                  Delete
-                </button>
-              ) : (
-                <div className="px-3 py-2 border-t border-[#2a2a2a]">
-                  <p className="text-xs text-[#bbb] mb-2">Delete this server?</p>
-                  <div className="flex gap-3">
-                    <button onClick={() => setConfirmDelete(false)} className="text-xs text-[#777] hover:text-white">
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      disabled={deleting}
-                      className="text-xs text-red-400 hover:text-red-300 font-semibold"
-                    >
-                      {deleting ? "…" : "Delete"}
-                    </button>
-                  </div>
+            ) : (
+              <div className="px-3 py-2 border-t border-[#2a2a2a]">
+                <p className="text-xs text-[#bbb] mb-2">Delete this server?</p>
+                <div className="flex gap-3">
+                  <button onClick={() => setConfirmDelete(false)} className="text-xs text-[#777] hover:text-white">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="text-xs text-red-400 hover:text-red-300 font-semibold"
+                  >
+                    {deleting ? "…" : "Delete"}
+                  </button>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

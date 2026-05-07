@@ -35,6 +35,7 @@ export default function ServerCard({ server }: Props) {
   }, [menuOpen]);
 
   const handleConnect = async () => {
+    if (connecting) return;
     setConnecting(true);
     setError(null);
     try {
@@ -47,13 +48,12 @@ export default function ServerCard({ server }: Props) {
   };
 
   const handleOpenTerminal = async () => {
+    setMenuOpen(false);
     setOpeningTerminal(true);
     setError(null);
     try {
       const result = await openSession(server.id, server.displayName);
-      if (result === null) {
-        setError("Maximum terminal sessions (20) reached");
-      }
+      if (result === null) setError("Maximum terminal sessions (20) reached");
     } catch (e) {
       setError(formatError(e));
     } finally {
@@ -73,18 +73,20 @@ export default function ServerCard({ server }: Props) {
   };
 
   return (
-    <div className="bg-[#111] border border-[#1e1e1e] rounded-lg p-4 flex flex-col gap-3 hover:border-[#2a2a2a] transition-colors">
-      {/* Header row: status dot + name/host + kebab */}
+    <div
+      onClick={() => { void handleConnect(); }}
+      className={`bg-[#111] border border-[#1e1e1e] rounded-lg p-4 flex flex-col gap-3 transition-colors select-none
+        ${connecting ? "opacity-60 cursor-wait" : "hover:border-[#2a2a2a] cursor-pointer hover:bg-[#131313]"}`}
+    >
+      {/* Header: dot + name/host + kebab */}
       <div className="flex items-start gap-2">
-        <div className="w-2 h-2 rounded-full bg-[#333] mt-1 shrink-0" />
+        <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${connecting ? "bg-accent animate-pulse" : "bg-[#333]"}`} />
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
             <span className="font-medium text-white truncate">{server.displayName}</span>
             {server.isJumpHost && (
-              <span className="text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded font-medium">
-                Jump
-              </span>
+              <span className="text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded font-medium">Jump</span>
             )}
           </div>
           <p className="text-sm text-[#888] font-mono truncate">
@@ -94,7 +96,11 @@ export default function ServerCard({ server }: Props) {
           </p>
         </div>
 
-        <div className="relative shrink-0" ref={menuRef}>
+        <div
+          className="relative shrink-0"
+          ref={menuRef}
+          onClick={(e) => e.stopPropagation()}
+        >
           <button
             onClick={() => setMenuOpen((o) => !o)}
             className="text-[#555] hover:text-white p-1 rounded hover:bg-[#1a1a1a] transition-colors text-lg leading-none"
@@ -104,12 +110,19 @@ export default function ServerCard({ server }: Props) {
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-8 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-20 min-w-[140px] py-1">
+            <div className="absolute right-0 top-8 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-20 min-w-[150px] py-1">
               <button
                 onClick={() => { openEdit(server.id); setMenuOpen(false); }}
                 className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors"
               >
                 Edit
+              </button>
+              <button
+                onClick={() => { void handleOpenTerminal(); }}
+                disabled={openingTerminal}
+                className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors disabled:opacity-40"
+              >
+                {openingTerminal ? "Opening…" : "Open Terminal"}
               </button>
               {!confirmDelete ? (
                 <button
@@ -140,7 +153,6 @@ export default function ServerCard({ server }: Props) {
         </div>
       </div>
 
-      {/* Tags */}
       {server.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {server.tags.map((tag) => (
@@ -155,24 +167,6 @@ export default function ServerCard({ server }: Props) {
       )}
 
       {error && <p className="text-xs text-red-400">{error}</p>}
-
-      {/* Actions pinned to the bottom */}
-      <div className="flex gap-2 mt-auto pt-3 border-t border-[#1a1a1a]">
-        <button
-          onClick={() => { void handleOpenTerminal(); }}
-          disabled={openingTerminal}
-          className="bg-[#1a1a1a] hover:bg-[#222] disabled:opacity-40 border border-[#2a2a2a] text-[#ccc] text-sm font-medium px-3 py-1.5 rounded transition-colors"
-        >
-          {openingTerminal ? "…" : "Terminal"}
-        </button>
-        <button
-          onClick={() => { void handleConnect(); }}
-          disabled={connecting}
-          className="flex-1 bg-accent hover:bg-accent-hover disabled:opacity-40 text-black text-sm font-semibold px-3 py-1.5 rounded transition-colors"
-        >
-          {connecting ? "Opening…" : "Connect"}
-        </button>
-      </div>
     </div>
   );
 }
