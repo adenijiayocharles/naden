@@ -71,7 +71,7 @@ export default function TerminalPane({ sessionId }: Props) {
   return (
     <div className="relative h-full w-full bg-[#0d0d0d]">
       {/* Terminal canvas — always mounted so xterm is ready the moment we connect */}
-      <div ref={containerRef} className="h-full w-full" style={{ padding: "4px" }} />
+      <div ref={containerRef} className="h-full w-full" style={{ padding: "12px" }} />
 
       {/* Connecting overlay */}
       {isConnecting && (
