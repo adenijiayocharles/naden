@@ -47,9 +47,10 @@ pub async fn vault_unlock(
 
     match crate::vault::master_password::verify(&state.db, &master_password).await? {
         Some(key) => {
-            // Reset failure counter on success.
             *state.unlock_failures.lock().await = (0, None);
             *state.vault_key.lock().await = Some(key);
+            // Reset auto-lock timer on successful unlock
+            *state.last_vault_activity.lock().await = std::time::Instant::now();
             Ok(true)
         }
         None => {

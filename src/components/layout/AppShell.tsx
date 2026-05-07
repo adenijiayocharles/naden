@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import { useVaultStore } from "../../store/vaultStore";
@@ -12,12 +12,20 @@ import VaultSetupModal from "../vault/VaultSetupModal";
 import TerminalPane from "../terminal/TerminalPane";
 import TerminalTabs from "../terminal/TerminalTabs";
 import AuditLogView from "../audit/AuditLogView";
+import OnboardingWizard from "../onboarding/OnboardingWizard";
+import { settingsCommands } from "../../lib/tauriCommands";
 
 export default function AppShell() {
   const fetchAll = useServerStore((s) => s.fetchAll);
   const activeView = useUiStore((s) => s.activeView);
   const serverListCollapsed = useUiStore((s) => s.serverListCollapsed);
   const toggleServerList = useUiStore((s) => s.toggleServerList);
+  const openAdd = useUiStore((s) => s.openAdd);
+  const openSettings = useUiStore((s) => s.openSettings);
+  const onboardingComplete = useUiStore((s) => s.onboardingComplete);
+  const onboardingChecked = useUiStore((s) => s.onboardingChecked);
+  const setOnboardingComplete = useUiStore((s) => s.setOnboardingComplete);
+  const setOnboardingChecked = useUiStore((s) => s.setOnboardingChecked);
   const { isSetup, isUnlocked, isChecking, setupDismissed, check } = useVaultStore();
   const sessions = useTerminalStore((s) => s.sessions);
   const activeSessionId = useTerminalStore((s) => s.activeSessionId);
@@ -27,7 +35,57 @@ export default function AppShell() {
   useEffect(() => {
     void fetchAll();
     void check();
-  }, [fetchAll, check]);
+    // Check onboarding once on mount
+    settingsCommands.getSetting("onboarding_complete")
+      .then((v) => {
+        setOnboardingComplete(v === "true");
+        setOnboardingChecked();
+      })
+      .catch(() => { setOnboardingChecked(); });
+  }, [fetchAll, check, setOnboardingComplete, setOnboardingChecked]);
+
+  // Keyboard shortcuts
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    const meta = e.metaKey || e.ctrlKey;
+    if (!meta) return;
+    switch (e.key) {
+      case "k":
+        e.preventDefault();
+        document.querySelector<HTMLInputElement>("[data-search-input]")?.focus();
+        break;
+      case "n":
+        e.preventDefault();
+        openAdd();
+        break;
+      case ",":
+        e.preventDefault();
+        openSettings();
+        break;
+    }
+  }, [openAdd, openSettings]);
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
+  // Vault heartbeat — throttled to once per minute on user activity
+  useEffect(() => {
+    let lastBeat = 0;
+    const beat = () => {
+      const now = Date.now();
+      if (now - lastBeat > 60_000) {
+        lastBeat = now;
+        settingsCommands.vaultHeartbeat().catch(() => {});
+      }
+    };
+    window.addEventListener("mousemove", beat, { passive: true });
+    window.addEventListener("keydown", beat, { passive: true });
+    return () => {
+      window.removeEventListener("mousemove", beat);
+      window.removeEventListener("keydown", beat);
+    };
+  }, []);
 
   if (isChecking) {
     return (
@@ -101,7 +159,10 @@ export default function AppShell() {
       </div>
 
       {(activeView === "add" || activeView === "edit") && <ServerForm />}
-      {!isSetup && !setupDismissed && <VaultSetupModal />}
+      {!isSetup && !setupDismissed && onboardingComplete && <VaultSetupModal />}
+      {onboardingChecked && !onboardingComplete && (
+        <OnboardingWizard onComplete={() => setOnboardingComplete(true)} />
+      )}
     </div>
   );
 }

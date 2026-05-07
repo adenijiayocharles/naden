@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 interface VaultStore {
   isSetup: boolean;
@@ -67,3 +68,8 @@ export const useVaultStore = create<VaultStore>((set) => ({
     await invoke("vault_change_password", { currentPassword, newPassword });
   },
 }));
+
+// Lock the vault whenever the Rust auto-lock task fires
+void listen("vault_auto_locked", () => {
+  useVaultStore.setState({ isUnlocked: false });
+});

@@ -1,4 +1,4 @@
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 mod commands;
 mod db;
@@ -19,6 +19,8 @@ pub struct AppState {
     pub server_cache: tokio::sync::RwLock<Vec<models::server::ServerWithTags>>,
     /// Active built-in terminal sessions.
     pub session_manager: ssh::connection::SessionManager,
+    /// Timestamp of the last vault-related activity; used by the auto-lock task.
+    pub last_vault_activity: tokio::sync::Mutex<std::time::Instant>,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -46,6 +48,10 @@ pub fn run() {
             // Backup
             commands::backup_commands::export_backup,
             commands::backup_commands::import_backup,
+            // Settings
+            commands::settings_commands::get_setting,
+            commands::settings_commands::set_setting,
+            commands::settings_commands::vault_heartbeat,
             // SSH
             commands::ssh_commands::launch_in_terminal,
             commands::ssh_commands::import_ssh_config,
@@ -80,7 +86,6 @@ pub fn run() {
                 .block_on(db::queries::list_servers_db(&pool))
                 .unwrap_or_default();
 
-            // Auto-unlock when the user has opted out of password protection.
             let password_required = rt
                 .block_on(vault::master_password::is_password_required(&pool))
                 .unwrap_or(true);
@@ -96,9 +101,59 @@ pub fn run() {
                 unlock_failures: tokio::sync::Mutex::new((0, None)),
                 server_cache: tokio::sync::RwLock::new(initial_cache),
                 session_manager: ssh::connection::SessionManager::new(),
+                last_vault_activity: tokio::sync::Mutex::new(std::time::Instant::now()),
             });
+
+            // Spawn vault auto-lock background task
+            let handle = app.handle().clone();
+            tokio::spawn(async move {
+                auto_lock_task(handle).await;
+            });
+
             Ok(())
         })
         .run(tauri::generate_context!())
         .expect("error while running SSH Manager");
+}
+
+/// Checks every 30 seconds whether the vault should be auto-locked based on
+/// the `vault_timeout_minutes` setting and time since last vault activity.
+async fn auto_lock_task(app: tauri::AppHandle) {
+    let interval = std::time::Duration::from_secs(30);
+    loop {
+        tokio::time::sleep(interval).await;
+
+        let state = app.state::<AppState>();
+
+        // Skip if vault is already locked
+        if state.vault_key.lock().await.is_none() {
+            continue;
+        }
+
+        // Read timeout setting (0 = disabled)
+        let timeout_mins: u64 = sqlx::query_scalar::<_, String>(
+            "SELECT value FROM settings WHERE key = 'vault_timeout_minutes'",
+        )
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+
+        if timeout_mins == 0 {
+            continue;
+        }
+
+        let elapsed = state
+            .last_vault_activity
+            .lock()
+            .await
+            .elapsed();
+
+        if elapsed >= std::time::Duration::from_secs(timeout_mins * 60) {
+            *state.vault_key.lock().await = None;
+            let _ = app.emit("vault_auto_locked", ());
+        }
+    }
 }

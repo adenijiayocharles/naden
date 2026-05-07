@@ -63,6 +63,17 @@ export const terminalCommands = {
     invoke<void>("resize_terminal", { sessionId, cols, rows }),
 };
 
+export const settingsCommands = {
+  getSetting: (key: string) =>
+    invoke<string | null>("get_setting", { key }),
+
+  setSetting: (key: string, value: string) =>
+    invoke<void>("set_setting", { key, value }),
+
+  vaultHeartbeat: () =>
+    invoke<void>("vault_heartbeat"),
+};
+
 export interface ImportSummary {
   serversImported: number;
   groupsImported: number;

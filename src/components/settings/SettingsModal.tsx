@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { save, open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useVaultStore } from "../../store/vaultStore";
 import { useServerStore } from "../../store/serverStore";
-import { backupCommands } from "../../lib/tauriCommands";
+import { backupCommands, settingsCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 
 interface Props {
@@ -49,6 +49,18 @@ export default function SettingsModal({ onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Vault timeout
+  const [timeoutMins, setTimeoutMins] = useState("0");
+  useEffect(() => {
+    settingsCommands.getSetting("vault_timeout_minutes")
+      .then((v) => { if (v !== null) setTimeoutMins(v); })
+      .catch(() => {});
+  }, []);
+  const saveTimeout = (v: string) => {
+    setTimeoutMins(v);
+    settingsCommands.setSetting("vault_timeout_minutes", v).catch(() => {});
+  };
 
   // Backup state
   const [backupMode, setBackupMode] = useState<"none" | "export" | "import">("none");
@@ -376,6 +388,23 @@ export default function SettingsModal({ onClose }: Props) {
                 )}
               </div>
             )}
+          </div>
+
+          {/* Vault timeout */}
+          <div className="flex items-center justify-between py-3 border-b border-[#1e1e1e]">
+            <div>
+              <p className="text-sm text-white font-medium">Auto-lock vault</p>
+              <p className="text-xs text-[#777] mt-0.5">Lock after this many minutes of inactivity (0 = never)</p>
+            </div>
+            <select
+              value={timeoutMins}
+              onChange={(e) => saveTimeout(e.target.value)}
+              className="ml-4 bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+            >
+              {[["0","Never"],["5","5 min"],["15","15 min"],["30","30 min"],["60","1 hour"],["120","2 hours"]].map(([v, l]) => (
+                <option key={v} value={v}>{l}</option>
+              ))}
+            </select>
           </div>
 
           {/* Backup section */}

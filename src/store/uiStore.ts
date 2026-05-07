@@ -9,6 +9,9 @@ interface UiStore {
   activeView: ActiveView;
   viewMode: ViewMode;
   serverListCollapsed: boolean;
+  settingsOpen: boolean;
+  onboardingComplete: boolean;
+  onboardingChecked: boolean;
   editingServerId: string | null;
   filterGroupId: string | null;
   filterTagId: string | null;
@@ -19,6 +22,10 @@ interface UiStore {
   openEdit: (serverId: string) => void;
   openAudit: () => void;
   closeForm: () => void;
+  openSettings: () => void;
+  closeSettings: () => void;
+  setOnboardingComplete: (v: boolean) => void;
+  setOnboardingChecked: () => void;
   setFilterGroup: (groupId: string | null) => void;
   setFilterTag: (tagId: string | null) => void;
   setSearch: (query: string) => void;
@@ -32,6 +39,9 @@ export const useUiStore = create<UiStore>((set) => ({
   activeView: "list",
   viewMode: "card",
   serverListCollapsed: false,
+  settingsOpen: false,
+  onboardingComplete: true, // assume complete until checked
+  onboardingChecked: false,
   editingServerId: null,
   filterGroupId: null,
   filterTagId: null,
@@ -42,6 +52,10 @@ export const useUiStore = create<UiStore>((set) => ({
   openEdit: (serverId) => set({ activeView: "edit", editingServerId: serverId }),
   openAudit: () => set({ activeView: "audit", editingServerId: null }),
   closeForm: () => set({ activeView: "list", editingServerId: null }),
+  openSettings: () => set({ settingsOpen: true }),
+  closeSettings: () => set({ settingsOpen: false }),
+  setOnboardingComplete: (v) => set({ onboardingComplete: v }),
+  setOnboardingChecked: () => set({ onboardingChecked: true }),
   setFilterGroup: (groupId) => set({ filterGroupId: groupId, filterTagId: null }),
   setFilterTag: (tagId) => set({ filterTagId: tagId, filterGroupId: null }),
 

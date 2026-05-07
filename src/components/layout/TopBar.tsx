@@ -9,8 +9,10 @@ export default function TopBar() {
   const searchQuery = useUiStore((s) => s.searchQuery);
   const viewMode = useUiStore((s) => s.viewMode);
   const setViewMode = useUiStore((s) => s.setViewMode);
+  const settingsOpen = useUiStore((s) => s.settingsOpen);
+  const openSettings = useUiStore((s) => s.openSettings);
+  const closeSettings = useUiStore((s) => s.closeSettings);
   const [showImport, setShowImport] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -18,6 +20,7 @@ export default function TopBar() {
       <header className="h-14 shrink-0 border-b border-[#1e1e1e] bg-[#0d0d0d] flex items-center px-4 gap-3">
         <input
           ref={inputRef}
+          data-search-input
           value={searchQuery}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search servers…"
@@ -69,7 +72,7 @@ export default function TopBar() {
             + Add Server
           </button>
           <button
-            onClick={() => setShowSettings(true)}
+            onClick={openSettings}
             className="text-[#888] hover:text-white p-1.5 rounded hover:bg-[#1a1a1a] transition-colors"
             aria-label="Settings"
           >
@@ -82,7 +85,7 @@ export default function TopBar() {
       </header>
 
       {showImport && <SshConfigImport onClose={() => setShowImport(false)} />}
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {settingsOpen && <SettingsModal onClose={closeSettings} />}
     </>
   );
 }
