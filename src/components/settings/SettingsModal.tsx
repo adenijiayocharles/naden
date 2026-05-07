@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { save, open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useVaultStore } from "../../store/vaultStore";
+import { useServerStore } from "../../store/serverStore";
 import { backupCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 
@@ -43,6 +44,7 @@ function strength(pwd: string): { label: string; color: string; pct: string } {
 
 export default function SettingsModal({ onClose }: Props) {
   const { isPasswordRequired, disablePassword, enablePassword, changePassword } = useVaultStore();
+  const fetchAll = useServerStore((s) => s.fetchAll);
   const [activeForm, setActiveForm] = useState<ActiveForm>("none");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -105,9 +107,10 @@ export default function SettingsModal({ onClose }: Props) {
       if (!selected) { setBackupLoading(false); return; }
       const path = typeof selected === "string" ? selected : selected[0];
       const summary = await backupCommands.importBackup(path, backupPwd);
+      await fetchAll();
       setBackupMsg({
         type: "ok",
-        text: `Imported ${summary.serversImported} server(s), ${summary.groupsImported} group(s), ${summary.tagsImported} tag(s). ${summary.serversSkipped > 0 ? `${summary.serversSkipped} already existed and were skipped.` : ""}`,
+        text: `Imported ${summary.serversImported} server(s), ${summary.groupsImported} group(s), ${summary.tagsImported} tag(s).${summary.serversSkipped > 0 ? ` ${summary.serversSkipped} already existed and were skipped.` : ""}`,
       });
       setBackupPwd("");
       setBackupMode("none");
