@@ -1,0 +1,28 @@
+# Suggested Updates
+
+## UX / Usability
+- [ ] Server duplication — clone an entry with one click (useful for similar servers)
+- [ ] Bulk operations — multi-select to delete or move servers to a group
+- [ ] Sort servers by name, group, or last connected
+- [ ] "Recently connected" section at the top of the server list
+- [ ] Server ping / TCP port check to show reachability before connecting
+
+## Terminal
+- [x] Session reconnect — when a session drops, offer a reconnect button instead of just closing the tab
+- [x] Per-session terminal settings (font size, scrollback limit) rather than hardcoded values
+- [x] Copy selected text to clipboard automatically (xterm `copyOnSelect` option)
+- [x] Terminal search (`Ctrl+F`) via xterm's `SearchAddon`
+
+## Security
+- [ ] Touch ID unlock via macOS `LocalAuthentication` through a Tauri plugin
+- [ ] Vault auto-lock countdown indicator in the UI
+- [ ] Clipboard auto-clear after copying a password (e.g. 30 seconds)
+
+## Missing PRD Features (P3)
+- [ ] SFTP file browser
+- [ ] Cloud sync for the server list (credentials stay local)
+
+## Code Quality
+- [ ] Finish and commit in-progress work: `vault_commands.rs`, `master_password.rs`, `vaultStore.ts`, `TopBar.tsx`, `src/components/settings/`
+- [ ] Frontend unit tests with Vitest (zero coverage currently)
+- [ ] Rust tests for SSH config parser and vault encryption/decryption roundtrip

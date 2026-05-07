@@ -24,6 +24,7 @@ interface TerminalStore {
 
   openSession: (serverId: string, serverName: string) => Promise<string | null>;
   closeSession: (sessionId: string) => Promise<void>;
+  reconnectSession: (sessionId: string) => Promise<void>;
   setActive: (sessionId: string) => void;
   removeSession: (sessionId: string) => void;
 }
@@ -80,7 +81,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
             s.id === sessionId ? { ...s, status: "error", errorMessage: payload } : s,
           ),
         }));
-        setTimeout(() => get().removeSession(sessionId), 3000);
+        // No auto-removal — the TerminalPane error overlay lets the user reconnect or close
       }),
     ]);
 
@@ -109,6 +110,15 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     }
 
     set((state) => dropFromState(state, sessionId));
+  },
+
+  reconnectSession: async (sessionId) => {
+    const session = get().sessions.find((s) => s.id === sessionId);
+    if (!session) return;
+    const { serverId, serverName } = session;
+    teardownResources(sessionId);
+    set((state) => dropFromState(state, sessionId));
+    await get().openSession(serverId, serverName);
   },
 
   setActive: (sessionId) => set({ activeSessionId: sessionId }),

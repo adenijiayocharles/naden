@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { save, open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useVaultStore } from "../../store/vaultStore";
 import { useServerStore } from "../../store/serverStore";
+import { useTerminalSettings } from "../../lib/terminalSettings";
 import { backupCommands, settingsCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 
@@ -45,6 +46,8 @@ function strength(pwd: string): { label: string; color: string; pct: string } {
 export default function SettingsModal({ onClose }: Props) {
   const { isPasswordRequired, disablePassword, enablePassword, changePassword } = useVaultStore();
   const fetchAll = useServerStore((s) => s.fetchAll);
+  const { fontSize, scrollback, copyOnSelect, setFontSize, setScrollback, setCopyOnSelect } =
+    useTerminalSettings();
   const [activeForm, setActiveForm] = useState<ActiveForm>("none");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -474,6 +477,63 @@ export default function SettingsModal({ onClose }: Props) {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Terminal section */}
+          <div>
+            <p className="text-xs font-semibold text-[#777] uppercase tracking-wider mb-3">Terminal</p>
+            <p className="text-xs text-[#555] mb-3">Changes apply to new sessions.</p>
+
+            <div className="flex items-center justify-between py-3 border-b border-[#1e1e1e]">
+              <div>
+                <p className="text-sm text-white font-medium">Font size</p>
+              </div>
+              <select
+                value={fontSize}
+                onChange={(e) => setFontSize(Number(e.target.value))}
+                className="ml-4 bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+              >
+                {[10, 12, 13, 14, 16, 18, 20].map((n) => (
+                  <option key={n} value={n}>{n}px</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between py-3 border-b border-[#1e1e1e]">
+              <div>
+                <p className="text-sm text-white font-medium">Scrollback lines</p>
+                <p className="text-xs text-[#777] mt-0.5">Lines retained above the viewport</p>
+              </div>
+              <select
+                value={scrollback}
+                onChange={(e) => setScrollback(Number(e.target.value))}
+                className="ml-4 bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+              >
+                {[[500,"500"],[1000,"1 000"],[5000,"5 000"],[10000,"10 000"],[50000,"50 000"]].map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between py-3">
+              <div>
+                <p className="text-sm text-white font-medium">Copy on select</p>
+                <p className="text-xs text-[#777] mt-0.5">Automatically copy selected text to clipboard</p>
+              </div>
+              <button
+                onClick={() => setCopyOnSelect(!copyOnSelect)}
+                className={`relative w-10 h-5.5 rounded-full transition-colors shrink-0 ml-4 ${
+                  copyOnSelect ? "bg-accent" : "bg-[#333]"
+                }`}
+                aria-label="Toggle copy on select"
+              >
+                <span
+                  className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                    copyOnSelect ? "translate-x-5" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+            </div>
           </div>
 
           {/* Success banner */}

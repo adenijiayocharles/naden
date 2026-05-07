@@ -14,6 +14,7 @@ import TerminalTabs from "../terminal/TerminalTabs";
 import AuditLogView from "../audit/AuditLogView";
 import OnboardingWizard from "../onboarding/OnboardingWizard";
 import { settingsCommands } from "../../lib/tauriCommands";
+import { useTerminalSettings } from "../../lib/terminalSettings";
 
 export default function AppShell() {
   const fetchAll = useServerStore((s) => s.fetchAll);
@@ -27,6 +28,7 @@ export default function AppShell() {
   const setOnboardingComplete = useUiStore((s) => s.setOnboardingComplete);
   const setOnboardingChecked = useUiStore((s) => s.setOnboardingChecked);
   const { isSetup, isUnlocked, isChecking, setupDismissed, check } = useVaultStore();
+  const loadTerminalSettings = useTerminalSettings((s) => s.load);
   const sessions = useTerminalStore((s) => s.sessions);
   const activeSessionId = useTerminalStore((s) => s.activeSessionId);
   const hasTerminal = sessions.length > 0;
@@ -35,6 +37,7 @@ export default function AppShell() {
   useEffect(() => {
     void fetchAll();
     void check();
+    void loadTerminalSettings();
     // Check onboarding once on mount
     settingsCommands.getSetting("onboarding_complete")
       .then((v) => {
@@ -42,7 +45,7 @@ export default function AppShell() {
         setOnboardingChecked();
       })
       .catch(() => { setOnboardingChecked(); });
-  }, [fetchAll, check, setOnboardingComplete, setOnboardingChecked]);
+  }, [fetchAll, check, loadTerminalSettings, setOnboardingComplete, setOnboardingChecked]);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
