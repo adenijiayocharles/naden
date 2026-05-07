@@ -58,7 +58,7 @@ pub async fn vault_unlock(
             *count += 1;
             // After 5 failures, apply exponential backoff: 30s × 2^(extra failures), max 1 h.
             if *count >= 5 {
-                let extra = (*count - 5).min(7) as u32;
+                let extra = (*count - 5).min(7);
                 let secs = 30u64 * (1u64 << extra);
                 *lockout_until =
                     Some(std::time::Instant::now() + std::time::Duration::from_secs(secs));
@@ -103,6 +103,69 @@ pub async fn retrieve_credential(
         return Err(AppError::Vault("vault is locked".into()));
     }
     vault::retrieve_credential(&vault_credential_id).await
+}
+
+#[tauri::command]
+pub async fn vault_is_password_required(
+    state: tauri::State<'_, AppState>,
+) -> Result<bool, AppError> {
+    master_password::is_password_required(&state.db).await
+}
+
+/// Disables vault password protection. Requires the current password to confirm.
+#[tauri::command]
+pub async fn vault_disable_password(
+    current_password: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    if master_password::verify(&state.db, &current_password).await?.is_none() {
+        return Err(AppError::Vault("incorrect password".into()));
+    }
+    master_password::disable_password(&state.db).await?;
+    // Ensure the vault stays unlocked with a placeholder key.
+    let mut key_guard = state.vault_key.lock().await;
+    if key_guard.is_none() {
+        *key_guard = Some(zeroize::Zeroizing::new([0u8; 32]));
+    }
+    Ok(())
+}
+
+/// Enables vault password protection and sets an initial master password.
+#[tauri::command]
+pub async fn vault_enable_password(
+    new_password: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    if new_password.len() < 8 {
+        return Err(AppError::Validation(
+            "master password must be at least 8 characters".into(),
+        ));
+    }
+    let key = master_password::setup(&state.db, &new_password).await?;
+    master_password::set_password_required(&state.db, true).await?;
+    *state.vault_key.lock().await = Some(key);
+    Ok(())
+}
+
+/// Changes the master password. Requires the current password to confirm.
+#[tauri::command]
+pub async fn vault_change_password(
+    current_password: String,
+    new_password: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    if new_password.len() < 8 {
+        return Err(AppError::Validation(
+            "master password must be at least 8 characters".into(),
+        ));
+    }
+    if master_password::verify(&state.db, &current_password).await?.is_none() {
+        return Err(AppError::Vault("incorrect current password".into()));
+    }
+    *state.unlock_failures.lock().await = (0, None);
+    let key = master_password::setup(&state.db, &new_password).await?;
+    *state.vault_key.lock().await = Some(key);
+    Ok(())
 }
 
 /// Deletes a secret from the OS keychain. Vault must be unlocked.

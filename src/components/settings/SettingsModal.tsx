@@ -1,0 +1,337 @@
+import { useState } from "react";
+import { useVaultStore } from "../../store/vaultStore";
+import { formatError } from "../../lib/errors";
+
+interface Props {
+  onClose: () => void;
+}
+
+type ActiveForm = "none" | "disable" | "enable" | "change";
+
+function PasswordInput({
+  value,
+  onChange,
+  placeholder,
+  autoFocus,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  autoFocus?: boolean;
+}) {
+  return (
+    <input
+      autoFocus={autoFocus}
+      type="password"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-3 py-2 text-sm text-white placeholder-[#666] focus:outline-none focus:border-accent transition-colors"
+    />
+  );
+}
+
+function strength(pwd: string): { label: string; color: string; pct: string } {
+  if (pwd.length === 0) return { label: "", color: "bg-[#222]", pct: "0%" };
+  if (pwd.length < 8)   return { label: "Too short", color: "bg-red-500",    pct: "25%" };
+  if (pwd.length < 12)  return { label: "Weak",      color: "bg-orange-500", pct: "50%" };
+  if (pwd.length < 16)  return { label: "Moderate",  color: "bg-yellow-400", pct: "75%" };
+  return                       { label: "Strong",    color: "bg-accent",     pct: "100%" };
+}
+
+export default function SettingsModal({ onClose }: Props) {
+  const { isPasswordRequired, disablePassword, enablePassword, changePassword } = useVaultStore();
+  const [activeForm, setActiveForm] = useState<ActiveForm>("none");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Disable form state
+  const [disablePwd, setDisablePwd] = useState("");
+
+  // Enable form state
+  const [enablePwd, setEnablePwd] = useState("");
+  const [enableConfirm, setEnableConfirm] = useState("");
+
+  // Change password form state
+  const [changeCurrent, setChangeCurrent] = useState("");
+  const [changeNew, setChangeNew] = useState("");
+  const [changeConfirm, setChangeConfirm] = useState("");
+
+  const reset = () => {
+    setError(null);
+    setSuccess(null);
+    setDisablePwd("");
+    setEnablePwd("");
+    setEnableConfirm("");
+    setChangeCurrent("");
+    setChangeNew("");
+    setChangeConfirm("");
+  };
+
+  const openForm = (form: ActiveForm) => {
+    reset();
+    setActiveForm(form);
+  };
+
+  const handleToggle = () => {
+    if (isPasswordRequired) {
+      openForm(activeForm === "disable" ? "none" : "disable");
+    } else {
+      openForm(activeForm === "enable" ? "none" : "enable");
+    }
+  };
+
+  const submitDisable = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await disablePassword(disablePwd);
+      setSuccess("Vault password disabled. The app will no longer require a password on launch.");
+      setActiveForm("none");
+      setDisablePwd("");
+    } catch (e) {
+      setError(formatError(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitEnable = async () => {
+    if (enablePwd !== enableConfirm) { setError("Passwords do not match."); return; }
+    if (enablePwd.length < 8) { setError("Password must be at least 8 characters."); return; }
+    setLoading(true);
+    setError(null);
+    try {
+      await enablePassword(enablePwd);
+      setSuccess("Vault password enabled. You will be asked for it on next launch.");
+      setActiveForm("none");
+      setEnablePwd("");
+      setEnableConfirm("");
+    } catch (e) {
+      setError(formatError(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitChange = async () => {
+    if (changeNew !== changeConfirm) { setError("New passwords do not match."); return; }
+    if (changeNew.length < 8) { setError("New password must be at least 8 characters."); return; }
+    setLoading(true);
+    setError(null);
+    try {
+      await changePassword(changeCurrent, changeNew);
+      setSuccess("Master password changed successfully.");
+      setActiveForm("none");
+      setChangeCurrent("");
+      setChangeNew("");
+      setChangeConfirm("");
+    } catch (e) {
+      setError(formatError(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const { label: strengthLabel, color: strengthColor, pct: strengthPct } =
+    strength(activeForm === "enable" ? enablePwd : changeNew);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-[#111] border border-[#1e1e1e] rounded-xl shadow-2xl w-full max-w-lg flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e1e1e]">
+          <h2 className="text-lg font-semibold text-white">Settings</h2>
+          <button onClick={onClose} className="text-[#777] hover:text-white p-1 rounded" aria-label="Close">✕</button>
+        </div>
+
+        <div className="px-6 py-5 space-y-6">
+          {/* Security section */}
+          <div>
+            <p className="text-xs font-semibold text-[#777] uppercase tracking-wider mb-3">Security</p>
+
+            {/* Vault password toggle */}
+            <div className="flex items-center justify-between py-3 border-b border-[#1e1e1e]">
+              <div>
+                <p className="text-sm text-white font-medium">Require master password</p>
+                <p className="text-xs text-[#777] mt-0.5">
+                  {isPasswordRequired
+                    ? "App is locked with a password on launch."
+                    : "App opens without a password. Credentials still use the OS keychain."}
+                </p>
+              </div>
+              <button
+                onClick={handleToggle}
+                className={`relative w-10 h-5.5 rounded-full transition-colors shrink-0 ml-4 ${
+                  isPasswordRequired ? "bg-accent" : "bg-[#333]"
+                }`}
+                aria-label="Toggle vault password"
+              >
+                <span
+                  className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                    isPasswordRequired ? "translate-x-5" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Disable password form */}
+            {activeForm === "disable" && (
+              <div className="mt-3 space-y-3 p-3 bg-[#0d0d0d] rounded-lg border border-[#1e1e1e]">
+                <p className="text-xs text-[#bbb]">Enter your current master password to disable vault protection.</p>
+                <PasswordInput
+                  autoFocus
+                  value={disablePwd}
+                  onChange={setDisablePwd}
+                  placeholder="Current password"
+                />
+                {error && <p className="text-xs text-red-400">{error}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openForm("none")}
+                    className="flex-1 py-2 text-xs text-[#777] hover:text-white bg-[#1a1a1a] hover:bg-[#222] rounded transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => { void submitDisable(); }}
+                    disabled={loading || !disablePwd}
+                    className="flex-1 py-2 text-xs text-black bg-red-500 hover:bg-red-400 disabled:opacity-40 rounded transition-colors font-semibold"
+                  >
+                    {loading ? "Verifying…" : "Disable password"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Enable password form */}
+            {activeForm === "enable" && (
+              <div className="mt-3 space-y-3 p-3 bg-[#0d0d0d] rounded-lg border border-[#1e1e1e]">
+                <p className="text-xs text-[#bbb]">Set a master password to protect vault access on launch.</p>
+                <div>
+                  <PasswordInput
+                    autoFocus
+                    value={enablePwd}
+                    onChange={(v) => { setEnablePwd(v); setError(null); }}
+                    placeholder="New password"
+                  />
+                  {enablePwd.length > 0 && (
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <div className="flex-1 h-1 bg-[#222] rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${strengthColor}`} style={{ width: strengthPct }} />
+                      </div>
+                      <span className="text-xs text-[#777] w-16 text-right">{strengthLabel}</span>
+                    </div>
+                  )}
+                </div>
+                <PasswordInput
+                  value={enableConfirm}
+                  onChange={(v) => { setEnableConfirm(v); setError(null); }}
+                  placeholder="Confirm password"
+                />
+                {error && <p className="text-xs text-red-400">{error}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openForm("none")}
+                    className="flex-1 py-2 text-xs text-[#777] hover:text-white bg-[#1a1a1a] hover:bg-[#222] rounded transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => { void submitEnable(); }}
+                    disabled={loading || enablePwd.length < 8 || enablePwd !== enableConfirm}
+                    className="flex-1 py-2 text-xs text-black bg-accent hover:bg-accent-hover disabled:opacity-40 rounded transition-colors font-semibold"
+                  >
+                    {loading ? "Setting up…" : "Enable password"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Change password button + form */}
+            {isPasswordRequired && (
+              <div className="mt-1">
+                <button
+                  onClick={() => openForm(activeForm === "change" ? "none" : "change")}
+                  className="w-full text-left py-3 text-sm text-[#bbb] hover:text-white transition-colors flex items-center justify-between"
+                >
+                  <span>Change master password</span>
+                  <svg className={`w-3.5 h-3.5 text-[#777] transition-transform ${activeForm === "change" ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {activeForm === "change" && (
+                  <div className="mb-2 space-y-3 p-3 bg-[#0d0d0d] rounded-lg border border-[#1e1e1e]">
+                    <PasswordInput
+                      autoFocus
+                      value={changeCurrent}
+                      onChange={(v) => { setChangeCurrent(v); setError(null); }}
+                      placeholder="Current password"
+                    />
+                    <div>
+                      <PasswordInput
+                        value={changeNew}
+                        onChange={(v) => { setChangeNew(v); setError(null); }}
+                        placeholder="New password"
+                      />
+                      {changeNew.length > 0 && (
+                        <div className="mt-1.5 flex items-center gap-2">
+                          <div className="flex-1 h-1 bg-[#222] rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all ${strengthColor}`} style={{ width: strengthPct }} />
+                          </div>
+                          <span className="text-xs text-[#777] w-16 text-right">{strengthLabel}</span>
+                        </div>
+                      )}
+                    </div>
+                    <PasswordInput
+                      value={changeConfirm}
+                      onChange={(v) => { setChangeConfirm(v); setError(null); }}
+                      placeholder="Confirm new password"
+                    />
+                    {error && <p className="text-xs text-red-400">{error}</p>}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => openForm("none")}
+                        className="flex-1 py-2 text-xs text-[#777] hover:text-white bg-[#1a1a1a] hover:bg-[#222] rounded transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => { void submitChange(); }}
+                        disabled={loading || !changeCurrent || changeNew.length < 8 || changeNew !== changeConfirm}
+                        className="flex-1 py-2 text-xs text-black bg-accent hover:bg-accent-hover disabled:opacity-40 rounded transition-colors font-semibold"
+                      >
+                        {loading ? "Updating…" : "Change password"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Success banner */}
+          {success && (
+            <p className="text-sm text-green-400 bg-green-950 border border-green-800 rounded-md px-3 py-2">
+              ✓ {success}
+            </p>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-[#1e1e1e] flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-[#777] hover:text-white bg-[#1a1a1a] hover:bg-[#222] rounded transition-colors"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

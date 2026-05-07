@@ -6,12 +6,16 @@ interface VaultStore {
   isUnlocked: boolean;
   isChecking: boolean;
   setupDismissed: boolean;
+  isPasswordRequired: boolean;
 
   check: () => Promise<void>;
   setup: (password: string) => Promise<void>;
   unlock: (password: string) => Promise<boolean>;
   lock: () => Promise<void>;
   dismissSetup: () => void;
+  disablePassword: (currentPassword: string) => Promise<void>;
+  enablePassword: (newPassword: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 export const useVaultStore = create<VaultStore>((set) => ({
@@ -19,14 +23,16 @@ export const useVaultStore = create<VaultStore>((set) => ({
   isUnlocked: false,
   isChecking: true,
   setupDismissed: false,
+  isPasswordRequired: true,
 
   check: async () => {
     set({ isChecking: true });
-    const [isSetup, isUnlocked] = await Promise.all([
+    const [isSetup, isUnlocked, isPasswordRequired] = await Promise.all([
       invoke<boolean>("vault_is_setup"),
       invoke<boolean>("vault_is_unlocked"),
+      invoke<boolean>("vault_is_password_required"),
     ]);
-    set({ isSetup, isUnlocked, isChecking: false });
+    set({ isSetup, isUnlocked, isPasswordRequired, isChecking: false });
   },
 
   setup: async (password) => {
@@ -46,4 +52,18 @@ export const useVaultStore = create<VaultStore>((set) => ({
   },
 
   dismissSetup: () => set({ setupDismissed: true }),
+
+  disablePassword: async (currentPassword) => {
+    await invoke("vault_disable_password", { currentPassword });
+    set({ isPasswordRequired: false, isSetup: true, isUnlocked: true });
+  },
+
+  enablePassword: async (newPassword) => {
+    await invoke("vault_enable_password", { newPassword });
+    set({ isPasswordRequired: true, isSetup: true, isUnlocked: true });
+  },
+
+  changePassword: async (currentPassword, newPassword) => {
+    await invoke("vault_change_password", { currentPassword, newPassword });
+  },
 }));

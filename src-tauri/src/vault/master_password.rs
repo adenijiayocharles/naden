@@ -36,7 +36,38 @@ fn verification_hash(key: &[u8; KEY_LEN]) -> [u8; 32] {
     h.finalize().into()
 }
 
+pub async fn is_password_required(db: &SqlitePool) -> Result<bool, AppError> {
+    let val: Option<String> =
+        sqlx::query_scalar("SELECT value FROM vault_meta WHERE key = 'password_required'")
+            .fetch_optional(db)
+            .await?;
+    // Default true: existing vaults that pre-date this setting require a password.
+    Ok(val.map(|v| v != "false").unwrap_or(true))
+}
+
+pub async fn set_password_required(db: &SqlitePool, required: bool) -> Result<(), AppError> {
+    sqlx::query(
+        "INSERT OR REPLACE INTO vault_meta (key, value) VALUES ('password_required', ?)",
+    )
+    .bind(if required { "true" } else { "false" })
+    .execute(db)
+    .await?;
+    Ok(())
+}
+
+/// Removes PBKDF2 credentials and marks the vault as not requiring a password.
+pub async fn disable_password(db: &SqlitePool) -> Result<(), AppError> {
+    sqlx::query("DELETE FROM vault_meta WHERE key IN ('pbkdf2_salt', 'verification')")
+        .execute(db)
+        .await?;
+    set_password_required(db, false).await
+}
+
 pub async fn is_setup(db: &SqlitePool) -> Result<bool, AppError> {
+    // When password protection is off the vault is always considered set up.
+    if !is_password_required(db).await? {
+        return Ok(true);
+    }
     let count: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM vault_meta WHERE key = 'pbkdf2_salt'")
             .fetch_one(db)
