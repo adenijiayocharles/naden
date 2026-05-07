@@ -7,15 +7,35 @@ import { useTerminalStore } from "../../store/terminalStore";
 
 interface Props {
   sessionId: string;
+  isActive: boolean;
 }
 
-export default function TerminalPane({ sessionId }: Props) {
+export default function TerminalPane({ sessionId, isActive }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const termRef = useRef<Terminal | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
+  // Always-current ref so event callbacks don't capture a stale isActive
+  const isActiveRef = useRef(isActive);
   const setStatus = useTerminalStore((s) => s.setStatus);
   const removeSession = useTerminalStore((s) => s.removeSession);
   const resizeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    isActiveRef.current = isActive;
+  }, [isActive]);
+
+  // Re-fit and focus whenever this tab becomes the active one
+  useEffect(() => {
+    if (!isActive) return;
+    const raf = requestAnimationFrame(() => {
+      fitAddonRef.current?.fit();
+      termRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [isActive]);
+
+  // Mount once per sessionId — stays alive for the lifetime of the session
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -35,7 +55,11 @@ export default function TerminalPane({ sessionId }: Props) {
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
     term.open(containerRef.current);
-    fitAddon.fit();
+    // Only fit if visible; if hidden dimensions are 0 and fit would miscalculate
+    if (isActiveRef.current) fitAddon.fit();
+
+    termRef.current = term;
+    fitAddonRef.current = fitAddon;
 
     const dataDisposer = term.onData((data) => {
       terminalCommands.sendTerminalInput(sessionId, data).catch(() => {});
@@ -74,7 +98,7 @@ export default function TerminalPane({ sessionId }: Props) {
       unlistenStatus = await listen<string>(`terminal:status:${sessionId}`, (event) => {
         if (event.payload === "connected") {
           setStatus(sessionId, "connected");
-          term.focus();
+          if (isActiveRef.current) term.focus();
         }
       });
 
@@ -85,7 +109,6 @@ export default function TerminalPane({ sessionId }: Props) {
       unlistenError = await listen<string>(`terminal:error:${sessionId}`, (event) => {
         setStatus(sessionId, "error", event.payload);
         term.writeln(`\r\n\x1b[31m[Error: ${event.payload}]\x1b[0m`);
-        // Give the user 3 s to read the error before closing the tab
         closeTimer.current = setTimeout(() => removeSession(sessionId), 3000);
       });
     })();
@@ -100,6 +123,8 @@ export default function TerminalPane({ sessionId }: Props) {
       unlistenClosed?.();
       unlistenError?.();
       term.dispose();
+      termRef.current = null;
+      fitAddonRef.current = null;
     };
   }, [sessionId, setStatus, removeSession]);
 
