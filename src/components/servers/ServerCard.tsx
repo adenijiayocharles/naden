@@ -1,86 +1,18 @@
-import { useRef, useEffect, useState } from "react";
 import type { Server } from "../../types/server";
-import { useServerStore } from "../../store/serverStore";
-import { useUiStore } from "../../store/uiStore";
-import { useTerminalStore } from "../../store/terminalStore";
-import { sshCommands } from "../../lib/tauriCommands";
-import { formatError } from "../../lib/errors";
+import { useServerActions, formatHost } from "./useServerActions";
+import ServerKebabMenu from "./ServerKebabMenu";
 
-interface Props {
-  server: Server;
-}
-
-export default function ServerCard({ server }: Props) {
-  const deleteServer = useServerStore((s) => s.deleteServer);
-  const openEdit = useUiStore((s) => s.openEdit);
-  const openSession = useTerminalStore((s) => s.openSession);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [connecting, setConnecting] = useState(false);
-  const [openingTerminal, setOpeningTerminal] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-        setConfirmDelete(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [menuOpen]);
-
-  const handleConnect = async () => {
-    if (connecting) return;
-    setConnecting(true);
-    setError(null);
-    try {
-      const result = await openSession(server.id, server.displayName);
-      if (result === null) setError("Maximum terminal sessions (20) reached");
-    } catch (e) {
-      setError(formatError(e));
-    } finally {
-      setConnecting(false);
-    }
-  };
-
-  const handleSystemTerminal = async () => {
-    setMenuOpen(false);
-    setOpeningTerminal(true);
-    setError(null);
-    try {
-      await sshCommands.launchInTerminal(server.id);
-    } catch (e) {
-      setError(formatError(e));
-    } finally {
-      setOpeningTerminal(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await deleteServer(server.id);
-    } catch (e) {
-      setError(formatError(e));
-      setDeleting(false);
-      setConfirmDelete(false);
-    }
-  };
+export default function ServerCard({ server }: { server: Server }) {
+  const actions = useServerActions(server);
 
   return (
     <div
-      onClick={() => { void handleConnect(); }}
+      onClick={() => { void actions.handleConnect(); }}
       className={`bg-[#111] border border-[#1e1e1e] rounded-lg p-4 flex flex-col gap-3 transition-colors select-none
-        ${connecting ? "opacity-60 cursor-wait" : "hover:border-[#2a2a2a] cursor-pointer hover:bg-[#131313]"}`}
+        ${actions.connecting ? "opacity-60 cursor-wait" : "hover:border-[#2a2a2a] cursor-pointer hover:bg-[#131313]"}`}
     >
-      {/* Header: dot + name/host + kebab */}
       <div className="flex items-start gap-2">
-        <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${connecting ? "bg-accent animate-pulse" : "bg-[#333]"}`} />
+        <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${actions.connecting ? "bg-accent animate-pulse" : "bg-[#333]"}`} />
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
@@ -89,68 +21,21 @@ export default function ServerCard({ server }: Props) {
               <span className="text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded font-medium">Jump</span>
             )}
           </div>
-          <p className="text-sm text-[#888] font-mono truncate">
-            {server.username ? `${server.username}@` : ""}
-            {server.hostname}
-            {server.port !== 22 ? `:${server.port}` : ""}
-          </p>
+          <p className="text-sm text-[#888] font-mono truncate">{formatHost(server)}</p>
         </div>
 
-        <div
-          className="relative shrink-0"
-          ref={menuRef}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={() => setMenuOpen((o) => !o)}
-            className="text-[#555] hover:text-white p-1 rounded hover:bg-[#1a1a1a] transition-colors text-lg leading-none"
-            aria-label="Server options"
-          >
-            ⋮
-          </button>
-
-          {menuOpen && (
-            <div className="absolute right-0 top-8 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-20 min-w-[150px] py-1">
-              <button
-                onClick={() => { openEdit(server.id); setMenuOpen(false); }}
-                className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => { void handleSystemTerminal(); }}
-                disabled={openingTerminal}
-                className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors disabled:opacity-40"
-              >
-                {openingTerminal ? "Opening…" : "System Terminal"}
-              </button>
-              {!confirmDelete ? (
-                <button
-                  onClick={() => setConfirmDelete(true)}
-                  className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-[#1e1e1e] transition-colors"
-                >
-                  Delete
-                </button>
-              ) : (
-                <div className="px-3 py-2 border-t border-[#2a2a2a]">
-                  <p className="text-xs text-[#bbb] mb-2">Delete this server?</p>
-                  <div className="flex gap-3">
-                    <button onClick={() => setConfirmDelete(false)} className="text-xs text-[#777] hover:text-white">
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      disabled={deleting}
-                      className="text-xs text-red-400 hover:text-red-300 font-semibold"
-                    >
-                      {deleting ? "…" : "Delete"}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        <ServerKebabMenu
+          menuRef={actions.menuRef}
+          menuOpen={actions.menuOpen}
+          setMenuOpen={actions.setMenuOpen}
+          confirmDelete={actions.confirmDelete}
+          setConfirmDelete={actions.setConfirmDelete}
+          deleting={actions.deleting}
+          openingTerminal={actions.openingTerminal}
+          onEdit={actions.editServer}
+          onSystemTerminal={() => { void actions.handleSystemTerminal(); }}
+          onDelete={() => { void actions.handleDelete(); }}
+        />
       </div>
 
       {server.tags.length > 0 && (
@@ -166,11 +51,8 @@ export default function ServerCard({ server }: Props) {
         </div>
       )}
 
-      {server.notes && (
-        <p className="text-xs text-[#555] truncate">{server.notes}</p>
-      )}
-
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {server.notes && <p className="text-xs text-[#555] truncate">{server.notes}</p>}
+      {actions.error && <p className="text-xs text-red-400">{actions.error}</p>}
     </div>
   );
 }

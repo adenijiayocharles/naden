@@ -28,6 +28,23 @@ interface TerminalStore {
   removeSession: (sessionId: string) => void;
 }
 
+function teardownResources(sessionId: string) {
+  sessionUnlisteners.get(sessionId)?.forEach((fn) => fn());
+  sessionUnlisteners.delete(sessionId);
+  sessionBuffer.detach(sessionId);
+}
+
+function dropFromState(state: TerminalStore, sessionId: string) {
+  const sessions = state.sessions.filter((s) => s.id !== sessionId);
+  return {
+    sessions,
+    activeSessionId:
+      state.activeSessionId === sessionId
+        ? (sessions[sessions.length - 1]?.id ?? null)
+        : state.activeSessionId,
+  };
+}
+
 export const useTerminalStore = create<TerminalStore>((set, get) => ({
   sessions: [],
   activeSessionId: null,
@@ -83,9 +100,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   closeSession: async (sessionId) => {
     // Remove listeners and buffer first so the backend's terminal:closed event
     // that follows the close command doesn't trigger a second removeSession
-    sessionUnlisteners.get(sessionId)?.forEach((fn) => fn());
-    sessionUnlisteners.delete(sessionId);
-    sessionBuffer.detach(sessionId);
+    teardownResources(sessionId);
 
     try {
       await terminalCommands.closeTerminalSession(sessionId);
@@ -93,16 +108,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       // Session may have already closed naturally
     }
 
-    set((state) => {
-      const sessions = state.sessions.filter((s) => s.id !== sessionId);
-      return {
-        sessions,
-        activeSessionId:
-          state.activeSessionId === sessionId
-            ? (sessions[sessions.length - 1]?.id ?? null)
-            : state.activeSessionId,
-      };
-    });
+    set((state) => dropFromState(state, sessionId));
   },
 
   setActive: (sessionId) => set({ activeSessionId: sessionId }),
@@ -111,19 +117,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     // Guard against double-removal (e.g. closeSession + terminal:closed race)
     if (!get().sessions.find((s) => s.id === sessionId)) return;
 
-    sessionUnlisteners.get(sessionId)?.forEach((fn) => fn());
-    sessionUnlisteners.delete(sessionId);
-    sessionBuffer.detach(sessionId);
-
-    set((state) => {
-      const sessions = state.sessions.filter((s) => s.id !== sessionId);
-      return {
-        sessions,
-        activeSessionId:
-          state.activeSessionId === sessionId
-            ? (sessions[sessions.length - 1]?.id ?? null)
-            : state.activeSessionId,
-      };
-    });
+    teardownResources(sessionId);
+    set((state) => dropFromState(state, sessionId));
   },
 }));

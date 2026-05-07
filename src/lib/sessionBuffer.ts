@@ -10,17 +10,30 @@ function base64ToBytes(encoded: string): Uint8Array {
 }
 
 class SessionBuffer {
+  private static readonly MAX_BYTES = 1 * 1024 * 1024; // 1 MB scrollback per session
+
   private readonly chunks = new Map<string, Uint8Array[]>();
+  private readonly chunkBytes = new Map<string, number>();
   private readonly unlisteners = new Map<string, UnlistenFn>();
   private readonly subscribers = new Map<string, OutputCallback>();
 
   async attach(sessionId: string): Promise<void> {
     if (this.unlisteners.has(sessionId)) return;
     this.chunks.set(sessionId, []);
+    this.chunkBytes.set(sessionId, 0);
 
     const unlisten = await listen<string>(`terminal:output:${sessionId}`, ({ payload }) => {
       const bytes = base64ToBytes(payload);
-      this.chunks.get(sessionId)?.push(bytes);
+      const arr = this.chunks.get(sessionId);
+      if (arr) {
+        arr.push(bytes);
+        let total = (this.chunkBytes.get(sessionId) ?? 0) + bytes.length;
+        // Evict oldest chunks to stay within the cap (always keep the latest chunk)
+        while (total > SessionBuffer.MAX_BYTES && arr.length > 1) {
+          total -= arr.shift()!.length;
+        }
+        this.chunkBytes.set(sessionId, total);
+      }
       this.subscribers.get(sessionId)?.(bytes);
     });
 
@@ -31,6 +44,7 @@ class SessionBuffer {
     this.unlisteners.get(sessionId)?.();
     this.unlisteners.delete(sessionId);
     this.chunks.delete(sessionId);
+    this.chunkBytes.delete(sessionId);
     this.subscribers.delete(sessionId);
   }
 

@@ -42,7 +42,15 @@ export default function TerminalPane({ sessionId }: Props) {
     const { chunks, unsub } = sessionBuffer.subscribeAndReplay(sessionId, (data) =>
       term.write(data),
     );
-    for (const chunk of chunks) term.write(chunk);
+    if (chunks.length === 1) {
+      term.write(chunks[0]);
+    } else if (chunks.length > 1) {
+      const total = chunks.reduce((n, c) => n + c.length, 0);
+      const combined = new Uint8Array(total);
+      let off = 0;
+      for (const c of chunks) { combined.set(c, off); off += c.length; }
+      term.write(combined);
+    }
 
     const dataDisposer = term.onData((data) => {
       terminalCommands.sendTerminalInput(sessionId, data).catch(() => {});

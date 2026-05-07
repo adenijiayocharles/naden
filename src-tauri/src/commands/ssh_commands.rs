@@ -31,17 +31,16 @@ async fn resolve_jump_chain(
     let mut visited = std::collections::HashSet::new();
     visited.insert(server.server.id.clone());
 
-    while let Some(ref id) = next_id.clone() {
+    while let Some(id) = next_id {
         if !visited.insert(id.clone()) {
             return Err(AppError::Ssh("circular jump-host reference detected".into()));
         }
         if chain.len() >= 10 {
             return Err(AppError::Ssh("jump-host chain exceeds maximum depth of 10".into()));
         }
-        let hop = queries::get_server_db(db, id).await?;
-        let next = hop.server.jump_host_id.clone();
+        let hop = queries::get_server_db(db, &id).await?;
+        next_id = hop.server.jump_host_id.clone();
         chain.push(hop);
-        next_id = next;
     }
 
     // chain is [closest_to_target, ..., farthest]; reverse for first→last order
@@ -102,7 +101,6 @@ pub async fn launch_in_terminal(
     let jump_chain = resolve_jump_chain(&state.db, &server).await?;
 
     let s = &server.server;
-    let session_start = chrono::Utc::now().to_rfc3339();
     // Insert with outcome = "success" immediately — we can't detect system terminal close
     let audit_id = audit_commands::insert_audit_entry(
         &state.db,
@@ -116,8 +114,9 @@ pub async fn launch_in_terminal(
     )
     .await?;
     let db = state.db.clone();
-    tokio::spawn(async move {
-        audit_commands::close_audit_entry(&db, &audit_id, "success", None, &session_start)
+    tauri::async_runtime::spawn(async move {
+        let session_end = chrono::Utc::now().to_rfc3339();
+        audit_commands::close_audit_entry(&db, &audit_id, "success", None, &session_end)
             .await
             .ok();
     });
