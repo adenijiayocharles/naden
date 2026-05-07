@@ -14,6 +14,12 @@ export default function Sidebar() {
   const tags = useServerStore((s) => s.tags);
   const { filterGroupId, filterTagId, setFilterGroup, setFilterTag, activeView, openAudit, closeForm } = useUiStore();
 
+  // When in audit view, selecting any server nav item should return to list view first
+  const selectFilter = (fn: () => void) => () => {
+    if (activeView === "audit") closeForm();
+    fn();
+  };
+
   const countByGroup = groups.reduce<Record<string, number>>((acc, g) => {
     acc[g.id] = servers.filter((s) => s.groupId === g.id).length;
     return acc;
@@ -57,8 +63,8 @@ export default function Sidebar() {
 
       <nav className="flex-1 p-2 space-y-0.5">
         {navItem(
-          !filterGroupId && !filterTagId,
-          () => { setFilterGroup(null); setFilterTag(null); },
+          !filterGroupId && !filterTagId && activeView !== "audit",
+          selectFilter(() => { setFilterGroup(null); setFilterTag(null); }),
           "All Servers",
           servers.length,
         )}
@@ -70,8 +76,8 @@ export default function Sidebar() {
             </p>
             {groups.map((g) =>
               navItem(
-                filterGroupId === g.id,
-                () => setFilterGroup(g.id),
+                filterGroupId === g.id && activeView !== "audit",
+                selectFilter(() => setFilterGroup(g.id)),
                 <span className="flex items-center gap-2">
                   {g.color && (
                     <span
@@ -94,8 +100,8 @@ export default function Sidebar() {
             </p>
             {tags.map((t) =>
               navItem(
-                filterTagId === t.id,
-                () => setFilterTag(t.id),
+                filterTagId === t.id && activeView !== "audit",
+                selectFilter(() => setFilterTag(t.id)),
                 `#${t.name}`,
                 countByTag[t.id] ?? 0,
               ),
