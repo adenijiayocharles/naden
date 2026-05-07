@@ -9,6 +9,10 @@ use uuid::Uuid;
 use crate::error::AppError;
 use crate::ssh::jump_host::{self, JumpInfo};
 
+/// Callback invoked when a terminal session ends.
+/// Arguments: (outcome: String, error_message: Option<String>)
+pub type OnCloseCallback = Box<dyn FnOnce(String, Option<String>) + Send>;
+
 pub enum AuthInfo {
     Password(String),
     PubKey { key_data: String, passphrase: Option<String> },
@@ -45,6 +49,7 @@ impl SessionManager {
         auth: AuthInfo,
         jump_chain: Vec<JumpInfo>,
         server_name: String,
+        on_close: Option<OnCloseCallback>,
         app_handle: tauri::AppHandle,
     ) -> Result<String, AppError> {
         let session_id = Uuid::new_v4().to_string();
@@ -61,7 +66,7 @@ impl SessionManager {
         std::thread::spawn(move || {
             run_session(
                 host, port, username, auth, jump_chain,
-                server_name, sid, rx, app_handle, sessions,
+                server_name, on_close, sid, rx, app_handle, sessions,
             );
         });
 
@@ -160,6 +165,7 @@ fn run_session(
     auth: AuthInfo,
     jump_chain: Vec<JumpInfo>,
     _server_name: String,
+    on_close: Option<OnCloseCallback>,
     session_id: String,
     rx: std::sync::mpsc::Receiver<SessionMessage>,
     app_handle: tauri::AppHandle,
@@ -259,8 +265,18 @@ fn run_session(
 
     sessions.lock().unwrap().remove(&session_id);
 
-    if let Err(ref e) = result {
-        let _ = app_handle.emit(&format!("terminal:error:{session_id}"), e.to_string());
+    // Determine outcome and invoke the audit callback before emitting events
+    let (outcome, error_msg) = match &result {
+        Ok(()) => ("user_closed".to_string(), None),
+        Err(e) => ("failure".to_string(), Some(e.to_string())),
+    };
+
+    if let Some(cb) = on_close {
+        cb(outcome, error_msg.clone());
+    }
+
+    if let Some(msg) = error_msg {
+        let _ = app_handle.emit(&format!("terminal:error:{session_id}"), msg);
     }
 
     let _ = app_handle.emit(&closed_event, ());

@@ -8,6 +8,7 @@ use crate::ssh::{
     launcher,
 };
 use crate::{vault, AppState};
+use crate::commands::audit_commands::{self, NewAuditEntry};
 
 /// Expand a leading `~` to the user's home directory.
 fn expand_path(path: &str) -> std::path::PathBuf {
@@ -99,6 +100,28 @@ pub async fn launch_in_terminal(
 ) -> Result<(), AppError> {
     let server = queries::get_server_db(&state.db, &server_id).await?;
     let jump_chain = resolve_jump_chain(&state.db, &server).await?;
+
+    let s = &server.server;
+    let session_start = chrono::Utc::now().to_rfc3339();
+    // Insert with outcome = "success" immediately — we can't detect system terminal close
+    let audit_id = audit_commands::insert_audit_entry(
+        &state.db,
+        &NewAuditEntry {
+            server_id: Some(&server_id),
+            server_display_name: &s.display_name,
+            hostname: &s.hostname,
+            port: s.port,
+            username: &s.username,
+        },
+    )
+    .await?;
+    let db = state.db.clone();
+    tokio::spawn(async move {
+        audit_commands::close_audit_entry(&db, &audit_id, "success", None, &session_start)
+            .await
+            .ok();
+    });
+
     launcher::launch_in_system_terminal(&server, &jump_chain).await
 }
 
@@ -171,6 +194,35 @@ pub async fn open_terminal_session(
     }
 
     let s = &server.server;
+
+    // Insert audit entry and pass a close callback so the session thread can
+    // update the outcome and duration when the session ends.
+    let audit_id = audit_commands::insert_audit_entry(
+        &state.db,
+        &NewAuditEntry {
+            server_id: Some(&server_id),
+            server_display_name: &s.display_name,
+            hostname: &s.hostname,
+            port: s.port,
+            username: &s.username,
+        },
+    )
+    .await?;
+    let db = state.db.clone();
+    let on_close = Box::new(move |outcome: String, error_msg: Option<String>| {
+        let session_end = chrono::Utc::now().to_rfc3339();
+        // run_session is a std::thread — use a small local runtime for the DB write
+        if let Ok(rt) = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+        {
+            rt.block_on(audit_commands::close_audit_entry(
+                &db, &audit_id, &outcome, error_msg, &session_end,
+            ))
+            .ok();
+        }
+    });
+
     state.session_manager.open_session(
         s.hostname.clone(),
         s.port as u16,
@@ -178,6 +230,7 @@ pub async fn open_terminal_session(
         auth,
         jump_chain,
         server.server.display_name.clone(),
+        Some(on_close),
         app_handle,
     )
 }

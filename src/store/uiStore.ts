@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { Server } from "../types/server";
 
-type ActiveView = "list" | "add" | "edit";
+type ActiveView = "list" | "add" | "edit" | "audit";
 export type ViewMode = "card" | "row";
 
 interface UiStore {
@@ -17,6 +17,7 @@ interface UiStore {
 
   openAdd: () => void;
   openEdit: (serverId: string) => void;
+  openAudit: () => void;
   closeForm: () => void;
   setFilterGroup: (groupId: string | null) => void;
   setFilterTag: (tagId: string | null) => void;
@@ -39,6 +40,7 @@ export const useUiStore = create<UiStore>((set) => ({
 
   openAdd: () => set({ activeView: "add", editingServerId: null }),
   openEdit: (serverId) => set({ activeView: "edit", editingServerId: serverId }),
+  openAudit: () => set({ activeView: "audit", editingServerId: null }),
   closeForm: () => set({ activeView: "list", editingServerId: null }),
   setFilterGroup: (groupId) => set({ filterGroupId: groupId, filterTagId: null }),
   setFilterTag: (tagId) => set({ filterTagId: tagId, filterGroupId: null }),

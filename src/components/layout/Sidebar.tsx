@@ -1,11 +1,18 @@
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 
+const ClockIcon = () => (
+  <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
+  </svg>
+);
+
 export default function Sidebar() {
   const servers = useServerStore((s) => s.servers);
   const groups = useServerStore((s) => s.groups);
   const tags = useServerStore((s) => s.tags);
-  const { filterGroupId, filterTagId, setFilterGroup, setFilterTag } = useUiStore();
+  const { filterGroupId, filterTagId, setFilterGroup, setFilterTag, activeView, openAudit, closeForm } = useUiStore();
 
   const countByGroup = groups.reduce<Record<string, number>>((acc, g) => {
     acc[g.id] = servers.filter((s) => s.groupId === g.id).length;
@@ -96,6 +103,20 @@ export default function Sidebar() {
           </div>
         )}
       </nav>
+      {/* Audit log link pinned to the bottom */}
+      <div className="p-2 border-t border-[#1e1e1e] shrink-0">
+        <button
+          onClick={() => { if (activeView === "audit") { closeForm(); } else { openAudit(); } }}
+          className={`w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors ${
+            activeView === "audit"
+              ? "bg-accent text-black font-medium"
+              : "text-[#777] hover:bg-[#1a1a1a] hover:text-white"
+          }`}
+        >
+          <ClockIcon />
+          Audit Log
+        </button>
+      </div>
     </aside>
   );
 }

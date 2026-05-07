@@ -40,6 +40,9 @@ pub fn run() {
             commands::server_commands::create_tag,
             // Search
             commands::search_commands::fuzzy_search,
+            // Audit
+            commands::audit_commands::list_audit_log,
+            commands::audit_commands::export_audit_csv,
             // SSH
             commands::ssh_commands::launch_in_terminal,
             commands::ssh_commands::import_ssh_config,

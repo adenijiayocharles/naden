@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { AuditEntry } from "../types/audit";
 import type {
   Server,
   Group,
@@ -60,4 +61,28 @@ export const terminalCommands = {
 
   resizeTerminal: (sessionId: string, cols: number, rows: number) =>
     invoke<void>("resize_terminal", { sessionId, cols, rows }),
+};
+
+export const auditCommands = {
+  listAuditLog: (
+    offset: number,
+    limit: number,
+    serverId?: string,
+    startDate?: string,
+    endDate?: string,
+  ) =>
+    invoke<AuditEntry[]>("list_audit_log", {
+      offset,
+      limit,
+      serverId: serverId ?? null,
+      startDate: startDate ?? null,
+      endDate: endDate ?? null,
+    }),
+
+  exportAuditCsv: (serverId?: string, startDate?: string, endDate?: string) =>
+    invoke<string>("export_audit_csv", {
+      serverId: serverId ?? null,
+      startDate: startDate ?? null,
+      endDate: endDate ?? null,
+    }),
 };

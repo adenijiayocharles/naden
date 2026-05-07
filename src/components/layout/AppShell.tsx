@@ -11,6 +11,7 @@ import VaultLockScreen from "../vault/VaultLockScreen";
 import VaultSetupModal from "../vault/VaultSetupModal";
 import TerminalPane from "../terminal/TerminalPane";
 import TerminalTabs from "../terminal/TerminalTabs";
+import AuditLogView from "../audit/AuditLogView";
 
 export default function AppShell() {
   const fetchAll = useServerStore((s) => s.fetchAll);
@@ -45,17 +46,19 @@ export default function AppShell() {
       <div className="flex flex-col flex-1 min-w-0">
         <TopBar />
         <div className="flex flex-1 min-h-0">
-          {/* Server list */}
+          {/* Server list / audit log */}
           <main
-            className={`overflow-y-auto shrink-0 transition-[width,padding] duration-200 ${
+            className={`shrink-0 transition-[width,padding] duration-200 ${
               hasTerminal
                 ? serverListCollapsed
                   ? "w-0 p-0 overflow-hidden"
-                  : "w-72 p-5 border-r border-[#1e1e1e]"
-                : "flex-1 p-5"
+                  : "w-72 border-r border-[#1e1e1e] overflow-hidden flex flex-col"
+                : "flex-1 overflow-hidden flex flex-col"
             }`}
           >
-            <ServerList />
+            {activeView === "audit"
+              ? <AuditLogView />
+              : <div className="flex-1 overflow-y-auto p-5"><ServerList /></div>}
           </main>
 
           {/* Collapse / expand handle — only visible when terminal is open */}
