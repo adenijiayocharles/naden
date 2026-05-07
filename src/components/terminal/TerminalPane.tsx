@@ -12,7 +12,9 @@ interface Props {
 export default function TerminalPane({ sessionId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const setStatus = useTerminalStore((s) => s.setStatus);
+  const removeSession = useTerminalStore((s) => s.removeSession);
   const resizeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -76,18 +78,20 @@ export default function TerminalPane({ sessionId }: Props) {
       });
 
       unlistenClosed = await listen<null>(`terminal:closed:${sessionId}`, () => {
-        setStatus(sessionId, "disconnected");
-        term.writeln("\r\n\x1b[33m[Session closed]\x1b[0m");
+        removeSession(sessionId);
       });
 
       unlistenError = await listen<string>(`terminal:error:${sessionId}`, (event) => {
         setStatus(sessionId, "error", event.payload);
         term.writeln(`\r\n\x1b[31m[Error: ${event.payload}]\x1b[0m`);
+        // Give the user 3 s to read the error before closing the tab
+        closeTimer.current = setTimeout(() => removeSession(sessionId), 3000);
       });
     })();
 
     return () => {
       if (resizeTimer.current) clearTimeout(resizeTimer.current);
+      if (closeTimer.current) clearTimeout(closeTimer.current);
       observer.disconnect();
       dataDisposer.dispose();
       unlistenOutput?.();
@@ -96,7 +100,7 @@ export default function TerminalPane({ sessionId }: Props) {
       unlistenError?.();
       term.dispose();
     };
-  }, [sessionId, setStatus]);
+  }, [sessionId, setStatus, removeSession]);
 
   return (
     <div
