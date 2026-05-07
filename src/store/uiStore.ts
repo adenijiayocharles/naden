@@ -8,6 +8,7 @@ export type ViewMode = "card" | "row";
 interface UiStore {
   activeView: ActiveView;
   viewMode: ViewMode;
+  serverListCollapsed: boolean;
   editingServerId: string | null;
   filterGroupId: string | null;
   filterTagId: string | null;
@@ -21,6 +22,7 @@ interface UiStore {
   setFilterTag: (tagId: string | null) => void;
   setSearch: (query: string) => void;
   setViewMode: (mode: ViewMode) => void;
+  toggleServerList: () => void;
 }
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -28,6 +30,7 @@ let searchTimer: ReturnType<typeof setTimeout> | null = null;
 export const useUiStore = create<UiStore>((set) => ({
   activeView: "list",
   viewMode: "card",
+  serverListCollapsed: false,
   editingServerId: null,
   filterGroupId: null,
   filterTagId: null,
@@ -41,6 +44,7 @@ export const useUiStore = create<UiStore>((set) => ({
   setFilterTag: (tagId) => set({ filterTagId: tagId, filterGroupId: null }),
 
   setViewMode: (mode) => set({ viewMode: mode }),
+  toggleServerList: () => set((s) => ({ serverListCollapsed: !s.serverListCollapsed })),
 
   setSearch: (query) => {
     set({ searchQuery: query });

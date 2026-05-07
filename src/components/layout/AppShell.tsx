@@ -15,6 +15,8 @@ import TerminalTabs from "../terminal/TerminalTabs";
 export default function AppShell() {
   const fetchAll = useServerStore((s) => s.fetchAll);
   const activeView = useUiStore((s) => s.activeView);
+  const serverListCollapsed = useUiStore((s) => s.serverListCollapsed);
+  const toggleServerList = useUiStore((s) => s.toggleServerList);
   const { isSetup, isUnlocked, isChecking, setupDismissed, check } = useVaultStore();
   const sessions = useTerminalStore((s) => s.sessions);
   const activeSessionId = useTerminalStore((s) => s.activeSessionId);
@@ -43,14 +45,43 @@ export default function AppShell() {
       <div className="flex flex-col flex-1 min-w-0">
         <TopBar />
         <div className="flex flex-1 min-h-0">
-          {/* Server list — collapses to a fixed width when terminal is open */}
+          {/* Server list */}
           <main
-            className={`overflow-y-auto p-5 shrink-0 ${
-              hasTerminal ? "w-72 border-r border-[#1e1e1e]" : "flex-1"
+            className={`overflow-y-auto shrink-0 transition-[width,padding] duration-200 ${
+              hasTerminal
+                ? serverListCollapsed
+                  ? "w-0 p-0 overflow-hidden"
+                  : "w-72 p-5 border-r border-[#1e1e1e]"
+                : "flex-1 p-5"
             }`}
           >
             <ServerList />
           </main>
+
+          {/* Collapse / expand handle — only visible when terminal is open */}
+          {hasTerminal && (
+            <button
+              onClick={toggleServerList}
+              aria-label={serverListCollapsed ? "Expand server list" : "Collapse server list"}
+              className="w-4 shrink-0 flex items-center justify-center bg-[#0a0a0a] border-r border-[#1e1e1e] hover:bg-[#161616] transition-colors group"
+            >
+              <svg
+                className="w-2.5 h-2.5 text-[#333] group-hover:text-[#888] transition-colors"
+                fill="none"
+                viewBox="0 0 6 10"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                {serverListCollapsed ? (
+                  <polyline points="1,1 5,5 1,9" />
+                ) : (
+                  <polyline points="5,1 1,5 5,9" />
+                )}
+              </svg>
+            </button>
+          )}
 
           {/* Built-in terminal panel */}
           {hasTerminal && (
