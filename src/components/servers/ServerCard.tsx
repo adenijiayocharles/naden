@@ -73,78 +73,44 @@ export default function ServerCard({ server }: Props) {
   };
 
   return (
-    <div className="bg-[#111] border border-[#1e1e1e] rounded-lg p-4 flex items-start gap-3 hover:border-[#2a2a2a] transition-colors">
-      {/* Status dot */}
-      <div className="w-2 h-2 rounded-full bg-[#333] mt-1.5 shrink-0" />
+    <div className="bg-[#111] border border-[#1e1e1e] rounded-lg p-4 flex flex-col gap-3 hover:border-[#2a2a2a] transition-colors">
+      {/* Header row: status dot + name/host + kebab */}
+      <div className="flex items-start gap-2">
+        <div className="w-2 h-2 rounded-full bg-[#333] mt-1 shrink-0" />
 
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-          <span className="font-medium text-white truncate">{server.displayName}</span>
-          {server.isJumpHost && (
-            <span className="text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded font-medium">
-              Jump Host
-            </span>
-          )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+            <span className="font-medium text-white truncate">{server.displayName}</span>
+            {server.isJumpHost && (
+              <span className="text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded font-medium">
+                Jump
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-[#888] font-mono truncate">
+            {server.username ? `${server.username}@` : ""}
+            {server.hostname}
+            {server.port !== 22 ? `:${server.port}` : ""}
+          </p>
         </div>
 
-        <p className="text-sm text-[#888] font-mono truncate">
-          {server.username ? `${server.username}@` : ""}
-          {server.hostname}
-          {server.port !== 22 ? `:${server.port}` : ""}
-        </p>
-
-        {server.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {server.tags.map((tag) => (
-              <span
-                key={tag.id}
-                className="text-xs bg-[#1a1a1a] border border-[#2a2a2a] text-[#999] px-1.5 py-0.5 rounded"
-              >
-                #{tag.name}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-2 shrink-0">
-        <button
-          onClick={() => { void handleOpenTerminal(); }}
-          disabled={openingTerminal}
-          className="bg-[#1a1a1a] hover:bg-[#222] disabled:opacity-40 border border-[#2a2a2a] text-[#ccc] text-sm font-medium px-3 py-1.5 rounded transition-colors"
-        >
-          {openingTerminal ? "…" : "Terminal"}
-        </button>
-        <button
-          onClick={() => { void handleConnect(); }}
-          disabled={connecting}
-          className="bg-accent hover:bg-accent-hover disabled:opacity-40 text-black text-sm font-semibold px-3 py-1.5 rounded transition-colors"
-        >
-          {connecting ? "Opening…" : "Connect"}
-        </button>
-
-        <div className="relative" ref={menuRef}>
+        <div className="relative shrink-0" ref={menuRef}>
           <button
             onClick={() => setMenuOpen((o) => !o)}
-            className="text-[#777] hover:text-white p-1.5 rounded hover:bg-[#1a1a1a] transition-colors text-lg leading-none"
+            className="text-[#555] hover:text-white p-1 rounded hover:bg-[#1a1a1a] transition-colors text-lg leading-none"
             aria-label="Server options"
           >
             ⋮
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-9 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-20 min-w-[140px] py-1">
+            <div className="absolute right-0 top-8 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-20 min-w-[140px] py-1">
               <button
                 onClick={() => { openEdit(server.id); setMenuOpen(false); }}
                 className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors"
               >
                 Edit
               </button>
-
               {!confirmDelete ? (
                 <button
                   onClick={() => setConfirmDelete(true)}
@@ -156,10 +122,7 @@ export default function ServerCard({ server }: Props) {
                 <div className="px-3 py-2 border-t border-[#2a2a2a]">
                   <p className="text-xs text-[#bbb] mb-2">Delete this server?</p>
                   <div className="flex gap-3">
-                    <button
-                      onClick={() => setConfirmDelete(false)}
-                      className="text-xs text-[#777] hover:text-white"
-                    >
+                    <button onClick={() => setConfirmDelete(false)} className="text-xs text-[#777] hover:text-white">
                       Cancel
                     </button>
                     <button
@@ -175,6 +138,40 @@ export default function ServerCard({ server }: Props) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Tags */}
+      {server.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {server.tags.map((tag) => (
+            <span
+              key={tag.id}
+              className="text-xs bg-[#1a1a1a] border border-[#2a2a2a] text-[#999] px-1.5 py-0.5 rounded"
+            >
+              #{tag.name}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {error && <p className="text-xs text-red-400">{error}</p>}
+
+      {/* Actions pinned to the bottom */}
+      <div className="flex gap-2 mt-auto pt-3 border-t border-[#1a1a1a]">
+        <button
+          onClick={() => { void handleOpenTerminal(); }}
+          disabled={openingTerminal}
+          className="bg-[#1a1a1a] hover:bg-[#222] disabled:opacity-40 border border-[#2a2a2a] text-[#ccc] text-sm font-medium px-3 py-1.5 rounded transition-colors"
+        >
+          {openingTerminal ? "…" : "Terminal"}
+        </button>
+        <button
+          onClick={() => { void handleConnect(); }}
+          disabled={connecting}
+          className="flex-1 bg-accent hover:bg-accent-hover disabled:opacity-40 text-black text-sm font-semibold px-3 py-1.5 rounded transition-colors"
+        >
+          {connecting ? "Opening…" : "Connect"}
+        </button>
       </div>
     </div>
   );
