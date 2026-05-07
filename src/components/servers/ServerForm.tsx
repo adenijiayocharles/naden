@@ -409,6 +409,36 @@ export default function ServerForm() {
                     ))}
                 </select>
               </SelectWrapper>
+
+              {/* Visual chain display */}
+              {form.jumpHostId && (() => {
+                const chain: string[] = ["Your machine"];
+                let id: string | undefined = form.jumpHostId;
+                const visited = new Set<string>();
+                while (id && !visited.has(id)) {
+                  visited.add(id);
+                  const hop = servers.find((s) => s.id === id);
+                  if (!hop) break;
+                  chain.push(hop.displayName);
+                  id = hop.jumpHostId ?? undefined;
+                }
+                const target = form.displayName.trim() || "this server";
+                chain.push(target);
+                return (
+                  <div className="mt-2 flex items-center flex-wrap gap-1 text-xs text-[#666]">
+                    {chain.map((label, i) => (
+                      <span key={i} className="flex items-center gap-1">
+                        <span className={i === 0 || i === chain.length - 1
+                          ? "text-[#888]"
+                          : "text-accent font-medium"}>
+                          {label}
+                        </span>
+                        {i < chain.length - 1 && <span className="text-[#333]">→</span>}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })()}
             </Field>
           )}
 

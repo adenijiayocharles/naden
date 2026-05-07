@@ -3,13 +3,13 @@ use crate::error::AppError;
 use crate::models::server::{CreateServerPayload, ServerWithTags};
 use crate::ssh::{
     config_parser::{self, ImportPreview},
-    connection,
+    connection::AuthInfo,
+    jump_host::JumpInfo,
     launcher,
 };
 use crate::{vault, AppState};
 
 /// Expand a leading `~` to the user's home directory.
-/// Paths from the file picker are already absolute; this handles manually typed paths.
 fn expand_path(path: &str) -> std::path::PathBuf {
     if let Some(rest) = path.strip_prefix("~/") {
         if let Some(home) = dirs::home_dir() {
@@ -19,13 +19,87 @@ fn expand_path(path: &str) -> std::path::PathBuf {
     std::path::PathBuf::from(path)
 }
 
+/// Walk the jump_host_id chain and return hops ordered first→last.
+/// Detects cycles (returns an error) and caps depth at 10.
+async fn resolve_jump_chain(
+    db: &sqlx::SqlitePool,
+    server: &ServerWithTags,
+) -> Result<Vec<ServerWithTags>, AppError> {
+    let mut chain: Vec<ServerWithTags> = Vec::new();
+    let mut next_id = server.server.jump_host_id.clone();
+    let mut visited = std::collections::HashSet::new();
+    visited.insert(server.server.id.clone());
+
+    while let Some(ref id) = next_id.clone() {
+        if !visited.insert(id.clone()) {
+            return Err(AppError::Ssh("circular jump-host reference detected".into()));
+        }
+        if chain.len() >= 10 {
+            return Err(AppError::Ssh("jump-host chain exceeds maximum depth of 10".into()));
+        }
+        let hop = queries::get_server_db(db, id).await?;
+        let next = hop.server.jump_host_id.clone();
+        chain.push(hop);
+        next_id = next;
+    }
+
+    // chain is [closest_to_target, ..., farthest]; reverse for first→last order
+    chain.reverse();
+    Ok(chain)
+}
+
+/// Build `AuthInfo` for `server`, reading credentials from the vault when needed.
+async fn auth_for_server(
+    server: &ServerWithTags,
+    state: &AppState,
+) -> Result<AuthInfo, AppError> {
+    let s = &server.server;
+    match s.auth_method.as_str() {
+        "password" => {
+            let vault_id = s
+                .vault_credential_id
+                .as_deref()
+                .ok_or_else(|| AppError::Vault("no vault credential for password auth".into()))?;
+            if state.vault_key.lock().await.is_none() {
+                return Err(AppError::Vault("vault is locked".into()));
+            }
+            Ok(AuthInfo::Password(vault::retrieve_credential(vault_id).await?))
+        }
+        "key" => {
+            let key_path_raw = s
+                .identity_file_path
+                .as_deref()
+                .ok_or_else(|| AppError::Ssh("no identity file path for key auth".into()))?;
+            let key_path = expand_path(key_path_raw);
+            let key_data = tokio::fs::read_to_string(&key_path).await.map_err(|e| {
+                AppError::Ssh(format!(
+                    "failed to read key file {}: {e}",
+                    key_path.display()
+                ))
+            })?;
+            let passphrase = if let Some(vid) = &s.vault_credential_id {
+                if state.vault_key.lock().await.is_some() {
+                    vault::retrieve_credential(vid).await.ok()
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            Ok(AuthInfo::PubKey { key_data, passphrase })
+        }
+        _ => Ok(AuthInfo::Agent),
+    }
+}
+
 #[tauri::command]
 pub async fn launch_in_terminal(
     server_id: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
     let server = queries::get_server_db(&state.db, &server_id).await?;
-    launcher::launch_in_system_terminal(&server).await
+    let jump_chain = resolve_jump_chain(&state.db, &server).await?;
+    launcher::launch_in_system_terminal(&server, &jump_chain).await
 }
 
 #[tauri::command]
@@ -40,7 +114,6 @@ pub async fn import_ssh_config(
             .join(".ssh")
             .join("config"),
     };
-
     config_parser::parse_ssh_config(&config_path)
 }
 
@@ -50,7 +123,6 @@ pub async fn confirm_ssh_config_import(
     state: tauri::State<'_, AppState>,
 ) -> Result<Vec<ServerWithTags>, AppError> {
     let mut created = Vec::with_capacity(previews.len());
-
     for preview in &previews {
         let payload = CreateServerPayload {
             display_name: preview.pattern.clone(),
@@ -60,10 +132,7 @@ pub async fn confirm_ssh_config_import(
                 .unwrap_or_else(|| preview.pattern.clone()),
             port: preview.port,
             username: preview.username.clone(),
-            auth_method: preview
-                .identity_file_path
-                .is_some()
-                .then(|| "key".to_string()),
+            auth_method: preview.identity_file_path.is_some().then(|| "key".to_string()),
             identity_file_path: preview.identity_file_path.clone(),
             group_id: None,
             notes: None,
@@ -71,16 +140,14 @@ pub async fn confirm_ssh_config_import(
             jump_host_id: None,
             tag_ids: None,
         };
-
         created.push(queries::create_server_db(&state.db, &payload).await?);
     }
-
     Ok(created)
 }
 
-/// Opens a built-in terminal session. Returns a session_id used for all subsequent
-/// events and commands. The actual SSH connection happens asynchronously in a
-/// background thread; status arrives via `terminal:status:{id}` events.
+/// Opens a built-in terminal session. Returns a session_id for subsequent events
+/// and commands. The SSH connection (including jump-host tunnel if configured)
+/// is established asynchronously; status arrives via `terminal:status:{id}` events.
 #[tauri::command]
 pub async fn open_terminal_session(
     server_id: String,
@@ -88,49 +155,28 @@ pub async fn open_terminal_session(
     app_handle: tauri::AppHandle,
 ) -> Result<String, AppError> {
     let server = queries::get_server_db(&state.db, &server_id).await?;
+    let auth = auth_for_server(&server, &state).await?;
+
+    // Resolve jump chain and build JumpInfo (with credentials) for each hop
+    let hop_servers = resolve_jump_chain(&state.db, &server).await?;
+    let mut jump_chain: Vec<JumpInfo> = Vec::with_capacity(hop_servers.len());
+    for hop in &hop_servers {
+        let hop_auth = auth_for_server(hop, &state).await?;
+        jump_chain.push(JumpInfo {
+            host: hop.server.hostname.clone(),
+            port: hop.server.port as u16,
+            username: hop.server.username.clone(),
+            auth: hop_auth,
+        });
+    }
+
     let s = &server.server;
-
-    let auth = match s.auth_method.as_str() {
-        "password" => {
-            let vault_id = s
-                .vault_credential_id
-                .as_deref()
-                .ok_or_else(|| AppError::Vault("no vault credential for password auth".into()))?;
-            if state.vault_key.lock().await.is_none() {
-                return Err(AppError::Vault("vault is locked".into()));
-            }
-            let password = vault::retrieve_credential(vault_id).await?;
-            connection::AuthInfo::Password(password)
-        }
-        "key" => {
-            let key_path_raw = s
-                .identity_file_path
-                .as_deref()
-                .ok_or_else(|| AppError::Ssh("no identity file path for key auth".into()))?;
-            let key_path = expand_path(key_path_raw);
-            let key_data = tokio::fs::read_to_string(&key_path)
-                .await
-                .map_err(|e| AppError::Ssh(format!("failed to read key file {}: {e}", key_path.display())))?;
-            // Passphrase is optional — only retrieved if there's a vault_credential_id
-            let passphrase = if let Some(vid) = &s.vault_credential_id {
-                if state.vault_key.lock().await.is_some() {
-                    vault::retrieve_credential(vid).await.ok()
-                } else {
-                    None
-                }
-            } else {
-                None
-            };
-            connection::AuthInfo::PubKey { key_data, passphrase }
-        }
-        _ => connection::AuthInfo::Agent,
-    };
-
     state.session_manager.open_session(
         s.hostname.clone(),
         s.port as u16,
         s.username.clone(),
         auth,
+        jump_chain,
         server.server.display_name.clone(),
         app_handle,
     )

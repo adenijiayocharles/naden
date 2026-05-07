@@ -7,6 +7,7 @@ use tauri::Emitter;
 use uuid::Uuid;
 
 use crate::error::AppError;
+use crate::ssh::jump_host::{self, JumpInfo};
 
 pub enum AuthInfo {
     Password(String),
@@ -35,17 +36,18 @@ impl SessionManager {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn open_session(
         &self,
         host: String,
         port: u16,
         username: String,
         auth: AuthInfo,
+        jump_chain: Vec<JumpInfo>,
         server_name: String,
         app_handle: tauri::AppHandle,
     ) -> Result<String, AppError> {
         let session_id = Uuid::new_v4().to_string();
-        // Bounded channel prevents unbounded backpressure from fast paste input
         let (tx, rx) = std::sync::mpsc::sync_channel(256);
 
         self.sessions
@@ -57,7 +59,10 @@ impl SessionManager {
         let sid = session_id.clone();
 
         std::thread::spawn(move || {
-            run_session(host, port, username, auth, server_name, sid, rx, app_handle, sessions);
+            run_session(
+                host, port, username, auth, jump_chain,
+                server_name, sid, rx, app_handle, sessions,
+            );
         });
 
         Ok(session_id)
@@ -93,7 +98,6 @@ impl SessionManager {
     }
 }
 
-/// Authenticate using the local SSH agent. Tries every identity until one succeeds.
 fn auth_via_agent(session: &mut ssh2::Session, username: &str) -> Result<(), ssh2::Error> {
     let mut agent = session.agent()?;
     agent.connect()?;
@@ -109,12 +113,52 @@ fn auth_via_agent(session: &mut ssh2::Session, username: &str) -> Result<(), ssh
     ))
 }
 
+/// Authenticate `session` for `username` using `auth`.
+/// Used by both the main session and jump-host hops.
+pub fn authenticate_session(
+    session: &mut ssh2::Session,
+    username: &str,
+    auth: &AuthInfo,
+) -> Result<(), AppError> {
+    match auth {
+        AuthInfo::Password(pass) => {
+            session
+                .userauth_password(username, pass)
+                .map_err(|e| AppError::Ssh(format!("Password auth failed: {e}")))?;
+        }
+        AuthInfo::PubKey { key_data, passphrase } => {
+            match session.userauth_pubkey_memory(username, None, key_data, passphrase.as_deref()) {
+                Ok(()) => {}
+                // LIBSSH2_ERROR_FILE (-16): key format unsupported; fall back to agent.
+                Err(ref e) if matches!(e.code(), ssh2::ErrorCode::Session(-16)) => {
+                    auth_via_agent(session, username).map_err(|_| {
+                        AppError::Ssh(
+                            "Private key format not supported by the local libssh2 \
+                             (OpenSSH format requires libssh2 ≥1.9 + OpenSSL). \
+                             Add the key to your SSH agent (`ssh-add <keyfile>`) \
+                             and set the server auth method to 'Agent'."
+                                .into(),
+                        )
+                    })?;
+                }
+                Err(e) => return Err(AppError::Ssh(format!("Key auth failed: {e}"))),
+            }
+        }
+        AuthInfo::Agent => {
+            auth_via_agent(session, username)
+                .map_err(|e| AppError::Ssh(format!("Agent auth failed: {e}")))?;
+        }
+    }
+    Ok(())
+}
+
 #[allow(clippy::too_many_arguments)]
 fn run_session(
     host: String,
     port: u16,
     username: String,
     auth: AuthInfo,
+    jump_chain: Vec<JumpInfo>,
     _server_name: String,
     session_id: String,
     rx: std::sync::mpsc::Receiver<SessionMessage>,
@@ -127,52 +171,22 @@ fn run_session(
     let _ = app_handle.emit(&format!("terminal:status:{session_id}"), "connecting");
 
     let result: Result<(), AppError> = (|| {
-        let tcp = TcpStream::connect((host.as_str(), port))
-            .map_err(|e| AppError::Ssh(format!("TCP connect failed: {e}")))?;
+        // Build the TCP stream: either a direct connection or a jump-host tunnel.
+        let stream = if jump_chain.is_empty() {
+            TcpStream::connect((host.as_str(), port))
+                .map_err(|e| AppError::Ssh(format!("TCP connect failed: {e}")))?
+        } else {
+            jump_host::open_tunnel(jump_chain, &host, port)?
+        };
 
         let mut session = ssh2::Session::new()
             .map_err(|e| AppError::Ssh(format!("SSH session create failed: {e}")))?;
-        session.set_tcp_stream(tcp);
+        session.set_tcp_stream(stream);
         session
             .handshake()
             .map_err(|e| AppError::Ssh(format!("SSH handshake failed: {e}")))?;
 
-        match &auth {
-            AuthInfo::Password(pass) => {
-                session
-                    .userauth_password(&username, pass)
-                    .map_err(|e| AppError::Ssh(format!("Password auth failed: {e}")))?;
-            }
-            AuthInfo::PubKey { key_data, passphrase } => {
-                match session.userauth_pubkey_memory(
-                    &username,
-                    None,
-                    key_data,
-                    passphrase.as_deref(),
-                ) {
-                    Ok(()) => {}
-                    // LIBSSH2_ERROR_FILE (-16): libssh2 can't parse this private key format.
-                    // Modern keys use OpenSSH format which older libssh2/LibreSSL builds don't
-                    // support. Fall back to the SSH agent, which handles all key types natively.
-                    Err(ref e) if matches!(e.code(), ssh2::ErrorCode::Session(-16)) => {
-                        auth_via_agent(&mut session, &username).map_err(|_| {
-                            AppError::Ssh(
-                                "Private key format not supported by the local libssh2 \
-                                 (OpenSSH format requires libssh2 ≥1.9 + OpenSSL). \
-                                 Add the key to your SSH agent (`ssh-add <keyfile>`) \
-                                 and set the server auth method to 'Agent'."
-                                    .into(),
-                            )
-                        })?;
-                    }
-                    Err(e) => return Err(AppError::Ssh(format!("Key auth failed: {e}"))),
-                }
-            }
-            AuthInfo::Agent => {
-                auth_via_agent(&mut session, &username)
-                    .map_err(|e| AppError::Ssh(format!("Agent auth failed: {e}")))?;
-            }
-        }
+        authenticate_session(&mut session, &username, &auth)?;
 
         if !session.authenticated() {
             return Err(AppError::Ssh("Authentication failed".into()));
@@ -190,14 +204,12 @@ fn run_session(
 
         let _ = app_handle.emit(&format!("terminal:status:{session_id}"), "connected");
 
-        // Non-blocking mode so the I/O loop can interleave reads with input messages
         session.set_blocking(false);
 
         let mut buf = vec![0u8; 4096];
         let poll_interval = std::time::Duration::from_millis(5);
 
         'io: loop {
-            // Drain all available output
             loop {
                 match channel.read(&mut buf) {
                     Ok(0) => break 'io,
@@ -211,12 +223,9 @@ fn run_session(
                 }
             }
 
-            // Process all pending messages from the frontend
             loop {
                 match rx.try_recv() {
                     Ok(SessionMessage::Input(data)) => {
-                        // Blocking write with a short timeout so a slow/stuck network
-                        // cannot freeze the thread indefinitely
                         session.set_blocking(true);
                         session.set_timeout(2000);
                         let _ = channel.write_all(&data);
@@ -238,16 +247,11 @@ fn run_session(
             std::thread::sleep(poll_interval);
         }
 
-        // Graceful shutdown: give the remote 3 s to acknowledge EOF before
-        // we give up. Without a timeout, wait_close blocks forever if the
-        // remote process keeps running (e.g. a hung job or zombie shell).
         session.set_blocking(true);
         session.set_timeout(3000);
         let _ = channel.send_eof();
-        let _ = channel.wait_close(); // returns after ≤3 s regardless
-        drop(channel); // release channel borrow before calling disconnect
-        // Tell the SSH server we are leaving so it can free its resources
-        // immediately rather than waiting for a TCP timeout.
+        let _ = channel.wait_close();
+        drop(channel);
         let _ = session.disconnect(None, "session closed", None);
 
         Ok(())

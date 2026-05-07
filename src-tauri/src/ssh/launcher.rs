@@ -1,11 +1,32 @@
 use crate::error::AppError;
 use crate::models::server::ServerWithTags;
 
+/// Format one jump-hop entry for the -J flag: `[user@]host[:port]`.
+fn jump_spec(s: &ServerWithTags) -> String {
+    let host = if s.server.port != 22 {
+        format!("{}:{}", s.server.hostname, s.server.port)
+    } else {
+        s.server.hostname.clone()
+    };
+    if !s.server.username.is_empty() {
+        format!("{}@{}", s.server.username, host)
+    } else {
+        host
+    }
+}
+
 /// Build SSH argument vector. Each element is a distinct argument — never joined
 /// into a shell string, so no shell metacharacter in hostname/username can be executed.
-fn build_ssh_argv(server: &ServerWithTags) -> Vec<String> {
+/// `jump_chain` is ordered from first hop to last hop (closest to the target last).
+fn build_ssh_argv(server: &ServerWithTags, jump_chain: &[ServerWithTags]) -> Vec<String> {
     let s = &server.server;
     let mut args = vec!["ssh".to_string()];
+
+    if !jump_chain.is_empty() {
+        let specs: Vec<String> = jump_chain.iter().map(jump_spec).collect();
+        args.push("-J".to_string());
+        args.push(specs.join(","));
+    }
 
     if s.port != 22 {
         args.push("-p".to_string());
@@ -26,8 +47,11 @@ fn build_ssh_argv(server: &ServerWithTags) -> Vec<String> {
     args
 }
 
-pub async fn launch_in_system_terminal(server: &ServerWithTags) -> Result<(), AppError> {
-    let argv = build_ssh_argv(server);
+pub async fn launch_in_system_terminal(
+    server: &ServerWithTags,
+    jump_chain: &[ServerWithTags],
+) -> Result<(), AppError> {
+    let argv = build_ssh_argv(server, jump_chain);
 
     #[cfg(target_os = "macos")]
     launch_macos(argv).await?;
