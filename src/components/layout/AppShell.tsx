@@ -20,6 +20,7 @@ export default function AppShell() {
   const activeSessionId = useTerminalStore((s) => s.activeSessionId);
   const hasTerminal = sessions.length > 0;
 
+
   useEffect(() => {
     void fetchAll();
     void check();
@@ -51,22 +52,14 @@ export default function AppShell() {
             <ServerList />
           </main>
 
-          {/* Built-in terminal panel — all sessions stay mounted so no events are lost */}
+          {/* Built-in terminal panel */}
           {hasTerminal && (
             <div className="flex flex-col flex-1 min-w-0">
               <TerminalTabs />
-              <div className="flex-1 min-h-0 relative">
-                {sessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className={`absolute inset-0 ${session.id === activeSessionId ? "" : "hidden"}`}
-                  >
-                    <TerminalPane
-                      sessionId={session.id}
-                      isActive={session.id === activeSessionId}
-                    />
-                  </div>
-                ))}
+              <div className="flex-1 min-h-0">
+                {activeSessionId && (
+                  <TerminalPane key={activeSessionId} sessionId={activeSessionId} />
+                )}
               </div>
             </div>
           )}
