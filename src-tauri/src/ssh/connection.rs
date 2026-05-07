@@ -215,8 +215,10 @@ fn run_session(
             loop {
                 match rx.try_recv() {
                     Ok(SessionMessage::Input(data)) => {
-                        // Toggle to blocking for write so we don't need a retry loop
+                        // Blocking write with a short timeout so a slow/stuck network
+                        // cannot freeze the thread indefinitely
                         session.set_blocking(true);
+                        session.set_timeout(2000);
                         let _ = channel.write_all(&data);
                         session.set_blocking(false);
                     }
@@ -236,9 +238,17 @@ fn run_session(
             std::thread::sleep(poll_interval);
         }
 
+        // Graceful shutdown: give the remote 3 s to acknowledge EOF before
+        // we give up. Without a timeout, wait_close blocks forever if the
+        // remote process keeps running (e.g. a hung job or zombie shell).
         session.set_blocking(true);
+        session.set_timeout(3000);
         let _ = channel.send_eof();
-        let _ = channel.wait_close();
+        let _ = channel.wait_close(); // returns after ≤3 s regardless
+        drop(channel); // release channel borrow before calling disconnect
+        // Tell the SSH server we are leaving so it can free its resources
+        // immediately rather than waiting for a TCP timeout.
+        let _ = session.disconnect(None, "session closed", None);
 
         Ok(())
     })();
