@@ -104,9 +104,10 @@ pub fn run() {
                 last_vault_activity: tokio::sync::Mutex::new(std::time::Instant::now()),
             });
 
-            // Spawn vault auto-lock background task
+            // Spawn vault auto-lock background task using Tauri's runtime,
+            // which is already active during setup (unlike tokio::spawn).
             let handle = app.handle().clone();
-            tokio::spawn(async move {
+            tauri::async_runtime::spawn(async move {
                 auto_lock_task(handle).await;
             });
 
