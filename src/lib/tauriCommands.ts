@@ -47,3 +47,17 @@ export const sshCommands = {
   confirmSshConfigImport: (previews: ImportPreview[]) =>
     invoke<Server[]>("confirm_ssh_config_import", { previews }),
 };
+
+export const terminalCommands = {
+  openTerminalSession: (serverId: string) =>
+    invoke<string>("open_terminal_session", { serverId }),
+
+  closeTerminalSession: (sessionId: string) =>
+    invoke<void>("close_terminal_session", { sessionId }),
+
+  sendTerminalInput: (sessionId: string, data: string) =>
+    invoke<void>("send_terminal_input", { sessionId, data }),
+
+  resizeTerminal: (sessionId: string, cols: number, rows: number) =>
+    invoke<void>("resize_terminal", { sessionId, cols, rows }),
+};

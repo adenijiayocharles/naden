@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import type { Server } from "../../types/server";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
+import { useTerminalStore } from "../../store/terminalStore";
 import { sshCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 
@@ -12,10 +13,12 @@ interface Props {
 export default function ServerCard({ server }: Props) {
   const deleteServer = useServerStore((s) => s.deleteServer);
   const openEdit = useUiStore((s) => s.openEdit);
+  const openSession = useTerminalStore((s) => s.openSession);
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [openingTerminal, setOpeningTerminal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -40,6 +43,21 @@ export default function ServerCard({ server }: Props) {
       setError(formatError(e));
     } finally {
       setConnecting(false);
+    }
+  };
+
+  const handleOpenTerminal = async () => {
+    setOpeningTerminal(true);
+    setError(null);
+    try {
+      const result = await openSession(server.id, server.displayName);
+      if (result === null) {
+        setError("Maximum terminal sessions (20) reached");
+      }
+    } catch (e) {
+      setError(formatError(e));
+    } finally {
+      setOpeningTerminal(false);
     }
   };
 
@@ -94,6 +112,13 @@ export default function ServerCard({ server }: Props) {
 
       {/* Actions */}
       <div className="flex items-center gap-2 shrink-0">
+        <button
+          onClick={() => { void handleOpenTerminal(); }}
+          disabled={openingTerminal}
+          className="bg-[#1a1a1a] hover:bg-[#222] disabled:opacity-40 border border-[#2a2a2a] text-[#ccc] text-sm font-medium px-3 py-1.5 rounded transition-colors"
+        >
+          {openingTerminal ? "…" : "Terminal"}
+        </button>
         <button
           onClick={() => { void handleConnect(); }}
           disabled={connecting}

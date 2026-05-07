@@ -17,6 +17,8 @@ pub struct AppState {
     /// Full server list cached in memory so fuzzy search never hits SQLite.
     /// Invalidated after every create / update / delete mutation.
     pub server_cache: tokio::sync::RwLock<Vec<models::server::ServerWithTags>>,
+    /// Active built-in terminal sessions.
+    pub session_manager: ssh::connection::SessionManager,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -42,12 +44,20 @@ pub fn run() {
             commands::ssh_commands::launch_in_terminal,
             commands::ssh_commands::import_ssh_config,
             commands::ssh_commands::confirm_ssh_config_import,
+            commands::ssh_commands::open_terminal_session,
+            commands::ssh_commands::close_terminal_session,
+            commands::ssh_commands::send_terminal_input,
+            commands::ssh_commands::resize_terminal,
             // Vault
             commands::vault_commands::vault_is_setup,
             commands::vault_commands::vault_setup,
             commands::vault_commands::vault_unlock,
             commands::vault_commands::vault_is_unlocked,
             commands::vault_commands::vault_lock,
+            commands::vault_commands::vault_is_password_required,
+            commands::vault_commands::vault_disable_password,
+            commands::vault_commands::vault_enable_password,
+            commands::vault_commands::vault_change_password,
             commands::vault_commands::store_credential,
             commands::vault_commands::retrieve_credential,
             commands::vault_commands::delete_credential,
@@ -64,11 +74,22 @@ pub fn run() {
                 .block_on(db::queries::list_servers_db(&pool))
                 .unwrap_or_default();
 
+            // Auto-unlock when the user has opted out of password protection.
+            let password_required = rt
+                .block_on(vault::master_password::is_password_required(&pool))
+                .unwrap_or(true);
+            let initial_vault_key = if !password_required {
+                Some(zeroize::Zeroizing::new([0u8; 32]))
+            } else {
+                None
+            };
+
             app.manage(AppState {
                 db: pool,
-                vault_key: tokio::sync::Mutex::new(None),
+                vault_key: tokio::sync::Mutex::new(initial_vault_key),
                 unlock_failures: tokio::sync::Mutex::new((0, None)),
                 server_cache: tokio::sync::RwLock::new(initial_cache),
+                session_manager: ssh::connection::SessionManager::new(),
             });
             Ok(())
         })
