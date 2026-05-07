@@ -3,9 +3,11 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Server } from "../types/server";
 
 type ActiveView = "list" | "add" | "edit";
+export type ViewMode = "card" | "row";
 
 interface UiStore {
   activeView: ActiveView;
+  viewMode: ViewMode;
   editingServerId: string | null;
   filterGroupId: string | null;
   filterTagId: string | null;
@@ -18,12 +20,14 @@ interface UiStore {
   setFilterGroup: (groupId: string | null) => void;
   setFilterTag: (tagId: string | null) => void;
   setSearch: (query: string) => void;
+  setViewMode: (mode: ViewMode) => void;
 }
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useUiStore = create<UiStore>((set) => ({
   activeView: "list",
+  viewMode: "card",
   editingServerId: null,
   filterGroupId: null,
   filterTagId: null,
@@ -35,6 +39,8 @@ export const useUiStore = create<UiStore>((set) => ({
   closeForm: () => set({ activeView: "list", editingServerId: null }),
   setFilterGroup: (groupId) => set({ filterGroupId: groupId, filterTagId: null }),
   setFilterTag: (tagId) => set({ filterTagId: tagId, filterGroupId: null }),
+
+  setViewMode: (mode) => set({ viewMode: mode }),
 
   setSearch: (query) => {
     set({ searchQuery: query });

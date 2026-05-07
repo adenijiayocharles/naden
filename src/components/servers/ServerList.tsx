@@ -1,13 +1,20 @@
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import ServerCard from "./ServerCard";
+import ServerRow from "./ServerRow";
 
 export default function ServerList() {
   const servers = useServerStore((s) => s.servers);
   const groups = useServerStore((s) => s.groups);
   const isLoading = useServerStore((s) => s.isLoading);
   const openAdd = useUiStore((s) => s.openAdd);
+  const viewMode = useUiStore((s) => s.viewMode);
   const { filterGroupId, filterTagId, searchQuery, searchResults } = useUiStore();
+
+  const Item = viewMode === "row" ? ServerRow : ServerCard;
+  const listClass = viewMode === "row"
+    ? "border border-[#1a1a1a] rounded-lg overflow-hidden"
+    : "space-y-2";
 
   if (isLoading) {
     return (
@@ -26,8 +33,8 @@ export default function ServerList() {
         <p className="text-[#333] text-sm">No servers match "{searchQuery}"</p>
       </div>
     ) : (
-      <div className="space-y-2">
-        {results.map((s) => <ServerCard key={s.id} server={s} />)}
+      <div className={listClass}>
+        {results.map((s) => <Item key={s.id} server={s} />)}
       </div>
     );
   }
@@ -61,8 +68,8 @@ export default function ServerList() {
 
   if (filterGroupId || filterTagId) {
     return (
-      <div className="space-y-2">
-        {filtered.map((s) => <ServerCard key={s.id} server={s} />)}
+      <div className={listClass}>
+        {filtered.map((s) => <Item key={s.id} server={s} />)}
       </div>
     );
   }
@@ -86,8 +93,8 @@ export default function ServerList() {
             {group.name}
             <span className="text-[#333] normal-case font-normal tracking-normal">{items.length}</span>
           </h2>
-          <div className="space-y-2">
-            {items.map((s) => <ServerCard key={s.id} server={s} />)}
+          <div className={listClass}>
+            {items.map((s) => <Item key={s.id} server={s} />)}
           </div>
         </section>
       ))}
@@ -97,8 +104,8 @@ export default function ServerList() {
           <h2 className="text-xs font-semibold text-[#666] uppercase tracking-wider mb-2">
             Ungrouped
           </h2>
-          <div className="space-y-2">
-            {ungrouped.map((s) => <ServerCard key={s.id} server={s} />)}
+          <div className={listClass}>
+            {ungrouped.map((s) => <Item key={s.id} server={s} />)}
           </div>
         </section>
       )}

@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useUiStore } from "../../store/uiStore";
+import { useUiStore, type ViewMode } from "../../store/uiStore";
 import SshConfigImport from "../servers/SshConfigImport";
 import SettingsModal from "../settings/SettingsModal";
 
@@ -7,6 +7,8 @@ export default function TopBar() {
   const openAdd = useUiStore((s) => s.openAdd);
   const setSearch = useUiStore((s) => s.setSearch);
   const searchQuery = useUiStore((s) => s.searchQuery);
+  const viewMode = useUiStore((s) => s.viewMode);
+  const setViewMode = useUiStore((s) => s.setViewMode);
   const [showImport, setShowImport] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -21,6 +23,37 @@ export default function TopBar() {
           placeholder="Search servers…"
           className="flex-1 min-w-0 max-w-sm bg-[#1a1a1a] border border-[#2a2a2a] rounded px-3 py-1.5 text-sm text-white placeholder-[#666] focus:outline-none focus:border-accent transition-colors"
         />
+
+        {/* View mode toggle */}
+        <div className="flex items-center bg-[#1a1a1a] border border-[#2a2a2a] rounded overflow-hidden shrink-0">
+          {(["card", "row"] as ViewMode[]).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              aria-label={mode === "card" ? "Card view" : "List view"}
+              className={`p-1.5 transition-colors ${
+                viewMode === mode
+                  ? "bg-[#2a2a2a] text-white"
+                  : "text-[#555] hover:text-[#999]"
+              }`}
+            >
+              {mode === "card" ? (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                  <rect x="1" y="1" width="6" height="6" rx="1" />
+                  <rect x="9" y="1" width="6" height="6" rx="1" />
+                  <rect x="1" y="9" width="6" height="6" rx="1" />
+                  <rect x="9" y="9" width="6" height="6" rx="1" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
+                  <line x1="1" y1="4" x2="15" y2="4" />
+                  <line x1="1" y1="8" x2="15" y2="8" />
+                  <line x1="1" y1="12" x2="15" y2="12" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
 
         <div className="ml-auto flex items-center gap-2 shrink-0">
           <button
