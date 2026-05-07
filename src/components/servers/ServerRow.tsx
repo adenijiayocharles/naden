@@ -39,7 +39,8 @@ export default function ServerRow({ server }: Props) {
     setConnecting(true);
     setError(null);
     try {
-      await sshCommands.launchInTerminal(server.id);
+      const result = await openSession(server.id, server.displayName);
+      if (result === null) setError("Maximum terminal sessions (20) reached");
     } catch (e) {
       setError(formatError(e));
     } finally {
@@ -47,13 +48,12 @@ export default function ServerRow({ server }: Props) {
     }
   };
 
-  const handleOpenTerminal = async () => {
+  const handleSystemTerminal = async () => {
     setMenuOpen(false);
     setOpeningTerminal(true);
     setError(null);
     try {
-      const result = await openSession(server.id, server.displayName);
-      if (result === null) setError("Maximum terminal sessions (20) reached");
+      await sshCommands.launchInTerminal(server.id);
     } catch (e) {
       setError(formatError(e));
     } finally {
@@ -136,11 +136,11 @@ export default function ServerRow({ server }: Props) {
               Edit
             </button>
             <button
-              onClick={() => { void handleOpenTerminal(); }}
+              onClick={() => { void handleSystemTerminal(); }}
               disabled={openingTerminal}
               className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors disabled:opacity-40"
             >
-              {openingTerminal ? "Opening…" : "Open Terminal"}
+              {openingTerminal ? "Opening…" : "System Terminal"}
             </button>
             {!confirmDelete ? (
               <button
