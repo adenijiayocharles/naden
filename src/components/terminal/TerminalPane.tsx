@@ -74,6 +74,7 @@ export default function TerminalPane({ sessionId }: Props) {
       unlistenStatus = await listen<string>(`terminal:status:${sessionId}`, (event) => {
         if (event.payload === "connected") {
           setStatus(sessionId, "connected");
+          term.focus();
         }
       });
 
