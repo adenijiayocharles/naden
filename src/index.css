@@ -12,3 +12,8 @@
     font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   }
 }
+
+@keyframes progress-slide {
+  0%   { left: -45%; width: 45%; }
+  100% { left: 100%; width: 45%; }
+}
