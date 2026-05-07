@@ -75,6 +75,7 @@ export default function ServerRow({ server }: Props) {
   return (
     <div
       onClick={() => { void handleConnect(); }}
+      title={server.notes ?? undefined}
       className={`group flex items-center gap-3 px-3 py-2.5 border-b border-[#1a1a1a] last:border-b-0 first:rounded-t-lg last:rounded-b-lg select-none transition-colors
         ${connecting ? "opacity-60 cursor-wait bg-[#0d0d0d]" : "cursor-pointer hover:bg-[#0f0f0f]"}`}
     >

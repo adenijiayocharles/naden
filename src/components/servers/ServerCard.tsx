@@ -166,6 +166,10 @@ export default function ServerCard({ server }: Props) {
         </div>
       )}
 
+      {server.notes && (
+        <p className="text-xs text-[#555] truncate">{server.notes}</p>
+      )}
+
       {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
   );

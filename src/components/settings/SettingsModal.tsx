@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { save, open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useVaultStore } from "../../store/vaultStore";
+import { backupCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 
 interface Props {
@@ -46,6 +48,12 @@ export default function SettingsModal({ onClose }: Props) {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Backup state
+  const [backupMode, setBackupMode] = useState<"none" | "export" | "import">("none");
+  const [backupPwd, setBackupPwd] = useState("");
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupMsg, setBackupMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
   // Disable form state
   const [disablePwd, setDisablePwd] = useState("");
 
@@ -57,6 +65,58 @@ export default function SettingsModal({ onClose }: Props) {
   const [changeCurrent, setChangeCurrent] = useState("");
   const [changeNew, setChangeNew] = useState("");
   const [changeConfirm, setChangeConfirm] = useState("");
+
+  const openBackupForm = (mode: "export" | "import") => {
+    setBackupMode((prev) => (prev === mode ? "none" : mode));
+    setBackupPwd("");
+    setBackupMsg(null);
+  };
+
+  const handleExport = async () => {
+    if (!backupPwd) return;
+    setBackupLoading(true);
+    setBackupMsg(null);
+    try {
+      const path = await save({
+        defaultPath: `ssh-manager-backup-${new Date().toISOString().slice(0, 10)}.sshbak`,
+        filters: [{ name: "SSH Manager Backup", extensions: ["sshbak"] }],
+      });
+      if (!path) { setBackupLoading(false); return; }
+      await backupCommands.exportBackup(backupPwd, path);
+      setBackupMsg({ type: "ok", text: "Backup exported successfully." });
+      setBackupPwd("");
+      setBackupMode("none");
+    } catch (e) {
+      setBackupMsg({ type: "err", text: formatError(e) });
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!backupPwd) return;
+    setBackupLoading(true);
+    setBackupMsg(null);
+    try {
+      const selected = await openDialog({
+        multiple: false,
+        filters: [{ name: "SSH Manager Backup", extensions: ["sshbak"] }],
+      });
+      if (!selected) { setBackupLoading(false); return; }
+      const path = typeof selected === "string" ? selected : selected[0];
+      const summary = await backupCommands.importBackup(path, backupPwd);
+      setBackupMsg({
+        type: "ok",
+        text: `Imported ${summary.serversImported} server(s), ${summary.groupsImported} group(s), ${summary.tagsImported} tag(s). ${summary.serversSkipped > 0 ? `${summary.serversSkipped} already existed and were skipped.` : ""}`,
+      });
+      setBackupPwd("");
+      setBackupMode("none");
+    } catch (e) {
+      setBackupMsg({ type: "err", text: formatError(e) });
+    } finally {
+      setBackupLoading(false);
+    }
+  };
 
   const reset = () => {
     setError(null);
@@ -311,6 +371,75 @@ export default function SettingsModal({ onClose }: Props) {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* Backup section */}
+          <div>
+            <p className="text-xs font-semibold text-[#777] uppercase tracking-wider mb-3">Data</p>
+            <p className="text-xs text-[#555] mb-3">
+              Backups contain server metadata only — credentials are never included.
+            </p>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => openBackupForm("export")}
+                className={`flex-1 py-2 text-sm rounded transition-colors border ${
+                  backupMode === "export"
+                    ? "border-accent text-white bg-[#111]"
+                    : "border-[#2a2a2a] text-[#bbb] bg-[#1a1a1a] hover:bg-[#222]"
+                }`}
+              >
+                Export Backup
+              </button>
+              <button
+                onClick={() => openBackupForm("import")}
+                className={`flex-1 py-2 text-sm rounded transition-colors border ${
+                  backupMode === "import"
+                    ? "border-accent text-white bg-[#111]"
+                    : "border-[#2a2a2a] text-[#bbb] bg-[#1a1a1a] hover:bg-[#222]"
+                }`}
+              >
+                Import Backup
+              </button>
+            </div>
+
+            {(backupMode === "export" || backupMode === "import") && (
+              <div className="mt-3 space-y-3 p-3 bg-[#0d0d0d] rounded-lg border border-[#1e1e1e]">
+                <p className="text-xs text-[#bbb]">
+                  {backupMode === "export"
+                    ? "Encrypt the backup with a password. You will need this password to restore."
+                    : "Enter the password used when the backup was created."}
+                </p>
+                <PasswordInput
+                  autoFocus
+                  value={backupPwd}
+                  onChange={setBackupPwd}
+                  placeholder={backupMode === "export" ? "Backup password" : "Backup password"}
+                />
+                {backupMsg && (
+                  <p className={`text-xs ${backupMsg.type === "ok" ? "text-green-400" : "text-red-400"}`}>
+                    {backupMsg.text}
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setBackupMode("none"); setBackupPwd(""); setBackupMsg(null); }}
+                    className="flex-1 py-2 text-xs text-[#777] hover:text-white bg-[#1a1a1a] hover:bg-[#222] rounded transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => { void (backupMode === "export" ? handleExport() : handleImport()); }}
+                    disabled={backupLoading || !backupPwd}
+                    className="flex-1 py-2 text-xs text-black bg-accent hover:bg-accent-hover disabled:opacity-40 rounded transition-colors font-semibold"
+                  >
+                    {backupLoading
+                      ? (backupMode === "export" ? "Exporting…" : "Importing…")
+                      : (backupMode === "export" ? "Choose file & export" : "Choose file & import")}
+                  </button>
+                </div>
               </div>
             )}
           </div>

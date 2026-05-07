@@ -63,6 +63,21 @@ export const terminalCommands = {
     invoke<void>("resize_terminal", { sessionId, cols, rows }),
 };
 
+export interface ImportSummary {
+  serversImported: number;
+  groupsImported: number;
+  tagsImported: number;
+  serversSkipped: number;
+}
+
+export const backupCommands = {
+  exportBackup: (password: string, path: string) =>
+    invoke<void>("export_backup", { password, path }),
+
+  importBackup: (path: string, password: string) =>
+    invoke<ImportSummary>("import_backup", { path, password }),
+};
+
 export const auditCommands = {
   listAuditLog: (
     offset: number,
