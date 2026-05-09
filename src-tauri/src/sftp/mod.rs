@@ -298,6 +298,8 @@ fn delete_entry(sftp: &ssh2::Sftp, path: &str) -> Result<(), AppError> {
         .map_err(|e| sftp_err("delete this directory", e))
 }
 
+const MAX_UPLOAD_BYTES: u64 = 2 * 1024 * 1024 * 1024; // 2 GB
+
 fn upload_file(
     sftp: &ssh2::Sftp,
     local_path: &str,
@@ -308,6 +310,13 @@ fn upload_file(
     let mut local_file = std::fs::File::open(local_path)
         .map_err(|e| AppError::Io(format!("cannot open local file: {e}")))?;
     let total = local_file.metadata().map(|m| m.len()).unwrap_or(0);
+
+    if total > MAX_UPLOAD_BYTES {
+        return Err(AppError::Io(format!(
+            "File too large to upload ({:.1} GB). Maximum is 2 GB.",
+            total as f64 / 1_073_741_824.0
+        )));
+    }
 
     let mut remote_file = sftp
         .create(Path::new(remote_path))

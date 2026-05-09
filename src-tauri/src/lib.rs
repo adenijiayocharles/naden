@@ -151,15 +151,19 @@ async fn auto_lock_task(app: tauri::AppHandle) {
         }
 
         // Read timeout setting (0 = disabled)
-        let timeout_mins: u64 = sqlx::query_scalar::<_, String>(
+        let timeout_mins: u64 = match sqlx::query_scalar::<_, String>(
             "SELECT value FROM settings WHERE key = 'vault_timeout_minutes'",
         )
         .fetch_optional(&state.db)
         .await
-        .ok()
-        .flatten()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(0);
+        {
+            Ok(Some(v)) => v.parse().unwrap_or(0),
+            Ok(None) => 0,
+            Err(e) => {
+                eprintln!("[auto-lock] failed to read vault_timeout_minutes: {e}");
+                continue; // skip this tick rather than silently disabling auto-lock
+            }
+        };
 
         if timeout_mins == 0 {
             continue;

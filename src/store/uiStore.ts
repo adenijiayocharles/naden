@@ -93,7 +93,7 @@ export const useUiStore = create<UiStore>((set) => ({
     searchTimer = setTimeout(() => {
       invoke<Server[]>("fuzzy_search", { query })
         .then((results) => set({ searchResults: results }))
-        .catch(() => { /* silently ignore search errors */ });
+        .catch((e) => { console.error("[search] fuzzy_search failed:", e); });
     }, 50);
   },
 }));

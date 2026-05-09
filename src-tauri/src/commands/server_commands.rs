@@ -147,7 +147,7 @@ pub async fn check_reachability(
 ) -> Result<ReachabilityResult, AppError> {
     let server = queries::get_server_db(&state.db, &server_id).await?;
     let host = server.server.hostname.clone();
-    let port = server.server.port as u16;
+    let port = u16::try_from(server.server.port).unwrap_or(22);
 
     let result = tokio::task::spawn_blocking(move || {
         use std::net::ToSocketAddrs;

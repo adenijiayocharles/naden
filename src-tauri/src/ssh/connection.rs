@@ -80,10 +80,16 @@ impl SessionManager {
         let sid = session_id.clone();
 
         std::thread::spawn(move || {
-            run_session(
-                host, port, username, auth, jump_chain,
-                server_name, on_close, sid, rx, app_handle, sessions,
-            );
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                run_session(
+                    host, port, username, auth, jump_chain,
+                    server_name, on_close, sid.clone(), rx, app_handle.clone(), Arc::clone(&sessions),
+                );
+            }));
+            if result.is_err() {
+                sessions.lock().unwrap().remove(&sid);
+                let _ = app_handle.emit(&format!("terminal:closed:{sid}"), ());
+            }
         });
 
         Ok(session_id)
@@ -249,7 +255,9 @@ fn run_session(
                     Ok(SessionMessage::Input(data)) => {
                         session.set_blocking(true);
                         session.set_timeout(2000);
-                        let _ = channel.write_all(&data);
+                        if channel.write_all(&data).is_err() {
+                            break 'io;
+                        }
                         session.set_blocking(false);
                     }
                     Ok(SessionMessage::Resize(cols, rows)) => {

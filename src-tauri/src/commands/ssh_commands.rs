@@ -186,7 +186,7 @@ pub async fn open_terminal_session(
         let hop_auth = auth_for_server(hop, &state).await?;
         jump_chain.push(JumpInfo {
             host: hop.server.hostname.clone(),
-            port: hop.server.port as u16,
+            port: u16::try_from(hop.server.port).unwrap_or(22),
             username: hop.server.username.clone(),
             auth: hop_auth,
         });
@@ -224,7 +224,7 @@ pub async fn open_terminal_session(
 
     state.session_manager.open_session(
         s.hostname.clone(),
-        s.port as u16,
+        u16::try_from(s.port).unwrap_or(22),
         s.username.clone(),
         auth,
         jump_chain,

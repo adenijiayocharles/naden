@@ -39,7 +39,6 @@ const SFTP_STATUS_COLORS: Record<SftpStatus, string> = {
 
 export default function AppShell() {
   const fetchAll = useServerStore((s) => s.fetchAll);
-  const fetchRecentServerIds = useServerStore((s) => s.fetchRecentServerIds);
   const bulkMode = useUiStore((s) => s.bulkMode);
   const activeView = useUiStore((s) => s.activeView);
   const serverListCollapsed = useUiStore((s) => s.serverListCollapsed);
@@ -96,7 +95,6 @@ export default function AppShell() {
     void fetchAll();
     void check();
     void loadTerminalSettings();
-    void fetchRecentServerIds();
     // Check onboarding once on mount
     settingsCommands.getSetting("onboarding_complete")
       .then((v) => {
@@ -104,7 +102,7 @@ export default function AppShell() {
         setOnboardingChecked();
       })
       .catch(() => { setOnboardingChecked(); });
-  }, [fetchAll, check, loadTerminalSettings, fetchRecentServerIds, setOnboardingComplete, setOnboardingChecked]);
+  }, [fetchAll, check, loadTerminalSettings, setOnboardingComplete, setOnboardingChecked]);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {

@@ -18,7 +18,6 @@ interface ServerStore {
   tags: Tag[];
   isLoading: boolean;
   error: string | null;
-  recentServerIds: string[];
   reachability: Record<string, ReachabilityInfo>;
 
   fetchAll: () => Promise<void>;
@@ -30,7 +29,6 @@ interface ServerStore {
   duplicateServer: (serverId: string) => Promise<Server>;
   createGroup: (name: string, color?: string) => Promise<Group>;
   createTag: (name: string) => Promise<Tag>;
-  fetchRecentServerIds: () => Promise<void>;
   checkReachability: (serverId: string) => Promise<void>;
 }
 
@@ -40,7 +38,6 @@ export const useServerStore = create<ServerStore>((set) => ({
   tags: [],
   isLoading: false,
   error: null,
-  recentServerIds: [],
   reachability: {},
 
   fetchAll: async () => {
@@ -75,10 +72,7 @@ export const useServerStore = create<ServerStore>((set) => ({
 
   deleteServer: async (id) => {
     await serverCommands.deleteServer(id);
-    set((s) => ({
-      servers: s.servers.filter((sv) => sv.id !== id),
-      recentServerIds: s.recentServerIds.filter((rid) => rid !== id),
-    }));
+    set((s) => ({ servers: s.servers.filter((sv) => sv.id !== id) }));
   },
 
   moveServerGroup: async (serverId, groupId) => {
@@ -113,11 +107,6 @@ export const useServerStore = create<ServerStore>((set) => ({
       tags: s.tags.some((t) => t.id === tag.id) ? s.tags : [...s.tags, tag],
     }));
     return tag;
-  },
-
-  fetchRecentServerIds: async () => {
-    const ids = await serverCommands.getRecentServerIds(8);
-    set({ recentServerIds: ids });
   },
 
   checkReachability: async (serverId) => {

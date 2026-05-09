@@ -40,9 +40,6 @@ export const serverCommands = {
   duplicateServer: (serverId: string) =>
     invoke<Server>("duplicate_server", { serverId }),
 
-  getRecentServerIds: (limit: number) =>
-    invoke<string[]>("get_recent_server_ids", { limit }),
-
   checkReachability: (serverId: string) =>
     invoke<ReachabilityResult>("check_reachability", { serverId }),
 
