@@ -49,8 +49,10 @@ export default function ServerRow({ server }: { server: Server }) {
         setConfirmDelete={actions.setConfirmDelete}
         deleting={actions.deleting}
         openingTerminal={actions.openingTerminal}
+        openingBrowser={actions.openingBrowser}
         onEdit={actions.editServer}
         onSystemTerminal={() => { void actions.handleSystemTerminal(); }}
+        onBrowseFiles={() => { void actions.handleBrowseFiles(); }}
         onDelete={() => { void actions.handleDelete(); }}
         buttonClassName="text-[#444] hover:text-white p-1 rounded hover:bg-[#1a1a1a] transition-colors text-base leading-none opacity-0 group-hover:opacity-100"
       />

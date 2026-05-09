@@ -8,6 +8,7 @@ import type {
   UpdateServerPayload,
   ImportPreview,
 } from "../types/server";
+import type { DirListing } from "../types/sftp";
 
 export const serverCommands = {
   listServers: () =>
@@ -87,6 +88,32 @@ export const backupCommands = {
 
   importBackup: (path: string, password: string) =>
     invoke<ImportSummary>("import_backup", { path, password }),
+};
+
+export const sftpCommands = {
+  openSftpSession: (serverId: string) =>
+    invoke<string>("open_sftp_session", { serverId }),
+
+  closeSftpSession: (sessionId: string) =>
+    invoke<void>("close_sftp_session", { sessionId }),
+
+  listSftpDir: (sessionId: string, path: string) =>
+    invoke<DirListing>("list_sftp_dir", { sessionId, path }),
+
+  mkdirSftp: (sessionId: string, path: string) =>
+    invoke<void>("mkdir_sftp", { sessionId, path }),
+
+  deleteSftp: (sessionId: string, path: string) =>
+    invoke<void>("delete_sftp", { sessionId, path }),
+
+  renameSftp: (sessionId: string, from: string, to: string) =>
+    invoke<void>("rename_sftp", { sessionId, from, to }),
+
+  uploadSftpFile: (sessionId: string, localPath: string, remotePath: string) =>
+    invoke<void>("upload_sftp_file", { sessionId, localPath, remotePath }),
+
+  downloadSftpFile: (sessionId: string, remotePath: string, localPath: string) =>
+    invoke<void>("download_sftp_file", { sessionId, remotePath, localPath }),
 };
 
 export const auditCommands = {

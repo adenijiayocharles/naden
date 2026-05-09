@@ -32,8 +32,10 @@ export default function ServerCard({ server }: { server: Server }) {
           setConfirmDelete={actions.setConfirmDelete}
           deleting={actions.deleting}
           openingTerminal={actions.openingTerminal}
+          openingBrowser={actions.openingBrowser}
           onEdit={actions.editServer}
           onSystemTerminal={() => { void actions.handleSystemTerminal(); }}
+          onBrowseFiles={() => { void actions.handleBrowseFiles(); }}
           onDelete={() => { void actions.handleDelete(); }}
         />
       </div>

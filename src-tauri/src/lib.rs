@@ -5,6 +5,7 @@ mod db;
 pub mod error;
 mod models;
 mod search;
+mod sftp;
 mod ssh;
 mod vault;
 
@@ -19,6 +20,8 @@ pub struct AppState {
     pub server_cache: tokio::sync::RwLock<Vec<models::server::ServerWithTags>>,
     /// Active built-in terminal sessions.
     pub session_manager: ssh::connection::SessionManager,
+    /// Active SFTP browser sessions.
+    pub sftp_manager: sftp::SftpManager,
     /// Timestamp of the last vault-related activity; used by the auto-lock task.
     pub last_vault_activity: tokio::sync::Mutex<std::time::Instant>,
 }
@@ -52,6 +55,15 @@ pub fn run() {
             commands::settings_commands::get_setting,
             commands::settings_commands::set_setting,
             commands::settings_commands::vault_heartbeat,
+            // SFTP
+            commands::sftp_commands::open_sftp_session,
+            commands::sftp_commands::close_sftp_session,
+            commands::sftp_commands::list_sftp_dir,
+            commands::sftp_commands::mkdir_sftp,
+            commands::sftp_commands::delete_sftp,
+            commands::sftp_commands::rename_sftp,
+            commands::sftp_commands::upload_sftp_file,
+            commands::sftp_commands::download_sftp_file,
             // SSH
             commands::ssh_commands::launch_in_terminal,
             commands::ssh_commands::import_ssh_config,
@@ -101,6 +113,7 @@ pub fn run() {
                 unlock_failures: tokio::sync::Mutex::new((0, None)),
                 server_cache: tokio::sync::RwLock::new(initial_cache),
                 session_manager: ssh::connection::SessionManager::new(),
+                sftp_manager: sftp::SftpManager::new(),
                 last_vault_activity: tokio::sync::Mutex::new(std::time::Instant::now()),
             });
 

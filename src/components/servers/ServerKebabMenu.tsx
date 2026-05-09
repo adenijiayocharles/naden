@@ -6,8 +6,10 @@ interface Props {
   setConfirmDelete: (v: boolean) => void;
   deleting: boolean;
   openingTerminal: boolean;
+  openingBrowser: boolean;
   onEdit: () => void;
   onSystemTerminal: () => void;
+  onBrowseFiles: () => void;
   onDelete: () => void;
   buttonClassName?: string;
 }
@@ -15,8 +17,8 @@ interface Props {
 export default function ServerKebabMenu({
   menuRef, menuOpen, setMenuOpen,
   confirmDelete, setConfirmDelete,
-  deleting, openingTerminal,
-  onEdit, onSystemTerminal, onDelete,
+  deleting, openingTerminal, openingBrowser,
+  onEdit, onSystemTerminal, onBrowseFiles, onDelete,
   buttonClassName = "text-[#555] hover:text-white p-1 rounded hover:bg-[#1a1a1a] transition-colors text-lg leading-none",
 }: Props) {
   return (
@@ -47,6 +49,13 @@ export default function ServerKebabMenu({
             className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors disabled:opacity-40"
           >
             {openingTerminal ? "Opening…" : "System Terminal"}
+          </button>
+          <button
+            onClick={onBrowseFiles}
+            disabled={openingBrowser}
+            className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors disabled:opacity-40"
+          >
+            {openingBrowser ? "Connecting…" : "Browse Files"}
           </button>
           {!confirmDelete ? (
             <button

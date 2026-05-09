@@ -1,8 +1,9 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState, useRef } from "react";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import { useVaultStore } from "../../store/vaultStore";
 import { useTerminalStore } from "../../store/terminalStore";
+import { useSftpStore } from "../../store/sftpStore";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import ServerList from "../servers/ServerList";
@@ -10,11 +11,28 @@ import ServerForm from "../servers/ServerForm";
 import VaultLockScreen from "../vault/VaultLockScreen";
 import VaultSetupModal from "../vault/VaultSetupModal";
 import TerminalPane from "../terminal/TerminalPane";
-import TerminalTabs from "../terminal/TerminalTabs";
 import AuditLogView from "../audit/AuditLogView";
 import OnboardingWizard from "../onboarding/OnboardingWizard";
+import SftpBrowser from "../sftp/SftpBrowser";
 import { settingsCommands } from "../../lib/tauriCommands";
 import { useTerminalSettings } from "../../lib/terminalSettings";
+import type { SessionStatus } from "../../store/terminalStore";
+import type { SftpStatus } from "../../store/sftpStore";
+
+type PanelType = "terminal" | "sftp";
+
+const TERMINAL_STATUS_COLORS: Record<SessionStatus, string> = {
+  connecting: "bg-yellow-500",
+  connected: "bg-[#CDFF00]",
+  disconnected: "bg-[#444]",
+  error: "bg-red-500",
+};
+
+const SFTP_STATUS_COLORS: Record<SftpStatus, string> = {
+  connecting: "bg-yellow-500",
+  connected: "bg-[#CDFF00]",
+  error: "bg-red-500",
+};
 
 export default function AppShell() {
   const fetchAll = useServerStore((s) => s.fetchAll);
@@ -29,9 +47,44 @@ export default function AppShell() {
   const setOnboardingChecked = useUiStore((s) => s.setOnboardingChecked);
   const { isSetup, isUnlocked, isChecking, setupDismissed, check } = useVaultStore();
   const loadTerminalSettings = useTerminalSettings((s) => s.load);
-  const sessions = useTerminalStore((s) => s.sessions);
-  const activeSessionId = useTerminalStore((s) => s.activeSessionId);
-  const hasTerminal = sessions.length > 0;
+
+  const terminalSessions = useTerminalStore((s) => s.sessions);
+  const terminalActiveId = useTerminalStore((s) => s.activeSessionId);
+  const terminalSetActive = useTerminalStore((s) => s.setActive);
+  const terminalClose = useTerminalStore((s) => s.closeSession);
+
+  const sftpSessions = useSftpStore((s) => s.sessions);
+  const sftpActiveId = useSftpStore((s) => s.activeSessionId);
+  const sftpSetActive = useSftpStore((s) => s.setActive);
+  const sftpClose = useSftpStore((s) => s.closeSession);
+
+  // Which panel type is currently in the foreground
+  const [activePanelType, setActivePanelType] = useState<PanelType>("terminal");
+
+  const hasTerminal = terminalSessions.length > 0;
+  const hasSftp = sftpSessions.length > 0;
+  const hasPanel = hasTerminal || hasSftp;
+
+  // Bring a panel type to the foreground only when a NEW session is added
+  // (length increases), not when one closes. Refs track the previous count.
+  const prevTerminalCount = useRef(terminalSessions.length);
+  const prevSftpCount = useRef(sftpSessions.length);
+
+  useEffect(() => {
+    if (terminalSessions.length > prevTerminalCount.current) setActivePanelType("terminal");
+    prevTerminalCount.current = terminalSessions.length;
+  }, [terminalSessions.length]);
+
+  useEffect(() => {
+    if (sftpSessions.length > prevSftpCount.current) setActivePanelType("sftp");
+    prevSftpCount.current = sftpSessions.length;
+  }, [sftpSessions.length]);
+
+  // Fall back when the active type's last session closes
+  useEffect(() => {
+    if (activePanelType === "terminal" && !hasTerminal && hasSftp) setActivePanelType("sftp");
+    if (activePanelType === "sftp" && !hasSftp && hasTerminal) setActivePanelType("terminal");
+  }, [hasTerminal, hasSftp]); // intentionally omits activePanelType — only relevant when availability changes
 
 
   useEffect(() => {
@@ -110,7 +163,7 @@ export default function AppShell() {
           {/* Server list / audit log */}
           <main
             className={`shrink-0 transition-[width,padding] duration-200 ${
-              hasTerminal
+              hasPanel
                 ? serverListCollapsed
                   ? "w-0 p-0 overflow-hidden"
                   : "w-72 border-r border-[#1e1e1e] overflow-hidden flex flex-col"
@@ -122,8 +175,8 @@ export default function AppShell() {
               : <div className="flex-1 overflow-y-auto p-5"><ServerList /></div>}
           </main>
 
-          {/* Collapse / expand handle — only visible when terminal is open */}
-          {hasTerminal && (
+          {/* Collapse / expand handle */}
+          {hasPanel && (
             <button
               onClick={toggleServerList}
               aria-label={serverListCollapsed ? "Expand server list" : "Collapse server list"}
@@ -147,13 +200,62 @@ export default function AppShell() {
             </button>
           )}
 
-          {/* Built-in terminal panel */}
-          {hasTerminal && (
+          {/* Unified panel: terminals + SFTP browsers */}
+          {hasPanel && (
             <div className="flex flex-col flex-1 min-w-0">
-              <TerminalTabs />
+              {/* Unified tab bar */}
+              <div className="h-10 bg-[#111] border-b border-[#1e1e1e] flex items-center gap-1 px-2 overflow-x-auto shrink-0">
+                {terminalSessions.map((session) => (
+                  <div
+                    key={session.id}
+                    onClick={() => { terminalSetActive(session.id); setActivePanelType("terminal"); }}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer shrink-0 transition-colors select-none ${
+                      activePanelType === "terminal" && session.id === terminalActiveId
+                        ? "bg-[#1e1e1e] text-white"
+                        : "text-[#888] hover:text-white hover:bg-[#191919]"
+                    }`}
+                  >
+                    <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${TERMINAL_STATUS_COLORS[session.status]}`} />
+                    <span className="max-w-[120px] truncate">{session.serverName}</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); void terminalClose(session.id); }}
+                      className="text-[#555] hover:text-white ml-1 leading-none transition-colors text-base"
+                      aria-label={`Close ${session.serverName}`}
+                    >×</button>
+                  </div>
+                ))}
+
+                {sftpSessions.map((session) => (
+                  <div
+                    key={session.id}
+                    onClick={() => { sftpSetActive(session.id); setActivePanelType("sftp"); }}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer shrink-0 transition-colors select-none ${
+                      activePanelType === "sftp" && session.id === sftpActiveId
+                        ? "bg-[#1e1e1e] text-white"
+                        : "text-[#888] hover:text-white hover:bg-[#191919]"
+                    }`}
+                  >
+                    <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${SFTP_STATUS_COLORS[session.status]}`} />
+                    <svg className="w-3 h-3 text-[#CDFF00] shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                    </svg>
+                    <span className="max-w-[120px] truncate">{session.serverName}</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); void sftpClose(session.id); }}
+                      className="text-[#555] hover:text-white ml-1 leading-none transition-colors text-base"
+                      aria-label={`Close ${session.serverName} browser`}
+                    >×</button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Panel content */}
               <div className="flex-1 min-h-0">
-                {activeSessionId && (
-                  <TerminalPane key={activeSessionId} sessionId={activeSessionId} />
+                {activePanelType === "terminal" && terminalActiveId && (
+                  <TerminalPane key={terminalActiveId} sessionId={terminalActiveId} />
+                )}
+                {activePanelType === "sftp" && sftpActiveId && (
+                  <SftpBrowser key={sftpActiveId} sessionId={sftpActiveId} />
                 )}
               </div>
             </div>

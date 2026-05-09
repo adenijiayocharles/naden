@@ -19,7 +19,7 @@
 - [ ] Clipboard auto-clear after copying a password (e.g. 30 seconds)
 
 ## Missing PRD Features (P3)
-- [ ] SFTP file browser
+- [x] SFTP file browser
 - [ ] Cloud sync for the server list (credentials stay local)
 
 ## Code Quality

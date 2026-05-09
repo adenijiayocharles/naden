@@ -3,6 +3,7 @@ import type { Server } from "../../types/server";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import { useTerminalStore } from "../../store/terminalStore";
+import { useSftpStore } from "../../store/sftpStore";
 import { sshCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 
@@ -10,12 +11,14 @@ export function useServerActions(server: Server) {
   const deleteServer = useServerStore((s) => s.deleteServer);
   const openEdit = useUiStore((s) => s.openEdit);
   const openSession = useTerminalStore((s) => s.openSession);
+  const openSftpSession = useSftpStore((s) => s.openSession);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [openingTerminal, setOpeningTerminal] = useState(false);
+  const [openingBrowser, setOpeningBrowser] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -58,6 +61,19 @@ export function useServerActions(server: Server) {
     }
   };
 
+  const handleBrowseFiles = async () => {
+    setMenuOpen(false);
+    setOpeningBrowser(true);
+    setError(null);
+    try {
+      await openSftpSession(server.id, server.displayName);
+    } catch (e) {
+      setError(formatError(e));
+    } finally {
+      setOpeningBrowser(false);
+    }
+  };
+
   const handleDelete = async () => {
     setDeleting(true);
     try {
@@ -75,10 +91,11 @@ export function useServerActions(server: Server) {
     menuRef,
     menuOpen, setMenuOpen,
     confirmDelete, setConfirmDelete,
-    deleting, connecting, openingTerminal,
+    deleting, connecting, openingTerminal, openingBrowser,
     error,
     handleConnect,
     handleSystemTerminal,
+    handleBrowseFiles,
     handleDelete,
     editServer,
   };

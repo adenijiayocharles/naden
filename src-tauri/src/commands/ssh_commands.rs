@@ -22,7 +22,7 @@ fn expand_path(path: &str) -> std::path::PathBuf {
 
 /// Walk the jump_host_id chain and return hops ordered first→last.
 /// Detects cycles (returns an error) and caps depth at 10.
-async fn resolve_jump_chain(
+pub(crate) async fn resolve_jump_chain(
     db: &sqlx::SqlitePool,
     server: &ServerWithTags,
 ) -> Result<Vec<ServerWithTags>, AppError> {
@@ -49,7 +49,7 @@ async fn resolve_jump_chain(
 }
 
 /// Build `AuthInfo` for `server`, reading credentials from the vault when needed.
-async fn auth_for_server(
+pub(crate) async fn auth_for_server(
     server: &ServerWithTags,
     state: &AppState,
 ) -> Result<AuthInfo, AppError> {
