@@ -71,6 +71,16 @@ pub async fn vault_unlock(
 
 #[tauri::command]
 pub async fn vault_is_unlocked(state: tauri::State<'_, AppState>) -> Result<bool, AppError> {
+    // When no master password is required the vault is always accessible,
+    // but vault_key starts as None on each restart. Auto-unlock here so the
+    // frontend never sees the locked state when password protection is off.
+    if !master_password::is_password_required(&state.db).await? {
+        let mut key = state.vault_key.lock().await;
+        if key.is_none() {
+            *key = Some(zeroize::Zeroizing::new([0u8; 32]));
+        }
+        return Ok(true);
+    }
     Ok(state.vault_key.lock().await.is_some())
 }
 

@@ -50,7 +50,7 @@ export default function AppShell() {
   const onboardingChecked = useUiStore((s) => s.onboardingChecked);
   const setOnboardingComplete = useUiStore((s) => s.setOnboardingComplete);
   const setOnboardingChecked = useUiStore((s) => s.setOnboardingChecked);
-  const { isSetup, isUnlocked, isChecking, setupDismissed, check } = useVaultStore();
+  const { isSetup, isUnlocked, isChecking, isPasswordRequired, setupDismissed, check } = useVaultStore();
   const loadTerminalSettings = useTerminalSettings((s) => s.load);
 
   const terminalSessions = useTerminalStore((s) => s.sessions);
@@ -160,7 +160,7 @@ export default function AppShell() {
     );
   }
 
-  if (isSetup && !isUnlocked) return <VaultLockScreen />;
+  if (isSetup && !isUnlocked && isPasswordRequired) return <VaultLockScreen />;
 
   return (
     <div className="flex h-screen bg-black text-white overflow-hidden">
