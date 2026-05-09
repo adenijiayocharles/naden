@@ -69,13 +69,15 @@ pub async fn toggle_favourite(
     state: tauri::State<'_, AppState>,
 ) -> Result<ServerWithTags, AppError> {
     let server = queries::get_server_db(&state.db, &server_id).await?;
-    let payload = UpdateServerPayload {
-        is_favourite: Some(!server.server.is_favourite),
-        ..Default::default()
-    };
-    let result = queries::update_server_db(&state.db, &server_id, &payload).await?;
+    let now = chrono::Utc::now().to_rfc3339();
+    sqlx::query("UPDATE servers SET is_favourite = ?, updated_at = ? WHERE id = ?")
+        .bind(!server.server.is_favourite)
+        .bind(&now)
+        .bind(&server_id)
+        .execute(&state.db)
+        .await?;
     refresh_cache(&state).await;
-    Ok(result)
+    queries::get_server_db(&state.db, &server_id).await
 }
 
 #[tauri::command]
