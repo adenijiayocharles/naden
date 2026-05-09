@@ -184,7 +184,7 @@ export default function TerminalPane({ sessionId }: Props) {
           </div>
           <button
             onClick={() => { void closeSession(sessionId); }}
-            className="text-xs text-[#555] hover:text-white transition-colors mt-2"
+            className="bg-accent hover:bg-accent-hover text-black text-sm font-semibold px-4 py-1.5 rounded transition-colors mt-2"
           >
             Cancel
           </button>
