@@ -67,6 +67,35 @@ export default function SettingsModal({ onClose }: Props) {
     settingsCommands.setSetting("theme", t).catch(() => {});
   };
 
+  // Accent colour
+  const ACCENTS = [
+    { id: "lime",   base: "#CDFF00", hover: "#d8ff33", dim: "#a8cc00" },
+    { id: "green",  base: "#00e676", hover: "#33eb91", dim: "#00b85e" },
+    { id: "cyan",   base: "#00d4ff", hover: "#33ddff", dim: "#00a8cc" },
+    { id: "blue",   base: "#4f8ef7", hover: "#7aaeff", dim: "#3a6bc4" },
+    { id: "purple", base: "#a78bfa", hover: "#c4b0ff", dim: "#7c5ccc" },
+    { id: "orange", base: "#ff8c42", hover: "#ffa566", dim: "#cc6f35" },
+    { id: "pink",   base: "#f472b6", hover: "#f9a8d4", dim: "#c4588c" },
+    { id: "red",    base: "#ff5555", hover: "#ff7777", dim: "#cc4444" },
+    { id: "white",  base: "#ffffff", hover: "#eeeeee", dim: "#cccccc" },
+  ] as const;
+  type AccentId = typeof ACCENTS[number]["id"];
+  const [accentId, setAccentId] = useState<AccentId>("lime");
+  useEffect(() => {
+    settingsCommands.getSetting("accent")
+      .then((v) => { if (v) setAccentId(v as AccentId); })
+      .catch(() => {});
+  }, []);
+  const saveAccent = (id: AccentId) => {
+    const a = ACCENTS.find((x) => x.id === id)!;
+    setAccentId(id);
+    const root = document.documentElement;
+    root.style.setProperty("--color-accent", a.base);
+    root.style.setProperty("--color-accent-hover", a.hover);
+    root.style.setProperty("--color-accent-dim", a.dim);
+    settingsCommands.setSetting("accent", id).catch(() => {});
+  };
+
   // Vault timeout
   const [timeoutMins, setTimeoutMins] = useState("0");
   useEffect(() => {
@@ -286,6 +315,22 @@ export default function SettingsModal({ onClose }: Props) {
                   </div>
                   <p className={`text-xs font-medium ${theme === id ? "text-accent" : "text-secondary"}`}>{label}</p>
                 </button>
+              ))}
+            </div>
+
+            {/* Accent colour */}
+            <p className="text-xs text-muted mt-4 mb-2">Accent colour</p>
+            <div className="flex gap-2 flex-wrap">
+              {ACCENTS.map(({ id, base }) => (
+                <button
+                  key={id}
+                  onClick={() => saveAccent(id)}
+                  title={id.charAt(0).toUpperCase() + id.slice(1)}
+                  className={`w-7 h-7 rounded-full transition-transform hover:scale-110 ${
+                    accentId === id ? "ring-2 ring-white/50 scale-110" : ""
+                  }`}
+                  style={{ backgroundColor: base }}
+                />
               ))}
             </div>
           </div>

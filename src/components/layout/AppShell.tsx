@@ -95,10 +95,30 @@ export default function AppShell() {
     void fetchAll();
     void check();
     void loadTerminalSettings();
-    // Apply persisted theme before anything renders
+    // Apply persisted theme and accent colour before anything renders
     settingsCommands.getSetting("theme")
       .then((t) => { if (t && t !== "dark") document.documentElement.dataset.theme = t; })
       .catch(() => {});
+    const ACCENTS: Record<string, [string, string, string]> = {
+      lime:   ["#CDFF00", "#d8ff33", "#a8cc00"],
+      green:  ["#00e676", "#33eb91", "#00b85e"],
+      cyan:   ["#00d4ff", "#33ddff", "#00a8cc"],
+      blue:   ["#4f8ef7", "#7aaeff", "#3a6bc4"],
+      purple: ["#a78bfa", "#c4b0ff", "#7c5ccc"],
+      orange: ["#ff8c42", "#ffa566", "#cc6f35"],
+      pink:   ["#f472b6", "#f9a8d4", "#c4588c"],
+      red:    ["#ff5555", "#ff7777", "#cc4444"],
+      white:  ["#ffffff", "#eeeeee", "#cccccc"],
+    };
+    settingsCommands.getSetting("accent").then((id) => {
+      if (id && id !== "lime" && ACCENTS[id]) {
+        const [base, hover, dim] = ACCENTS[id];
+        const root = document.documentElement;
+        root.style.setProperty("--color-accent", base);
+        root.style.setProperty("--color-accent-hover", hover);
+        root.style.setProperty("--color-accent-dim", dim);
+      }
+    }).catch(() => {});
     // Check onboarding once on mount
     settingsCommands.getSetting("onboarding_complete")
       .then((v) => {
