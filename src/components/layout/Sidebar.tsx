@@ -161,7 +161,7 @@ export default function Sidebar() {
     <aside className="w-60 shrink-0 bg-[#0d0d0d] border-r border-[#1e1e1e] flex flex-col overflow-y-auto">
       <div className="h-14 flex items-center px-4 border-b border-[#1e1e1e] shrink-0">
         <span className="font-bold text-white text-base tracking-tight">
-          SSH <span className="text-accent">Manager</span>
+          SSH Manager
         </span>
       </div>
 

@@ -22,7 +22,7 @@ export default function TopBar() {
 
   return (
     <>
-      <header className="h-14 shrink-0 border-b border-[#1e1e1e] bg-[#0d0d0d] flex items-center px-4 gap-3">
+      <header className="h-14 shrink-0 border-b border-[#1e1e1e] bg-black flex items-center px-4 gap-3">
         <input
           ref={inputRef}
           data-search-input
