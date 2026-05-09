@@ -4,9 +4,13 @@ import { formatError } from "../../lib/errors";
 
 export default function VaultLockScreen() {
   const unlock = useVaultStore((s) => s.unlock);
+  const check = useVaultStore((s) => s.check);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [recovering, setRecovering] = useState(false);
+
+  const vaultNotSetUp = error?.toLowerCase().includes("vault not set up") ?? false;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,6 +24,16 @@ export default function VaultLockScreen() {
       setError(formatError(e));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRecheck = async () => {
+    setRecovering(true);
+    setError(null);
+    try {
+      await check();
+    } finally {
+      setRecovering(false);
     }
   };
 
@@ -54,6 +68,21 @@ export default function VaultLockScreen() {
             {loading ? "Unlocking…" : "Unlock"}
           </button>
         </form>
+
+        {vaultNotSetUp && (
+          <div className="mt-6 p-4 bg-[#111] border border-[#2a2a2a] rounded-lg text-center">
+            <p className="text-xs text-[#777] mb-3">
+              Vault data may be missing or corrupted. You can re-check vault status to return to the setup screen.
+            </p>
+            <button
+              onClick={() => { void handleRecheck(); }}
+              disabled={recovering}
+              className="text-sm text-accent hover:text-accent-hover disabled:opacity-40 transition-colors"
+            >
+              {recovering ? "Checking…" : "Re-check vault status"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

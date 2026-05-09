@@ -4,6 +4,7 @@ import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
+import { useVaultStore } from "../../store/vaultStore";
 import { sshCommands, vaultCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import { copyWithAutoClear } from "../../lib/clipboardClear";
@@ -11,6 +12,8 @@ export { formatHost } from "../../lib/format";
 
 export function useServerActions(server: Server) {
   const groups = useServerStore((s) => s.groups);
+  const isVaultUnlocked = useVaultStore((s) => s.isUnlocked);
+
   const deleteServer = useServerStore((s) => s.deleteServer);
   const moveServerGroup = useServerStore((s) => s.moveServerGroup);
   const toggleFavourite = useServerStore((s) => s.toggleFavourite);
@@ -152,7 +155,7 @@ export function useServerActions(server: Server) {
 
   return {
     groups,
-    canCopyPassword: server.authMethod === "password" && !!server.vaultCredentialId,
+    canCopyPassword: isVaultUnlocked && server.authMethod === "password" && !!server.vaultCredentialId,
     menuRef,
     menuOpen, setMenuOpen,
     deleteModalOpen, setDeleteModalOpen,
