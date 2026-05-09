@@ -1,27 +1,11 @@
 import type { FileEntry } from "../../types/sftp";
+import { formatSize, formatDate } from "../../lib/format";
 
 interface Props {
   entries: FileEntry[];
   selected: string | null;
   onSelect: (path: string) => void;
   onNavigate: (entry: FileEntry) => void;
-}
-
-function formatSize(bytes: number, isDir: boolean): string {
-  if (isDir) return "—";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-}
-
-function formatDate(ts: number | null): string {
-  if (!ts) return "—";
-  return new Date(ts * 1000).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }
 
 function FileIcon({ isDir }: { isDir: boolean }) {

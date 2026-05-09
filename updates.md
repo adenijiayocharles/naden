@@ -23,6 +23,6 @@
 - [ ] Cloud sync for the server list (credentials stay local)
 
 ## Code Quality
-- [ ] Finish and commit in-progress work: `vault_commands.rs`, `master_password.rs`, `vaultStore.ts`, `TopBar.tsx`, `src/components/settings/`
-- [ ] Frontend unit tests with Vitest (zero coverage currently)
-- [ ] Rust tests for SSH config parser and vault encryption/decryption roundtrip
+- [x] Finish and commit in-progress work: all files were already complete
+- [x] Frontend unit tests with Vitest — 24 tests across errors.ts and format.ts
+- [x] Rust tests for SSH config parser (7 tests) and vault encryption/decryption roundtrip (8 tests)

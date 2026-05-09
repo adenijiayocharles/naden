@@ -6,6 +6,7 @@ import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
 import { sshCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
+export { formatHost } from "../../lib/format";
 
 export function useServerActions(server: Server) {
   const deleteServer = useServerStore((s) => s.deleteServer);
@@ -132,9 +133,3 @@ export function useServerActions(server: Server) {
   };
 }
 
-/** Host string shared by both card and row views */
-export function formatHost(server: Server): string {
-  const prefix = server.username ? `${server.username}@` : "";
-  const suffix = server.port !== 22 ? `:${server.port}` : "";
-  return `${prefix}${server.hostname}${suffix}`;
-}
