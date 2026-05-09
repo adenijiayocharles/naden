@@ -11,9 +11,11 @@ interface Props {
   duplicating: boolean;
   checkingReachability: boolean;
   isFavourite: boolean;
+  canCopyPassword: boolean;
   groups: Group[];
   currentGroupId?: string;
   onEdit: () => void;
+  onCopyPassword: () => void;
   onSystemTerminal: () => void;
   onBrowseFiles: () => void;
   onToggleFavourite: () => void;
@@ -26,9 +28,9 @@ interface Props {
 
 export default function ServerKebabMenu({
   menuRef, menuOpen, setMenuOpen,
-  isFavourite, groups, currentGroupId,
+  isFavourite, canCopyPassword, groups, currentGroupId,
   deleting, openingTerminal, openingBrowser, duplicating, checkingReachability,
-  onEdit, onSystemTerminal, onBrowseFiles, onToggleFavourite, onMoveToGroup,
+  onEdit, onCopyPassword, onSystemTerminal, onBrowseFiles, onToggleFavourite, onMoveToGroup,
   onDuplicate, onCheckReachability, onDelete,
   buttonClassName = "text-[#555] hover:text-white p-1 rounded hover:bg-[#1a1a1a] transition-colors text-lg leading-none",
 }: Props) {
@@ -58,6 +60,18 @@ export default function ServerKebabMenu({
           >
             Edit
           </button>
+          {canCopyPassword && (
+            <button
+              onClick={onCopyPassword}
+              className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors flex items-center gap-2"
+            >
+              <svg className="w-3.5 h-3.5 shrink-0 text-[#666]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+                <rect x="3" y="1" width="10" height="14" rx="1.5" />
+                <path strokeLinecap="round" d="M6 1v2h4V1" />
+              </svg>
+              Copy Password
+            </button>
+          )}
 
           <button
             onClick={onToggleFavourite}

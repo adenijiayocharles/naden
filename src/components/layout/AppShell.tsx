@@ -15,7 +15,9 @@ import AuditLogView from "../audit/AuditLogView";
 import OnboardingWizard from "../onboarding/OnboardingWizard";
 import SftpBrowser from "../sftp/SftpBrowser";
 import BulkActionBar from "../servers/BulkActionBar";
+import ClipboardClearBanner from "./ClipboardClearBanner";
 import { settingsCommands } from "../../lib/tauriCommands";
+import { recordHeartbeat } from "../../lib/vaultActivity";
 import { useTerminalSettings } from "../../lib/terminalSettings";
 import type { SessionStatus } from "../../store/terminalStore";
 import type { SftpStatus } from "../../store/sftpStore";
@@ -129,13 +131,16 @@ export default function AppShell() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  // Vault heartbeat — throttled to once per minute on user activity
+  // Vault heartbeat — throttled to once per minute on user activity.
+  // recordHeartbeat() mirrors the Rust-side last_vault_activity reset so
+  // VaultCountdown can derive remaining time accurately.
   useEffect(() => {
     let lastBeat = 0;
     const beat = () => {
       const now = Date.now();
       if (now - lastBeat > 60_000) {
         lastBeat = now;
+        recordHeartbeat();
         settingsCommands.vaultHeartbeat().catch(() => {});
       }
     };
@@ -272,6 +277,7 @@ export default function AppShell() {
         </div>
       </div>
 
+      <ClipboardClearBanner />
       {(activeView === "add" || activeView === "edit") && <ServerForm />}
       {!isSetup && !setupDismissed && onboardingComplete && <VaultSetupModal />}
       {onboardingChecked && !onboardingComplete && (

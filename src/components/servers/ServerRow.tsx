@@ -95,6 +95,7 @@ export default function ServerRow({ server }: { server: Server }) {
           menuOpen={actions.menuOpen}
           setMenuOpen={actions.setMenuOpen}
           isFavourite={server.isFavourite}
+          canCopyPassword={actions.canCopyPassword}
           groups={actions.groups}
           currentGroupId={server.groupId}
           deleting={actions.deleting}
@@ -103,6 +104,7 @@ export default function ServerRow({ server }: { server: Server }) {
           duplicating={actions.duplicating}
           checkingReachability={actions.checkingReachability}
           onEdit={actions.editServer}
+          onCopyPassword={() => { void actions.handleCopyPassword(); }}
           onSystemTerminal={() => { void actions.handleSystemTerminal(); }}
           onBrowseFiles={() => { void actions.handleBrowseFiles(); }}
           onToggleFavourite={() => { void actions.handleToggleFavourite(); }}

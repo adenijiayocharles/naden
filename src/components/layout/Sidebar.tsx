@@ -1,5 +1,6 @@
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
+import VaultCountdown from "./VaultCountdown";
 
 const ClockIcon = () => (
   <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -123,6 +124,8 @@ export default function Sidebar() {
           </div>
         )}
       </nav>
+      {/* Vault auto-lock countdown */}
+      <VaultCountdown />
       {/* Audit log link pinned to the bottom */}
       <div className="p-2 border-t border-[#1e1e1e] shrink-0">
         <button

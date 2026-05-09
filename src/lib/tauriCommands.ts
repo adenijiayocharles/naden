@@ -110,6 +110,11 @@ export const backupCommands = {
     invoke<ImportSummary>("import_backup", { path, password }),
 };
 
+export const vaultCommands = {
+  retrieveCredential: (vaultCredentialId: string) =>
+    invoke<string>("retrieve_credential", { vaultCredentialId }),
+};
+
 export const sftpCommands = {
   openSftpSession: (serverId: string) =>
     invoke<string>("open_sftp_session", { serverId }),

@@ -4,8 +4,9 @@ import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
-import { sshCommands } from "../../lib/tauriCommands";
+import { sshCommands, vaultCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
+import { copyWithAutoClear } from "../../lib/clipboardClear";
 export { formatHost } from "../../lib/format";
 
 export function useServerActions(server: Server) {
@@ -65,6 +66,17 @@ export function useServerActions(server: Server) {
       setError(formatError(e));
     } finally {
       setOpeningTerminal(false);
+    }
+  };
+
+  const handleCopyPassword = async () => {
+    setMenuOpen(false);
+    if (!server.vaultCredentialId) return;
+    try {
+      const password = await vaultCommands.retrieveCredential(server.vaultCredentialId);
+      copyWithAutoClear(password);
+    } catch (e) {
+      setError(formatError(e));
     }
   };
 
@@ -140,6 +152,7 @@ export function useServerActions(server: Server) {
 
   return {
     groups,
+    canCopyPassword: server.authMethod === "password" && !!server.vaultCredentialId,
     menuRef,
     menuOpen, setMenuOpen,
     deleteModalOpen, setDeleteModalOpen,
@@ -148,6 +161,7 @@ export function useServerActions(server: Server) {
     handleConnect,
     handleSystemTerminal,
     handleBrowseFiles,
+    handleCopyPassword,
     handleMoveToGroup,
     handleToggleFavourite,
     handleDuplicate,
