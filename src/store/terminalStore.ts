@@ -72,6 +72,11 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       }),
 
       listen<null>(`terminal:closed:${sessionId}`, () => {
+        // If the session is in error state keep it alive so the error overlay
+        // stays visible — the user closes it explicitly via the Reconnect/Close
+        // buttons in TerminalPane, which calls closeSession().
+        const session = get().sessions.find((s) => s.id === sessionId);
+        if (session?.status === "error") return;
         get().removeSession(sessionId);
       }),
 
