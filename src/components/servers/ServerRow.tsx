@@ -55,13 +55,25 @@ export default function ServerRow({ server }: { server: Server }) {
         <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${actions.connecting ? "bg-accent animate-pulse" : "bg-[#333]"}`} />
       )}
 
-      <span className="w-40 shrink-0 truncate text-sm font-medium text-white">
+      <span className="w-40 shrink-0 truncate text-sm font-medium text-white" title={server.displayName}>
         {server.displayName}
       </span>
 
       <span className="flex-1 min-w-0 truncate text-sm text-[#666] font-mono">
         {formatHost(server)}
       </span>
+
+      {server.authMethod === "password" ? (
+        <svg className="w-3 h-3 text-[#444] shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Password auth</title>
+          <rect x="3" y="7" width="10" height="8" rx="1.5" />
+          <path strokeLinecap="round" d="M5 7V5a3 3 0 016 0v2" />
+        </svg>
+      ) : (
+        <svg className="w-3 h-3 text-[#444] shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Key auth</title>
+          <circle cx="6" cy="8" r="3.5" />
+          <path strokeLinecap="round" d="M9 8h5M12 6v4" />
+        </svg>
+      )}
 
       <div className="hidden md:flex items-center gap-1.5 shrink-0">
         {!bulkMode && (

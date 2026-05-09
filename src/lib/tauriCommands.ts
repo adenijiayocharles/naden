@@ -49,6 +49,12 @@ export const serverCommands = {
   createGroup: (name: string, color?: string) =>
     invoke<Group>("create_group", { name, color: color ?? null }),
 
+  updateGroup: (groupId: string, name: string, color?: string) =>
+    invoke<Group>("update_group", { groupId, name, color: color ?? null }),
+
+  deleteGroup: (groupId: string) =>
+    invoke<void>("delete_group", { groupId }),
+
   listTags: () =>
     invoke<Tag[]>("list_tags"),
 

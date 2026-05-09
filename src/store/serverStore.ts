@@ -28,6 +28,8 @@ interface ServerStore {
   toggleFavourite: (serverId: string) => Promise<void>;
   duplicateServer: (serverId: string) => Promise<Server>;
   createGroup: (name: string, color?: string) => Promise<Group>;
+  updateGroup: (groupId: string, name: string, color?: string) => Promise<Group>;
+  deleteGroup: (groupId: string) => Promise<void>;
   createTag: (name: string) => Promise<Tag>;
   checkReachability: (serverId: string) => Promise<void>;
 }
@@ -99,6 +101,20 @@ export const useServerStore = create<ServerStore>((set) => ({
     const group = await serverCommands.createGroup(name, color);
     set((s) => ({ groups: [...s.groups, group] }));
     return group;
+  },
+
+  updateGroup: async (groupId, name, color) => {
+    const group = await serverCommands.updateGroup(groupId, name, color);
+    set((s) => ({ groups: s.groups.map((g) => (g.id === groupId ? group : g)) }));
+    return group;
+  },
+
+  deleteGroup: async (groupId) => {
+    await serverCommands.deleteGroup(groupId);
+    set((s) => ({
+      groups: s.groups.filter((g) => g.id !== groupId),
+      servers: s.servers.map((sv) => sv.groupId === groupId ? { ...sv, groupId: undefined } : sv),
+    }));
   },
 
   createTag: async (name) => {

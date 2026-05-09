@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import VaultCountdown from "./VaultCountdown";
+import { formatError } from "../../lib/errors";
+import type { Group } from "../../types/server";
 
 const ClockIcon = () => (
   <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -9,13 +12,111 @@ const ClockIcon = () => (
   </svg>
 );
 
+function GroupEditModal({ group, onClose }: { group: Group; onClose: () => void }) {
+  const updateGroup = useServerStore((s) => s.updateGroup);
+  const deleteGroup = useServerStore((s) => s.deleteGroup);
+  const setFilterGroup = useUiStore((s) => s.setFilterGroup);
+  const filterGroupId = useUiStore((s) => s.filterGroupId);
+  const [name, setName] = useState(group.name);
+  const [color, setColor] = useState(group.color ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const COLORS = ["#e53e3e","#ed8936","#ecc94b","#48bb78","#38b2ac","#4299e1","#667eea","#ed64a6","#a0aec0"];
+
+  const handleSave = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await updateGroup(group.id, name.trim(), color || undefined);
+      onClose();
+    } catch (e) {
+      setError(formatError(e));
+      setBusy(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteGroup(group.id);
+      if (filterGroupId === group.id) setFilterGroup(null);
+      onClose();
+    } catch (e) {
+      setError(formatError(e));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-[#111] border border-[#1e1e1e] rounded-xl shadow-2xl w-full max-w-sm p-5">
+        <h3 className="text-sm font-semibold text-white mb-4">Edit Group</h3>
+
+        <div className="space-y-3">
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Group name"
+            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-3 py-2 text-sm text-white placeholder-[#666] focus:outline-none focus:border-accent"
+          />
+
+          <div>
+            <p className="text-xs text-[#666] mb-2">Color</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              {COLORS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setColor(c)}
+                  className={`w-5 h-5 rounded-full transition-transform ${color === c ? "scale-125 ring-2 ring-white/30" : "hover:scale-110"}`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+              <button
+                onClick={() => setColor("")}
+                className={`w-5 h-5 rounded-full border transition-transform ${!color ? "scale-125 ring-2 ring-white/30 border-white/30" : "border-[#444] hover:scale-110"}`}
+              />
+            </div>
+          </div>
+
+          {error && <p className="text-xs text-red-400">{error}</p>}
+        </div>
+
+        <div className="flex items-center gap-2 mt-5">
+          {confirmDelete ? (
+            <>
+              <span className="text-xs text-red-400 flex-1">Delete group and ungroup servers?</span>
+              <button onClick={() => { void handleDelete(); }} disabled={busy} className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-500 text-white rounded transition-colors disabled:opacity-40">Confirm</button>
+              <button onClick={() => setConfirmDelete(false)} className="px-3 py-1.5 text-xs text-[#666] hover:text-white transition-colors">Cancel</button>
+            </>
+          ) : (
+            <>
+              <button onClick={() => setConfirmDelete(true)} disabled={busy} className="text-xs text-red-500 hover:text-red-400 transition-colors mr-auto disabled:opacity-40">Delete</button>
+              <button onClick={onClose} className="px-3 py-1.5 text-xs text-[#666] hover:text-white bg-[#1a1a1a] rounded transition-colors">Cancel</button>
+              <button onClick={() => { void handleSave(); }} disabled={busy || !name.trim()} className="px-3 py-1.5 text-xs text-black bg-accent hover:bg-accent-hover rounded font-semibold transition-colors disabled:opacity-40">
+                {busy ? "Saving…" : "Save"}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Sidebar() {
   const servers = useServerStore((s) => s.servers);
   const groups = useServerStore((s) => s.groups);
   const tags = useServerStore((s) => s.tags);
   const { filterGroupId, filterTagId, filterFavourites, setFilterGroup, setFilterTag, setFilterFavourites, activeView, openAudit, closeForm } = useUiStore();
+  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
 
-  // When in audit view, selecting any server nav item should return to list view first
   const selectFilter = (fn: () => void) => () => {
     if (activeView === "audit") closeForm();
     fn();
@@ -89,22 +190,42 @@ export default function Sidebar() {
             <p className="px-3 pb-1 text-xs font-semibold text-[#666] uppercase tracking-wider">
               Groups
             </p>
-            {groups.map((g) =>
-              navItem(
-                filterGroupId === g.id && activeView !== "audit",
-                selectFilter(() => setFilterGroup(g.id)),
-                <span className="flex items-center gap-2">
-                  {g.color && (
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: g.color }}
-                    />
-                  )}
-                  {g.name}
-                </span>,
-                countByGroup[g.id] ?? 0,
-              ),
-            )}
+            {groups.map((g) => (
+              <div key={g.id} className="group/item flex items-center">
+                <button
+                  onClick={selectFilter(() => setFilterGroup(g.id))}
+                  className={`flex-1 text-left px-3 py-2 rounded-l text-sm flex items-center justify-between transition-colors min-w-0 ${
+                    filterGroupId === g.id && activeView !== "audit"
+                      ? "bg-accent text-black font-medium"
+                      : "text-[#bbb] hover:bg-[#1a1a1a] hover:text-white"
+                  }`}
+                >
+                  <span className="flex items-center gap-2 min-w-0 truncate">
+                    {g.color && (
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: g.color }} />
+                    )}
+                    <span className="truncate">{g.name}</span>
+                  </span>
+                  <span className={`text-xs ml-2 shrink-0 ${filterGroupId === g.id && activeView !== "audit" ? "text-black/60" : "text-[#777]"}`}>
+                    {countByGroup[g.id] ?? 0}
+                  </span>
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setEditingGroup(g); }}
+                  className={`px-1.5 py-2 rounded-r opacity-0 group-hover/item:opacity-100 transition-opacity ${
+                    filterGroupId === g.id && activeView !== "audit"
+                      ? "text-black/50 hover:text-black"
+                      : "text-[#444] hover:text-[#bbb] hover:bg-[#1a1a1a]"
+                  }`}
+                  title="Edit group"
+                  aria-label={`Edit ${g.name}`}
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.5 1.5l2 2-6 6H2.5v-2l6-6z" />
+                  </svg>
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
@@ -140,6 +261,10 @@ export default function Sidebar() {
           Audit Log
         </button>
       </div>
+
+      {editingGroup && (
+        <GroupEditModal group={editingGroup} onClose={() => setEditingGroup(null)} />
+      )}
     </aside>
   );
 }

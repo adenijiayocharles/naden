@@ -192,6 +192,28 @@ pub async fn create_group(
 }
 
 #[tauri::command]
+pub async fn update_group(
+    group_id: String,
+    name: String,
+    color: Option<String>,
+    state: tauri::State<'_, AppState>,
+) -> Result<Group, AppError> {
+    let group = queries::update_group_db(&state.db, &group_id, &name, color.as_deref()).await?;
+    refresh_cache(&state).await;
+    Ok(group)
+}
+
+#[tauri::command]
+pub async fn delete_group(
+    group_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    queries::delete_group_db(&state.db, &group_id).await?;
+    refresh_cache(&state).await;
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn list_tags(state: tauri::State<'_, AppState>) -> Result<Vec<Tag>, AppError> {
     queries::list_tags_db(&state.db).await
 }

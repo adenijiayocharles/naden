@@ -1,46 +1,9 @@
-import { useEffect, useState } from "react";
-import { useVaultStore } from "../../store/vaultStore";
-import { settingsCommands } from "../../lib/tauriCommands";
-import { getLastHeartbeatMs } from "../../lib/vaultActivity";
-
-function fmt(secs: number): string {
-  const m = Math.floor(secs / 60);
-  const s = secs % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
+import { useVaultCountdown } from "../../lib/useVaultCountdown";
 
 export default function VaultCountdown() {
-  const isUnlocked = useVaultStore((s) => s.isUnlocked);
-  const isPasswordRequired = useVaultStore((s) => s.isPasswordRequired);
-  const [timeoutMins, setTimeoutMins] = useState(0);
-  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
-
-  useEffect(() => {
-    settingsCommands.getSetting("vault_timeout_minutes")
-      .then((v) => setTimeoutMins(Number(v ?? "0")))
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (!isUnlocked || !isPasswordRequired || timeoutMins === 0) {
-      setSecondsLeft(null);
-      return;
-    }
-
-    const tick = () => {
-      const elapsed = Math.floor((Date.now() - getLastHeartbeatMs()) / 1000);
-      setSecondsLeft(Math.max(0, timeoutMins * 60 - elapsed));
-    };
-
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [isUnlocked, isPasswordRequired, timeoutMins]);
-
-  if (secondsLeft === null) return null;
-
-  const urgent = secondsLeft < 60;
-  const warning = secondsLeft < 120;
+  const countdown = useVaultCountdown();
+  if (!countdown) return null;
+  const { urgent, warning, fmt } = countdown;
 
   return (
     <div className={`mx-2 mb-2 px-3 py-2 rounded-lg border text-xs flex items-center gap-2 ${
@@ -55,7 +18,7 @@ export default function VaultCountdown() {
         <path strokeLinecap="round" d="M3 5.5A2.5 2.5 0 015.5 3h5A2.5 2.5 0 0113 5.5v7A2.5 2.5 0 0110.5 15h-5A2.5 2.5 0 013 12.5v-7z" />
         <path strokeLinecap="round" d="M8 7v3" />
       </svg>
-      <span>Locks in <span className="font-mono font-semibold">{fmt(secondsLeft)}</span></span>
+      <span>Locks in <span className="font-mono font-semibold">{fmt()}</span></span>
     </div>
   );
 }

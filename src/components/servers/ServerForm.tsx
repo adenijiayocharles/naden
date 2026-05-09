@@ -55,6 +55,7 @@ export default function ServerForm() {
   const [showNewGroup, setShowNewGroup] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [saved, setSaved] = useState(false);
   const tagInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -190,7 +191,8 @@ export default function ServerForm() {
       } else {
         await createServer(payload);
       }
-      closeForm();
+      setSaved(true);
+      setTimeout(closeForm, 600);
     } catch (e) {
       setErrors((errs) => ({ ...errs, submit: formatError(e) }));
     } finally {
@@ -475,7 +477,7 @@ export default function ServerForm() {
             disabled={submitting}
             className="px-4 py-2 text-sm text-black bg-accent hover:bg-accent-hover rounded font-semibold transition-colors disabled:opacity-50"
           >
-            {submitting ? "Saving…" : isEdit ? "Save Changes" : "Add Server"}
+            {saved ? "Saved ✓" : submitting ? "Saving…" : isEdit ? "Save Changes" : "Add Server"}
           </button>
         </div>
       </div>

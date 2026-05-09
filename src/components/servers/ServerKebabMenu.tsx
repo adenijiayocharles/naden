@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { Group } from "../../types/server";
 
 interface Props {
@@ -33,8 +33,29 @@ export default function ServerKebabMenu({
   buttonClassName = "text-[#555] hover:text-white p-1 rounded hover:bg-[#1a1a1a] transition-colors text-lg leading-none",
 }: Props) {
   const [showGroupPicker, setShowGroupPicker] = useState(false);
+  const menuRef2 = useRef<HTMLDivElement>(null);
   const hasGroups = groups.length > 0;
   const isGrouped = Boolean(currentGroupId);
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setMenuOpen(false); setShowGroupPicker(false); return; }
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      e.preventDefault();
+      const items = menuRef2.current?.querySelectorAll<HTMLElement>("button:not(:disabled)");
+      if (!items?.length) return;
+      const focused = document.activeElement as HTMLElement;
+      const idx = Array.from(items).indexOf(focused);
+      const next = e.key === "ArrowDown"
+        ? items[(idx + 1) % items.length]
+        : items[(idx - 1 + items.length) % items.length];
+      next.focus();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [menuOpen, setMenuOpen]);
 
   return (
     <div
@@ -51,7 +72,7 @@ export default function ServerKebabMenu({
       </button>
 
       {menuOpen && (
-        <div className="absolute right-0 top-8 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-20 min-w-[170px] py-1">
+        <div ref={menuRef2} className="absolute right-0 top-8 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-20 min-w-[170px] py-1">
           <button
             onClick={onEdit}
             className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors"
@@ -85,7 +106,7 @@ export default function ServerKebabMenu({
               </button>
 
               {showGroupPicker && (
-                <div className="absolute left-full top-0 ml-1 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-30 min-w-[150px] py-1">
+                <div className="absolute right-full top-0 mr-1 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-30 min-w-[150px] py-1">
                   {isGrouped && (
                     <button
                       onClick={() => { onMoveToGroup(null); setShowGroupPicker(false); }}

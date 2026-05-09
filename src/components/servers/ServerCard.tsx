@@ -13,7 +13,7 @@ export function FavouriteButton({ isFavourite, onToggle }: { isFavourite: boolea
       className={`p-0.5 rounded transition-colors shrink-0 ${
         isFavourite
           ? "text-yellow-400 hover:text-yellow-300"
-          : "text-[#333] hover:text-[#888]"
+          : "text-[#555] hover:text-yellow-400"
       }`}
     >
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}
@@ -82,6 +82,19 @@ export default function ServerCard({ server }: { server: Server }) {
             <ReachabilityDot serverId={server.id} />
           </div>
           <p className="text-sm text-[#888] font-mono truncate">{formatHost(server)}</p>
+          <div className="flex items-center gap-1.5 mt-1">
+            {server.authMethod === "password" ? (
+              <svg className="w-3 h-3 text-[#444]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Password auth</title>
+                <rect x="3" y="7" width="10" height="8" rx="1.5" />
+                <path strokeLinecap="round" d="M5 7V5a3 3 0 016 0v2" />
+              </svg>
+            ) : (
+              <svg className="w-3 h-3 text-[#444]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Key auth</title>
+                <circle cx="6" cy="8" r="3.5" />
+                <path strokeLinecap="round" d="M9 8h5M12 6v4" />
+              </svg>
+            )}
+          </div>
         </div>
 
         {!bulkMode && (

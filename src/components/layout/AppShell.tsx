@@ -222,6 +222,7 @@ export default function AppShell() {
                   <div
                     key={session.id}
                     onClick={() => { terminalSetActive(session.id); setActivePanelType("terminal"); }}
+                    title={session.status === "error" && session.errorMessage ? session.errorMessage : undefined}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer shrink-0 transition-colors select-none ${
                       activePanelType === "terminal" && session.id === terminalActiveId
                         ? "bg-[#1e1e1e] text-white"

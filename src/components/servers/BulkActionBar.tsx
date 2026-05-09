@@ -16,6 +16,7 @@ export default function BulkActionBar() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showGroupPicker, setShowGroupPicker] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const count = bulkSelected.length;
   const visibleIds = servers.map((s) => s.id);
@@ -23,9 +24,9 @@ export default function BulkActionBar() {
   const handleSelectAll = () => selectAll(visibleIds);
 
   const handleDeleteAll = async () => {
-    if (!confirm(`Delete ${count} server${count !== 1 ? "s" : ""}? This cannot be undone.`)) return;
     setBusy(true);
     setError(null);
+    setConfirmDelete(false);
     try {
       await Promise.all(bulkSelected.map((id) => deleteServer(id)));
       toggleBulkMode();
@@ -111,13 +112,33 @@ export default function BulkActionBar() {
         </div>
 
         {/* Delete */}
-        <button
-          onClick={() => { void handleDeleteAll(); }}
-          disabled={busy || count === 0}
-          className="px-3 py-1 rounded text-xs bg-red-950/50 border border-red-900/50 text-red-400 hover:bg-red-900/40 hover:text-red-300 transition-colors disabled:opacity-40"
-        >
-          {busy ? "Deleting…" : `Delete ${count > 0 ? count : ""}`}
-        </button>
+        {confirmDelete ? (
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-red-400">Delete {count} server{count !== 1 ? "s" : ""}?</span>
+            <button
+              onClick={() => { void handleDeleteAll(); }}
+              disabled={busy}
+              className="px-2 py-1 rounded text-xs bg-red-600 hover:bg-red-500 text-white transition-colors disabled:opacity-40"
+            >
+              {busy ? "Deleting…" : "Confirm"}
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              disabled={busy}
+              className="px-2 py-1 rounded text-xs text-[#666] hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            disabled={busy || count === 0}
+            className="px-3 py-1 rounded text-xs bg-red-950/50 border border-red-900/50 text-red-400 hover:bg-red-900/40 hover:text-red-300 transition-colors disabled:opacity-40"
+          >
+            Delete {count > 0 ? count : ""}
+          </button>
+        )}
       </div>
     </div>
   );

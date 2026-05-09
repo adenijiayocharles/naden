@@ -38,6 +38,11 @@ function ToolbarBtn({
 
 function PathBreadcrumb({ path, busy, onNavigateTo }: { path: string; busy: boolean; onNavigateTo: (p: string) => void }) {
   const segments = path.split("/").filter(Boolean);
+  // Show at most 3 segments; if truncated, show a collapsed ancestor indicator
+  const MAX_VISIBLE = 3;
+  const truncated = segments.length > MAX_VISIBLE;
+  const visible = truncated ? segments.slice(-MAX_VISIBLE) : segments;
+  const hiddenDepth = segments.length - visible.length;
 
   return (
     <div className="flex items-center gap-0.5 min-w-0 font-mono text-xs overflow-hidden">
@@ -54,9 +59,22 @@ function PathBreadcrumb({ path, busy, onNavigateTo }: { path: string; busy: bool
       >
         /
       </button>
-      {segments.map((seg, i) => {
-        const segPath = "/" + segments.slice(0, i + 1).join("/");
-        const isLast = i === segments.length - 1;
+      {truncated && (
+        <>
+          <button
+            onClick={() => onNavigateTo("/" + segments.slice(0, hiddenDepth).join("/"))}
+            disabled={busy}
+            className="text-[#555] hover:text-white disabled:pointer-events-none transition-colors shrink-0 px-0.5"
+            title={`/${segments.slice(0, hiddenDepth).join("/")}`}
+          >
+            …
+          </button>
+          <span className="text-[#444] shrink-0">/</span>
+        </>
+      )}
+      {visible.map((seg, i) => {
+        const segPath = "/" + segments.slice(0, hiddenDepth + i + 1).join("/");
+        const isLast = i === visible.length - 1;
         return (
           <span key={segPath} className="flex items-center gap-0.5 min-w-0">
             <button

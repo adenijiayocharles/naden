@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useUiStore, type ViewMode } from "../../store/uiStore";
+import { useVaultCountdown } from "../../lib/useVaultCountdown";
 import SshConfigImport from "../servers/SshConfigImport";
 import SettingsModal from "../settings/SettingsModal";
 
@@ -15,6 +16,7 @@ export default function TopBar() {
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const openSettings = useUiStore((s) => s.openSettings);
   const closeSettings = useUiStore((s) => s.closeSettings);
+  const countdown = useVaultCountdown();
   const [showImport, setShowImport] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -74,6 +76,24 @@ export default function TopBar() {
         </div>
 
         <div className="ml-auto flex items-center gap-2 shrink-0">
+          {countdown && (
+            <span
+              title={`Vault locks in ${countdown.fmt()}`}
+              className={`flex items-center gap-1 text-xs font-mono px-2 py-1 rounded border ${
+                countdown.urgent
+                  ? "bg-red-950/30 border-red-900/40 text-red-400"
+                  : countdown.warning
+                    ? "bg-yellow-950/30 border-yellow-900/40 text-yellow-400"
+                    : "bg-[#1a1a1a] border-[#2a2a2a] text-[#555]"
+              }`}
+            >
+              <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+                <rect x="5" y="1" width="6" height="3" rx="1" />
+                <path strokeLinecap="round" d="M3 5.5A2.5 2.5 0 015.5 3h5A2.5 2.5 0 0113 5.5v7A2.5 2.5 0 0110.5 15h-5A2.5 2.5 0 013 12.5v-7z" />
+              </svg>
+              {countdown.fmt()}
+            </span>
+          )}
           <button
             onClick={() => setShowImport(true)}
             className="text-[#888] hover:text-accent text-sm px-3 py-1.5 rounded hover:bg-[#1a1a1a] transition-colors hidden sm:block"

@@ -234,9 +234,22 @@ export default function SettingsModal({ onClose }: Props) {
           <button onClick={onClose} className="text-[#777] hover:text-white p-1 rounded" aria-label="Close">✕</button>
         </div>
 
+        {/* Section jump nav */}
+        <div className="flex items-center gap-4 px-6 py-2 border-b border-[#1e1e1e] shrink-0">
+          {(["Security", "Data", "Terminal"] as const).map((s) => (
+            <a
+              key={s}
+              href={`#settings-${s.toLowerCase()}`}
+              className="text-xs text-[#555] hover:text-[#bbb] transition-colors"
+            >
+              {s}
+            </a>
+          ))}
+        </div>
+
         <div className="px-6 py-5 space-y-6 overflow-y-auto">
           {/* Security section */}
-          <div>
+          <div id="settings-security">
             <p className="text-xs font-semibold text-[#777] uppercase tracking-wider mb-3">Security</p>
 
             {/* Vault password toggle */}
@@ -432,7 +445,7 @@ export default function SettingsModal({ onClose }: Props) {
           </div>
 
           {/* Backup section */}
-          <div>
+          <div id="settings-data">
             <p className="text-xs font-semibold text-[#777] uppercase tracking-wider mb-3">Data</p>
             <p className="text-xs text-[#555] mb-3">
               Backups contain server metadata only — credentials are never included.
@@ -501,7 +514,7 @@ export default function SettingsModal({ onClose }: Props) {
           </div>
 
           {/* Terminal section */}
-          <div>
+          <div id="settings-terminal">
             <p className="text-xs font-semibold text-[#777] uppercase tracking-wider mb-3">Terminal</p>
             <p className="text-xs text-[#555] mb-3">Changes apply to new sessions.</p>
 

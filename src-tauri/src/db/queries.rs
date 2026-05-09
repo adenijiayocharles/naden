@@ -271,6 +271,42 @@ pub async fn create_group_db(
         .await?)
 }
 
+pub async fn update_group_db(
+    db: &SqlitePool,
+    group_id: &str,
+    name: &str,
+    color: Option<&str>,
+) -> Result<Group, AppError> {
+    if name.trim().is_empty() {
+        return Err(AppError::Validation("group name is required".into()));
+    }
+    let now = Utc::now().to_rfc3339();
+    sqlx::query("UPDATE groups SET name = ?, color = ?, updated_at = ? WHERE id = ?")
+        .bind(name)
+        .bind(color)
+        .bind(&now)
+        .bind(group_id)
+        .execute(db)
+        .await?;
+    Ok(sqlx::query_as("SELECT * FROM groups WHERE id = ?")
+        .bind(group_id)
+        .fetch_one(db)
+        .await?)
+}
+
+pub async fn delete_group_db(db: &SqlitePool, group_id: &str) -> Result<(), AppError> {
+    // Ungrouped servers in this group first
+    sqlx::query("UPDATE servers SET group_id = NULL WHERE group_id = ?")
+        .bind(group_id)
+        .execute(db)
+        .await?;
+    sqlx::query("DELETE FROM groups WHERE id = ?")
+        .bind(group_id)
+        .execute(db)
+        .await?;
+    Ok(())
+}
+
 // ── tag queries ───────────────────────────────────────────────────────────────
 
 pub async fn list_tags_db(db: &SqlitePool) -> Result<Vec<Tag>, AppError> {

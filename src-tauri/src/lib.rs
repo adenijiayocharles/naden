@@ -46,6 +46,8 @@ pub fn run() {
             commands::server_commands::check_reachability,
             commands::server_commands::list_groups,
             commands::server_commands::create_group,
+            commands::server_commands::update_group,
+            commands::server_commands::delete_group,
             commands::server_commands::list_tags,
             commands::server_commands::create_tag,
             // Search
