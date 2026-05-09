@@ -1,4 +1,3 @@
-import { useState } from "react";
 import type { Group } from "../../types/server";
 
 interface Props {
@@ -32,7 +31,6 @@ export default function ServerKebabMenu({
   onDuplicate, onCheckReachability, onDelete,
   buttonClassName = "text-[#555] hover:text-white p-1 rounded hover:bg-[#1a1a1a] transition-colors text-lg leading-none",
 }: Props) {
-  const [showGroupPicker, setShowGroupPicker] = useState(false);
   const hasGroups = groups.length > 0;
   const isGrouped = Boolean(currentGroupId);
 
@@ -43,7 +41,7 @@ export default function ServerKebabMenu({
       onClick={(e) => e.stopPropagation()}
     >
       <button
-        onClick={() => { setMenuOpen(!menuOpen); setShowGroupPicker(false); }}
+        onClick={() => { setMenuOpen(!menuOpen); }}
         className={buttonClassName}
         aria-label="Server options"
       >
@@ -73,45 +71,32 @@ export default function ServerKebabMenu({
 
           {/* Move to group — only shown when there are groups or the server is currently grouped */}
           {(hasGroups || isGrouped) && (
-            <>
-              <button
-                onClick={() => setShowGroupPicker((v) => !v)}
-                className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors flex items-center justify-between"
-              >
-                <span>Move to Group</span>
-                <svg className={`w-3 h-3 text-[#555] transition-transform ${showGroupPicker ? "rotate-180" : ""}`} fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2 4l4 4 4-4" />
-                </svg>
-              </button>
-
-              {showGroupPicker && (
-                <div className="border-t border-[#222] pt-1 pb-1">
-                  {isGrouped && (
-                    <button
-                      onClick={() => { onMoveToGroup(null); setShowGroupPicker(false); }}
-                      className="w-full text-left px-4 py-1.5 text-xs text-[#999] hover:bg-[#1e1e1e] hover:text-white transition-colors"
-                    >
-                      Ungrouped
-                    </button>
-                  )}
-                  {groups.map((g) => (
-                    <button
-                      key={g.id}
-                      onClick={() => { onMoveToGroup(g.id); setShowGroupPicker(false); }}
-                      className={`w-full text-left px-4 py-1.5 text-xs hover:bg-[#1e1e1e] hover:text-white transition-colors flex items-center gap-2 ${
-                        g.id === currentGroupId ? "text-white font-medium" : "text-[#999]"
-                      }`}
-                    >
-                      {g.color && (
-                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: g.color }} />
-                      )}
-                      {g.name}
-                      {g.id === currentGroupId && <span className="ml-auto text-accent">✓</span>}
-                    </button>
-                  ))}
-                </div>
+            <div className="border-t border-[#222] pt-1 pb-1">
+              <p className="px-3 py-1 text-xs text-[#555] uppercase tracking-wider">Move to Group</p>
+              {isGrouped && (
+                <button
+                  onClick={() => onMoveToGroup(null)}
+                  className="w-full text-left px-3 py-1.5 text-xs text-[#999] hover:bg-[#1e1e1e] hover:text-white transition-colors"
+                >
+                  Ungrouped
+                </button>
               )}
-            </>
+              {groups.map((g) => (
+                <button
+                  key={g.id}
+                  onClick={() => onMoveToGroup(g.id)}
+                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-[#1e1e1e] hover:text-white transition-colors flex items-center gap-2 ${
+                    g.id === currentGroupId ? "text-white font-medium" : "text-[#999]"
+                  }`}
+                >
+                  {g.color && (
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: g.color }} />
+                  )}
+                  {g.name}
+                  {g.id === currentGroupId && <span className="ml-auto text-accent">✓</span>}
+                </button>
+              ))}
+            </div>
           )}
 
           <button
