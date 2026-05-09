@@ -113,14 +113,6 @@ export default function ServerList() {
   }
 
   // ── Default view ────────────────────────────────────────────────────────────
-  const serverById = new Map(servers.map((s) => [s.id, s]));
-
-  // Recently connected — up to 5 servers that exist in the current list
-  const recentServers = recentServerIds
-    .map((id) => serverById.get(id))
-    .filter((s): s is Server => s !== undefined)
-    .slice(0, 5);
-
   const ungrouped = applySort(filtered.filter((s) => !s.groupId));
   const sections = groups
     .map((g) => ({ group: g, items: applySort(filtered.filter((s) => s.groupId === g.id)) }))
@@ -128,21 +120,6 @@ export default function ServerList() {
 
   return (
     <div className="space-y-6">
-      {/* Recently connected section */}
-      {recentServers.length > 0 && (
-        <section>
-          <h2 className="text-xs font-semibold text-[#666] uppercase tracking-wider mb-2 flex items-center gap-2">
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.8}>
-              <circle cx="6" cy="6" r="5" />
-              <path strokeLinecap="round" d="M6 3.5v2.7l1.8 1.8" />
-            </svg>
-            Recently Connected
-          </h2>
-          <div className={listClass}>
-            {recentServers.map((s) => <Item key={s.id} server={s} />)}
-          </div>
-        </section>
-      )}
 
       {sections.map(({ group, items }) => (
         <section key={group.id}>
