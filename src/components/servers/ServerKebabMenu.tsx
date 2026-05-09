@@ -2,8 +2,6 @@ interface Props {
   menuRef: React.RefObject<HTMLDivElement>;
   menuOpen: boolean;
   setMenuOpen: (open: boolean) => void;
-  confirmDelete: boolean;
-  setConfirmDelete: (v: boolean) => void;
   deleting: boolean;
   openingTerminal: boolean;
   openingBrowser: boolean;
@@ -20,7 +18,6 @@ interface Props {
 
 export default function ServerKebabMenu({
   menuRef, menuOpen, setMenuOpen,
-  confirmDelete, setConfirmDelete,
   deleting, openingTerminal, openingBrowser, duplicating, checkingReachability,
   onEdit, onSystemTerminal, onBrowseFiles, onDuplicate, onCheckReachability, onDelete,
   buttonClassName = "text-[#555] hover:text-white p-1 rounded hover:bg-[#1a1a1a] transition-colors text-lg leading-none",
@@ -75,33 +72,13 @@ export default function ServerKebabMenu({
           >
             {checkingReachability ? "Checking…" : "Check Connectivity"}
           </button>
-          {!confirmDelete ? (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-[#1e1e1e] transition-colors"
-            >
-              Delete
-            </button>
-          ) : (
-            <div className="px-3 py-2 border-t border-[#2a2a2a]">
-              <p className="text-xs text-[#bbb] mb-2">Delete this server?</p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="text-xs text-[#777] hover:text-white"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={onDelete}
-                  disabled={deleting}
-                  className="text-xs text-red-400 hover:text-red-300 font-semibold"
-                >
-                  {deleting ? "…" : "Delete"}
-                </button>
-              </div>
-            </div>
-          )}
+          <button
+            onClick={onDelete}
+            disabled={deleting}
+            className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-[#1e1e1e] transition-colors disabled:opacity-40"
+          >
+            Delete
+          </button>
         </div>
       )}
     </div>

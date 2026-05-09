@@ -3,6 +3,7 @@ import { useServerActions, formatHost } from "./useServerActions";
 import { useUiStore } from "../../store/uiStore";
 import { useServerStore } from "../../store/serverStore";
 import ServerKebabMenu from "./ServerKebabMenu";
+import DeleteServerModal from "./DeleteServerModal";
 
 function ReachabilityDot({ serverId }: { serverId: string }) {
   const info = useServerStore((s) => s.reachability[serverId]);
@@ -31,6 +32,7 @@ export default function ServerCard({ server }: { server: Server }) {
   };
 
   return (
+    <>
     <div
       onClick={handleClick}
       className={`bg-[#111] border rounded-lg p-4 flex flex-col gap-3 transition-colors select-none
@@ -68,8 +70,6 @@ export default function ServerCard({ server }: { server: Server }) {
             menuRef={actions.menuRef}
             menuOpen={actions.menuOpen}
             setMenuOpen={actions.setMenuOpen}
-            confirmDelete={actions.confirmDelete}
-            setConfirmDelete={actions.setConfirmDelete}
             deleting={actions.deleting}
             openingTerminal={actions.openingTerminal}
             openingBrowser={actions.openingBrowser}
@@ -80,7 +80,7 @@ export default function ServerCard({ server }: { server: Server }) {
             onBrowseFiles={() => { void actions.handleBrowseFiles(); }}
             onDuplicate={() => { void actions.handleDuplicate(); }}
             onCheckReachability={() => { void actions.handleCheckReachability(); }}
-            onDelete={() => { void actions.handleDelete(); }}
+            onDelete={actions.handleDelete}
           />
         )}
       </div>
@@ -101,5 +101,15 @@ export default function ServerCard({ server }: { server: Server }) {
       {server.notes && <p className="text-xs text-[#555] truncate">{server.notes}</p>}
       {actions.error && <p className="text-xs text-red-400">{actions.error}</p>}
     </div>
+
+    {actions.deleteModalOpen && (
+      <DeleteServerModal
+        serverName={server.displayName}
+        deleting={actions.deleting}
+        onConfirm={() => { void actions.commitDelete(); }}
+        onCancel={() => actions.setDeleteModalOpen(false)}
+      />
+    )}
+    </>
   );
 }

@@ -3,6 +3,7 @@ import { useServerActions, formatHost } from "./useServerActions";
 import { useUiStore } from "../../store/uiStore";
 import { useServerStore } from "../../store/serverStore";
 import ServerKebabMenu from "./ServerKebabMenu";
+import DeleteServerModal from "./DeleteServerModal";
 
 function ReachabilityDot({ serverId }: { serverId: string }) {
   const info = useServerStore((s) => s.reachability[serverId]);
@@ -31,6 +32,7 @@ export default function ServerRow({ server }: { server: Server }) {
   };
 
   return (
+    <>
     <div
       onClick={handleClick}
       title={server.notes ?? undefined}
@@ -85,8 +87,6 @@ export default function ServerRow({ server }: { server: Server }) {
           menuRef={actions.menuRef}
           menuOpen={actions.menuOpen}
           setMenuOpen={actions.setMenuOpen}
-          confirmDelete={actions.confirmDelete}
-          setConfirmDelete={actions.setConfirmDelete}
           deleting={actions.deleting}
           openingTerminal={actions.openingTerminal}
           openingBrowser={actions.openingBrowser}
@@ -97,10 +97,20 @@ export default function ServerRow({ server }: { server: Server }) {
           onBrowseFiles={() => { void actions.handleBrowseFiles(); }}
           onDuplicate={() => { void actions.handleDuplicate(); }}
           onCheckReachability={() => { void actions.handleCheckReachability(); }}
-          onDelete={() => { void actions.handleDelete(); }}
+          onDelete={actions.handleDelete}
           buttonClassName="text-[#444] hover:text-white p-1 rounded hover:bg-[#1a1a1a] transition-colors text-base leading-none opacity-0 group-hover:opacity-100"
         />
       )}
     </div>
+
+    {actions.deleteModalOpen && (
+      <DeleteServerModal
+        serverName={server.displayName}
+        deleting={actions.deleting}
+        onConfirm={() => { void actions.commitDelete(); }}
+        onCancel={() => actions.setDeleteModalOpen(false)}
+      />
+    )}
+    </>
   );
 }

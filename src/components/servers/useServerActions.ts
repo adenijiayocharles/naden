@@ -16,7 +16,7 @@ export function useServerActions(server: Server) {
   const openSftpSession = useSftpStore((s) => s.openSession);
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [openingTerminal, setOpeningTerminal] = useState(false);
@@ -31,7 +31,6 @@ export function useServerActions(server: Server) {
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
-        setConfirmDelete(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -101,14 +100,16 @@ export function useServerActions(server: Server) {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => { setMenuOpen(false); setDeleteModalOpen(true); };
+
+  const commitDelete = async () => {
     setDeleting(true);
     try {
       await deleteServer(server.id);
+      setDeleteModalOpen(false);
     } catch (e) {
       setError(formatError(e));
       setDeleting(false);
-      setConfirmDelete(false);
     }
   };
 
@@ -117,7 +118,7 @@ export function useServerActions(server: Server) {
   return {
     menuRef,
     menuOpen, setMenuOpen,
-    confirmDelete, setConfirmDelete,
+    deleteModalOpen, setDeleteModalOpen,
     deleting, connecting, openingTerminal, openingBrowser, duplicating, checkingReachability,
     error,
     handleConnect,
@@ -126,6 +127,7 @@ export function useServerActions(server: Server) {
     handleDuplicate,
     handleCheckReachability,
     handleDelete,
+    commitDelete,
     editServer,
   };
 }
