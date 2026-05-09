@@ -106,7 +106,7 @@ export default function ServerKebabMenu({
               </button>
 
               {showGroupPicker && (
-                <div className="absolute right-full top-0 mr-1 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-30 min-w-[150px] py-1">
+                <div className="absolute left-full top-0 ml-1 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-30 min-w-[150px] py-1">
                   {isGrouped && (
                     <button
                       onClick={() => { onMoveToGroup(null); setShowGroupPicker(false); }}
