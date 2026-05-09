@@ -4,6 +4,7 @@ import { useUiStore } from "../../store/uiStore";
 import { useServerStore } from "../../store/serverStore";
 import ServerKebabMenu from "./ServerKebabMenu";
 import DeleteServerModal from "./DeleteServerModal";
+import ConnectionErrorModal from "./ConnectionErrorModal";
 import { FavouriteButton } from "./ServerCard";
 
 function ReachabilityDot({ serverId }: { serverId: string }) {
@@ -133,6 +134,14 @@ export default function ServerRow({ server }: { server: Server }) {
         deleting={actions.deleting}
         onConfirm={() => { void actions.commitDelete(); }}
         onCancel={() => actions.setDeleteModalOpen(false)}
+      />
+    )}
+    {actions.connectionError && (
+      <ConnectionErrorModal
+        serverName={server.displayName}
+        message={actions.connectionError}
+        onRetry={() => { actions.setConnectionError(null); void actions.handleConnect(); }}
+        onClose={() => actions.setConnectionError(null)}
       />
     )}
     </>

@@ -45,15 +45,17 @@ export function useServerActions(server: Server) {
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
 
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+
   const handleConnect = async () => {
     if (connecting) return;
     setConnecting(true);
     setError(null);
     try {
       const result = await openSession(server.id, server.displayName);
-      if (result === null) setError("Maximum terminal sessions (20) reached");
+      if (result === null) setConnectionError("Maximum terminal sessions (20) reached");
     } catch (e) {
-      setError(formatError(e));
+      setConnectionError(formatError(e));
     } finally {
       setConnecting(false);
     }
@@ -159,6 +161,7 @@ export function useServerActions(server: Server) {
     menuRef,
     menuOpen, setMenuOpen,
     deleteModalOpen, setDeleteModalOpen,
+    connectionError, setConnectionError,
     deleting, connecting, openingTerminal, openingBrowser, duplicating, checkingReachability,
     error,
     handleConnect,
