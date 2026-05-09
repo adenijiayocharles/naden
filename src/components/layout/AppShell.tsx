@@ -95,6 +95,10 @@ export default function AppShell() {
     void fetchAll();
     void check();
     void loadTerminalSettings();
+    // Apply persisted theme before anything renders
+    settingsCommands.getSetting("theme")
+      .then((t) => { if (t && t !== "dark") document.documentElement.dataset.theme = t; })
+      .catch(() => {});
     // Check onboarding once on mount
     settingsCommands.getSetting("onboarding_complete")
       .then((v) => {
@@ -152,7 +156,7 @@ export default function AppShell() {
 
   if (isChecking) {
     return (
-      <div className="flex h-screen items-center justify-center bg-black text-[#777] text-sm">
+      <div className="flex h-screen items-center justify-center bg-black text-muted text-sm">
         Loading…
       </div>
     );
@@ -174,7 +178,7 @@ export default function AppShell() {
               hasPanel
                 ? serverListCollapsed
                   ? "w-0 p-0 overflow-hidden"
-                  : "w-72 border-r border-[#1e1e1e] overflow-hidden flex flex-col"
+                  : "w-72 border-r border-stroke-subtle overflow-hidden flex flex-col"
                 : "flex-1 overflow-hidden flex flex-col"
             }`}
           >
@@ -193,10 +197,10 @@ export default function AppShell() {
             <button
               onClick={toggleServerList}
               aria-label={serverListCollapsed ? "Expand server list" : "Collapse server list"}
-              className="w-4 shrink-0 flex items-center justify-center bg-[#0a0a0a] border-r border-[#1e1e1e] hover:bg-[#161616] transition-colors group"
+              className="w-4 shrink-0 flex items-center justify-center bg-surface-0 border-r border-stroke-subtle hover:bg-surface-2 transition-colors group"
             >
               <svg
-                className="w-2.5 h-2.5 text-[#333] group-hover:text-[#888] transition-colors"
+                className="w-2.5 h-2.5 text-dim group-hover:text-muted transition-colors"
                 fill="none"
                 viewBox="0 0 6 10"
                 stroke="currentColor"
@@ -217,7 +221,7 @@ export default function AppShell() {
           {hasPanel && (
             <div className="flex flex-col flex-1 min-w-0">
               {/* Unified tab bar */}
-              <div className="h-10 bg-[#111] border-b border-[#1e1e1e] flex items-center gap-1 px-2 overflow-x-auto shrink-0">
+              <div className="h-10 bg-surface-1 border-b border-stroke-subtle flex items-center gap-1 px-2 overflow-x-auto shrink-0">
                 {terminalSessions.map((session) => (
                   <div
                     key={session.id}
@@ -225,15 +229,15 @@ export default function AppShell() {
                     title={session.status === "error" && session.errorMessage ? session.errorMessage : undefined}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer shrink-0 transition-colors select-none ${
                       activePanelType === "terminal" && session.id === terminalActiveId
-                        ? "bg-[#1e1e1e] text-white"
-                        : "text-[#888] hover:text-white hover:bg-[#191919]"
+                        ? "bg-surface-4 text-white"
+                        : "text-muted hover:text-white hover:bg-surface-2"
                     }`}
                   >
                     <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${TERMINAL_STATUS_COLORS[session.status]}`} />
                     <span className="max-w-[120px] truncate">{session.serverName}</span>
                     <button
                       onClick={(e) => { e.stopPropagation(); void terminalClose(session.id); }}
-                      className="text-[#555] hover:text-white ml-1 leading-none transition-colors text-base"
+                      className="text-faint hover:text-white ml-1 leading-none transition-colors text-base"
                       aria-label={`Close ${session.serverName}`}
                     >×</button>
                   </div>
@@ -245,8 +249,8 @@ export default function AppShell() {
                     onClick={() => { sftpSetActive(session.id); setActivePanelType("sftp"); }}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer shrink-0 transition-colors select-none ${
                       activePanelType === "sftp" && session.id === sftpActiveId
-                        ? "bg-[#1e1e1e] text-white"
-                        : "text-[#888] hover:text-white hover:bg-[#191919]"
+                        ? "bg-surface-4 text-white"
+                        : "text-muted hover:text-white hover:bg-surface-2"
                     }`}
                   >
                     <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${SFTP_STATUS_COLORS[session.status]}`} />
@@ -256,7 +260,7 @@ export default function AppShell() {
                     <span className="max-w-[120px] truncate">{session.serverName}</span>
                     <button
                       onClick={(e) => { e.stopPropagation(); void sftpClose(session.id); }}
-                      className="text-[#555] hover:text-white ml-1 leading-none transition-colors text-base"
+                      className="text-faint hover:text-white ml-1 leading-none transition-colors text-base"
                       aria-label={`Close ${session.serverName} browser`}
                     >×</button>
                   </div>

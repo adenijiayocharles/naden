@@ -45,7 +45,7 @@ export default function VaultLockScreen() {
           <h1 className="text-2xl font-bold text-white mb-1">
             SSH <span className="text-accent">Manager</span>
           </h1>
-          <p className="text-[#777] text-sm">Enter your master password to continue</p>
+          <p className="text-muted text-sm">Enter your master password to continue</p>
         </div>
 
         <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-3">
@@ -55,7 +55,7 @@ export default function VaultLockScreen() {
             value={password}
             onChange={(e) => { setPassword(e.target.value); setError(null); }}
             placeholder="Master password"
-            className="w-full bg-[#111] border border-[#2a2a2a] rounded px-4 py-3 text-white placeholder-[#666] focus:outline-none focus:border-accent transition-colors"
+            className="w-full bg-surface-1 border border-stroke rounded px-4 py-3 text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
           />
 
           {error && <p className="text-sm text-red-400 text-center">{error}</p>}
@@ -70,8 +70,8 @@ export default function VaultLockScreen() {
         </form>
 
         {vaultNotSetUp && (
-          <div className="mt-6 p-4 bg-[#111] border border-[#2a2a2a] rounded-lg text-center">
-            <p className="text-xs text-[#777] mb-3">
+          <div className="mt-6 p-4 bg-surface-1 border border-stroke rounded-lg text-center">
+            <p className="text-xs text-muted mb-3">
               Vault data may be missing or corrupted. You can re-check vault status to return to the setup screen.
             </p>
             <button

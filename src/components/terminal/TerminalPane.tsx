@@ -138,12 +138,12 @@ export default function TerminalPane({ sessionId }: Props) {
   }, [sessionId]); // settings read via getState() intentionally — avoids recreating live sessions
 
   return (
-    <div className="relative h-full w-full bg-[#0d0d0d]">
+    <div className="relative h-full w-full bg-surface-0">
       <div ref={containerRef} className="h-full w-full" style={{ padding: "15px" }} />
 
       {/* Search bar — floats over terminal at top-right */}
       {searchVisible && (
-        <div className="absolute top-3 right-4 z-30 flex items-center gap-1.5 bg-[#1a1a1a] border border-[#333] rounded-lg shadow-2xl px-2.5 py-1.5">
+        <div className="absolute top-3 right-4 z-30 flex items-center gap-1.5 bg-surface-3 border border-[#333] rounded-lg shadow-2xl px-2.5 py-1.5">
           <input
             autoFocus
             type="text"
@@ -161,22 +161,22 @@ export default function TerminalPane({ sessionId }: Props) {
             className="bg-transparent text-sm text-white placeholder-[#555] outline-none w-44"
           />
           <button onClick={findPrevious} title="Previous (Shift+Enter)"
-            className="text-[#888] hover:text-white px-1 text-sm leading-none">↑</button>
+            className="text-muted hover:text-white px-1 text-sm leading-none">↑</button>
           <button onClick={findNext} title="Next (Enter)"
-            className="text-[#888] hover:text-white px-1 text-sm leading-none">↓</button>
+            className="text-muted hover:text-white px-1 text-sm leading-none">↓</button>
           <button onClick={closeSearch} aria-label="Close search"
-            className="text-[#666] hover:text-white px-1 text-base leading-none ml-0.5">×</button>
+            className="text-faint hover:text-white px-1 text-base leading-none ml-0.5">×</button>
         </div>
       )}
 
       {/* Connecting overlay */}
       {isConnecting && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0d0d0d] gap-4">
-          <p className="text-[#666] text-sm tracking-wide">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-0 gap-4">
+          <p className="text-faint text-sm tracking-wide">
             Connecting to{" "}
             <span className="text-white font-medium">{session?.serverName}</span>…
           </p>
-          <div className="relative w-48 h-0.5 bg-[#1e1e1e] rounded-full overflow-hidden">
+          <div className="relative w-48 h-0.5 bg-surface-4 rounded-full overflow-hidden">
             <div
               className="absolute top-0 h-full bg-accent rounded-full"
               style={{ animation: "progress-slide 1.2s ease-in-out infinite" }}
@@ -193,10 +193,10 @@ export default function TerminalPane({ sessionId }: Props) {
 
       {/* Error overlay — user can reconnect or close the tab */}
       {isError && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0d0d0d]/95 gap-4">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-0/95 gap-4">
           <p className="text-red-400 text-sm font-medium">Connection failed</p>
           {session?.errorMessage && (
-            <p className="text-[#666] text-xs max-w-xs text-center">{session.errorMessage}</p>
+            <p className="text-faint text-xs max-w-xs text-center">{session.errorMessage}</p>
           )}
           <div className="flex gap-3 mt-1">
             <button
@@ -207,7 +207,7 @@ export default function TerminalPane({ sessionId }: Props) {
             </button>
             <button
               onClick={() => { void closeSession(sessionId); }}
-              className="px-4 py-2 text-sm text-[#777] hover:text-white bg-[#1a1a1a] hover:bg-[#222] rounded transition-colors"
+              className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
             >
               Close
             </button>

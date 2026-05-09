@@ -3,7 +3,7 @@ import { useVaultStore } from "../../store/vaultStore";
 import { formatError } from "../../lib/errors";
 
 function strength(pwd: string): { label: string; color: string; width: string } {
-  if (pwd.length === 0)  return { label: "",          color: "bg-[#222]",     width: "w-0" };
+  if (pwd.length === 0)  return { label: "",          color: "bg-surface-4",     width: "w-0" };
   if (pwd.length < 8)   return { label: "Too short",  color: "bg-red-500",    width: "w-1/4" };
   if (pwd.length < 12)  return { label: "Weak",       color: "bg-orange-500", width: "w-2/4" };
   if (pwd.length < 16)  return { label: "Moderate",   color: "bg-yellow-400", width: "w-3/4" };
@@ -52,7 +52,7 @@ export default function VaultSetupModal() {
           <h1 className="text-2xl font-bold text-white mb-1">
             SSH <span className="text-accent">Manager</span>
           </h1>
-          <p className="text-[#777] text-sm">Set a master password to protect your stored credentials.</p>
+          <p className="text-muted text-sm">Set a master password to protect your stored credentials.</p>
         </div>
 
         <form onSubmit={(e) => { void handleSetup(e); }} className="space-y-3">
@@ -63,14 +63,14 @@ export default function VaultSetupModal() {
               value={password}
               onChange={(e) => { setPassword(e.target.value); setError(null); }}
               placeholder="Master password"
-              className="w-full bg-[#111] border border-[#2a2a2a] rounded px-4 py-3 text-white placeholder-[#666] focus:outline-none focus:border-accent transition-colors"
+              className="w-full bg-surface-1 border border-stroke rounded px-4 py-3 text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
             />
             {password.length > 0 && (
               <div className="mt-1.5 flex items-center gap-2">
-                <div className="flex-1 h-1 bg-[#222] rounded-full overflow-hidden">
+                <div className="flex-1 h-1 bg-surface-4 rounded-full overflow-hidden">
                   <div className={`h-full rounded-full transition-all ${color} ${width}`} />
                 </div>
-                <span className="text-xs text-[#777] w-16 text-right">{label}</span>
+                <span className="text-xs text-muted w-16 text-right">{label}</span>
               </div>
             )}
           </div>
@@ -80,7 +80,7 @@ export default function VaultSetupModal() {
             value={confirm}
             onChange={(e) => { setConfirm(e.target.value); setError(null); }}
             placeholder="Confirm password"
-            className="w-full bg-[#111] border border-[#2a2a2a] rounded px-4 py-3 text-white placeholder-[#666] focus:outline-none focus:border-accent transition-colors"
+            className="w-full bg-surface-1 border border-stroke rounded px-4 py-3 text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
           />
 
           {error && <p className="text-sm text-red-400 text-center">{error}</p>}
@@ -98,11 +98,11 @@ export default function VaultSetupModal() {
           <button
             onClick={() => { void handleSkip(); }}
             disabled={loading || skipping}
-            className="text-sm text-[#555] hover:text-[#888] disabled:opacity-40 transition-colors"
+            className="text-sm text-faint hover:text-muted disabled:opacity-40 transition-colors"
           >
             {skipping ? "Skipping…" : "Continue without password protection"}
           </button>
-          <p className="text-xs text-[#444] mt-1">
+          <p className="text-xs text-dim mt-1">
             You can enable a master password anytime in Settings.
           </p>
         </div>

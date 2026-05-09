@@ -27,7 +27,8 @@
       "Bash(git *)",
       "Bash(cargo clippy *)",
       "Bash(npm test *)",
-      "Bash(cargo test *)"
+      "Bash(cargo test *)",
+      "Bash(xargs sed -i '' -e 's/bg-black\\\\b/bg-surface-base/g' -e 's/bg-\\\\[#000\\\\]/bg-surface-base/g' -e 's/bg-\\\\[#0d0d0d\\\\]/bg-surface-0/g' -e 's/bg-\\\\[#0a0a0a\\\\]/bg-surface-0/g' -e 's/bg-\\\\[#0f0f0f\\\\]/bg-surface-0/g' -e 's/bg-\\\\[#111\\\\]/bg-surface-1/g' -e 's/bg-\\\\[#131313\\\\]/bg-surface-1/g' -e 's/bg-\\\\[#161616\\\\]/bg-surface-2/g' -e 's/bg-\\\\[#191919\\\\]/bg-surface-2/g' -e 's/bg-\\\\[#1a1a1a\\\\]/bg-surface-3/g' -e 's/bg-\\\\[#1e1e1e\\\\]/bg-surface-4/g' -e 's/bg-\\\\[#222\\\\]/bg-surface-4/g' -e 's/border-\\\\[#1e1e1e\\\\]/border-stroke-subtle/g' -e 's/border-\\\\[#2a2a2a\\\\]/border-stroke/g' -e 's/border-\\\\[#222\\\\]/border-stroke/g' -e 's/text-\\\\[#ccc\\\\]/text-secondary/g' -e 's/text-\\\\[#bbb\\\\]/text-secondary/g' -e 's/text-\\\\[#aaa\\\\]/text-muted/g' -e 's/text-\\\\[#999\\\\]/text-muted/g' -e 's/text-\\\\[#888\\\\]/text-muted/g' -e 's/text-\\\\[#777\\\\]/text-muted/g' -e 's/text-\\\\[#666\\\\]/text-faint/g' -e 's/text-\\\\[#555\\\\]/text-faint/g' -e 's/text-\\\\[#444\\\\]/text-dim/g' -e 's/text-\\\\[#333\\\\]/text-dim/g' -e 's/placeholder-\\\\[#666\\\\]/placeholder-faint/g')"
     ]
   }
 }

@@ -220,15 +220,15 @@ export default function ServerForm() {
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) closeForm(); }}
     >
-      <div className="bg-[#111] border border-[#1e1e1e] rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e1e1e] shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-stroke-subtle shrink-0">
           <h2 className="text-lg font-semibold text-white">
             {isEdit ? "Edit Server" : "Add Server"}
           </h2>
           <button
             onClick={closeForm}
-            className="text-[#777] hover:text-white p-1 rounded"
+            className="text-muted hover:text-white p-1 rounded"
             aria-label="Close"
           >
             ✕
@@ -331,7 +331,7 @@ export default function ServerForm() {
                 <button
                   type="button"
                   onClick={() => { void pickIdentityFile(); }}
-                  className="px-3 py-2 bg-[#1a1a1a] hover:bg-[#222] text-[#bbb] text-sm rounded border border-[#2a2a2a] transition-colors shrink-0"
+                  className="px-3 py-2 bg-surface-3 hover:bg-surface-4 text-secondary text-sm rounded border border-stroke transition-colors shrink-0"
                 >
                   Browse
                 </button>
@@ -376,7 +376,7 @@ export default function ServerForm() {
                 <button
                   type="button"
                   onClick={() => { setShowNewGroup(false); setNewGroupName(""); }}
-                  className="px-3 py-2 bg-[#1a1a1a] hover:bg-[#222] text-[#bbb] text-sm rounded transition-colors shrink-0"
+                  className="px-3 py-2 bg-surface-3 hover:bg-surface-4 text-secondary text-sm rounded transition-colors shrink-0"
                 >
                   Cancel
                 </button>
@@ -389,12 +389,12 @@ export default function ServerForm() {
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-1 mb-2">
                 {tags.map((t) => (
-                  <span key={t.id} className="flex items-center gap-1 bg-[#1a1a1a] border border-[#2a2a2a] text-[#999] text-xs px-2 py-1 rounded-full">
+                  <span key={t.id} className="flex items-center gap-1 bg-surface-3 border border-stroke text-muted text-xs px-2 py-1 rounded-full">
                     #{t.name}
                     <button
                       type="button"
                       onClick={() => setTags((ts) => ts.filter((x) => x.id !== t.id))}
-                      className="text-[#777] hover:text-white leading-none"
+                      className="text-muted hover:text-white leading-none"
                       aria-label={`Remove tag ${t.name}`}
                     >
                       ×
@@ -420,9 +420,9 @@ export default function ServerForm() {
                 type="checkbox"
                 checked={form.isJumpHost}
                 onChange={set("isJumpHost")}
-                className="rounded border-[#2a2a2a] bg-[#1a1a1a] text-accent"
+                className="rounded border-stroke bg-surface-3 text-accent"
               />
-              <span className="text-sm text-[#bbb]">This server is a jump host / bastion</span>
+              <span className="text-sm text-secondary">This server is a jump host / bastion</span>
             </label>
           </Field>
 
@@ -460,15 +460,15 @@ export default function ServerForm() {
                 const target = form.displayName.trim() || "this server";
                 chain.push(target);
                 return (
-                  <div className="mt-2 flex items-center flex-wrap gap-1 text-xs text-[#666]">
+                  <div className="mt-2 flex items-center flex-wrap gap-1 text-xs text-faint">
                     {chain.map((label, i) => (
                       <span key={i} className="flex items-center gap-1">
                         <span className={i === 0 || i === chain.length - 1
-                          ? "text-[#888]"
+                          ? "text-muted"
                           : "text-accent font-medium"}>
                           {label}
                         </span>
-                        {i < chain.length - 1 && <span className="text-[#333]">→</span>}
+                        {i < chain.length - 1 && <span className="text-dim">→</span>}
                       </span>
                     ))}
                   </div>
@@ -497,11 +497,11 @@ export default function ServerForm() {
         </form>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#1e1e1e] shrink-0">
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-stroke-subtle shrink-0">
           <button
             type="button"
             onClick={closeForm}
-            className="px-4 py-2 text-sm text-[#777] hover:text-white bg-[#1a1a1a] hover:bg-[#222] rounded transition-colors"
+            className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
           >
             Cancel
           </button>
@@ -534,7 +534,7 @@ function Field({
   return (
     <div>
       {label && (
-        <label className="block text-sm font-medium text-[#bbb] mb-1">
+        <label className="block text-sm font-medium text-secondary mb-1">
           {label}
           {required && <span className="text-red-400 ml-0.5">*</span>}
         </label>
@@ -549,7 +549,7 @@ function SelectWrapper({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative">
       {children}
-      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[#777]">
+      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-muted">
         <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
           <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
         </svg>
@@ -559,7 +559,7 @@ function SelectWrapper({ children }: { children: React.ReactNode }) {
 }
 
 const input = (hasError: boolean) =>
-  `w-full bg-[#1a1a1a] border ${hasError ? "border-red-500" : "border-[#2a2a2a]"} rounded px-3 py-2 text-sm text-white placeholder-[#666] focus:outline-none focus:border-accent transition-colors`;
+  `w-full bg-surface-3 border ${hasError ? "border-red-500" : "border-stroke"} rounded px-3 py-2 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors`;
 
 const select = () =>
-  "w-full appearance-none bg-[#1a1a1a] border border-[#2a2a2a] rounded px-3 pr-10 py-2 text-sm text-white focus:outline-none focus:border-accent transition-colors";
+  "w-full appearance-none bg-surface-3 border border-stroke rounded px-3 pr-10 py-2 text-sm text-white focus:outline-none focus:border-accent transition-colors";

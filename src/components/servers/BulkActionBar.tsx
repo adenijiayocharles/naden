@@ -53,15 +53,15 @@ export default function BulkActionBar() {
   };
 
   return (
-    <div className="shrink-0 border-t border-[#1e1e1e] bg-[#111] px-4 py-2.5 flex items-center gap-3">
-      <span className="text-xs text-[#888]">
+    <div className="shrink-0 border-t border-stroke-subtle bg-surface-1 px-4 py-2.5 flex items-center gap-3">
+      <span className="text-xs text-muted">
         {count === 0 ? "None selected" : `${count} selected`}
       </span>
 
       <button
         onClick={handleSelectAll}
         disabled={busy}
-        className="text-xs text-[#666] hover:text-white transition-colors disabled:opacity-40"
+        className="text-xs text-faint hover:text-white transition-colors disabled:opacity-40"
       >
         Select all
       </button>
@@ -69,7 +69,7 @@ export default function BulkActionBar() {
       <button
         onClick={clearSelected}
         disabled={busy || count === 0}
-        className="text-xs text-[#666] hover:text-white transition-colors disabled:opacity-40"
+        className="text-xs text-faint hover:text-white transition-colors disabled:opacity-40"
       >
         Clear
       </button>
@@ -82,16 +82,16 @@ export default function BulkActionBar() {
           <button
             onClick={() => setShowGroupPicker((v) => !v)}
             disabled={busy || count === 0}
-            className="px-3 py-1 rounded text-xs bg-[#1a1a1a] border border-[#2a2a2a] text-[#aaa] hover:text-white hover:border-[#444] transition-colors disabled:opacity-40"
+            className="px-3 py-1 rounded text-xs bg-surface-3 border border-stroke text-muted hover:text-white hover:border-[#444] transition-colors disabled:opacity-40"
           >
             Move to group…
           </button>
 
           {showGroupPicker && (
-            <div className="absolute bottom-full mb-1 right-0 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl min-w-[160px] py-1 z-30">
+            <div className="absolute bottom-full mb-1 right-0 bg-surface-2 border border-stroke rounded-lg shadow-2xl min-w-[160px] py-1 z-30">
               <button
                 onClick={() => { void handleMoveToGroup(null); }}
-                className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors"
+                className="w-full text-left px-3 py-2 text-sm text-secondary hover:bg-surface-4 hover:text-white transition-colors"
               >
                 Ungrouped
               </button>
@@ -99,7 +99,7 @@ export default function BulkActionBar() {
                 <button
                   key={g.id}
                   onClick={() => { void handleMoveToGroup(g.id); }}
-                  className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-sm text-secondary hover:bg-surface-4 hover:text-white transition-colors flex items-center gap-2"
                 >
                   {g.color && (
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: g.color }} />
@@ -125,7 +125,7 @@ export default function BulkActionBar() {
             <button
               onClick={() => setConfirmDelete(false)}
               disabled={busy}
-              className="px-2 py-1 rounded text-xs text-[#666] hover:text-white transition-colors"
+              className="px-2 py-1 rounded text-xs text-faint hover:text-white transition-colors"
             >
               Cancel
             </button>

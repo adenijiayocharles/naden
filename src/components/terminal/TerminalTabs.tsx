@@ -20,15 +20,15 @@ export default function TerminalTabs() {
   const closeSession = useTerminalStore((s) => s.closeSession);
 
   return (
-    <div className="h-10 bg-[#111] border-b border-[#1e1e1e] flex items-center gap-1 px-2 overflow-x-auto shrink-0">
+    <div className="h-10 bg-surface-1 border-b border-stroke-subtle flex items-center gap-1 px-2 overflow-x-auto shrink-0">
       {sessions.map((session) => (
         <div
           key={session.id}
           onClick={() => setActive(session.id)}
           className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer shrink-0 transition-colors select-none ${
             session.id === activeSessionId
-              ? "bg-[#1e1e1e] text-white"
-              : "text-[#888] hover:text-white hover:bg-[#191919]"
+              ? "bg-surface-4 text-white"
+              : "text-muted hover:text-white hover:bg-surface-2"
           }`}
         >
           <StatusDot status={session.status} />
@@ -38,7 +38,7 @@ export default function TerminalTabs() {
               e.stopPropagation();
               void closeSession(session.id);
             }}
-            className="text-[#555] hover:text-white ml-1 leading-none transition-colors text-base"
+            className="text-faint hover:text-white ml-1 leading-none transition-colors text-base"
             aria-label={`Close ${session.serverName}`}
           >
             ×

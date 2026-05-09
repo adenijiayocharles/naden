@@ -21,21 +21,21 @@ export default function ServerList() {
         {Array.from({ length: 6 }).map((_, i) => (
           viewMode === "row" ? (
             <div key={i} className="flex items-center gap-3 px-3 py-2.5 border-b border-[#1a1a1a] last:border-b-0 animate-pulse">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#222] shrink-0" />
-              <div className="w-32 h-3 bg-[#1a1a1a] rounded" />
-              <div className="flex-1 h-3 bg-[#161616] rounded" />
+              <div className="w-1.5 h-1.5 rounded-full bg-surface-4 shrink-0" />
+              <div className="w-32 h-3 bg-surface-3 rounded" />
+              <div className="flex-1 h-3 bg-surface-2 rounded" />
             </div>
           ) : (
-            <div key={i} className="bg-[#111] border border-[#1e1e1e] rounded-lg p-4 flex flex-col gap-3 animate-pulse">
+            <div key={i} className="bg-surface-1 border border-stroke-subtle rounded-lg p-4 flex flex-col gap-3 animate-pulse">
               <div className="flex items-start gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#222] mt-1 shrink-0" />
+                <div className="w-2 h-2 rounded-full bg-surface-4 mt-1 shrink-0" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-3.5 bg-[#1a1a1a] rounded w-3/4" />
-                  <div className="h-3 bg-[#161616] rounded w-1/2" />
+                  <div className="h-3.5 bg-surface-3 rounded w-3/4" />
+                  <div className="h-3 bg-surface-2 rounded w-1/2" />
                 </div>
               </div>
-              <div className="h-px bg-[#1a1a1a] mt-auto" />
-              <div className="h-7 bg-[#1a1a1a] rounded" />
+              <div className="h-px bg-surface-3 mt-auto" />
+              <div className="h-7 bg-surface-3 rounded" />
             </div>
           )
         ))}
@@ -48,8 +48,8 @@ export default function ServerList() {
     const results = searchResults ?? [];
     return results.length === 0 ? (
       <div className="flex flex-col items-center justify-center h-64 text-center">
-        <p className="text-[#777] text-lg font-medium mb-1">No matches</p>
-        <p className="text-[#333] text-sm">No servers match "{searchQuery}"</p>
+        <p className="text-muted text-lg font-medium mb-1">No matches</p>
+        <p className="text-dim text-sm">No servers match "{searchQuery}"</p>
       </div>
     ) : (
       <div className={listClass}>
@@ -82,8 +82,8 @@ export default function ServerList() {
           : "Add your first server or import from ~/.ssh/config";
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
-        <p className="text-[#777] text-lg font-medium mb-1">{heading}</p>
-        <p className="text-[#333] text-sm mb-4">{sub}</p>
+        <p className="text-muted text-lg font-medium mb-1">{heading}</p>
+        <p className="text-dim text-sm mb-4">{sub}</p>
         {!filterFavourites && !filterGroupId && !filterTagId && (
           <button
             onClick={openAdd}
@@ -124,7 +124,7 @@ export default function ServerList() {
               <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
             )}
             {group.name}
-            <span className="text-[#333] normal-case font-normal tracking-normal">{items.length}</span>
+            <span className="text-dim normal-case font-normal tracking-normal">{items.length}</span>
           </h2>
           <div className={listClass}>
             {items.map((s) => <Item key={s.id} server={s} />)}
@@ -134,7 +134,7 @@ export default function ServerList() {
 
       {ungrouped.length > 0 && (
         <section>
-          <h2 className="text-xs font-semibold text-[#666] uppercase tracking-wider mb-2">
+          <h2 className="text-xs font-semibold text-faint uppercase tracking-wider mb-2">
             Ungrouped
           </h2>
           <div className={listClass}>

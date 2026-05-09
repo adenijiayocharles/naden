@@ -1,15 +1,63 @@
 @import "tailwindcss";
 
 @theme {
+  /* Accent */
   --color-accent: #CDFF00;
   --color-accent-hover: #d8ff33;
   --color-accent-dim: #a8cc00;
+
+  /* Surfaces — 5 depth levels */
+  --color-surface-base: #000000;
+  --color-surface-0:    #0d0d0d;
+  --color-surface-1:    #111111;
+  --color-surface-2:    #161616;
+  --color-surface-3:    #1a1a1a;
+  --color-surface-4:    #1e1e1e;
+
+  /* Borders */
+  --color-stroke:        #2a2a2a;
+  --color-stroke-subtle: #1e1e1e;
+
+  /* Text scale */
+  --color-secondary: #bbbbbb;
+  --color-muted:     #888888;
+  --color-faint:     #666666;
+  --color-dim:       #444444;
+
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {
   html {
     font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  /* ── OLED ─────────────────────────────────────────────────── */
+  [data-theme="oled"] {
+    --color-surface-base: #000000;
+    --color-surface-0:    #000000;
+    --color-surface-1:    #090909;
+    --color-surface-2:    #0d0d0d;
+    --color-surface-3:    #111111;
+    --color-surface-4:    #161616;
+    --color-stroke:        #1a1a1a;
+    --color-stroke-subtle: #0d0d0d;
+  }
+
+  /* ── Dim ──────────────────────────────────────────────────── */
+  [data-theme="dim"] {
+    --color-surface-base: #1a1b1e;
+    --color-surface-0:    #1e2023;
+    --color-surface-1:    #25272b;
+    --color-surface-2:    #2d3035;
+    --color-surface-3:    #34373d;
+    --color-surface-4:    #3d4045;
+    --color-stroke:        #4a4d54;
+    --color-stroke-subtle: #3d4045;
+    --color-secondary: #b0b3b8;
+    --color-muted:     #8a8d91;
+    --color-faint:     #606770;
+    --color-dim:       #4a4d55;
   }
 }
 

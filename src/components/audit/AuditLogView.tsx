@@ -11,7 +11,7 @@ const PAGE = 50;
 const OUTCOME_STYLES: Record<AuditOutcome, string> = {
   connecting: "text-yellow-400",
   success:    "text-[#CDFF00]",
-  user_closed:"text-[#888]",
+  user_closed:"text-muted",
   failure:    "text-red-400",
   timeout:    "text-orange-400",
 };
@@ -126,11 +126,11 @@ export default function AuditLogView() {
   return (
     <div className="flex flex-col h-full">
       {/* Filter bar */}
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-[#1e1e1e] shrink-0 flex-wrap">
+      <div className="flex items-center gap-3 px-5 py-3 border-b border-stroke-subtle shrink-0 flex-wrap">
         <select
           value={filterServer}
           onChange={(e) => setFilterServer(e.target.value)}
-          className="bg-[#1a1a1a] border border-[#2a2a2a] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-accent"
+          className="bg-surface-3 border border-stroke rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-accent"
         >
           <option value="">All servers</option>
           {servers.map((s) => (
@@ -142,20 +142,20 @@ export default function AuditLogView() {
           type="date"
           value={filterStart}
           onChange={(e) => setFilterStart(e.target.value)}
-          className="bg-[#1a1a1a] border border-[#2a2a2a] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-accent"
+          className="bg-surface-3 border border-stroke rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-accent"
         />
-        <span className="text-[#555] text-sm">→</span>
+        <span className="text-faint text-sm">→</span>
         <input
           type="date"
           value={filterEnd}
           onChange={(e) => setFilterEnd(e.target.value)}
-          className="bg-[#1a1a1a] border border-[#2a2a2a] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-accent"
+          className="bg-surface-3 border border-stroke rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-accent"
         />
 
         {(filterServer || filterStart || filterEnd) && (
           <button
             onClick={() => { setFilterServer(""); setFilterStart(""); setFilterEnd(""); }}
-            className="text-[#666] hover:text-white text-sm transition-colors"
+            className="text-faint hover:text-white text-sm transition-colors"
           >
             Clear
           </button>
@@ -164,21 +164,21 @@ export default function AuditLogView() {
         <button
           onClick={() => { void handleExport(); }}
           disabled={exporting}
-          className="ml-auto bg-[#1a1a1a] hover:bg-[#222] border border-[#2a2a2a] text-[#ccc] text-sm px-3 py-1.5 rounded transition-colors disabled:opacity-40"
+          className="ml-auto bg-surface-3 hover:bg-surface-4 border border-stroke text-secondary text-sm px-3 py-1.5 rounded transition-colors disabled:opacity-40"
         >
           {exporting ? "Exporting…" : "Export CSV"}
         </button>
       </div>
 
       {error && (
-        <p className="text-sm text-red-400 px-5 py-2 border-b border-[#1e1e1e]">{error}</p>
+        <p className="text-sm text-red-400 px-5 py-2 border-b border-stroke-subtle">{error}</p>
       )}
 
       {/* Table */}
       <div className="flex-1 overflow-y-auto">
         <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-[#0d0d0d] border-b border-[#1e1e1e]">
-            <tr className="text-left text-xs text-[#666] uppercase tracking-wider">
+          <thead className="sticky top-0 bg-surface-0 border-b border-stroke-subtle">
+            <tr className="text-left text-xs text-faint uppercase tracking-wider">
               <th className="px-5 py-2.5 font-medium">Time</th>
               <th className="px-3 py-2.5 font-medium">Server</th>
               <th className="px-3 py-2.5 font-medium">Host</th>
@@ -191,23 +191,23 @@ export default function AuditLogView() {
             {entries.map((e) => (
               <tr
                 key={e.id}
-                className="border-b border-[#111] hover:bg-[#0f0f0f] transition-colors"
+                className="border-b border-[#111] hover:bg-surface-0 transition-colors"
                 title={e.errorMessage ?? undefined}
               >
-                <td className="px-5 py-2.5 text-[#888] whitespace-nowrap font-mono text-xs">
+                <td className="px-5 py-2.5 text-muted whitespace-nowrap font-mono text-xs">
                   {fmt(e.sessionStart)}
                 </td>
                 <td className="px-3 py-2.5 text-white max-w-[160px] truncate">
                   {e.serverDisplayName}
                 </td>
-                <td className="px-3 py-2.5 text-[#666] font-mono text-xs whitespace-nowrap">
+                <td className="px-3 py-2.5 text-faint font-mono text-xs whitespace-nowrap">
                   {e.hostname}:{e.port}
                 </td>
-                <td className="px-3 py-2.5 text-[#888]">{e.username || "—"}</td>
-                <td className={`px-3 py-2.5 font-medium ${OUTCOME_STYLES[e.outcome as AuditOutcome] ?? "text-[#888]"}`}>
+                <td className="px-3 py-2.5 text-muted">{e.username || "—"}</td>
+                <td className={`px-3 py-2.5 font-medium ${OUTCOME_STYLES[e.outcome as AuditOutcome] ?? "text-muted"}`}>
                   {OUTCOME_LABEL[e.outcome as AuditOutcome] ?? e.outcome}
                 </td>
-                <td className="px-3 py-2.5 text-[#666] font-mono text-xs">
+                <td className="px-3 py-2.5 text-faint font-mono text-xs">
                   {duration(e.sessionStart, e.sessionEnd)}
                 </td>
               </tr>
@@ -215,7 +215,7 @@ export default function AuditLogView() {
 
             {!loading && entries.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-5 py-16 text-center text-[#555]">
+                <td colSpan={6} className="px-5 py-16 text-center text-faint">
                   No connections recorded yet
                 </td>
               </tr>
@@ -227,7 +227,7 @@ export default function AuditLogView() {
           <div className="flex justify-center py-4">
             <button
               onClick={() => { void load(false); }}
-              className="text-sm text-[#666] hover:text-white transition-colors"
+              className="text-sm text-faint hover:text-white transition-colors"
             >
               Load more
             </button>
@@ -236,7 +236,7 @@ export default function AuditLogView() {
 
         {loading && (
           <div className="flex justify-center py-6">
-            <span className="text-[#555] text-sm">Loading…</span>
+            <span className="text-faint text-sm">Loading…</span>
           </div>
         )}
       </div>

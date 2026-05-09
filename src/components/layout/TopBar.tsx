@@ -22,14 +22,14 @@ export default function TopBar() {
 
   return (
     <>
-      <header className="h-14 shrink-0 border-b border-[#1e1e1e] bg-black flex items-center px-4 gap-3">
+      <header className="h-14 shrink-0 border-b border-stroke-subtle bg-black flex items-center px-4 gap-3">
         <input
           ref={inputRef}
           data-search-input
           value={searchQuery}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search servers…"
-          className="flex-1 min-w-0 max-w-sm bg-[#1a1a1a] border border-[#2a2a2a] rounded px-3 py-1.5 text-sm text-white placeholder-[#666] focus:outline-none focus:border-accent transition-colors"
+          className="flex-1 min-w-0 max-w-sm bg-surface-3 border border-stroke rounded px-3 py-1.5 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
         />
 
         {/* Select toggle */}
@@ -38,14 +38,14 @@ export default function TopBar() {
           className={`px-2.5 py-1.5 rounded border text-xs transition-colors shrink-0 ${
             bulkMode
               ? "bg-accent/10 border-accent/30 text-accent"
-              : "bg-[#1a1a1a] border-[#2a2a2a] text-[#666] hover:text-[#999]"
+              : "bg-surface-3 border-stroke text-faint hover:text-muted"
           }`}
         >
           {bulkMode ? `Cancel${bulkSelected.length > 0 ? ` (${bulkSelected.length})` : ""}` : "Select"}
         </button>
 
         {/* View mode toggle */}
-        <div className="flex items-center bg-[#1a1a1a] border border-[#2a2a2a] rounded overflow-hidden shrink-0">
+        <div className="flex items-center bg-surface-3 border border-stroke rounded overflow-hidden shrink-0">
           {(["card", "row"] as ViewMode[]).map((mode) => (
             <button
               key={mode}
@@ -54,7 +54,7 @@ export default function TopBar() {
               className={`p-1.5 transition-colors ${
                 viewMode === mode
                   ? "bg-[#2a2a2a] text-white"
-                  : "text-[#555] hover:text-[#999]"
+                  : "text-faint hover:text-muted"
               }`}
             >
               {mode === "card" ? (
@@ -84,7 +84,7 @@ export default function TopBar() {
                   ? "bg-red-950/30 border-red-900/40 text-red-400"
                   : countdown.warning
                     ? "bg-yellow-950/30 border-yellow-900/40 text-yellow-400"
-                    : "bg-[#1a1a1a] border-[#2a2a2a] text-[#555]"
+                    : "bg-surface-3 border-stroke text-faint"
               }`}
             >
               <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
@@ -96,7 +96,7 @@ export default function TopBar() {
           )}
           <button
             onClick={() => setShowImport(true)}
-            className="text-[#888] hover:text-accent text-sm px-3 py-1.5 rounded hover:bg-[#1a1a1a] transition-colors hidden sm:block"
+            className="text-muted hover:text-accent text-sm px-3 py-1.5 rounded hover:bg-surface-3 transition-colors hidden sm:block"
           >
             Import SSH Config
           </button>
@@ -108,7 +108,7 @@ export default function TopBar() {
           </button>
           <button
             onClick={openSettings}
-            className="text-[#888] hover:text-white p-1.5 rounded hover:bg-[#1a1a1a] transition-colors"
+            className="text-muted hover:text-white p-1.5 rounded hover:bg-surface-3 transition-colors"
             aria-label="Settings"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>

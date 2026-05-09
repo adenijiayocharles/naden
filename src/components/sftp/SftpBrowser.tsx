@@ -163,7 +163,7 @@ export default function SftpBrowser({ sessionId }: Props) {
   const isError = session.status === "error";
 
   return (
-    <div className="relative h-full w-full flex flex-col bg-[#0a0a0a]">
+    <div className="relative h-full w-full flex flex-col bg-surface-0">
       <SftpToolbar
         currentPath={session.currentPath}
         selectedPath={selected}
@@ -193,7 +193,7 @@ export default function SftpBrowser({ sessionId }: Props) {
           </button>
           <button
             onClick={() => setConfirmingDelete(false)}
-            className="text-[#666] hover:text-white transition-colors"
+            className="text-faint hover:text-white transition-colors"
           >
             Cancel
           </button>
@@ -202,8 +202,8 @@ export default function SftpBrowser({ sessionId }: Props) {
 
       {/* Inline rename input */}
       {renaming && (
-        <div className="px-4 py-2 bg-[#111] border-b border-[#1e1e1e] flex items-center gap-2">
-          <span className="text-xs text-[#888]">Rename to:</span>
+        <div className="px-4 py-2 bg-surface-1 border-b border-stroke-subtle flex items-center gap-2">
+          <span className="text-xs text-muted">Rename to:</span>
           <input
             autoFocus
             value={renameValue}
@@ -212,17 +212,17 @@ export default function SftpBrowser({ sessionId }: Props) {
               if (e.key === "Enter") void commitRename();
               if (e.key === "Escape") setRenaming(null);
             }}
-            className="flex-1 bg-[#1a1a1a] border border-[#333] rounded px-2 py-1 text-sm text-white outline-none focus:border-accent font-mono"
+            className="flex-1 bg-surface-3 border border-[#333] rounded px-2 py-1 text-sm text-white outline-none focus:border-accent font-mono"
           />
           <button onClick={() => { void commitRename(); }} className="text-xs text-accent px-2">OK</button>
-          <button onClick={() => setRenaming(null)} className="text-xs text-[#666] px-2">Cancel</button>
+          <button onClick={() => setRenaming(null)} className="text-xs text-faint px-2">Cancel</button>
         </div>
       )}
 
       {/* New folder input */}
       {creatingFolder && (
-        <div className="px-4 py-2 bg-[#111] border-b border-[#1e1e1e] flex items-center gap-2">
-          <span className="text-xs text-[#888]">New folder:</span>
+        <div className="px-4 py-2 bg-surface-1 border-b border-stroke-subtle flex items-center gap-2">
+          <span className="text-xs text-muted">New folder:</span>
           <input
             autoFocus
             value={folderName}
@@ -232,10 +232,10 @@ export default function SftpBrowser({ sessionId }: Props) {
               if (e.key === "Escape") setCreatingFolder(false);
             }}
             placeholder="folder-name"
-            className="flex-1 bg-[#1a1a1a] border border-[#333] rounded px-2 py-1 text-sm text-white outline-none focus:border-accent font-mono placeholder-[#444]"
+            className="flex-1 bg-surface-3 border border-[#333] rounded px-2 py-1 text-sm text-white outline-none focus:border-accent font-mono placeholder-[#444]"
           />
           <button onClick={() => { void commitNewFolder(); }} className="text-xs text-accent px-2">Create</button>
-          <button onClick={() => setCreatingFolder(false)} className="text-xs text-[#666] px-2">Cancel</button>
+          <button onClick={() => setCreatingFolder(false)} className="text-xs text-faint px-2">Cancel</button>
         </div>
       )}
 
@@ -249,7 +249,7 @@ export default function SftpBrowser({ sessionId }: Props) {
 
       {/* Transfer progress */}
       {transferProgress && (
-        <div className="px-4 py-2 bg-[#0f1a0a] border-b border-[#1e1e1e] flex items-center gap-3 text-xs text-[#aaa]">
+        <div className="px-4 py-2 bg-[#0f1a0a] border-b border-stroke-subtle flex items-center gap-3 text-xs text-muted">
           <svg className="w-3 h-3 animate-spin text-accent shrink-0" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
@@ -267,12 +267,12 @@ export default function SftpBrowser({ sessionId }: Props) {
 
       {/* Connecting overlay */}
       {isConnecting && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0a0a] gap-4">
-          <p className="text-[#666] text-sm">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-0 gap-4">
+          <p className="text-faint text-sm">
             Connecting to{" "}
             <span className="text-white font-medium">{session.serverName}</span>…
           </p>
-          <div className="relative w-48 h-0.5 bg-[#1e1e1e] rounded-full overflow-hidden">
+          <div className="relative w-48 h-0.5 bg-surface-4 rounded-full overflow-hidden">
             <div
               className="absolute top-0 h-full bg-accent rounded-full"
               style={{ animation: "progress-slide 1.2s ease-in-out infinite" }}
@@ -289,14 +289,14 @@ export default function SftpBrowser({ sessionId }: Props) {
 
       {/* Error overlay */}
       {isError && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0a0a]/95 gap-4">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-0/95 gap-4">
           <p className="text-red-400 text-sm font-medium">Connection failed</p>
           {session.errorMessage && (
-            <p className="text-[#666] text-xs max-w-xs text-center">{session.errorMessage}</p>
+            <p className="text-faint text-xs max-w-xs text-center">{session.errorMessage}</p>
           )}
           <button
             onClick={() => { void closeSession(sessionId); }}
-            className="px-4 py-2 text-sm text-[#777] hover:text-white bg-[#1a1a1a] hover:bg-[#222] rounded transition-colors"
+            className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
           >
             Close
           </button>

@@ -93,27 +93,27 @@ export default function SshConfigImport({ onClose }: Props) {
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-[#111] border border-[#1e1e1e] rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e1e1e] shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-stroke-subtle shrink-0">
           <h2 className="text-lg font-semibold text-white">Import from SSH Config</h2>
-          <button onClick={onClose} className="text-[#777] hover:text-white p-1 rounded" aria-label="Close">✕</button>
+          <button onClick={onClose} className="text-muted hover:text-white p-1 rounded" aria-label="Close">✕</button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
           {/* Path picker */}
           <div>
-            <label className="block text-sm font-medium text-[#bbb] mb-1">Config file path</label>
+            <label className="block text-sm font-medium text-secondary mb-1">Config file path</label>
             <div className="flex gap-2">
               <input
                 value={configPath}
                 onChange={(e) => setConfigPath(e.target.value)}
-                className="flex-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
+                className="flex-1 bg-surface-3 border border-stroke rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
               />
               <button
                 type="button"
                 onClick={() => { void browseConfig(); }}
-                className="px-3 py-2 bg-[#1a1a1a] hover:bg-[#222] text-[#bbb] text-sm rounded border border-[#2a2a2a] transition-colors shrink-0"
+                className="px-3 py-2 bg-surface-3 hover:bg-surface-4 text-secondary text-sm rounded border border-stroke transition-colors shrink-0"
               >
                 Browse
               </button>
@@ -140,7 +140,7 @@ export default function SshConfigImport({ onClose }: Props) {
 
           {/* Preview table */}
           {previews && previews.length === 0 && (
-            <p className="text-sm text-[#777] text-center py-8">
+            <p className="text-sm text-muted text-center py-8">
               No Host entries found in this config file.
             </p>
           )}
@@ -148,7 +148,7 @@ export default function SshConfigImport({ onClose }: Props) {
           {previews && previews.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-[#777]">
+                <p className="text-sm text-muted">
                   {selected.size} of {previews.length} selected
                 </p>
                 <button
@@ -159,15 +159,15 @@ export default function SshConfigImport({ onClose }: Props) {
                 </button>
               </div>
 
-              <div className="border border-[#1e1e1e] rounded-lg overflow-hidden">
+              <div className="border border-stroke-subtle rounded-lg overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead className="bg-[#161616]">
-                    <tr className="border-b border-[#1e1e1e]">
+                  <thead className="bg-surface-2">
+                    <tr className="border-b border-stroke-subtle">
                       <th className="w-10 px-3 py-2" />
-                      <th className="text-left px-3 py-2 text-[#777] font-medium">Host</th>
-                      <th className="text-left px-3 py-2 text-[#777] font-medium">Hostname</th>
-                      <th className="text-left px-3 py-2 text-[#777] font-medium">User</th>
-                      <th className="text-left px-3 py-2 text-[#777] font-medium">Port</th>
+                      <th className="text-left px-3 py-2 text-muted font-medium">Host</th>
+                      <th className="text-left px-3 py-2 text-muted font-medium">Hostname</th>
+                      <th className="text-left px-3 py-2 text-muted font-medium">User</th>
+                      <th className="text-left px-3 py-2 text-muted font-medium">Port</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -175,8 +175,8 @@ export default function SshConfigImport({ onClose }: Props) {
                       <tr
                         key={p.pattern}
                         onClick={() => toggle(p.pattern)}
-                        className={`cursor-pointer border-b border-[#1e1e1e] last:border-0 transition-colors ${
-                          selected.has(p.pattern) ? "bg-accent/5" : "hover:bg-[#161616]"
+                        className={`cursor-pointer border-b border-stroke-subtle last:border-0 transition-colors ${
+                          selected.has(p.pattern) ? "bg-accent/5" : "hover:bg-surface-2"
                         }`}
                       >
                         <td className="px-3 py-2 text-center">
@@ -185,13 +185,13 @@ export default function SshConfigImport({ onClose }: Props) {
                             checked={selected.has(p.pattern)}
                             onChange={() => toggle(p.pattern)}
                             onClick={(e) => e.stopPropagation()}
-                            className="rounded border-[#2a2a2a]"
+                            className="rounded border-stroke"
                           />
                         </td>
                         <td className="px-3 py-2 font-mono text-white">{p.pattern}</td>
-                        <td className="px-3 py-2 text-[#888]">{p.hostname ?? <span className="text-[#666] italic">same as host</span>}</td>
-                        <td className="px-3 py-2 text-[#888]">{p.username ?? "—"}</td>
-                        <td className="px-3 py-2 text-[#888]">{p.port ?? 22}</td>
+                        <td className="px-3 py-2 text-muted">{p.hostname ?? <span className="text-faint italic">same as host</span>}</td>
+                        <td className="px-3 py-2 text-muted">{p.username ?? "—"}</td>
+                        <td className="px-3 py-2 text-muted">{p.port ?? 22}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -202,10 +202,10 @@ export default function SshConfigImport({ onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#1e1e1e] shrink-0">
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-stroke-subtle shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm text-[#777] hover:text-white bg-[#1a1a1a] hover:bg-[#222] rounded transition-colors"
+            className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
           >
             {imported !== null ? "Done" : "Cancel"}
           </button>

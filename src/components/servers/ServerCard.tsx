@@ -14,7 +14,7 @@ export function FavouriteButton({ isFavourite, onToggle }: { isFavourite: boolea
       className={`p-0.5 rounded transition-colors shrink-0 ${
         isFavourite
           ? "text-yellow-400 hover:text-yellow-300"
-          : "text-[#555] hover:text-yellow-400"
+          : "text-faint hover:text-yellow-400"
       }`}
     >
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}
@@ -55,9 +55,9 @@ export default function ServerCard({ server }: { server: Server }) {
     <>
     <div
       onClick={handleClick}
-      className={`bg-[#111] border rounded-lg p-4 flex flex-col gap-3 transition-colors select-none
-        ${isSelected ? "border-accent/50 bg-accent/5" : "border-[#1e1e1e]"}
-        ${actions.connecting ? "opacity-60 cursor-wait" : "hover:border-[#2a2a2a] cursor-pointer hover:bg-[#131313]"}`}
+      className={`bg-surface-1 border rounded-lg p-4 flex flex-col gap-3 transition-colors select-none
+        ${isSelected ? "border-accent/50 bg-accent/5" : "border-stroke-subtle"}
+        ${actions.connecting ? "opacity-60 cursor-wait" : "hover:border-stroke cursor-pointer hover:bg-surface-1"}`}
     >
       <div className="flex items-start gap-2">
         {bulkMode ? (
@@ -82,15 +82,15 @@ export default function ServerCard({ server }: { server: Server }) {
             )}
             <ReachabilityDot serverId={server.id} />
           </div>
-          <p className="text-sm text-[#888] font-mono truncate">{formatHost(server)}</p>
+          <p className="text-sm text-muted font-mono truncate">{formatHost(server)}</p>
           <div className="flex items-center gap-1.5 mt-1">
             {server.authMethod === "password" ? (
-              <svg className="w-3 h-3 text-[#444]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Password auth</title>
+              <svg className="w-3 h-3 text-dim" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Password auth</title>
                 <rect x="3" y="7" width="10" height="8" rx="1.5" />
                 <path strokeLinecap="round" d="M5 7V5a3 3 0 016 0v2" />
               </svg>
             ) : (
-              <svg className="w-3 h-3 text-[#444]" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Key auth</title>
+              <svg className="w-3 h-3 text-dim" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Key auth</title>
                 <circle cx="6" cy="8" r="3.5" />
                 <path strokeLinecap="round" d="M9 8h5M12 6v4" />
               </svg>
@@ -135,7 +135,7 @@ export default function ServerCard({ server }: { server: Server }) {
           {server.tags.map((tag) => (
             <span
               key={tag.id}
-              className="text-xs bg-[#1a1a1a] border border-[#2a2a2a] text-[#999] px-1.5 py-0.5 rounded"
+              className="text-xs bg-surface-3 border border-stroke text-muted px-1.5 py-0.5 rounded"
             >
               #{tag.name}
             </span>
@@ -143,7 +143,7 @@ export default function ServerCard({ server }: { server: Server }) {
         </div>
       )}
 
-      {server.notes && <p className="text-xs text-[#555] truncate">{server.notes}</p>}
+      {server.notes && <p className="text-xs text-faint truncate">{server.notes}</p>}
       {actions.error && <p className="text-xs text-red-400">{actions.error}</p>}
     </div>
 

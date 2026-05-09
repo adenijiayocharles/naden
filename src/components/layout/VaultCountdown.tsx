@@ -11,7 +11,7 @@ export default function VaultCountdown() {
         ? "bg-red-950/30 border-red-900/40 text-red-400"
         : warning
           ? "bg-yellow-950/30 border-yellow-900/40 text-yellow-400"
-          : "bg-[#0d0d0d] border-[#1e1e1e] text-[#555]"
+          : "bg-surface-0 border-stroke-subtle text-faint"
     }`}>
       <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
         <rect x="5" y="1" width="6" height="3" rx="1" />

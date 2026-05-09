@@ -29,7 +29,7 @@ function ToolbarBtn({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs text-[#aaa] hover:text-white hover:bg-[#222] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+      className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs text-muted hover:text-white hover:bg-surface-4 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
     >
       {children}
     </button>
@@ -55,7 +55,7 @@ function PathBreadcrumb({ path, busy, onNavigateTo }: { path: string; busy: bool
       <button
         onClick={() => onNavigateTo("/")}
         disabled={busy}
-        className="text-[#666] hover:text-white disabled:pointer-events-none transition-colors shrink-0"
+        className="text-faint hover:text-white disabled:pointer-events-none transition-colors shrink-0"
       >
         /
       </button>
@@ -64,12 +64,12 @@ function PathBreadcrumb({ path, busy, onNavigateTo }: { path: string; busy: bool
           <button
             onClick={() => onNavigateTo("/" + segments.slice(0, hiddenDepth).join("/"))}
             disabled={busy}
-            className="text-[#555] hover:text-white disabled:pointer-events-none transition-colors shrink-0 px-0.5"
+            className="text-faint hover:text-white disabled:pointer-events-none transition-colors shrink-0 px-0.5"
             title={`/${segments.slice(0, hiddenDepth).join("/")}`}
           >
             …
           </button>
-          <span className="text-[#444] shrink-0">/</span>
+          <span className="text-dim shrink-0">/</span>
         </>
       )}
       {visible.map((seg, i) => {
@@ -81,12 +81,12 @@ function PathBreadcrumb({ path, busy, onNavigateTo }: { path: string; busy: bool
               onClick={() => onNavigateTo(segPath)}
               disabled={busy || isLast}
               className={`truncate transition-colors disabled:pointer-events-none ${
-                isLast ? "text-[#ccc]" : "text-[#666] hover:text-white"
+                isLast ? "text-secondary" : "text-faint hover:text-white"
               }`}
             >
               {seg}
             </button>
-            {!isLast && <span className="text-[#444] shrink-0">/</span>}
+            {!isLast && <span className="text-dim shrink-0">/</span>}
           </span>
         );
       })}
@@ -112,7 +112,7 @@ export default function SftpToolbar({
   const canDownload = hasSelection && !selectedIsDir;
 
   return (
-    <div className="flex flex-col shrink-0 bg-[#0d0d0d] border-b border-[#1e1e1e]">
+    <div className="flex flex-col shrink-0 bg-surface-0 border-b border-stroke-subtle">
       {/* Action buttons row */}
       <div className="h-10 flex items-center gap-1 px-2">
         <ToolbarBtn onClick={onNavigateUp} disabled={busy || currentPath === "/"} title="Up">
@@ -130,7 +130,7 @@ export default function SftpToolbar({
           Refresh
         </ToolbarBtn>
 
-        <div className="w-px h-4 bg-[#222] mx-1" />
+        <div className="w-px h-4 bg-surface-4 mx-1" />
 
         <ToolbarBtn onClick={onUpload} disabled={busy} title="Upload file">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
@@ -154,7 +154,7 @@ export default function SftpToolbar({
           New Folder
         </ToolbarBtn>
 
-        <div className="w-px h-4 bg-[#222] mx-1" />
+        <div className="w-px h-4 bg-surface-4 mx-1" />
 
         <ToolbarBtn onClick={onRename} disabled={busy || !hasSelection} title="Rename selected">
           Rename

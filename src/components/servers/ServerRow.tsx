@@ -40,7 +40,7 @@ export default function ServerRow({ server }: { server: Server }) {
       title={server.notes ?? undefined}
       className={`group flex items-center gap-3 px-3 py-2.5 border-b border-[#1a1a1a] last:border-b-0 first:rounded-t-lg last:rounded-b-lg select-none transition-colors
         ${isSelected ? "bg-accent/5" : ""}
-        ${actions.connecting ? "opacity-60 cursor-wait bg-[#0d0d0d]" : "cursor-pointer hover:bg-[#0f0f0f]"}`}
+        ${actions.connecting ? "opacity-60 cursor-wait bg-surface-0" : "cursor-pointer hover:bg-surface-0"}`}
     >
       {bulkMode ? (
         <div className={`w-4 h-4 rounded border shrink-0 flex items-center justify-center transition-colors ${
@@ -60,17 +60,17 @@ export default function ServerRow({ server }: { server: Server }) {
         {server.displayName}
       </span>
 
-      <span className="flex-1 min-w-0 truncate text-sm text-[#666] font-mono">
+      <span className="flex-1 min-w-0 truncate text-sm text-faint font-mono">
         {formatHost(server)}
       </span>
 
       {server.authMethod === "password" ? (
-        <svg className="w-3 h-3 text-[#444] shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Password auth</title>
+        <svg className="w-3 h-3 text-dim shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Password auth</title>
           <rect x="3" y="7" width="10" height="8" rx="1.5" />
           <path strokeLinecap="round" d="M5 7V5a3 3 0 016 0v2" />
         </svg>
       ) : (
-        <svg className="w-3 h-3 text-[#444] shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Key auth</title>
+        <svg className="w-3 h-3 text-dim shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Key auth</title>
           <circle cx="6" cy="8" r="3.5" />
           <path strokeLinecap="round" d="M9 8h5M12 6v4" />
         </svg>
@@ -90,13 +90,13 @@ export default function ServerRow({ server }: { server: Server }) {
         {server.tags.slice(0, 3).map((tag) => (
           <span
             key={tag.id}
-            className="text-xs bg-[#1a1a1a] border border-[#2a2a2a] text-[#666] px-1.5 py-0.5 rounded"
+            className="text-xs bg-surface-3 border border-stroke text-faint px-1.5 py-0.5 rounded"
           >
             #{tag.name}
           </span>
         ))}
         {server.tags.length > 3 && (
-          <span className="text-xs text-[#444]">+{server.tags.length - 3}</span>
+          <span className="text-xs text-dim">+{server.tags.length - 3}</span>
         )}
       </div>
 
@@ -123,7 +123,7 @@ export default function ServerRow({ server }: { server: Server }) {
           onDuplicate={() => { void actions.handleDuplicate(); }}
           onCheckReachability={() => { void actions.handleCheckReachability(); }}
           onDelete={actions.handleDelete}
-          buttonClassName="text-[#444] hover:text-white p-1 rounded hover:bg-[#1a1a1a] transition-colors text-base leading-none opacity-0 group-hover:opacity-100"
+          buttonClassName="text-dim hover:text-white p-1 rounded hover:bg-surface-3 transition-colors text-base leading-none opacity-0 group-hover:opacity-100"
           submenuLeft
         />
       )}
