@@ -278,6 +278,12 @@ export default function SftpBrowser({ sessionId }: Props) {
               style={{ animation: "progress-slide 1.2s ease-in-out infinite" }}
             />
           </div>
+          <button
+            onClick={() => { void closeSession(sessionId); }}
+            className="text-xs text-[#555] hover:text-white transition-colors mt-2"
+          >
+            Cancel
+          </button>
         </div>
       )}
 
