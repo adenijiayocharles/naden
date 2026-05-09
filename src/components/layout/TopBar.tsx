@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import { useUiStore, type ViewMode } from "../../store/uiStore";
-import { useServerStore } from "../../store/serverStore";
 import SshConfigImport from "../servers/SshConfigImport";
 import SettingsModal from "../settings/SettingsModal";
 
@@ -10,23 +9,14 @@ export default function TopBar() {
   const searchQuery = useUiStore((s) => s.searchQuery);
   const viewMode = useUiStore((s) => s.viewMode);
   const setViewMode = useUiStore((s) => s.setViewMode);
-  const sortBy = useUiStore((s) => s.sortBy);
-  const setSortBy = useUiStore((s) => s.setSortBy);
   const bulkMode = useUiStore((s) => s.bulkMode);
   const toggleBulkMode = useUiStore((s) => s.toggleBulkMode);
   const bulkSelected = useUiStore((s) => s.bulkSelected);
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const openSettings = useUiStore((s) => s.openSettings);
   const closeSettings = useUiStore((s) => s.closeSettings);
-  const fetchRecentServerIds = useServerStore((s) => s.fetchRecentServerIds);
   const [showImport, setShowImport] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleSortToggle = () => {
-    const next = sortBy === "name" ? "last_connected" : "name";
-    setSortBy(next);
-    if (next === "last_connected") void fetchRecentServerIds();
-  };
 
   return (
     <>
@@ -39,22 +29,6 @@ export default function TopBar() {
           placeholder="Search servers…"
           className="flex-1 min-w-0 max-w-sm bg-[#1a1a1a] border border-[#2a2a2a] rounded px-3 py-1.5 text-sm text-white placeholder-[#666] focus:outline-none focus:border-accent transition-colors"
         />
-
-        {/* Sort toggle */}
-        <button
-          onClick={handleSortToggle}
-          title={sortBy === "name" ? "Sort by name (click for last connected)" : "Sort by last connected (click for name)"}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded border text-xs transition-colors shrink-0 ${
-            sortBy === "last_connected"
-              ? "bg-accent/10 border-accent/30 text-accent"
-              : "bg-[#1a1a1a] border-[#2a2a2a] text-[#666] hover:text-[#999]"
-          }`}
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2 4h12M4 8h8M6 12h4" />
-          </svg>
-          {sortBy === "last_connected" ? "Recent" : "A–Z"}
-        </button>
 
         {/* Select toggle */}
         <button

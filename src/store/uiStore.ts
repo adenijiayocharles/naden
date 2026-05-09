@@ -4,12 +4,9 @@ import type { Server } from "../types/server";
 
 type ActiveView = "list" | "add" | "edit" | "audit";
 export type ViewMode = "card" | "row";
-export type SortBy = "name" | "last_connected";
-
 interface UiStore {
   activeView: ActiveView;
   viewMode: ViewMode;
-  sortBy: SortBy;
   serverListCollapsed: boolean;
   settingsOpen: boolean;
   onboardingComplete: boolean;
@@ -36,7 +33,6 @@ interface UiStore {
   setFilterFavourites: (v: boolean) => void;
   setSearch: (query: string) => void;
   setViewMode: (mode: ViewMode) => void;
-  setSortBy: (sort: SortBy) => void;
   toggleServerList: () => void;
   toggleBulkMode: () => void;
   toggleSelected: (id: string) => void;
@@ -49,7 +45,6 @@ let searchTimer: ReturnType<typeof setTimeout> | null = null;
 export const useUiStore = create<UiStore>((set) => ({
   activeView: "list",
   viewMode: "card",
-  sortBy: "name",
   serverListCollapsed: false,
   settingsOpen: false,
   onboardingComplete: true, // assume complete until checked
@@ -76,7 +71,6 @@ export const useUiStore = create<UiStore>((set) => ({
   setFilterFavourites: (v) => set({ filterFavourites: v, filterGroupId: null, filterTagId: null }),
 
   setViewMode: (mode) => set({ viewMode: mode }),
-  setSortBy: (sort) => set({ sortBy: sort }),
   toggleServerList: () => set((s) => ({ serverListCollapsed: !s.serverListCollapsed })),
   toggleBulkMode: () => set((s) => ({ bulkMode: !s.bulkMode, bulkSelected: [] })),
   toggleSelected: (id) => set((s) => ({

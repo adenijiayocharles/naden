@@ -2,36 +2,18 @@ import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import ServerCard from "./ServerCard";
 import ServerRow from "./ServerRow";
-import type { Server } from "../../types/server";
-
 export default function ServerList() {
   const servers = useServerStore((s) => s.servers);
   const groups = useServerStore((s) => s.groups);
-  const recentServerIds = useServerStore((s) => s.recentServerIds);
   const isLoading = useServerStore((s) => s.isLoading);
   const openAdd = useUiStore((s) => s.openAdd);
   const viewMode = useUiStore((s) => s.viewMode);
-  const sortBy = useUiStore((s) => s.sortBy);
   const { filterGroupId, filterTagId, filterFavourites, searchQuery, searchResults } = useUiStore();
 
   const Item = viewMode === "row" ? ServerRow : ServerCard;
   const listClass = viewMode === "row"
     ? "border border-[#1a1a1a] rounded-lg"
     : "grid gap-3 grid-cols-[repeat(auto-fill,minmax(240px,1fr))]";
-
-  // Sort a list of servers according to the active sort preference.
-  // "last_connected" orders by position in recentServerIds; servers not
-  // in the list come last, sorted by name.
-  const applySort = (list: Server[]): Server[] => {
-    if (sortBy === "name") return list;
-    const order = new Map(recentServerIds.map((id, i) => [id, i]));
-    return [...list].sort((a, b) => {
-      const ia = order.get(a.id) ?? Infinity;
-      const ib = order.get(b.id) ?? Infinity;
-      if (ia !== ib) return ia - ib;
-      return a.displayName.localeCompare(b.displayName);
-    });
-  };
 
   if (isLoading) {
     return (
@@ -108,19 +90,19 @@ export default function ServerList() {
     );
   }
 
-  // Filtered view (favourites, group, or tag active) — just sort, no sections
+  // Filtered view (favourites, group, or tag active) — no sections
   if (filterFavourites || filterGroupId || filterTagId) {
     return (
       <div className={listClass}>
-        {applySort(filtered).map((s) => <Item key={s.id} server={s} />)}
+        {filtered.map((s) => <Item key={s.id} server={s} />)}
       </div>
     );
   }
 
   // ── Default view ────────────────────────────────────────────────────────────
-  const ungrouped = applySort(filtered.filter((s) => !s.groupId));
+  const ungrouped = filtered.filter((s) => !s.groupId);
   const sections = groups
-    .map((g) => ({ group: g, items: applySort(filtered.filter((s) => s.groupId === g.id)) }))
+    .map((g) => ({ group: g, items: filtered.filter((s) => s.groupId === g.id) }))
     .filter(({ items }) => items.length > 0);
 
   return (
