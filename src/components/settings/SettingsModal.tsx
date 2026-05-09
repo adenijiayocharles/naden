@@ -227,14 +227,14 @@ export default function SettingsModal({ onClose }: Props) {
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-[#111] border border-[#1e1e1e] rounded-xl shadow-2xl w-full max-w-lg flex flex-col">
+      <div className="bg-[#111] border border-[#1e1e1e] rounded-xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e1e1e]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e1e1e] shrink-0">
           <h2 className="text-lg font-semibold text-white">Settings</h2>
           <button onClick={onClose} className="text-[#777] hover:text-white p-1 rounded" aria-label="Close">✕</button>
         </div>
 
-        <div className="px-6 py-5 space-y-6">
+        <div className="px-6 py-5 space-y-6 overflow-y-auto">
           {/* Security section */}
           <div>
             <p className="text-xs font-semibold text-[#777] uppercase tracking-wider mb-3">Security</p>
