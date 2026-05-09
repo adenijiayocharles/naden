@@ -141,6 +141,20 @@ pub async fn vault_disable_password(
     Ok(())
 }
 
+/// Permanently opts out of vault password protection without requiring a current password.
+/// Only valid when no password has been set up yet (is_setup is false).
+#[tauri::command]
+pub async fn vault_skip_setup(state: tauri::State<'_, AppState>) -> Result<(), AppError> {
+    if master_password::is_setup(&state.db).await? {
+        return Err(AppError::Vault(
+            "vault is already set up — use disable password to remove protection".into(),
+        ));
+    }
+    master_password::set_password_required(&state.db, false).await?;
+    *state.vault_key.lock().await = Some(zeroize::Zeroizing::new([0u8; 32]));
+    Ok(())
+}
+
 /// Enables vault password protection and sets an initial master password.
 #[tauri::command]
 pub async fn vault_enable_password(

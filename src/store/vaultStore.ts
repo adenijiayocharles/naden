@@ -11,6 +11,7 @@ interface VaultStore {
 
   check: () => Promise<void>;
   setup: (password: string) => Promise<void>;
+  skipSetup: () => Promise<void>;
   unlock: (password: string) => Promise<boolean>;
   lock: () => Promise<void>;
   dismissSetup: () => void;
@@ -39,6 +40,11 @@ export const useVaultStore = create<VaultStore>((set) => ({
   setup: async (password) => {
     await invoke("vault_setup", { masterPassword: password });
     set({ isSetup: true, isUnlocked: true });
+  },
+
+  skipSetup: async () => {
+    await invoke("vault_skip_setup");
+    set({ isSetup: true, isUnlocked: true, isPasswordRequired: false });
   },
 
   unlock: async (password) => {

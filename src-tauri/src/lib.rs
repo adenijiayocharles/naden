@@ -84,6 +84,7 @@ pub fn run() {
             commands::vault_commands::vault_is_unlocked,
             commands::vault_commands::vault_lock,
             commands::vault_commands::vault_is_password_required,
+            commands::vault_commands::vault_skip_setup,
             commands::vault_commands::vault_disable_password,
             commands::vault_commands::vault_enable_password,
             commands::vault_commands::vault_change_password,
