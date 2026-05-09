@@ -86,13 +86,17 @@ export default function ServerList() {
   if (filtered.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
-        <p className="text-[#777] text-lg font-medium mb-1">No servers yet</p>
-        <p className="text-[#333] text-sm mb-4">
-          {filterGroupId || filterTagId
-            ? "No servers match the current filter."
-            : "Add your first server or import from ~/.ssh/config"}
+        <p className="text-[#777] text-lg font-medium mb-1">
+          {filterFavourites ? "No favourites yet" : "No servers yet"}
         </p>
-        {!filterGroupId && !filterTagId && (
+        <p className="text-[#333] text-sm mb-4">
+          {filterFavourites
+            ? "Open the ⋮ menu on any server and choose \"Add to Favourites\"."
+            : filterGroupId || filterTagId
+              ? "No servers match the current filter."
+              : "Add your first server or import from ~/.ssh/config"}
+        </p>
+        {!filterFavourites && !filterGroupId && !filterTagId && (
           <button
             onClick={openAdd}
             className="bg-accent hover:bg-accent-hover text-black text-sm font-semibold px-4 py-2 rounded transition-colors"
