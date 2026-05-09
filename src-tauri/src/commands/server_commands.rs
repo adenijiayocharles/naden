@@ -64,6 +64,23 @@ pub async fn delete_server(
 }
 
 #[tauri::command]
+pub async fn move_server_group(
+    server_id: String,
+    group_id: Option<String>,
+    state: tauri::State<'_, AppState>,
+) -> Result<ServerWithTags, AppError> {
+    let now = chrono::Utc::now().to_rfc3339();
+    sqlx::query("UPDATE servers SET group_id = ?, updated_at = ? WHERE id = ?")
+        .bind(group_id.as_deref())
+        .bind(&now)
+        .bind(&server_id)
+        .execute(&state.db)
+        .await?;
+    refresh_cache(&state).await;
+    queries::get_server_db(&state.db, &server_id).await
+}
+
+#[tauri::command]
 pub async fn toggle_favourite(
     server_id: String,
     state: tauri::State<'_, AppState>,

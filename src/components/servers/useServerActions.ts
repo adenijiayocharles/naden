@@ -9,7 +9,9 @@ import { formatError } from "../../lib/errors";
 export { formatHost } from "../../lib/format";
 
 export function useServerActions(server: Server) {
+  const groups = useServerStore((s) => s.groups);
   const deleteServer = useServerStore((s) => s.deleteServer);
+  const moveServerGroup = useServerStore((s) => s.moveServerGroup);
   const toggleFavourite = useServerStore((s) => s.toggleFavourite);
   const duplicateServer = useServerStore((s) => s.duplicateServer);
   const checkReachability = useServerStore((s) => s.checkReachability);
@@ -63,6 +65,16 @@ export function useServerActions(server: Server) {
       setError(formatError(e));
     } finally {
       setOpeningTerminal(false);
+    }
+  };
+
+  const handleMoveToGroup = async (groupId: string | null) => {
+    setMenuOpen(false);
+    setError(null);
+    try {
+      await moveServerGroup(server.id, groupId);
+    } catch (e) {
+      setError(formatError(e));
     }
   };
 
@@ -127,6 +139,7 @@ export function useServerActions(server: Server) {
   const editServer = () => { openEdit(server.id); setMenuOpen(false); };
 
   return {
+    groups,
     menuRef,
     menuOpen, setMenuOpen,
     deleteModalOpen, setDeleteModalOpen,
@@ -135,6 +148,7 @@ export function useServerActions(server: Server) {
     handleConnect,
     handleSystemTerminal,
     handleBrowseFiles,
+    handleMoveToGroup,
     handleToggleFavourite,
     handleDuplicate,
     handleCheckReachability,

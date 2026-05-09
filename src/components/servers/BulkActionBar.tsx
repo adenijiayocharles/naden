@@ -11,7 +11,7 @@ export default function BulkActionBar() {
   const servers = useServerStore((s) => s.servers);
   const groups = useServerStore((s) => s.groups);
   const deleteServer = useServerStore((s) => s.deleteServer);
-  const updateServer = useServerStore((s) => s.updateServer);
+  const moveServerGroup = useServerStore((s) => s.moveServerGroup);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export default function BulkActionBar() {
     setError(null);
     try {
       await Promise.all(
-        bulkSelected.map((id) => updateServer(id, { groupId: groupId ?? undefined })),
+        bulkSelected.map((id) => moveServerGroup(id, groupId)),
       );
       clearSelected();
     } catch (e) {

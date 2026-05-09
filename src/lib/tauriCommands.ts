@@ -31,6 +31,9 @@ export const serverCommands = {
   deleteServer: (id: string) =>
     invoke<void>("delete_server", { id }),
 
+  moveServerGroup: (serverId: string, groupId: string | null) =>
+    invoke<Server>("move_server_group", { serverId, groupId }),
+
   toggleFavourite: (serverId: string) =>
     invoke<Server>("toggle_favourite", { serverId }),
 
