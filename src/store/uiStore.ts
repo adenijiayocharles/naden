@@ -17,6 +17,7 @@ interface UiStore {
   editingServerId: string | null;
   filterGroupId: string | null;
   filterTagId: string | null;
+  filterFavourites: boolean;
   searchQuery: string;
   searchResults: Server[] | null;
   bulkMode: boolean;
@@ -32,6 +33,7 @@ interface UiStore {
   setOnboardingChecked: () => void;
   setFilterGroup: (groupId: string | null) => void;
   setFilterTag: (tagId: string | null) => void;
+  setFilterFavourites: (v: boolean) => void;
   setSearch: (query: string) => void;
   setViewMode: (mode: ViewMode) => void;
   setSortBy: (sort: SortBy) => void;
@@ -55,6 +57,7 @@ export const useUiStore = create<UiStore>((set) => ({
   editingServerId: null,
   filterGroupId: null,
   filterTagId: null,
+  filterFavourites: false,
   searchQuery: "",
   searchResults: null,
   bulkMode: false,
@@ -68,8 +71,9 @@ export const useUiStore = create<UiStore>((set) => ({
   closeSettings: () => set({ settingsOpen: false }),
   setOnboardingComplete: (v) => set({ onboardingComplete: v }),
   setOnboardingChecked: () => set({ onboardingChecked: true }),
-  setFilterGroup: (groupId) => set({ filterGroupId: groupId, filterTagId: null }),
-  setFilterTag: (tagId) => set({ filterTagId: tagId, filterGroupId: null }),
+  setFilterGroup: (groupId) => set({ filterGroupId: groupId, filterTagId: null, filterFavourites: false }),
+  setFilterTag: (tagId) => set({ filterTagId: tagId, filterGroupId: null, filterFavourites: false }),
+  setFilterFavourites: (v) => set({ filterFavourites: v, filterGroupId: null, filterTagId: null }),
 
   setViewMode: (mode) => set({ viewMode: mode }),
   setSortBy: (sort) => set({ sortBy: sort }),

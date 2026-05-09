@@ -13,6 +13,7 @@ export interface Server {
   notes?: string;
   isJumpHost: boolean;
   jumpHostId?: string;
+  isFavourite: boolean;
   tags: Tag[];
   createdAt: string;
   updatedAt: string;
@@ -42,6 +43,7 @@ export interface CreateServerPayload {
   notes?: string;
   isJumpHost?: boolean;
   jumpHostId?: string;
+  isFavourite?: boolean;
   tagIds?: string[];
 }
 

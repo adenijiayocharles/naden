@@ -70,6 +70,7 @@ export default function ServerCard({ server }: { server: Server }) {
             menuRef={actions.menuRef}
             menuOpen={actions.menuOpen}
             setMenuOpen={actions.setMenuOpen}
+            isFavourite={server.isFavourite}
             deleting={actions.deleting}
             openingTerminal={actions.openingTerminal}
             openingBrowser={actions.openingBrowser}
@@ -78,6 +79,7 @@ export default function ServerCard({ server }: { server: Server }) {
             onEdit={actions.editServer}
             onSystemTerminal={() => { void actions.handleSystemTerminal(); }}
             onBrowseFiles={() => { void actions.handleBrowseFiles(); }}
+            onToggleFavourite={() => { void actions.handleToggleFavourite(); }}
             onDuplicate={() => { void actions.handleDuplicate(); }}
             onCheckReachability={() => { void actions.handleCheckReachability(); }}
             onDelete={actions.handleDelete}

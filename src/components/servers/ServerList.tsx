@@ -12,7 +12,7 @@ export default function ServerList() {
   const openAdd = useUiStore((s) => s.openAdd);
   const viewMode = useUiStore((s) => s.viewMode);
   const sortBy = useUiStore((s) => s.sortBy);
-  const { filterGroupId, filterTagId, searchQuery, searchResults } = useUiStore();
+  const { filterGroupId, filterTagId, filterFavourites, searchQuery, searchResults } = useUiStore();
 
   const Item = viewMode === "row" ? ServerRow : ServerCard;
   const listClass = viewMode === "row"
@@ -77,6 +77,7 @@ export default function ServerList() {
   }
 
   const filtered = (() => {
+    if (filterFavourites) return servers.filter((s) => s.isFavourite);
     if (filterGroupId) return servers.filter((s) => s.groupId === filterGroupId);
     if (filterTagId) return servers.filter((s) => s.tags.some((t) => t.id === filterTagId));
     return servers;
@@ -103,8 +104,8 @@ export default function ServerList() {
     );
   }
 
-  // Filtered view (group or tag active) — just sort, no sections
-  if (filterGroupId || filterTagId) {
+  // Filtered view (favourites, group, or tag active) — just sort, no sections
+  if (filterFavourites || filterGroupId || filterTagId) {
     return (
       <div className={listClass}>
         {applySort(filtered).map((s) => <Item key={s.id} server={s} />)}

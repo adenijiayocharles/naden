@@ -129,8 +129,8 @@ pub async fn create_server_db(
         "INSERT INTO servers
          (id, display_name, hostname, port, username, auth_method,
           identity_file_path, group_id, notes, is_jump_host, jump_host_id,
-          created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          is_favourite, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(&payload.display_name)
@@ -143,6 +143,7 @@ pub async fn create_server_db(
     .bind(&payload.notes)
     .bind(payload.is_jump_host.unwrap_or(false))
     .bind(&payload.jump_host_id)
+    .bind(false) // is_favourite defaults to false on creation
     .bind(&now)
     .bind(&now)
     .execute(db)
@@ -185,7 +186,7 @@ pub async fn update_server_db(
         "UPDATE servers SET
          display_name = ?, hostname = ?, port = ?, username = ?, auth_method = ?,
          identity_file_path = ?, group_id = ?, notes = ?,
-         is_jump_host = ?, jump_host_id = ?, updated_at = ?
+         is_jump_host = ?, jump_host_id = ?, is_favourite = ?, updated_at = ?
          WHERE id = ?",
     )
     .bind(payload.display_name.as_deref().unwrap_or(&s.display_name))
@@ -198,6 +199,7 @@ pub async fn update_server_db(
     .bind(payload.notes.as_deref())
     .bind(payload.is_jump_host.unwrap_or(s.is_jump_host))
     .bind(payload.jump_host_id.as_deref())
+    .bind(payload.is_favourite.unwrap_or(s.is_favourite))
     .bind(&now)
     .bind(id)
     .execute(db)

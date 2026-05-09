@@ -10,6 +10,7 @@ export { formatHost } from "../../lib/format";
 
 export function useServerActions(server: Server) {
   const deleteServer = useServerStore((s) => s.deleteServer);
+  const toggleFavourite = useServerStore((s) => s.toggleFavourite);
   const duplicateServer = useServerStore((s) => s.duplicateServer);
   const checkReachability = useServerStore((s) => s.checkReachability);
   const openEdit = useUiStore((s) => s.openEdit);
@@ -62,6 +63,15 @@ export function useServerActions(server: Server) {
       setError(formatError(e));
     } finally {
       setOpeningTerminal(false);
+    }
+  };
+
+  const handleToggleFavourite = async () => {
+    setMenuOpen(false);
+    try {
+      await toggleFavourite(server.id);
+    } catch (e) {
+      setError(formatError(e));
     }
   };
 
@@ -125,6 +135,7 @@ export function useServerActions(server: Server) {
     handleConnect,
     handleSystemTerminal,
     handleBrowseFiles,
+    handleToggleFavourite,
     handleDuplicate,
     handleCheckReachability,
     handleDelete,

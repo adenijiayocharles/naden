@@ -31,6 +31,9 @@ export const serverCommands = {
   deleteServer: (id: string) =>
     invoke<void>("delete_server", { id }),
 
+  toggleFavourite: (serverId: string) =>
+    invoke<Server>("toggle_favourite", { serverId }),
+
   duplicateServer: (serverId: string) =>
     invoke<Server>("duplicate_server", { serverId }),
 

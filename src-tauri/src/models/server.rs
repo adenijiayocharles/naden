@@ -15,6 +15,7 @@ pub struct Server {
     pub notes: Option<String>,
     pub is_jump_host: bool,
     pub jump_host_id: Option<String>,
+    pub is_favourite: bool,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -75,6 +76,7 @@ pub struct UpdateServerPayload {
     pub notes: Option<String>,
     pub is_jump_host: Option<bool>,
     pub jump_host_id: Option<String>,
+    pub is_favourite: Option<bool>,
     /// When Some, replaces the full tag list. Some(vec![]) clears all tags.
     pub tag_ids: Option<Vec<String>>,
 }

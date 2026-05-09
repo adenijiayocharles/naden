@@ -64,6 +64,21 @@ pub async fn delete_server(
 }
 
 #[tauri::command]
+pub async fn toggle_favourite(
+    server_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<ServerWithTags, AppError> {
+    let server = queries::get_server_db(&state.db, &server_id).await?;
+    let payload = UpdateServerPayload {
+        is_favourite: Some(!server.server.is_favourite),
+        ..Default::default()
+    };
+    let result = queries::update_server_db(&state.db, &server_id, &payload).await?;
+    refresh_cache(&state).await;
+    Ok(result)
+}
+
+#[tauri::command]
 pub async fn duplicate_server(
     server_id: String,
     state: tauri::State<'_, AppState>,

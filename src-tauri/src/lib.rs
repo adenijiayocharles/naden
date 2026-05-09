@@ -39,6 +39,7 @@ pub fn run() {
             commands::server_commands::create_server,
             commands::server_commands::update_server,
             commands::server_commands::delete_server,
+            commands::server_commands::toggle_favourite,
             commands::server_commands::duplicate_server,
             commands::server_commands::get_recent_server_ids,
             commands::server_commands::check_reachability,

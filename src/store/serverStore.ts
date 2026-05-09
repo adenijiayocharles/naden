@@ -25,6 +25,7 @@ interface ServerStore {
   createServer: (payload: CreateServerPayload) => Promise<Server>;
   updateServer: (id: string, payload: UpdateServerPayload) => Promise<Server>;
   deleteServer: (id: string) => Promise<void>;
+  toggleFavourite: (serverId: string) => Promise<void>;
   duplicateServer: (serverId: string) => Promise<Server>;
   createGroup: (name: string, color?: string) => Promise<Group>;
   createTag: (name: string) => Promise<Tag>;
@@ -76,6 +77,13 @@ export const useServerStore = create<ServerStore>((set) => ({
     set((s) => ({
       servers: s.servers.filter((sv) => sv.id !== id),
       recentServerIds: s.recentServerIds.filter((rid) => rid !== id),
+    }));
+  },
+
+  toggleFavourite: async (serverId) => {
+    const server = await serverCommands.toggleFavourite(serverId);
+    set((s) => ({
+      servers: s.servers.map((sv) => (sv.id === serverId ? server : sv)),
     }));
   },
 
