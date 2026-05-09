@@ -39,6 +39,7 @@ export interface CreateServerPayload {
   username?: string;
   authMethod?: AuthMethod;
   identityFilePath?: string;
+  vaultCredentialId?: string;
   groupId?: string;
   notes?: string;
   isJumpHost?: boolean;

@@ -111,6 +111,7 @@ pub async fn duplicate_server(
         username: Some(s.username.clone()),
         auth_method: Some(s.auth_method.clone()),
         identity_file_path: s.identity_file_path.clone(),
+        vault_credential_id: s.vault_credential_id.clone(),
         group_id: s.group_id.clone(),
         notes: s.notes.clone(),
         is_jump_host: Some(s.is_jump_host),

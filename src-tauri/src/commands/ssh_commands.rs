@@ -162,6 +162,7 @@ pub async fn confirm_ssh_config_import(
             username: preview.username.clone(),
             auth_method: preview.identity_file_path.is_some().then(|| "key".to_string()),
             identity_file_path: preview.identity_file_path.clone(),
+            vault_credential_id: None,
             group_id: None,
             notes: None,
             is_jump_host: None,

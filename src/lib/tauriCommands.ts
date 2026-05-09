@@ -114,6 +114,9 @@ export const backupCommands = {
 };
 
 export const vaultCommands = {
+  storeCredential: (secret: string) =>
+    invoke<string>("store_credential", { secret }),
+
   retrieveCredential: (vaultCredentialId: string) =>
     invoke<string>("retrieve_credential", { vaultCredentialId }),
 };

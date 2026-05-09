@@ -4,7 +4,8 @@ import { homeDir, join } from "@tauri-apps/api/path";
 import type { AuthMethod, Tag } from "../../types/server";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
-import { serverCommands } from "../../lib/tauriCommands";
+import { serverCommands, vaultCommands } from "../../lib/tauriCommands";
+import { useVaultStore } from "../../store/vaultStore";
 import { formatError } from "../../lib/errors";
 
 interface FormData {
@@ -48,7 +49,12 @@ export default function ServerForm() {
     ? servers.find((s) => s.id === editingServerId)
     : undefined;
 
+  const isVaultUnlocked = useVaultStore((s) => s.isUnlocked);
+  const isPasswordRequired = useVaultStore((s) => s.isPasswordRequired);
+  const vaultAvailable = !isPasswordRequired || isVaultUnlocked;
+
   const [form, setForm] = useState<FormData>(DEFAULT_FORM);
+  const [password, setPassword] = useState("");
   const [tags, setTags] = useState<Tag[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [newGroupName, setNewGroupName] = useState("");
@@ -172,6 +178,14 @@ export default function ServerForm() {
 
     setSubmitting(true);
     try {
+      // Store password in vault if provided, reuse existing credential ID otherwise
+      let vaultCredentialId: string | undefined = isEdit
+        ? existingServer?.vaultCredentialId
+        : undefined;
+      if (form.authMethod === "password" && password.trim()) {
+        vaultCredentialId = await vaultCommands.storeCredential(password.trim());
+      }
+
       const payload = {
         displayName: form.displayName.trim(),
         hostname: form.hostname.trim(),
@@ -179,6 +193,7 @@ export default function ServerForm() {
         username: form.username.trim() || undefined,
         authMethod: form.authMethod,
         identityFilePath: form.identityFilePath.trim() || undefined,
+        vaultCredentialId,
         groupId: form.groupId || undefined,
         notes: form.notes.trim() || undefined,
         isJumpHost: form.isJumpHost,
@@ -283,6 +298,24 @@ export default function ServerForm() {
               </select>
             </SelectWrapper>
           </Field>
+
+          {/* Password */}
+          {form.authMethod === "password" && (
+            <Field label={isEdit && existingServer?.vaultCredentialId ? "New Password (leave blank to keep existing)" : "Password"}>
+              {!vaultAvailable ? (
+                <p className="text-xs text-yellow-500">Unlock the vault to store a password.</p>
+              ) : (
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={isEdit && existingServer?.vaultCredentialId ? "Enter new password to change…" : "SSH password"}
+                  className={input(false)}
+                  autoComplete="new-password"
+                />
+              )}
+            </Field>
+          )}
 
           {/* Identity File */}
           {form.authMethod === "key" && (

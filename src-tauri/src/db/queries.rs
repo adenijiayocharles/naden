@@ -128,9 +128,9 @@ pub async fn create_server_db(
     sqlx::query(
         "INSERT INTO servers
          (id, display_name, hostname, port, username, auth_method,
-          identity_file_path, group_id, notes, is_jump_host, jump_host_id,
-          is_favourite, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          identity_file_path, vault_credential_id, group_id, notes,
+          is_jump_host, jump_host_id, is_favourite, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(&payload.display_name)
@@ -139,6 +139,7 @@ pub async fn create_server_db(
     .bind(payload.username.as_deref().unwrap_or(""))
     .bind(payload.auth_method.as_deref().unwrap_or("key"))
     .bind(&payload.identity_file_path)
+    .bind(&payload.vault_credential_id)
     .bind(&payload.group_id)
     .bind(&payload.notes)
     .bind(payload.is_jump_host.unwrap_or(false))
@@ -182,10 +183,14 @@ pub async fn update_server_db(
         return Err(AppError::Validation("port must be between 1 and 65535".into()));
     }
 
+    // vault_credential_id: if payload provides a new one use it; if not keep existing
+    let vault_credential_id = payload.vault_credential_id.as_deref()
+        .or(s.vault_credential_id.as_deref());
+
     sqlx::query(
         "UPDATE servers SET
          display_name = ?, hostname = ?, port = ?, username = ?, auth_method = ?,
-         identity_file_path = ?, group_id = ?, notes = ?,
+         identity_file_path = ?, vault_credential_id = ?, group_id = ?, notes = ?,
          is_jump_host = ?, jump_host_id = ?, is_favourite = ?, updated_at = ?
          WHERE id = ?",
     )
@@ -195,6 +200,7 @@ pub async fn update_server_db(
     .bind(payload.username.as_deref().unwrap_or(&s.username))
     .bind(payload.auth_method.as_deref().unwrap_or(&s.auth_method))
     .bind(payload.identity_file_path.as_deref())
+    .bind(vault_credential_id)
     .bind(payload.group_id.as_deref())
     .bind(payload.notes.as_deref())
     .bind(payload.is_jump_host.unwrap_or(s.is_jump_host))
