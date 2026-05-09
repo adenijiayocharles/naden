@@ -9,6 +9,8 @@ import { formatError } from "../../lib/errors";
 
 export function useServerActions(server: Server) {
   const deleteServer = useServerStore((s) => s.deleteServer);
+  const duplicateServer = useServerStore((s) => s.duplicateServer);
+  const checkReachability = useServerStore((s) => s.checkReachability);
   const openEdit = useUiStore((s) => s.openEdit);
   const openSession = useTerminalStore((s) => s.openSession);
   const openSftpSession = useSftpStore((s) => s.openSession);
@@ -19,6 +21,8 @@ export function useServerActions(server: Server) {
   const [connecting, setConnecting] = useState(false);
   const [openingTerminal, setOpeningTerminal] = useState(false);
   const [openingBrowser, setOpeningBrowser] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
+  const [checkingReachability, setCheckingReachability] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -61,6 +65,29 @@ export function useServerActions(server: Server) {
     }
   };
 
+  const handleDuplicate = async () => {
+    setMenuOpen(false);
+    setDuplicating(true);
+    setError(null);
+    try {
+      await duplicateServer(server.id);
+    } catch (e) {
+      setError(formatError(e));
+    } finally {
+      setDuplicating(false);
+    }
+  };
+
+  const handleCheckReachability = async () => {
+    setMenuOpen(false);
+    setCheckingReachability(true);
+    try {
+      await checkReachability(server.id);
+    } finally {
+      setCheckingReachability(false);
+    }
+  };
+
   const handleBrowseFiles = async () => {
     setMenuOpen(false);
     setOpeningBrowser(true);
@@ -91,11 +118,13 @@ export function useServerActions(server: Server) {
     menuRef,
     menuOpen, setMenuOpen,
     confirmDelete, setConfirmDelete,
-    deleting, connecting, openingTerminal, openingBrowser,
+    deleting, connecting, openingTerminal, openingBrowser, duplicating, checkingReachability,
     error,
     handleConnect,
     handleSystemTerminal,
     handleBrowseFiles,
+    handleDuplicate,
+    handleCheckReachability,
     handleDelete,
     editServer,
   };

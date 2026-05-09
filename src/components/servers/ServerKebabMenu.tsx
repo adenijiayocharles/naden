@@ -7,9 +7,13 @@ interface Props {
   deleting: boolean;
   openingTerminal: boolean;
   openingBrowser: boolean;
+  duplicating: boolean;
+  checkingReachability: boolean;
   onEdit: () => void;
   onSystemTerminal: () => void;
   onBrowseFiles: () => void;
+  onDuplicate: () => void;
+  onCheckReachability: () => void;
   onDelete: () => void;
   buttonClassName?: string;
 }
@@ -17,8 +21,8 @@ interface Props {
 export default function ServerKebabMenu({
   menuRef, menuOpen, setMenuOpen,
   confirmDelete, setConfirmDelete,
-  deleting, openingTerminal, openingBrowser,
-  onEdit, onSystemTerminal, onBrowseFiles, onDelete,
+  deleting, openingTerminal, openingBrowser, duplicating, checkingReachability,
+  onEdit, onSystemTerminal, onBrowseFiles, onDuplicate, onCheckReachability, onDelete,
   buttonClassName = "text-[#555] hover:text-white p-1 rounded hover:bg-[#1a1a1a] transition-colors text-lg leading-none",
 }: Props) {
   return (
@@ -56,6 +60,20 @@ export default function ServerKebabMenu({
             className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors disabled:opacity-40"
           >
             {openingBrowser ? "Connecting…" : "Browse Files"}
+          </button>
+          <button
+            onClick={onDuplicate}
+            disabled={duplicating}
+            className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors disabled:opacity-40"
+          >
+            {duplicating ? "Duplicating…" : "Duplicate"}
+          </button>
+          <button
+            onClick={onCheckReachability}
+            disabled={checkingReachability}
+            className="w-full text-left px-3 py-2 text-sm text-[#bbb] hover:bg-[#1e1e1e] hover:text-white transition-colors disabled:opacity-40"
+          >
+            {checkingReachability ? "Checking…" : "Check Connectivity"}
           </button>
           {!confirmDelete ? (
             <button

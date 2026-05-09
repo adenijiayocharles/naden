@@ -2,19 +2,36 @@ import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import ServerCard from "./ServerCard";
 import ServerRow from "./ServerRow";
+import type { Server } from "../../types/server";
 
 export default function ServerList() {
   const servers = useServerStore((s) => s.servers);
   const groups = useServerStore((s) => s.groups);
+  const recentServerIds = useServerStore((s) => s.recentServerIds);
   const isLoading = useServerStore((s) => s.isLoading);
   const openAdd = useUiStore((s) => s.openAdd);
   const viewMode = useUiStore((s) => s.viewMode);
+  const sortBy = useUiStore((s) => s.sortBy);
   const { filterGroupId, filterTagId, searchQuery, searchResults } = useUiStore();
 
   const Item = viewMode === "row" ? ServerRow : ServerCard;
   const listClass = viewMode === "row"
     ? "border border-[#1a1a1a] rounded-lg"
     : "grid gap-3 grid-cols-[repeat(auto-fill,minmax(240px,1fr))]";
+
+  // Sort a list of servers according to the active sort preference.
+  // "last_connected" orders by position in recentServerIds; servers not
+  // in the list come last, sorted by name.
+  const applySort = (list: Server[]): Server[] => {
+    if (sortBy === "name") return list;
+    const order = new Map(recentServerIds.map((id, i) => [id, i]));
+    return [...list].sort((a, b) => {
+      const ia = order.get(a.id) ?? Infinity;
+      const ib = order.get(b.id) ?? Infinity;
+      if (ia !== ib) return ia - ib;
+      return a.displayName.localeCompare(b.displayName);
+    });
+  };
 
   if (isLoading) {
     return (
@@ -44,7 +61,7 @@ export default function ServerList() {
     );
   }
 
-  // Search results take priority over sidebar filters
+  // Search takes priority over all filters/sorting
   if (searchQuery.trim()) {
     const results = searchResults ?? [];
     return results.length === 0 ? (
@@ -86,21 +103,47 @@ export default function ServerList() {
     );
   }
 
+  // Filtered view (group or tag active) — just sort, no sections
   if (filterGroupId || filterTagId) {
     return (
       <div className={listClass}>
-        {filtered.map((s) => <Item key={s.id} server={s} />)}
+        {applySort(filtered).map((s) => <Item key={s.id} server={s} />)}
       </div>
     );
   }
 
-  const ungrouped = filtered.filter((s) => !s.groupId);
+  // ── Default view ────────────────────────────────────────────────────────────
+  const serverById = new Map(servers.map((s) => [s.id, s]));
+
+  // Recently connected — up to 5 servers that exist in the current list
+  const recentServers = recentServerIds
+    .map((id) => serverById.get(id))
+    .filter((s): s is Server => s !== undefined)
+    .slice(0, 5);
+
+  const ungrouped = applySort(filtered.filter((s) => !s.groupId));
   const sections = groups
-    .map((g) => ({ group: g, items: filtered.filter((s) => s.groupId === g.id) }))
+    .map((g) => ({ group: g, items: applySort(filtered.filter((s) => s.groupId === g.id)) }))
     .filter(({ items }) => items.length > 0);
 
   return (
     <div className="space-y-6">
+      {/* Recently connected section */}
+      {recentServers.length > 0 && (
+        <section>
+          <h2 className="text-xs font-semibold text-[#666] uppercase tracking-wider mb-2 flex items-center gap-2">
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.8}>
+              <circle cx="6" cy="6" r="5" />
+              <path strokeLinecap="round" d="M6 3.5v2.7l1.8 1.8" />
+            </svg>
+            Recently Connected
+          </h2>
+          <div className={listClass}>
+            {recentServers.map((s) => <Item key={s.id} server={s} />)}
+          </div>
+        </section>
+      )}
+
       {sections.map(({ group, items }) => (
         <section key={group.id}>
           <h2

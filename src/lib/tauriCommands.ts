@@ -10,6 +10,11 @@ import type {
 } from "../types/server";
 import type { DirListing } from "../types/sftp";
 
+export interface ReachabilityResult {
+  reachable: boolean;
+  latencyMs?: number;
+}
+
 export const serverCommands = {
   listServers: () =>
     invoke<Server[]>("list_servers"),
@@ -25,6 +30,15 @@ export const serverCommands = {
 
   deleteServer: (id: string) =>
     invoke<void>("delete_server", { id }),
+
+  duplicateServer: (serverId: string) =>
+    invoke<Server>("duplicate_server", { serverId }),
+
+  getRecentServerIds: (limit: number) =>
+    invoke<string[]>("get_recent_server_ids", { limit }),
+
+  checkReachability: (serverId: string) =>
+    invoke<ReachabilityResult>("check_reachability", { serverId }),
 
   listGroups: () =>
     invoke<Group[]>("list_groups"),

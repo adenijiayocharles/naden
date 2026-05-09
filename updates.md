@@ -1,11 +1,11 @@
 # Suggested Updates
 
 ## UX / Usability
-- [ ] Server duplication — clone an entry with one click (useful for similar servers)
-- [ ] Bulk operations — multi-select to delete or move servers to a group
-- [ ] Sort servers by name, group, or last connected
-- [ ] "Recently connected" section at the top of the server list
-- [ ] Server ping / TCP port check to show reachability before connecting
+- [x] Server duplication — clone an entry with one click (useful for similar servers)
+- [x] Bulk operations — multi-select to delete or move servers to a group
+- [x] Sort servers by name or last connected
+- [x] "Recently connected" section at the top of the server list
+- [x] Server ping / TCP port check to show reachability before connecting
 
 ## Terminal
 - [x] Session reconnect — when a session drops, offer a reconnect button instead of just closing the tab

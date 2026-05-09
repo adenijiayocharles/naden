@@ -14,6 +14,7 @@ import TerminalPane from "../terminal/TerminalPane";
 import AuditLogView from "../audit/AuditLogView";
 import OnboardingWizard from "../onboarding/OnboardingWizard";
 import SftpBrowser from "../sftp/SftpBrowser";
+import BulkActionBar from "../servers/BulkActionBar";
 import { settingsCommands } from "../../lib/tauriCommands";
 import { useTerminalSettings } from "../../lib/terminalSettings";
 import type { SessionStatus } from "../../store/terminalStore";
@@ -36,6 +37,8 @@ const SFTP_STATUS_COLORS: Record<SftpStatus, string> = {
 
 export default function AppShell() {
   const fetchAll = useServerStore((s) => s.fetchAll);
+  const fetchRecentServerIds = useServerStore((s) => s.fetchRecentServerIds);
+  const bulkMode = useUiStore((s) => s.bulkMode);
   const activeView = useUiStore((s) => s.activeView);
   const serverListCollapsed = useUiStore((s) => s.serverListCollapsed);
   const toggleServerList = useUiStore((s) => s.toggleServerList);
@@ -91,6 +94,7 @@ export default function AppShell() {
     void fetchAll();
     void check();
     void loadTerminalSettings();
+    void fetchRecentServerIds();
     // Check onboarding once on mount
     settingsCommands.getSetting("onboarding_complete")
       .then((v) => {
@@ -98,7 +102,7 @@ export default function AppShell() {
         setOnboardingChecked();
       })
       .catch(() => { setOnboardingChecked(); });
-  }, [fetchAll, check, loadTerminalSettings, setOnboardingComplete, setOnboardingChecked]);
+  }, [fetchAll, check, loadTerminalSettings, fetchRecentServerIds, setOnboardingComplete, setOnboardingChecked]);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -172,7 +176,12 @@ export default function AppShell() {
           >
             {activeView === "audit"
               ? <AuditLogView />
-              : <div className="flex-1 overflow-y-auto p-5"><ServerList /></div>}
+              : (
+                <>
+                  <div className="flex-1 overflow-y-auto p-5"><ServerList /></div>
+                  {bulkMode && <BulkActionBar />}
+                </>
+              )}
           </main>
 
           {/* Collapse / expand handle */}

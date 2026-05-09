@@ -4,10 +4,12 @@ import type { Server } from "../types/server";
 
 type ActiveView = "list" | "add" | "edit" | "audit";
 export type ViewMode = "card" | "row";
+export type SortBy = "name" | "last_connected";
 
 interface UiStore {
   activeView: ActiveView;
   viewMode: ViewMode;
+  sortBy: SortBy;
   serverListCollapsed: boolean;
   settingsOpen: boolean;
   onboardingComplete: boolean;
@@ -17,6 +19,8 @@ interface UiStore {
   filterTagId: string | null;
   searchQuery: string;
   searchResults: Server[] | null;
+  bulkMode: boolean;
+  bulkSelected: string[];
 
   openAdd: () => void;
   openEdit: (serverId: string) => void;
@@ -30,7 +34,12 @@ interface UiStore {
   setFilterTag: (tagId: string | null) => void;
   setSearch: (query: string) => void;
   setViewMode: (mode: ViewMode) => void;
+  setSortBy: (sort: SortBy) => void;
   toggleServerList: () => void;
+  toggleBulkMode: () => void;
+  toggleSelected: (id: string) => void;
+  selectAll: (ids: string[]) => void;
+  clearSelected: () => void;
 }
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -38,6 +47,7 @@ let searchTimer: ReturnType<typeof setTimeout> | null = null;
 export const useUiStore = create<UiStore>((set) => ({
   activeView: "list",
   viewMode: "card",
+  sortBy: "name",
   serverListCollapsed: false,
   settingsOpen: false,
   onboardingComplete: true, // assume complete until checked
@@ -47,6 +57,8 @@ export const useUiStore = create<UiStore>((set) => ({
   filterTagId: null,
   searchQuery: "",
   searchResults: null,
+  bulkMode: false,
+  bulkSelected: [],
 
   openAdd: () => set({ activeView: "add", editingServerId: null }),
   openEdit: (serverId) => set({ activeView: "edit", editingServerId: serverId }),
@@ -60,7 +72,16 @@ export const useUiStore = create<UiStore>((set) => ({
   setFilterTag: (tagId) => set({ filterTagId: tagId, filterGroupId: null }),
 
   setViewMode: (mode) => set({ viewMode: mode }),
+  setSortBy: (sort) => set({ sortBy: sort }),
   toggleServerList: () => set((s) => ({ serverListCollapsed: !s.serverListCollapsed })),
+  toggleBulkMode: () => set((s) => ({ bulkMode: !s.bulkMode, bulkSelected: [] })),
+  toggleSelected: (id) => set((s) => ({
+    bulkSelected: s.bulkSelected.includes(id)
+      ? s.bulkSelected.filter((x) => x !== id)
+      : [...s.bulkSelected, id],
+  })),
+  selectAll: (ids) => set({ bulkSelected: ids }),
+  clearSelected: () => set({ bulkSelected: [] }),
 
   setSearch: (query) => {
     set({ searchQuery: query });
