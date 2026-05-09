@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { homeDir, join } from "@tauri-apps/api/path";
 import type { ImportPreview } from "../../types/server";
@@ -12,13 +12,20 @@ interface Props {
 
 export default function SshConfigImport({ onClose }: Props) {
   const fetchAll = useServerStore((s) => s.fetchAll);
-  const [configPath, setConfigPath] = useState("~/.ssh/config");
+  const [configPath, setConfigPath] = useState("");
   const [previews, setPreviews] = useState<ImportPreview[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imported, setImported] = useState<number | null>(null);
+
+  useEffect(() => {
+    homeDir()
+      .then((home) => join(home, ".ssh", "config"))
+      .then(setConfigPath)
+      .catch(() => {});
+  }, []);
 
   const browseConfig = async () => {
     try {
@@ -36,10 +43,7 @@ export default function SshConfigImport({ onClose }: Props) {
     setSelected(new Set());
     setImported(null);
     try {
-      const path = configPath.startsWith("~/")
-        ? undefined // let the backend expand it
-        : configPath;
-      const results = await sshCommands.importSshConfig(path);
+      const results = await sshCommands.importSshConfig(configPath || undefined);
       setPreviews(results);
       setSelected(new Set(results.map((p) => p.pattern)));
     } catch (e) {

@@ -12,12 +12,12 @@ pub async fn open_sftp_session(
     app_handle: tauri::AppHandle,
 ) -> Result<String, AppError> {
     let server = queries::get_server_db(&state.db, &server_id).await?;
-    let auth = auth_for_server(&server, &state).await?;
+    let auth = auth_for_server(&server, &state, &app_handle).await?;
 
     let hop_servers = resolve_jump_chain(&state.db, &server).await?;
     let mut jump_chain: Vec<JumpInfo> = Vec::with_capacity(hop_servers.len());
     for hop in &hop_servers {
-        let hop_auth = auth_for_server(hop, &state).await?;
+        let hop_auth = auth_for_server(hop, &state, &app_handle).await?;
         jump_chain.push(JumpInfo {
             host: hop.server.hostname.clone(),
             port: hop.server.port as u16,

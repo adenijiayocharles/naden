@@ -17,7 +17,13 @@ pub struct ImportPreview {
     pub identity_file_path: Option<String>,
 }
 
-pub fn parse_ssh_config(path: &PathBuf) -> Result<Vec<ImportPreview>, AppError> {
+pub fn parse_ssh_config(path: &PathBuf, app: &tauri::AppHandle) -> Result<Vec<ImportPreview>, AppError> {
+    use tauri::Manager;
+    let home_dir = app.path().home_dir().ok();
+    parse_ssh_config_inner(path, home_dir.as_ref())
+}
+
+fn parse_ssh_config_inner(path: &PathBuf, home_dir: Option<&std::path::PathBuf>) -> Result<Vec<ImportPreview>, AppError> {
     let file = std::fs::File::open(path).map_err(|e| AppError::Io(e.to_string()))?;
     let mut reader = BufReader::new(file);
 
@@ -40,7 +46,7 @@ pub fn parse_ssh_config(path: &PathBuf) -> Result<Vec<ImportPreview>, AppError> 
                 .identity_file
                 .as_ref()
                 .and_then(|v| v.first())
-                .map(|pb| expand_tilde(pb));
+                .map(|pb| expand_tilde(pb, home_dir));
 
             previews.push(ImportPreview {
                 pattern: name,
@@ -52,14 +58,13 @@ pub fn parse_ssh_config(path: &PathBuf) -> Result<Vec<ImportPreview>, AppError> 
         }
     }
 
-
     Ok(previews)
 }
 
-fn expand_tilde(path: &std::path::Path) -> String {
+fn expand_tilde(path: &std::path::Path, home_dir: Option<&std::path::PathBuf>) -> String {
     let s = path.to_string_lossy();
     if let Some(rest) = s.strip_prefix("~/") {
-        if let Some(home) = dirs::home_dir() {
+        if let Some(home) = home_dir {
             return home.join(rest).to_string_lossy().to_string();
         }
     }
@@ -83,7 +88,7 @@ mod tests {
         let path = write_config(
             "Host web\n  HostName 10.0.0.1\n  User ubuntu\n  Port 2222\n",
         );
-        let previews = parse_ssh_config(&path).unwrap();
+        let previews = parse_ssh_config_inner(&path, None).unwrap();
         fs::remove_file(&path).ok();
 
         assert_eq!(previews.len(), 1);
@@ -98,7 +103,7 @@ mod tests {
         let path = write_config(
             "Host alpha\n  HostName 1.2.3.4\n\nHost beta\n  HostName 5.6.7.8\n  Port 2222\n",
         );
-        let previews = parse_ssh_config(&path).unwrap();
+        let previews = parse_ssh_config_inner(&path, None).unwrap();
         fs::remove_file(&path).ok();
 
         assert_eq!(previews.len(), 2);
@@ -110,7 +115,7 @@ mod tests {
     #[test]
     fn skips_wildcard_catch_all() {
         let path = write_config("Host *\n  ServerAliveInterval 60\n");
-        let previews = parse_ssh_config(&path).unwrap();
+        let previews = parse_ssh_config_inner(&path, None).unwrap();
         fs::remove_file(&path).ok();
         assert!(previews.is_empty());
     }
@@ -118,7 +123,7 @@ mod tests {
     #[test]
     fn skips_negated_patterns() {
         let path = write_config("Host prod !secret\n  HostName 10.0.0.1\n");
-        let previews = parse_ssh_config(&path).unwrap();
+        let previews = parse_ssh_config_inner(&path, None).unwrap();
         fs::remove_file(&path).ok();
 
         // Only "prod" should appear; "!secret" is negated
@@ -130,7 +135,7 @@ mod tests {
         let path = write_config(
             "Host jump\n  HostName bastion.example.com\n  IdentityFile ~/.ssh/id_ed25519\n",
         );
-        let previews = parse_ssh_config(&path).unwrap();
+        let previews = parse_ssh_config_inner(&path, None).unwrap();
         fs::remove_file(&path).ok();
 
         assert_eq!(previews.len(), 1);
@@ -139,14 +144,14 @@ mod tests {
 
     #[test]
     fn returns_error_for_missing_file() {
-        let result = parse_ssh_config(&PathBuf::from("/nonexistent/path/to/config"));
+        let result = parse_ssh_config_inner(&PathBuf::from("/nonexistent/path/to/config"), None);
         assert!(matches!(result, Err(crate::error::AppError::Io(_))));
     }
 
     #[test]
     fn empty_config_returns_no_previews() {
         let path = write_config("");
-        let previews = parse_ssh_config(&path).unwrap();
+        let previews = parse_ssh_config_inner(&path, None).unwrap();
         fs::remove_file(&path).ok();
         assert!(previews.is_empty());
     }
@@ -154,7 +159,7 @@ mod tests {
     #[test]
     fn host_without_hostname_uses_pattern() {
         let path = write_config("Host myalias\n  Port 22\n");
-        let previews = parse_ssh_config(&path).unwrap();
+        let previews = parse_ssh_config_inner(&path, None).unwrap();
         fs::remove_file(&path).ok();
 
         assert_eq!(previews.len(), 1);

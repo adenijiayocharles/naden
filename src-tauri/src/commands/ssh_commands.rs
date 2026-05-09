@@ -10,10 +10,11 @@ use crate::ssh::{
 use crate::{vault, AppState};
 use crate::commands::audit_commands::{self, NewAuditEntry};
 
-/// Expand a leading `~` to the user's home directory.
-fn expand_path(path: &str) -> std::path::PathBuf {
+/// Expand a leading `~` to the user's home directory using Tauri's path resolver.
+fn expand_path(path: &str, app: &tauri::AppHandle) -> std::path::PathBuf {
+    use tauri::Manager;
     if let Some(rest) = path.strip_prefix("~/") {
-        if let Some(home) = dirs::home_dir() {
+        if let Ok(home) = app.path().home_dir() {
             return home.join(rest);
         }
     }
@@ -52,6 +53,7 @@ pub(crate) async fn resolve_jump_chain(
 pub(crate) async fn auth_for_server(
     server: &ServerWithTags,
     state: &AppState,
+    app: &tauri::AppHandle,
 ) -> Result<AuthInfo, AppError> {
     let s = &server.server;
     match s.auth_method.as_str() {
@@ -70,7 +72,7 @@ pub(crate) async fn auth_for_server(
                 .identity_file_path
                 .as_deref()
                 .ok_or_else(|| AppError::Ssh("no identity file path for key auth".into()))?;
-            let key_path = expand_path(key_path_raw);
+            let key_path = expand_path(key_path_raw, app);
             let key_data = tokio::fs::read_to_string(&key_path).await.map_err(|e| {
                 AppError::Ssh(format!(
                     "failed to read key file {}: {e}",
@@ -127,16 +129,20 @@ pub async fn launch_in_terminal(
 #[tauri::command]
 pub async fn import_ssh_config(
     path: Option<String>,
+    app: tauri::AppHandle,
     _state: tauri::State<'_, AppState>,
 ) -> Result<Vec<ImportPreview>, AppError> {
+    use tauri::Manager;
     let config_path = match path {
         Some(p) => std::path::PathBuf::from(p),
-        None => dirs::home_dir()
-            .ok_or_else(|| AppError::Ssh("cannot determine home directory".into()))?
+        None => app
+            .path()
+            .home_dir()
+            .map_err(|_| AppError::Ssh("cannot determine home directory".into()))?
             .join(".ssh")
             .join("config"),
     };
-    config_parser::parse_ssh_config(&config_path)
+    config_parser::parse_ssh_config(&config_path, &app)
 }
 
 #[tauri::command]
@@ -177,13 +183,13 @@ pub async fn open_terminal_session(
     app_handle: tauri::AppHandle,
 ) -> Result<String, AppError> {
     let server = queries::get_server_db(&state.db, &server_id).await?;
-    let auth = auth_for_server(&server, &state).await?;
+    let auth = auth_for_server(&server, &state, &app_handle).await?;
 
     // Resolve jump chain and build JumpInfo (with credentials) for each hop
     let hop_servers = resolve_jump_chain(&state.db, &server).await?;
     let mut jump_chain: Vec<JumpInfo> = Vec::with_capacity(hop_servers.len());
     for hop in &hop_servers {
-        let hop_auth = auth_for_server(hop, &state).await?;
+        let hop_auth = auth_for_server(hop, &state, &app_handle).await?;
         jump_chain.push(JumpInfo {
             host: hop.server.hostname.clone(),
             port: u16::try_from(hop.server.port).unwrap_or(22),
