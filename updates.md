@@ -1,28 +1,29 @@
-# Suggested Updates
+# Updates
 
 ## UX / Usability
-- [x] Server duplication — clone an entry with one click (useful for similar servers)
-- [x] Bulk operations — multi-select to delete or move servers to a group
-- [x] Sort servers by name or last connected
-- [x] "Recently connected" section at the top of the server list
-- [x] Server ping / TCP port check to show reachability before connecting
+- [x] Server duplication
+- [x] Bulk operations — multi-select to delete or move to a group
+- [x] Server ping / TCP port check (reachability indicator)
+- [x] Favourites — star button on cards/rows, sidebar section
+- [x] Move server between groups via kebab menu
+- [x] Delete confirmation modal
 
 ## Terminal
-- [x] Session reconnect — when a session drops, offer a reconnect button instead of just closing the tab
-- [x] Per-session terminal settings (font size, scrollback limit) rather than hardcoded values
-- [x] Copy selected text to clipboard automatically (xterm `copyOnSelect` option)
-- [x] Terminal search (`Ctrl+F`) via xterm's `SearchAddon`
+- [x] Session reconnect — reconnect button when a session drops
+- [x] Per-session terminal settings (font size, scrollback)
+- [x] Copy-on-select
+- [x] Terminal search (Ctrl+F)
 
 ## Security
-- [ ] Touch ID unlock via macOS `LocalAuthentication` through a Tauri plugin
-- [ ] Vault auto-lock countdown indicator in the UI
-- [ ] Clipboard auto-clear after copying a password (e.g. 30 seconds)
+- [x] Vault auto-lock with countdown indicator
+- [x] Clipboard auto-clear after copying a password (30 seconds)
+- [x] Blocking vault setup screen on first launch
+- [ ] Touch ID unlock (macOS LocalAuthentication)
 
-## Missing PRD Features (P3)
+## Features
 - [x] SFTP file browser
-- [ ] Cloud sync for the server list (credentials stay local)
+- [x] Encrypted backup export / import
 
 ## Code Quality
-- [x] Finish and commit in-progress work: all files were already complete
-- [x] Frontend unit tests with Vitest — 24 tests across errors.ts and format.ts
-- [x] Rust tests for SSH config parser (7 tests) and vault encryption/decryption roundtrip (8 tests)
+- [x] Frontend unit tests (Vitest)
+- [x] Rust tests — SSH config parser and vault encryption
