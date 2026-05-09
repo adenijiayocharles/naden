@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::io::{Read, Write};
-use std::net::TcpStream;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use tauri::Emitter;
@@ -154,8 +153,7 @@ fn run_sftp_session(
 
     let result: Result<(), AppError> = (|| {
         let stream = if jump_chain.is_empty() {
-            TcpStream::connect((host.as_str(), port))
-                .map_err(|e| AppError::Ssh(format!("TCP connect failed: {e}")))?
+            crate::ssh::connection::tcp_connect(&host, port)?
         } else {
             jump_host::open_tunnel(jump_chain, &host, port)?
         };

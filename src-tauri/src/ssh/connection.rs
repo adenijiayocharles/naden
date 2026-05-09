@@ -9,6 +9,22 @@ use uuid::Uuid;
 use crate::error::AppError;
 use crate::ssh::jump_host::{self, JumpInfo};
 
+const CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+
+/// Resolve `host` and open a TCP connection with a fixed timeout.
+/// Using connect_timeout avoids the OS default (~75 s on macOS) when a host
+/// is firewalled or unreachable.
+pub(crate) fn tcp_connect(host: &str, port: u16) -> Result<TcpStream, AppError> {
+    use std::net::ToSocketAddrs;
+    let addr = (host, port)
+        .to_socket_addrs()
+        .map_err(|e| AppError::Ssh(format!("failed to resolve '{host}': {e}")))?
+        .next()
+        .ok_or_else(|| AppError::Ssh(format!("could not resolve hostname '{host}'")))?;
+    TcpStream::connect_timeout(&addr, CONNECT_TIMEOUT)
+        .map_err(|e| AppError::Ssh(format!("TCP connect to {host}:{port} failed: {e}")))
+}
+
 /// Callback invoked when a terminal session ends.
 /// Arguments: (outcome: String, error_message: Option<String>)
 pub type OnCloseCallback = Box<dyn FnOnce(String, Option<String>) + Send>;
@@ -179,8 +195,7 @@ fn run_session(
     let result: Result<(), AppError> = (|| {
         // Build the TCP stream: either a direct connection or a jump-host tunnel.
         let stream = if jump_chain.is_empty() {
-            TcpStream::connect((host.as_str(), port))
-                .map_err(|e| AppError::Ssh(format!("TCP connect failed: {e}")))?
+            tcp_connect(&host, port)?
         } else {
             jump_host::open_tunnel(jump_chain, &host, port)?
         };

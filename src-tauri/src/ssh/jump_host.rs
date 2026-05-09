@@ -1,5 +1,5 @@
 use std::io::{Read, Write};
-use std::net::TcpStream;
+use std::net::TcpStream; // used as the return type of open_tunnel / one_hop
 use std::os::unix::io::{FromRawFd, IntoRawFd};
 use std::os::unix::net::UnixStream;
 
@@ -41,8 +41,7 @@ pub fn open_tunnel(
 ) -> Result<TcpStream, AppError> {
     assert!(!jumps.is_empty(), "open_tunnel requires at least one jump");
 
-    let first_tcp = TcpStream::connect((jumps[0].host.as_str(), jumps[0].port))
-        .map_err(|e| AppError::Ssh(format!("connect to {} failed: {e}", jumps[0].host)))?;
+    let first_tcp = crate::ssh::connection::tcp_connect(&jumps[0].host, jumps[0].port)?;
 
     let mut stream = first_tcp;
 
