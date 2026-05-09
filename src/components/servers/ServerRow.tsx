@@ -4,6 +4,7 @@ import { useUiStore } from "../../store/uiStore";
 import { useServerStore } from "../../store/serverStore";
 import ServerKebabMenu from "./ServerKebabMenu";
 import DeleteServerModal from "./DeleteServerModal";
+import { FavouriteButton } from "./ServerCard";
 
 function ReachabilityDot({ serverId }: { serverId: string }) {
   const info = useServerStore((s) => s.reachability[serverId]);
@@ -63,6 +64,12 @@ export default function ServerRow({ server }: { server: Server }) {
       </span>
 
       <div className="hidden md:flex items-center gap-1.5 shrink-0">
+        {!bulkMode && (
+          <FavouriteButton
+            isFavourite={server.isFavourite}
+            onToggle={() => { void actions.handleToggleFavourite(); }}
+          />
+        )}
         <ReachabilityDot serverId={server.id} />
         {server.isJumpHost && (
           <span className="text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded">Jump</span>
