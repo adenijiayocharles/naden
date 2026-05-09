@@ -96,7 +96,6 @@ export default function ServerCard({ server }: { server: Server }) {
             menuRef={actions.menuRef}
             menuOpen={actions.menuOpen}
             setMenuOpen={actions.setMenuOpen}
-            isFavourite={server.isFavourite}
             canCopyPassword={actions.canCopyPassword}
             groups={actions.groups}
             currentGroupId={server.groupId}
@@ -109,7 +108,6 @@ export default function ServerCard({ server }: { server: Server }) {
             onCopyPassword={() => { void actions.handleCopyPassword(); }}
             onSystemTerminal={() => { void actions.handleSystemTerminal(); }}
             onBrowseFiles={() => { void actions.handleBrowseFiles(); }}
-            onToggleFavourite={() => { void actions.handleToggleFavourite(); }}
             onMoveToGroup={(gid) => { void actions.handleMoveToGroup(gid); }}
             onDuplicate={() => { void actions.handleDuplicate(); }}
             onCheckReachability={() => { void actions.handleCheckReachability(); }}
