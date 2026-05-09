@@ -251,14 +251,14 @@ export default function SettingsModal({ onClose }: Props) {
               </div>
               <button
                 onClick={handleToggle}
-                className={`relative w-10 h-5.5 rounded-full transition-colors shrink-0 ml-4 ${
+                className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ml-4 ${
                   isPasswordRequired ? "bg-accent" : "bg-[#333]"
                 }`}
                 aria-label="Toggle vault password"
               >
                 <span
-                  className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                    isPasswordRequired ? "translate-x-5" : "translate-x-0.5"
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                    isPasswordRequired ? "translate-x-[22px]" : "translate-x-0"
                   }`}
                 />
               </button>
@@ -543,14 +543,14 @@ export default function SettingsModal({ onClose }: Props) {
               </div>
               <button
                 onClick={() => setCopyOnSelect(!copyOnSelect)}
-                className={`relative w-10 h-5.5 rounded-full transition-colors shrink-0 ml-4 ${
+                className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ml-4 ${
                   copyOnSelect ? "bg-accent" : "bg-[#333]"
                 }`}
                 aria-label="Toggle copy on select"
               >
                 <span
-                  className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                    copyOnSelect ? "translate-x-5" : "translate-x-0.5"
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                    copyOnSelect ? "translate-x-[22px]" : "translate-x-0"
                   }`}
                 />
               </button>
