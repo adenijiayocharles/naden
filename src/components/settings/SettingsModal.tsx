@@ -60,7 +60,13 @@ export default function SettingsModal({ onClose }: Props) {
       .then((v) => { if (v !== null) setTimeoutMins(v); })
       .catch(() => {});
   }, []);
+  const [autoLockNeedsPassword, setAutoLockNeedsPassword] = useState(false);
   const saveTimeout = (v: string) => {
+    if (v !== "0" && !isPasswordRequired) {
+      setAutoLockNeedsPassword(true);
+      return;
+    }
+    setAutoLockNeedsPassword(false);
     setTimeoutMins(v);
     settingsCommands.setSetting("vault_timeout_minutes", v).catch(() => {});
   };
@@ -186,6 +192,7 @@ export default function SettingsModal({ onClose }: Props) {
       setActiveForm("none");
       setEnablePwd("");
       setEnableConfirm("");
+      setAutoLockNeedsPassword(false);
     } catch (e) {
       setError(formatError(e));
     } finally {
@@ -394,20 +401,34 @@ export default function SettingsModal({ onClose }: Props) {
           </div>
 
           {/* Vault timeout */}
-          <div className="flex items-center justify-between py-3 border-b border-[#1e1e1e]">
-            <div>
-              <p className="text-sm text-white font-medium">Auto-lock vault</p>
-              <p className="text-xs text-[#777] mt-0.5">Lock after this many minutes of inactivity (0 = never)</p>
+          <div className="py-3 border-b border-[#1e1e1e]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-white font-medium">Auto-lock vault</p>
+                <p className="text-xs text-[#777] mt-0.5">Lock after this many minutes of inactivity (0 = never)</p>
+              </div>
+              <select
+                value={timeoutMins}
+                onChange={(e) => saveTimeout(e.target.value)}
+                disabled={!isPasswordRequired && timeoutMins === "0"}
+                className="ml-4 bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-accent shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {[["0","Never"],["5","5 min"],["15","15 min"],["30","30 min"],["60","1 hour"],["120","2 hours"]].map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </select>
             </div>
-            <select
-              value={timeoutMins}
-              onChange={(e) => saveTimeout(e.target.value)}
-              className="ml-4 bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-accent shrink-0"
-            >
-              {[["0","Never"],["5","5 min"],["15","15 min"],["30","30 min"],["60","1 hour"],["120","2 hours"]].map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
-            </select>
+            {autoLockNeedsPassword && (
+              <div className="mt-2 flex items-center justify-between gap-3 bg-[#1a1a0a] border border-yellow-800/50 rounded-lg px-3 py-2">
+                <p className="text-xs text-yellow-400">A master password is required to use auto-lock.</p>
+                <button
+                  onClick={() => { setAutoLockNeedsPassword(false); openForm("enable"); }}
+                  className="text-xs text-accent hover:text-accent-hover shrink-0 transition-colors"
+                >
+                  Set password →
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Backup section */}
