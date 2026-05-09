@@ -124,6 +124,7 @@ export default function ServerRow({ server }: { server: Server }) {
           onCheckReachability={() => { void actions.handleCheckReachability(); }}
           onDelete={actions.handleDelete}
           buttonClassName="text-[#444] hover:text-white p-1 rounded hover:bg-[#1a1a1a] transition-colors text-base leading-none opacity-0 group-hover:opacity-100"
+          submenuLeft
         />
       )}
     </div>

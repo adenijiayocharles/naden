@@ -22,6 +22,7 @@ interface Props {
   onCheckReachability: () => void;
   onDelete: () => void;
   buttonClassName?: string;
+  submenuLeft?: boolean;
 }
 
 export default function ServerKebabMenu({
@@ -31,6 +32,7 @@ export default function ServerKebabMenu({
   onEdit, onCopyPassword, onSystemTerminal, onBrowseFiles, onMoveToGroup,
   onDuplicate, onCheckReachability, onDelete,
   buttonClassName = "text-[#555] hover:text-white p-1 rounded hover:bg-[#1a1a1a] transition-colors text-lg leading-none",
+  submenuLeft = false,
 }: Props) {
   const [showGroupPicker, setShowGroupPicker] = useState(false);
   const menuRef2 = useRef<HTMLDivElement>(null);
@@ -106,7 +108,7 @@ export default function ServerKebabMenu({
               </button>
 
               {showGroupPicker && (
-                <div className="absolute left-full top-0 ml-1 bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-30 min-w-[150px] py-1">
+                <div className={`absolute top-0 ${submenuLeft ? "right-full mr-1" : "left-full ml-1"} bg-[#161616] border border-[#2a2a2a] rounded-lg shadow-2xl z-30 min-w-[150px] py-1`}>
                   {isGrouped && (
                     <button
                       onClick={() => { onMoveToGroup(null); setShowGroupPicker(false); }}
