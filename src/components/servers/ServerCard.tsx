@@ -5,6 +5,7 @@ import { useServerStore } from "../../store/serverStore";
 import ServerKebabMenu from "./ServerKebabMenu";
 import DeleteServerModal from "./DeleteServerModal";
 import ConnectionErrorModal from "./ConnectionErrorModal";
+import { timeAgo } from "../../lib/format";
 
 export function FavouriteButton({ isFavourite, onToggle }: { isFavourite: boolean; onToggle: () => void }) {
   return (
@@ -45,6 +46,10 @@ export default function ServerCard({ server }: { server: Server }) {
   const bulkSelected = useUiStore((s) => s.bulkSelected);
   const toggleSelected = useUiStore((s) => s.toggleSelected);
   const isSelected = bulkSelected.includes(server.id);
+  const groups = useServerStore((s) => s.groups);
+  const lastConnectedMap = useServerStore((s) => s.lastConnectedMap);
+  const groupColor = server.groupId ? groups.find((g) => g.id === server.groupId)?.color : undefined;
+  const lastConnected = lastConnectedMap[server.id];
 
   const handleClick = () => {
     if (bulkMode) { toggleSelected(server.id); return; }
@@ -71,7 +76,10 @@ export default function ServerCard({ server }: { server: Server }) {
             )}
           </div>
         ) : (
-          <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${actions.connecting ? "bg-accent animate-pulse" : "bg-[#333]"}`} />
+          <div
+            className={`w-2 h-2 rounded-full mt-1 shrink-0 ${actions.connecting ? "bg-accent animate-pulse" : ""}`}
+            style={!actions.connecting ? { backgroundColor: groupColor ?? "#333" } : undefined}
+          />
         )}
 
         <div className="flex-1 min-w-0">
@@ -94,6 +102,11 @@ export default function ServerCard({ server }: { server: Server }) {
                 <circle cx="6" cy="8" r="3.5" />
                 <path strokeLinecap="round" d="M9 8h5M12 6v4" />
               </svg>
+            )}
+            {lastConnected && (
+              <span className="text-xs text-dim" title={new Date(lastConnected).toLocaleString()}>
+                {timeAgo(lastConnected)}
+              </span>
             )}
           </div>
         </div>

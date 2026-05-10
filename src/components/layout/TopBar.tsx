@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useUiStore, type ViewMode } from "../../store/uiStore";
+import { useUiStore, type ViewMode, type SortMode } from "../../store/uiStore";
 import { useVaultCountdown } from "../../lib/useVaultCountdown";
 import SshConfigImport from "../servers/SshConfigImport";
 import SettingsModal from "../settings/SettingsModal";
@@ -13,6 +13,8 @@ export default function TopBar() {
   const bulkMode = useUiStore((s) => s.bulkMode);
   const toggleBulkMode = useUiStore((s) => s.toggleBulkMode);
   const bulkSelected = useUiStore((s) => s.bulkSelected);
+  const sortMode = useUiStore((s) => s.sortMode);
+  const setSortMode = useUiStore((s) => s.setSortMode);
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const openSettings = useUiStore((s) => s.openSettings);
   const closeSettings = useUiStore((s) => s.closeSettings);
@@ -43,6 +45,19 @@ export default function TopBar() {
         >
           {bulkMode ? `Cancel${bulkSelected.length > 0 ? ` (${bulkSelected.length})` : ""}` : "Select"}
         </button>
+
+        {/* Sort mode */}
+        <select
+          value={sortMode}
+          onChange={(e) => setSortMode(e.target.value as SortMode)}
+          className="h-7 bg-surface-3 border border-stroke rounded px-2 text-xs text-faint focus:outline-none focus:border-accent shrink-0 cursor-pointer"
+        >
+          <option value="default">Sort: Default</option>
+          <option value="name_asc">Name A → Z</option>
+          <option value="name_desc">Name Z → A</option>
+          <option value="host">Host</option>
+          <option value="last_connected">Last connected</option>
+        </select>
 
         {/* View mode toggle */}
         <div className="flex items-center bg-surface-3 border border-stroke rounded overflow-hidden shrink-0">

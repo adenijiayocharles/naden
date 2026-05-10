@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { serverCommands, type ReachabilityResult } from "../lib/tauriCommands";
+import { serverCommands, auditCommands, type ReachabilityResult } from "../lib/tauriCommands";
 import type {
   Server,
   Group,
@@ -19,6 +19,7 @@ interface ServerStore {
   isLoading: boolean;
   error: string | null;
   reachability: Record<string, ReachabilityInfo>;
+  lastConnectedMap: Record<string, string>;
 
   fetchAll: () => Promise<void>;
   createServer: (payload: CreateServerPayload) => Promise<Server>;
@@ -41,6 +42,7 @@ export const useServerStore = create<ServerStore>((set) => ({
   isLoading: false,
   error: null,
   reachability: {},
+  lastConnectedMap: {},
 
   fetchAll: async () => {
     set({ isLoading: true, error: null });
@@ -51,6 +53,9 @@ export const useServerStore = create<ServerStore>((set) => ({
         serverCommands.listTags(),
       ]);
       set({ servers, groups, tags });
+      auditCommands.getLastConnectedMap()
+        .then((map) => set({ lastConnectedMap: map }))
+        .catch(() => {});
     } catch (e) {
       set({ error: String(e) });
     } finally {

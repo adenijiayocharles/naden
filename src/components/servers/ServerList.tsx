@@ -1,13 +1,36 @@
 import { useServerStore } from "../../store/serverStore";
-import { useUiStore } from "../../store/uiStore";
+import { useUiStore, type SortMode } from "../../store/uiStore";
 import ServerCard from "./ServerCard";
 import ServerRow from "./ServerRow";
+import type { Server } from "../../types/server";
+
+function sortServers(list: Server[], mode: SortMode, lastConnectedMap: Record<string, string>): Server[] {
+  if (mode === "default") return list;
+  return [...list].sort((a, b) => {
+    switch (mode) {
+      case "name_asc": return a.displayName.localeCompare(b.displayName);
+      case "name_desc": return b.displayName.localeCompare(a.displayName);
+      case "host": return a.hostname.localeCompare(b.hostname);
+      case "last_connected": {
+        const la = lastConnectedMap[a.id] ?? "";
+        const lb = lastConnectedMap[b.id] ?? "";
+        return lb.localeCompare(la);
+      }
+      default: return 0;
+    }
+  });
+}
+
 export default function ServerList() {
   const servers = useServerStore((s) => s.servers);
   const groups = useServerStore((s) => s.groups);
+  const lastConnectedMap = useServerStore((s) => s.lastConnectedMap);
   const isLoading = useServerStore((s) => s.isLoading);
   const openAdd = useUiStore((s) => s.openAdd);
   const viewMode = useUiStore((s) => s.viewMode);
+  const sortMode = useUiStore((s) => s.sortMode);
+  const collapsedGroups = useUiStore((s) => s.collapsedGroups);
+  const toggleGroupCollapse = useUiStore((s) => s.toggleGroupCollapse);
   const { filterGroupId, filterTagId, filterFavourites, searchQuery, searchResults } = useUiStore();
 
   const Item = viewMode === "row" ? ServerRow : ServerCard;
@@ -53,7 +76,7 @@ export default function ServerList() {
       </div>
     ) : (
       <div className={listClass}>
-        {results.map((s) => <Item key={s.id} server={s} />)}
+        {sortServers(results, sortMode, lastConnectedMap).map((s) => <Item key={s.id} server={s} />)}
       </div>
     );
   }
@@ -100,7 +123,7 @@ export default function ServerList() {
   if (filterFavourites || filterGroupId || filterTagId) {
     return (
       <div className={listClass}>
-        {filtered.map((s) => <Item key={s.id} server={s} />)}
+        {sortServers(filtered, sortMode, lastConnectedMap).map((s) => <Item key={s.id} server={s} />)}
       </div>
     );
   }
@@ -114,23 +137,36 @@ export default function ServerList() {
   return (
     <div className="space-y-6">
 
-      {sections.map(({ group, items }) => (
-        <section key={group.id}>
-          <h2
-            className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-2"
-            style={{ color: group.color ?? "#666" }}
-          >
-            {group.color && (
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
+      {sections.map(({ group, items }) => {
+        const collapsed = collapsedGroups.has(group.id);
+        return (
+          <section key={group.id}>
+            <button
+              onClick={() => toggleGroupCollapse(group.id)}
+              className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-2 w-full text-left select-none"
+              style={{ color: group.color ?? "#666" }}
+            >
+              <svg
+                className={`w-2.5 h-2.5 shrink-0 transition-transform ${collapsed ? "" : "rotate-90"}`}
+                fill="none" viewBox="0 0 6 10" stroke="currentColor" strokeWidth={2}
+                strokeLinecap="round" strokeLinejoin="round"
+              >
+                <polyline points="1,1 5,5 1,9" />
+              </svg>
+              {group.color && (
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
+              )}
+              {group.name}
+              <span className="text-dim normal-case font-normal tracking-normal">{items.length}</span>
+            </button>
+            {!collapsed && (
+              <div className={listClass}>
+                {sortServers(items, sortMode, lastConnectedMap).map((s) => <Item key={s.id} server={s} />)}
+              </div>
             )}
-            {group.name}
-            <span className="text-dim normal-case font-normal tracking-normal">{items.length}</span>
-          </h2>
-          <div className={listClass}>
-            {items.map((s) => <Item key={s.id} server={s} />)}
-          </div>
-        </section>
-      ))}
+          </section>
+        );
+      })}
 
       {ungrouped.length > 0 && (
         <section>
@@ -138,7 +174,7 @@ export default function ServerList() {
             Ungrouped
           </h2>
           <div className={listClass}>
-            {ungrouped.map((s) => <Item key={s.id} server={s} />)}
+            {sortServers(ungrouped, sortMode, lastConnectedMap).map((s) => <Item key={s.id} server={s} />)}
           </div>
         </section>
       )}

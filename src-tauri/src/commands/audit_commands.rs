@@ -160,6 +160,21 @@ pub async fn export_audit_csv(
     Ok(csv)
 }
 
+#[tauri::command]
+pub async fn get_last_connected_map(
+    state: tauri::State<'_, AppState>,
+) -> Result<std::collections::HashMap<String, String>, AppError> {
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT server_id, MAX(session_start) FROM audit_log
+         WHERE server_id IS NOT NULL
+         GROUP BY server_id",
+    )
+    .fetch_all(&state.db)
+    .await?;
+
+    Ok(rows.into_iter().collect())
+}
+
 fn csv_escape(s: &str) -> String {
     if s.contains([',', '"', '\n']) {
         format!("\"{}\"", s.replace('"', "\"\""))

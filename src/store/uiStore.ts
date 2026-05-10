@@ -4,9 +4,12 @@ import type { Server } from "../types/server";
 
 type ActiveView = "list" | "add" | "edit" | "audit";
 export type ViewMode = "card" | "row";
+export type SortMode = "default" | "name_asc" | "name_desc" | "host" | "last_connected";
 interface UiStore {
   activeView: ActiveView;
   viewMode: ViewMode;
+  sortMode: SortMode;
+  collapsedGroups: Set<string>;
   serverListCollapsed: boolean;
   settingsOpen: boolean;
   onboardingComplete: boolean;
@@ -33,6 +36,8 @@ interface UiStore {
   setFilterFavourites: (v: boolean) => void;
   setSearch: (query: string) => void;
   setViewMode: (mode: ViewMode) => void;
+  setSortMode: (mode: SortMode) => void;
+  toggleGroupCollapse: (groupId: string) => void;
   toggleServerList: () => void;
   toggleBulkMode: () => void;
   toggleSelected: (id: string) => void;
@@ -45,6 +50,8 @@ let searchTimer: ReturnType<typeof setTimeout> | null = null;
 export const useUiStore = create<UiStore>((set) => ({
   activeView: "list",
   viewMode: "card",
+  sortMode: "default",
+  collapsedGroups: new Set<string>(),
   serverListCollapsed: false,
   settingsOpen: false,
   onboardingComplete: true, // assume complete until checked
@@ -71,6 +78,12 @@ export const useUiStore = create<UiStore>((set) => ({
   setFilterFavourites: (v) => set({ filterFavourites: v, filterGroupId: null, filterTagId: null }),
 
   setViewMode: (mode) => set({ viewMode: mode }),
+  setSortMode: (mode) => set({ sortMode: mode }),
+  toggleGroupCollapse: (groupId) => set((s) => {
+    const next = new Set(s.collapsedGroups);
+    if (next.has(groupId)) next.delete(groupId); else next.add(groupId);
+    return { collapsedGroups: next };
+  }),
   toggleServerList: () => set((s) => ({ serverListCollapsed: !s.serverListCollapsed })),
   toggleBulkMode: () => set((s) => ({ bulkMode: !s.bulkMode, bulkSelected: [] })),
   toggleSelected: (id) => set((s) => ({

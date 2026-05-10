@@ -55,6 +55,7 @@ pub fn run() {
             // Audit
             commands::audit_commands::list_audit_log,
             commands::audit_commands::export_audit_csv,
+            commands::audit_commands::get_last_connected_map,
             // Backup
             commands::backup_commands::export_backup,
             commands::backup_commands::import_backup,

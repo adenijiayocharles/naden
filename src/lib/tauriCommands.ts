@@ -169,4 +169,7 @@ export const auditCommands = {
       startDate: startDate ?? null,
       endDate: endDate ?? null,
     }),
+
+  getLastConnectedMap: () =>
+    invoke<Record<string, string>>("get_last_connected_map"),
 };

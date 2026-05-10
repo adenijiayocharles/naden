@@ -6,6 +6,7 @@ import ServerKebabMenu from "./ServerKebabMenu";
 import DeleteServerModal from "./DeleteServerModal";
 import ConnectionErrorModal from "./ConnectionErrorModal";
 import { FavouriteButton } from "./ServerCard";
+import { timeAgo } from "../../lib/format";
 
 function ReachabilityDot({ serverId }: { serverId: string }) {
   const info = useServerStore((s) => s.reachability[serverId]);
@@ -27,6 +28,10 @@ export default function ServerRow({ server }: { server: Server }) {
   const bulkSelected = useUiStore((s) => s.bulkSelected);
   const toggleSelected = useUiStore((s) => s.toggleSelected);
   const isSelected = bulkSelected.includes(server.id);
+  const groups = useServerStore((s) => s.groups);
+  const lastConnectedMap = useServerStore((s) => s.lastConnectedMap);
+  const groupColor = server.groupId ? groups.find((g) => g.id === server.groupId)?.color : undefined;
+  const lastConnected = lastConnectedMap[server.id];
 
   const handleClick = () => {
     if (bulkMode) { toggleSelected(server.id); return; }
@@ -53,7 +58,10 @@ export default function ServerRow({ server }: { server: Server }) {
           )}
         </div>
       ) : (
-        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${actions.connecting ? "bg-accent animate-pulse" : "bg-[#333]"}`} />
+        <div
+          className={`w-1.5 h-1.5 rounded-full shrink-0 ${actions.connecting ? "bg-accent animate-pulse" : ""}`}
+          style={!actions.connecting ? { backgroundColor: groupColor ?? "#333" } : undefined}
+        />
       )}
 
       <span className="w-40 shrink-0 truncate text-sm font-medium text-white" title={server.displayName}>
@@ -84,6 +92,14 @@ export default function ServerRow({ server }: { server: Server }) {
           />
         )}
         <ReachabilityDot serverId={server.id} />
+        {lastConnected && (
+          <span
+            className="text-xs text-dim font-mono hidden lg:block"
+            title={new Date(lastConnected).toLocaleString()}
+          >
+            {timeAgo(lastConnected)}
+          </span>
+        )}
         {server.isJumpHost && (
           <span className="text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded">Jump</span>
         )}
