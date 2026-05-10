@@ -118,7 +118,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                       value={password}
                       onChange={(e) => { setPassword(e.target.value); setVaultError(null); }}
                       placeholder="Master password"
-                      className="w-full bg-surface-3 border border-stroke rounded px-3 py-2 text-sm text-white placeholder-faint focus:outline-none focus:border-accent"
+                      className="w-full h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent"
                     />
                     {password.length > 0 && (
                       <div className="mt-1.5 flex items-center gap-2">
@@ -134,7 +134,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                     value={confirm}
                     onChange={(e) => { setConfirm(e.target.value); setVaultError(null); }}
                     placeholder="Confirm password"
-                    className="w-full bg-surface-3 border border-stroke rounded px-3 py-2 text-sm text-white placeholder-faint focus:outline-none focus:border-accent"
+                    className="w-full h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent"
                   />
                   {vaultError && <p className="text-xs text-red-400">{vaultError}</p>}
                 </div>

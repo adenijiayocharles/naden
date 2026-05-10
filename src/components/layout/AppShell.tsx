@@ -26,14 +26,14 @@ type PanelType = "terminal" | "sftp";
 
 const TERMINAL_STATUS_COLORS: Record<SessionStatus, string> = {
   connecting: "bg-yellow-500",
-  connected: "bg-[#CDFF00]",
+  connected: "bg-accent",
   disconnected: "bg-[#444]",
   error: "bg-red-500",
 };
 
 const SFTP_STATUS_COLORS: Record<SftpStatus, string> = {
   connecting: "bg-yellow-500",
-  connected: "bg-[#CDFF00]",
+  connected: "bg-accent",
   error: "bg-red-500",
 };
 
@@ -249,7 +249,7 @@ export default function AppShell() {
                     title={session.status === "error" && session.errorMessage ? session.errorMessage : undefined}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer shrink-0 transition-colors select-none ${
                       activePanelType === "terminal" && session.id === terminalActiveId
-                        ? "bg-surface-4 text-white"
+                        ? "bg-accent/10 text-accent"
                         : "text-muted hover:text-white hover:bg-surface-2"
                     }`}
                   >
@@ -269,12 +269,12 @@ export default function AppShell() {
                     onClick={() => { sftpSetActive(session.id); setActivePanelType("sftp"); }}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer shrink-0 transition-colors select-none ${
                       activePanelType === "sftp" && session.id === sftpActiveId
-                        ? "bg-surface-4 text-white"
+                        ? "bg-accent/10 text-accent"
                         : "text-muted hover:text-white hover:bg-surface-2"
                     }`}
                   >
                     <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${SFTP_STATUS_COLORS[session.status]}`} />
-                    <svg className="w-3 h-3 text-[#CDFF00] shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-3 h-3 text-accent shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
                     </svg>
                     <span className="max-w-[120px] truncate">{session.serverName}</span>

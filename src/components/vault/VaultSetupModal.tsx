@@ -63,7 +63,7 @@ export default function VaultSetupModal() {
               value={password}
               onChange={(e) => { setPassword(e.target.value); setError(null); }}
               placeholder="Master password"
-              className="w-full bg-surface-1 border border-stroke rounded px-4 py-3 text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
+              className="w-full h-8 bg-surface-1 border border-stroke rounded px-4 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
             />
             {password.length > 0 && (
               <div className="mt-1.5 flex items-center gap-2">
@@ -80,7 +80,7 @@ export default function VaultSetupModal() {
             value={confirm}
             onChange={(e) => { setConfirm(e.target.value); setError(null); }}
             placeholder="Confirm password"
-            className="w-full bg-surface-1 border border-stroke rounded px-4 py-3 text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
+            className="w-full h-8 bg-surface-1 border border-stroke rounded px-4 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
           />
 
           {error && <p className="text-sm text-red-400 text-center">{error}</p>}

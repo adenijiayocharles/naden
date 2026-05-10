@@ -212,7 +212,7 @@ export default function SftpBrowser({ sessionId }: Props) {
               if (e.key === "Enter") void commitRename();
               if (e.key === "Escape") setRenaming(null);
             }}
-            className="flex-1 bg-surface-3 border border-[#333] rounded px-2 py-1 text-sm text-white outline-none focus:border-accent font-mono"
+            className="flex-1 h-8 bg-surface-3 border border-[#333] rounded px-2 text-sm text-white outline-none focus:border-accent font-mono"
           />
           <button onClick={() => { void commitRename(); }} className="text-xs text-accent px-2">OK</button>
           <button onClick={() => setRenaming(null)} className="text-xs text-faint px-2">Cancel</button>

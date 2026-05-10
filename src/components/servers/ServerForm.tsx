@@ -559,7 +559,7 @@ function SelectWrapper({ children }: { children: React.ReactNode }) {
 }
 
 const input = (hasError: boolean) =>
-  `w-full bg-surface-3 border ${hasError ? "border-red-500" : "border-stroke"} rounded px-3 py-2 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors`;
+  `w-full h-8 bg-surface-3 border ${hasError ? "border-red-500" : "border-stroke"} rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors`;
 
 const select = () =>
-  "w-full appearance-none bg-surface-3 border border-stroke rounded px-3 pr-10 py-2 text-sm text-white focus:outline-none focus:border-accent transition-colors";
+  "w-full h-8 appearance-none bg-surface-3 border border-stroke rounded px-3 pr-10 text-sm text-white focus:outline-none focus:border-accent transition-colors";

@@ -20,6 +20,7 @@ interface UiStore {
   filterFavourites: boolean;
   searchQuery: string;
   searchResults: Server[] | null;
+  auditSearchQuery: string;
   bulkMode: boolean;
   bulkSelected: string[];
 
@@ -35,6 +36,7 @@ interface UiStore {
   setFilterTag: (tagId: string | null) => void;
   setFilterFavourites: (v: boolean) => void;
   setSearch: (query: string) => void;
+  setAuditSearch: (query: string) => void;
   setViewMode: (mode: ViewMode) => void;
   setSortMode: (mode: SortMode) => void;
   toggleGroupCollapse: (groupId: string) => void;
@@ -62,6 +64,7 @@ export const useUiStore = create<UiStore>((set) => ({
   filterFavourites: false,
   searchQuery: "",
   searchResults: null,
+  auditSearchQuery: "",
   bulkMode: false,
   bulkSelected: [],
 
@@ -77,6 +80,7 @@ export const useUiStore = create<UiStore>((set) => ({
   setFilterTag: (tagId) => set({ filterTagId: tagId, filterGroupId: null, filterFavourites: false }),
   setFilterFavourites: (v) => set({ filterFavourites: v, filterGroupId: null, filterTagId: null }),
 
+  setAuditSearch: (query) => set({ auditSearchQuery: query }),
   setViewMode: (mode) => set({ viewMode: mode }),
   setSortMode: (mode) => set({ sortMode: mode }),
   toggleGroupCollapse: (groupId) => set((s) => {

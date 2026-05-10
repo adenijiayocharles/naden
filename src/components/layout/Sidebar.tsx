@@ -5,6 +5,83 @@ import VaultCountdown from "./VaultCountdown";
 import { formatError } from "../../lib/errors";
 import type { Group } from "../../types/server";
 
+function GroupCreateModal({ onClose }: { onClose: () => void }) {
+  const createGroup = useServerStore((s) => s.createGroup);
+  const [name, setName] = useState("");
+  const [color, setColor] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const COLORS = ["#e53e3e","#ed8936","#ecc94b","#48bb78","#38b2ac","#4299e1","#667eea","#ed64a6","#a0aec0"];
+
+  const handleCreate = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await createGroup(name.trim(), color || undefined);
+      onClose();
+    } catch (e) {
+      setError(formatError(e));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-2xl w-full max-w-sm p-5">
+        <h3 className="text-sm font-semibold text-white mb-4">New Group</h3>
+
+        <div className="space-y-3">
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) void handleCreate(); }}
+            placeholder="Group name"
+            className="w-full h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent"
+          />
+
+          <div>
+            <p className="text-xs text-faint mb-2">Color</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              {COLORS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setColor(c)}
+                  className={`w-5 h-5 rounded-full transition-transform ${color === c ? "scale-125 ring-2 ring-white/30" : "hover:scale-110"}`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+              <button
+                onClick={() => setColor("")}
+                className={`w-5 h-5 rounded-full border transition-transform ${!color ? "scale-125 ring-2 ring-white/30 border-white/30" : "border-[#444] hover:scale-110"}`}
+              />
+            </div>
+          </div>
+
+          {error && <p className="text-xs text-red-400">{error}</p>}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 mt-5">
+          <button onClick={onClose} className="px-3 py-1.5 text-xs text-faint hover:text-white bg-surface-3 rounded transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={() => { void handleCreate(); }}
+            disabled={busy || !name.trim()}
+            className="px-3 py-1.5 text-xs text-black bg-accent hover:bg-accent-hover rounded font-semibold transition-colors disabled:opacity-40"
+          >
+            {busy ? "Creating…" : "Create"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const ClockIcon = () => (
   <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
     <circle cx="12" cy="12" r="10" />
@@ -64,7 +141,7 @@ function GroupEditModal({ group, onClose }: { group: Group; onClose: () => void 
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Group name"
-            className="w-full bg-surface-3 border border-stroke rounded px-3 py-2 text-sm text-white placeholder-faint focus:outline-none focus:border-accent"
+            className="w-full h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent"
           />
 
           <div>
@@ -116,6 +193,7 @@ export default function Sidebar() {
   const tags = useServerStore((s) => s.tags);
   const { filterGroupId, filterTagId, filterFavourites, setFilterGroup, setFilterTag, setFilterFavourites, activeView, openAudit, closeForm } = useUiStore();
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
+  const [creatingGroup, setCreatingGroup] = useState(false);
 
   const selectFilter = (fn: () => void) => () => {
     if (activeView === "audit") closeForm();
@@ -185,12 +263,22 @@ export default function Sidebar() {
           favouriteCount,
         )}
 
-        {groups.length > 0 && (
-          <div className="pt-3">
-            <p className="px-3 pb-1 text-xs font-semibold text-faint uppercase tracking-wider">
-              Groups
-            </p>
-            {groups.map((g) => (
+        <div className="pt-3">
+          <div className="flex items-center justify-between px-3 pb-1">
+            <p className="text-xs font-semibold text-faint uppercase tracking-wider">Groups</p>
+            <button
+              onClick={() => setCreatingGroup(true)}
+              className="text-dim hover:text-muted transition-colors"
+              title="New group"
+              aria-label="New group"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 14 14" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
+                <line x1="7" y1="2" x2="7" y2="12" />
+                <line x1="2" y1="7" x2="12" y2="7" />
+              </svg>
+            </button>
+          </div>
+          {groups.map((g) => (
               <div key={g.id} className="group/item flex items-center">
                 <button
                   onClick={selectFilter(() => setFilterGroup(g.id))}
@@ -227,7 +315,6 @@ export default function Sidebar() {
               </div>
             ))}
           </div>
-        )}
 
         {tags.length > 0 && (
           <div className="pt-3">
@@ -264,6 +351,9 @@ export default function Sidebar() {
 
       {editingGroup && (
         <GroupEditModal group={editingGroup} onClose={() => setEditingGroup(null)} />
+      )}
+      {creatingGroup && (
+        <GroupCreateModal onClose={() => setCreatingGroup(false)} />
       )}
     </aside>
   );

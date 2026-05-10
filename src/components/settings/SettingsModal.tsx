@@ -30,7 +30,7 @@ function PasswordInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full bg-surface-3 border border-stroke rounded px-3 py-2 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
+      className="w-full h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
     />
   );
 }
@@ -511,7 +511,7 @@ export default function SettingsModal({ onClose }: Props) {
                 value={timeoutMins}
                 onChange={(e) => saveTimeout(e.target.value)}
                 disabled={!isPasswordRequired && timeoutMins === "0"}
-                className="ml-4 bg-surface-3 border border-stroke rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-accent shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="ml-4 h-8 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {[["0","Never"],["5","5 min"],["15","15 min"],["30","30 min"],["60","1 hour"],["120","2 hours"]].map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>
@@ -612,7 +612,7 @@ export default function SettingsModal({ onClose }: Props) {
               <select
                 value={fontSize}
                 onChange={(e) => setFontSize(Number(e.target.value))}
-                className="ml-4 bg-surface-3 border border-stroke rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+                className="ml-4 h-8 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
               >
                 {[10, 12, 13, 14, 16, 18, 20].map((n) => (
                   <option key={n} value={n}>{n}px</option>
@@ -628,7 +628,7 @@ export default function SettingsModal({ onClose }: Props) {
               <select
                 value={scrollback}
                 onChange={(e) => setScrollback(Number(e.target.value))}
-                className="ml-4 bg-surface-3 border border-stroke rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+                className="ml-4 h-8 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
               >
                 {[[500,"500"],[1000,"1 000"],[5000,"5 000"],[10000,"10 000"],[50000,"50 000"]].map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>

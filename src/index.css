@@ -32,6 +32,12 @@
     font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   }
 
+  /* Uniform 32 px height for all single-line form controls */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  select {
+    height: 2rem;
+  }
+
   /* ── OLED ─────────────────────────────────────────────────── */
   [data-theme="oled"] {
     --color-surface-base: #000000;

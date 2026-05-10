@@ -15,80 +15,102 @@ export default function TopBar() {
   const bulkSelected = useUiStore((s) => s.bulkSelected);
   const sortMode = useUiStore((s) => s.sortMode);
   const setSortMode = useUiStore((s) => s.setSortMode);
+  const activeView = useUiStore((s) => s.activeView);
+  const auditSearchQuery = useUiStore((s) => s.auditSearchQuery);
+  const setAuditSearch = useUiStore((s) => s.setAuditSearch);
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const openSettings = useUiStore((s) => s.openSettings);
   const closeSettings = useUiStore((s) => s.closeSettings);
   const countdown = useVaultCountdown();
+  const isAudit = activeView === "audit";
   const [showImport, setShowImport] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
     <>
       <header className="h-14 shrink-0 border-b border-stroke-subtle bg-black flex items-center px-4 gap-3">
-        <input
-          ref={inputRef}
-          data-search-input
-          value={searchQuery}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search servers…"
-          className="flex-1 min-w-0 max-w-sm bg-surface-3 border border-stroke rounded px-3 py-1.5 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
-        />
+        {isAudit ? (
+          <input
+            value={auditSearchQuery}
+            onChange={(e) => setAuditSearch(e.target.value)}
+            placeholder="Search audit log…"
+            className="flex-1 min-w-0 max-w-sm h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
+          />
+        ) : (
+          <>
+            <div className="relative flex-1 min-w-0 max-w-sm">
+              <input
+                ref={inputRef}
+                data-search-input
+                value={searchQuery}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search servers…"
+                className="w-full h-8 bg-surface-3 border border-stroke rounded px-3 pr-12 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
+              />
+              {!searchQuery && (
+                <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-dim pointer-events-none select-none">
+                  ⌘K
+                </kbd>
+              )}
+            </div>
 
-        {/* Select toggle */}
-        <button
-          onClick={toggleBulkMode}
-          className={`px-2.5 py-1.5 rounded border text-xs transition-colors shrink-0 ${
-            bulkMode
-              ? "bg-accent/10 border-accent/30 text-accent"
-              : "bg-surface-3 border-stroke text-faint hover:text-muted"
-          }`}
-        >
-          {bulkMode ? `Cancel${bulkSelected.length > 0 ? ` (${bulkSelected.length})` : ""}` : "Select"}
-        </button>
-
-        {/* Sort mode */}
-        <select
-          value={sortMode}
-          onChange={(e) => setSortMode(e.target.value as SortMode)}
-          className="h-7 bg-surface-3 border border-stroke rounded px-2 text-xs text-faint focus:outline-none focus:border-accent shrink-0 cursor-pointer"
-        >
-          <option value="default">Sort: Default</option>
-          <option value="name_asc">Name A → Z</option>
-          <option value="name_desc">Name Z → A</option>
-          <option value="host">Host</option>
-          <option value="last_connected">Last connected</option>
-        </select>
-
-        {/* View mode toggle */}
-        <div className="flex items-center bg-surface-3 border border-stroke rounded overflow-hidden shrink-0">
-          {(["card", "row"] as ViewMode[]).map((mode) => (
+            {/* Bulk select */}
             <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              aria-label={mode === "card" ? "Card view" : "List view"}
-              className={`p-1.5 transition-colors ${
-                viewMode === mode
-                  ? "bg-[#2a2a2a] text-white"
-                  : "text-faint hover:text-muted"
+              onClick={toggleBulkMode}
+              className={`px-2.5 py-1.5 rounded border text-xs transition-colors shrink-0 ${
+                bulkMode
+                  ? "bg-accent/10 border-accent/30 text-accent"
+                  : "bg-surface-3 border-stroke text-faint hover:text-muted"
               }`}
             >
-              {mode === "card" ? (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                  <rect x="1" y="1" width="6" height="6" rx="1" />
-                  <rect x="9" y="1" width="6" height="6" rx="1" />
-                  <rect x="1" y="9" width="6" height="6" rx="1" />
-                  <rect x="9" y="9" width="6" height="6" rx="1" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
-                  <line x1="1" y1="4" x2="15" y2="4" />
-                  <line x1="1" y1="8" x2="15" y2="8" />
-                  <line x1="1" y1="12" x2="15" y2="12" />
-                </svg>
-              )}
+              {bulkMode ? `Cancel${bulkSelected.length > 0 ? ` (${bulkSelected.length})` : ""}` : "Select"}
             </button>
-          ))}
-        </div>
+
+            {/* Sort mode */}
+            <select
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as SortMode)}
+              className="h-8 bg-surface-3 border border-stroke rounded px-2 text-xs text-faint focus:outline-none focus:border-accent shrink-0 cursor-pointer"
+            >
+              <option value="default">Sort: Default</option>
+              <option value="name_asc">Name A → Z</option>
+              <option value="name_desc">Name Z → A</option>
+              <option value="host">Host</option>
+              <option value="last_connected">Last connected</option>
+            </select>
+
+            {/* View mode toggle */}
+            <div className="flex items-center bg-surface-3 border border-stroke rounded overflow-hidden shrink-0">
+              {(["card", "row"] as ViewMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  aria-label={mode === "card" ? "Card view" : "List view"}
+                  className={`p-1.5 transition-colors ${
+                    viewMode === mode
+                      ? "bg-[#2a2a2a] text-white"
+                      : "text-faint hover:text-muted"
+                  }`}
+                >
+                  {mode === "card" ? (
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                      <rect x="1" y="1" width="6" height="6" rx="1" />
+                      <rect x="9" y="1" width="6" height="6" rx="1" />
+                      <rect x="1" y="9" width="6" height="6" rx="1" />
+                      <rect x="9" y="9" width="6" height="6" rx="1" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
+                      <line x1="1" y1="4" x2="15" y2="4" />
+                      <line x1="1" y1="8" x2="15" y2="8" />
+                      <line x1="1" y1="12" x2="15" y2="12" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
 
         <div className="ml-auto flex items-center gap-2 shrink-0">
           {countdown && (
