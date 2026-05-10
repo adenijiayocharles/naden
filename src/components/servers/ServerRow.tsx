@@ -43,7 +43,7 @@ export default function ServerRow({ server }: { server: Server }) {
     <div
       onClick={handleClick}
       title={server.notes ?? undefined}
-      className={`group flex items-center gap-3 px-3 py-2.5 border-b border-[#1a1a1a] last:border-b-0 first:rounded-t-lg last:rounded-b-lg select-none transition-colors
+      className={`group flex items-center gap-3 px-3 py-2.5 border-b border-stroke-subtle last:border-b-0 first:rounded-t-lg last:rounded-b-lg select-none transition-colors
         ${isSelected ? "bg-accent/5" : ""}
         ${actions.connecting ? "opacity-60 cursor-wait bg-surface-0" : "cursor-pointer hover:bg-surface-0"}`}
     >
@@ -101,7 +101,7 @@ export default function ServerRow({ server }: { server: Server }) {
           </span>
         )}
         {server.isJumpHost && (
-          <span className="text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded">Jump</span>
+          <span className="text-xs bg-accent/10 text-accent-fg px-1.5 py-0.5 rounded">Jump</span>
         )}
         {server.tags.slice(0, 3).map((tag) => (
           <span

@@ -5,6 +5,9 @@
   --color-accent: #CDFF00;
   --color-accent-hover: #d8ff33;
   --color-accent-dim: #a8cc00;
+  /* Foreground use of accent — readable on any surface.
+     In dark themes this equals the accent; in light mode it darkens via color-mix. */
+  --color-accent-fg: var(--color-accent);
 
   /* Surfaces — 5 depth levels */
   --color-surface-base: #000000;
@@ -64,6 +67,36 @@
     --color-muted:     #8a8d91;
     --color-faint:     #606770;
     --color-dim:       #4a4d55;
+  }
+
+  /* ── Light ─────────────────────────────────────────────────── */
+  [data-theme="light"] {
+    /* Make text-white render dark — the primary text flip for light mode.
+       bg-black is NOT overridden so modal overlays (bg-black/60) and the
+       VaultLockScreen remain dark, which is correct behaviour. */
+    --color-white: #18181b;
+
+    /* Surfaces — 0 = sidebar/recessed, 4 = most elevated */
+    --color-surface-base: #e4e4e7;
+    --color-surface-0:    #e8e8eb;
+    --color-surface-1:    #f0f0f2;
+    --color-surface-2:    #f4f4f6;
+    --color-surface-3:    #f8f8fa;
+    --color-surface-4:    #ffffff;
+
+    /* Borders */
+    --color-stroke:        #d0d0d4;
+    --color-stroke-subtle: #e0e0e3;
+
+    /* Text scale — dark on light */
+    --color-secondary: #27272a;
+    --color-muted:     #52525b;
+    --color-faint:     #71717a;
+    --color-dim:       #888888;
+
+    /* Accent foreground text — mix accent with black so neon colours stay
+       readable on light surfaces regardless of which accent the user picked. */
+    --color-accent-fg: color-mix(in srgb, var(--color-accent) 60%, #000000);
   }
 }
 

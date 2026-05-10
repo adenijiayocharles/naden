@@ -35,7 +35,7 @@ export default function ServerList() {
 
   const Item = viewMode === "row" ? ServerRow : ServerCard;
   const listClass = viewMode === "row"
-    ? "border border-[#1a1a1a] rounded-lg"
+    ? "border border-stroke-subtle rounded-lg"
     : "grid gap-3 grid-cols-[repeat(auto-fill,minmax(240px,1fr))]";
 
   if (isLoading) {

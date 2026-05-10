@@ -28,7 +28,7 @@ export default function TopBar() {
 
   return (
     <>
-      <header className="h-14 shrink-0 border-b border-stroke-subtle bg-black flex items-center px-4 gap-3">
+      <header className="h-14 shrink-0 border-b border-stroke-subtle bg-surface-base flex items-center px-4 gap-3">
         {isAudit ? (
           <input
             value={auditSearchQuery}
@@ -59,7 +59,7 @@ export default function TopBar() {
               onClick={toggleBulkMode}
               className={`px-2.5 py-1.5 rounded border text-xs transition-colors shrink-0 ${
                 bulkMode
-                  ? "bg-accent/10 border-accent/30 text-accent"
+                  ? "bg-accent/10 border-accent/30 text-accent-fg"
                   : "bg-surface-3 border-stroke text-faint hover:text-muted"
               }`}
             >
@@ -88,7 +88,7 @@ export default function TopBar() {
                   aria-label={mode === "card" ? "Card view" : "List view"}
                   className={`p-1.5 transition-colors ${
                     viewMode === mode
-                      ? "bg-[#2a2a2a] text-white"
+                      ? "bg-surface-4 text-white"
                       : "text-faint hover:text-muted"
                   }`}
                 >

@@ -86,7 +86,7 @@ export default function ServerCard({ server }: { server: Server }) {
           <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
             <span className="font-medium text-white truncate">{server.displayName}</span>
             {server.isJumpHost && (
-              <span className="text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded font-medium">Jump</span>
+              <span className="text-xs bg-accent/10 text-accent-fg px-1.5 py-0.5 rounded font-medium">Jump</span>
             )}
             <ReachabilityDot serverId={server.id} />
           </div>

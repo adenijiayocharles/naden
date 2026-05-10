@@ -1,4 +1,4 @@
-export type AuthMethod = "key" | "password" | "agent";
+export type AuthMethod = "key" | "password";
 
 export interface Server {
   id: string;

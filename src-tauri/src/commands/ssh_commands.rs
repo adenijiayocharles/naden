@@ -90,7 +90,7 @@ pub(crate) async fn auth_for_server(
             };
             Ok(AuthInfo::PubKey { key_data, passphrase })
         }
-        _ => Ok(AuthInfo::Agent),
+        _ => Err(AppError::Ssh(format!("unsupported auth method: {}", s.auth_method))),
     }
 }
 

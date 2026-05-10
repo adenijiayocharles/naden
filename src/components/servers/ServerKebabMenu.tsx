@@ -129,7 +129,7 @@ export default function ServerKebabMenu({
                         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: g.color }} />
                       )}
                       {g.name}
-                      {g.id === currentGroupId && <span className="ml-auto pl-3 text-accent">✓</span>}
+                      {g.id === currentGroupId && <span className="ml-auto pl-3 text-accent-fg">✓</span>}
                     </button>
                   ))}
                 </div>

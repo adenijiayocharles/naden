@@ -56,14 +56,52 @@ export default function AppShell() {
   const terminalActiveId = useTerminalStore((s) => s.activeSessionId);
   const terminalSetActive = useTerminalStore((s) => s.setActive);
   const terminalClose = useTerminalStore((s) => s.closeSession);
+  const terminalReorder = useTerminalStore((s) => s.reorderSessions);
 
   const sftpSessions = useSftpStore((s) => s.sessions);
   const sftpActiveId = useSftpStore((s) => s.activeSessionId);
   const sftpSetActive = useSftpStore((s) => s.setActive);
   const sftpClose = useSftpStore((s) => s.closeSession);
+  const sftpReorder = useSftpStore((s) => s.reorderSessions);
 
   // Which panel type is currently in the foreground
   const [activePanelType, setActivePanelType] = useState<PanelType>("terminal");
+
+  // Drag-and-drop tab reordering
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragType, setDragType] = useState<PanelType | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  const resetDrag = () => { setDragId(null); setDragType(null); setDragOverId(null); };
+
+  const handleDragStart = (id: string, type: PanelType) => (e: React.DragEvent) => {
+    setDragId(id); setDragType(type);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (id: string, type: PanelType) => (e: React.DragEvent) => {
+    if (type !== dragType) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverId(id);
+  };
+
+  const handleDrop = (targetId: string, type: PanelType) => (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!dragId || dragType !== type || dragId === targetId) { resetDrag(); return; }
+    const move = <T extends { id: string }>(list: T[]): T[] => {
+      const from = list.findIndex((s) => s.id === dragId);
+      const to = list.findIndex((s) => s.id === targetId);
+      if (from === -1 || to === -1) return list;
+      const next = [...list];
+      next.splice(from, 1);
+      next.splice(to, 0, list[from]);
+      return next;
+    };
+    if (type === "terminal") terminalReorder(move(terminalSessions));
+    else sftpReorder(move(sftpSessions));
+    resetDrag();
+  };
 
   const hasTerminal = terminalSessions.length > 0;
   const hasSftp = sftpSessions.length > 0;
@@ -176,7 +214,7 @@ export default function AppShell() {
 
   if (isChecking) {
     return (
-      <div className="flex h-screen items-center justify-center bg-black text-muted text-sm">
+      <div className="flex h-screen items-center justify-center bg-surface-base text-muted text-sm">
         Loading…
       </div>
     );
@@ -186,7 +224,7 @@ export default function AppShell() {
   if (isSetup && !isUnlocked && isPasswordRequired) return <VaultLockScreen />;
 
   return (
-    <div className="flex h-screen bg-black text-white overflow-hidden">
+    <div className="flex h-screen bg-surface-base text-white overflow-hidden">
       <Sidebar />
 
       <div className="flex flex-col flex-1 min-w-0">
@@ -241,17 +279,25 @@ export default function AppShell() {
           {hasPanel && (
             <div className="flex flex-col flex-1 min-w-0">
               {/* Unified tab bar */}
-              <div className="h-10 bg-surface-1 border-b border-stroke-subtle flex items-center gap-1 px-2 overflow-x-auto shrink-0">
+              <div
+                className="h-10 bg-surface-1 border-b border-stroke-subtle flex items-center gap-1 px-2 overflow-x-auto shrink-0"
+                onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) resetDrag(); }}
+                onDragEnd={resetDrag}
+              >
                 {terminalSessions.map((session) => (
                   <div
                     key={session.id}
+                    draggable
+                    onDragStart={handleDragStart(session.id, "terminal")}
+                    onDragOver={handleDragOver(session.id, "terminal")}
+                    onDrop={handleDrop(session.id, "terminal")}
                     onClick={() => { terminalSetActive(session.id); setActivePanelType("terminal"); }}
                     title={session.status === "error" && session.errorMessage ? session.errorMessage : undefined}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer shrink-0 transition-colors select-none ${
                       activePanelType === "terminal" && session.id === terminalActiveId
-                        ? "bg-accent/10 text-accent"
+                        ? "bg-accent/10 text-accent-fg"
                         : "text-muted hover:text-white hover:bg-surface-2"
-                    }`}
+                    } ${dragId === session.id ? "opacity-40" : ""} ${dragOverId === session.id && dragId !== session.id ? "ring-1 ring-inset ring-accent/50" : ""}`}
                   >
                     <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${TERMINAL_STATUS_COLORS[session.status]}`} />
                     <span className="max-w-[120px] truncate">{session.serverName}</span>
@@ -263,18 +309,27 @@ export default function AppShell() {
                   </div>
                 ))}
 
+                {/* Separator between terminal and SFTP tab groups */}
+                {hasTerminal && hasSftp && (
+                  <div className="w-px h-5 bg-stroke mx-1 shrink-0" />
+                )}
+
                 {sftpSessions.map((session) => (
                   <div
                     key={session.id}
+                    draggable
+                    onDragStart={handleDragStart(session.id, "sftp")}
+                    onDragOver={handleDragOver(session.id, "sftp")}
+                    onDrop={handleDrop(session.id, "sftp")}
                     onClick={() => { sftpSetActive(session.id); setActivePanelType("sftp"); }}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer shrink-0 transition-colors select-none ${
                       activePanelType === "sftp" && session.id === sftpActiveId
-                        ? "bg-accent/10 text-accent"
+                        ? "bg-accent/10 text-accent-fg"
                         : "text-muted hover:text-white hover:bg-surface-2"
-                    }`}
+                    } ${dragId === session.id ? "opacity-40" : ""} ${dragOverId === session.id && dragId !== session.id ? "ring-1 ring-inset ring-accent/50" : ""}`}
                   >
                     <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${SFTP_STATUS_COLORS[session.status]}`} />
-                    <svg className="w-3 h-3 text-accent shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-3 h-3 text-accent-fg shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
                     </svg>
                     <span className="max-w-[120px] truncate">{session.serverName}</span>

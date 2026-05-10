@@ -27,6 +27,7 @@ interface SftpStore {
   setActive: (sessionId: string) => void;
   navigateTo: (sessionId: string, path: string) => Promise<void>;
   removeSession: (sessionId: string) => void;
+  reorderSessions: (sessions: SftpSession[]) => void;
 }
 
 function teardown(sessionId: string) {
@@ -109,6 +110,7 @@ export const useSftpStore = create<SftpStore>((set, get) => ({
   },
 
   setActive: (sessionId) => set({ activeSessionId: sessionId }),
+  reorderSessions: (sessions) => set({ sessions }),
 
   navigateTo: async (sessionId, path) => {
     set((state) => ({

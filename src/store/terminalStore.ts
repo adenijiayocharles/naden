@@ -27,6 +27,7 @@ interface TerminalStore {
   reconnectSession: (sessionId: string) => Promise<void>;
   setActive: (sessionId: string) => void;
   removeSession: (sessionId: string) => void;
+  reorderSessions: (sessions: TerminalSession[]) => void;
 }
 
 function teardownResources(sessionId: string) {
@@ -127,6 +128,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   },
 
   setActive: (sessionId) => set({ activeSessionId: sessionId }),
+  reorderSessions: (sessions) => set({ sessions }),
 
   removeSession: (sessionId) => {
     // Guard against double-removal (e.g. closeSession + terminal:closed race)

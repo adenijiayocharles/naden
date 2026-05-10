@@ -176,7 +176,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-white">Import existing servers</h2>
               <p className="text-sm text-muted">
-                If you have servers configured in <code className="text-accent">~/.ssh/config</code>, you can import them now. You can also do this later from the toolbar.
+                If you have servers configured in <code className="text-accent-fg">~/.ssh/config</code>, you can import them now. You can also do this later from the toolbar.
               </p>
               <div className="flex gap-2 pt-2">
                 <button onClick={() => setStep("vault")} className="px-4 py-2 text-sm text-faint hover:text-white transition-colors">

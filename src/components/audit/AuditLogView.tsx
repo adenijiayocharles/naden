@@ -11,7 +11,7 @@ const PAGE = 50;
 
 const OUTCOME_STYLES: Record<AuditOutcome, string> = {
   connecting: "text-yellow-400",
-  success:    "text-accent",
+  success:    "text-accent-fg",
   user_closed:"text-muted",
   failure:    "text-red-400",
   timeout:    "text-orange-400",
@@ -78,7 +78,7 @@ function sortEntries(list: AuditEntry[], col: SortCol | null, dir: SortDir): Aud
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   return (
     <svg
-      className={`w-3 h-3 shrink-0 ${active ? "text-accent" : "text-dim"}`}
+      className={`w-3 h-3 shrink-0 ${active ? "text-accent-fg" : "text-dim"}`}
       fill="none" viewBox="0 0 8 10" stroke="currentColor" strokeWidth={1.5}
       strokeLinecap="round" strokeLinejoin="round"
     >
@@ -304,7 +304,7 @@ export default function AuditLogView() {
               onClick={() => setFilterOutcome(value)}
               className={`px-2.5 py-0.5 rounded-full text-xs border transition-colors ${
                 filterOutcome === value
-                  ? "bg-accent/15 text-accent border-accent/30"
+                  ? "bg-accent/15 text-accent-fg border-accent/30"
                   : "bg-surface-3 border-stroke text-faint hover:text-muted"
               }`}
             >
@@ -335,7 +335,7 @@ export default function AuditLogView() {
             {displayed.map((e) => (
               <tr
                 key={e.id}
-                className="border-b border-[#111] hover:bg-surface-0 transition-colors"
+                className="border-b border-stroke-subtle hover:bg-surface-0 transition-colors"
                 title={e.errorMessage ?? undefined}
               >
                 <td className="px-5 py-2.5 text-muted whitespace-nowrap font-mono text-xs">

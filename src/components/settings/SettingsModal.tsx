@@ -54,7 +54,7 @@ export default function SettingsModal({ onClose }: Props) {
   const [loading, setLoading] = useState(false);
 
   // Theme
-  type Theme = "dark" | "oled" | "dim";
+  type Theme = "dark" | "oled" | "dim" | "light";
   const [theme, setTheme] = useState<Theme>("dark");
   useEffect(() => {
     settingsCommands.getSetting("theme")
@@ -296,9 +296,10 @@ export default function SettingsModal({ onClose }: Props) {
             <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Appearance</p>
             <div className="flex gap-2">
               {([
-                { id: "dark", label: "Dark", surfaces: ["#000", "#0d0d0d", "#111", "#1a1a1a"] },
-                { id: "oled", label: "OLED",  surfaces: ["#000", "#000", "#090909", "#111"] },
-                { id: "dim",  label: "Dim",   surfaces: ["#1a1b1e", "#1e2023", "#25272b", "#34373d"] },
+                { id: "dark",  label: "Dark",  surfaces: ["#000",     "#0d0d0d", "#111",    "#1a1a1a"] },
+                { id: "oled",  label: "OLED",  surfaces: ["#000",     "#000",    "#090909", "#111"]    },
+                { id: "dim",   label: "Dim",   surfaces: ["#1a1b1e",  "#1e2023", "#25272b", "#34373d"] },
+                { id: "light", label: "Light", surfaces: ["#e8e8eb",  "#f0f0f2", "#ffffff", "#f8f8fa"] },
               ] as const).map(({ id, label, surfaces }) => (
                 <button
                   key={id}
@@ -313,7 +314,7 @@ export default function SettingsModal({ onClose }: Props) {
                       <div key={i} className="flex-1 h-5 rounded" style={{ backgroundColor: c }} />
                     ))}
                   </div>
-                  <p className={`text-xs font-medium ${theme === id ? "text-accent" : "text-secondary"}`}>{label}</p>
+                  <p className={`text-xs font-medium ${theme === id ? "text-accent-fg" : "text-secondary"}`}>{label}</p>
                 </button>
               ))}
             </div>

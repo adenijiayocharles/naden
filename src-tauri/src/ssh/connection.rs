@@ -32,7 +32,6 @@ pub type OnCloseCallback = Box<dyn FnOnce(String, Option<String>) + Send>;
 pub enum AuthInfo {
     Password(String),
     PubKey { key_data: String, passphrase: Option<String> },
-    Agent,
 }
 
 enum SessionMessage {
@@ -125,21 +124,6 @@ impl SessionManager {
     }
 }
 
-fn auth_via_agent(session: &mut ssh2::Session, username: &str) -> Result<(), ssh2::Error> {
-    let mut agent = session.agent()?;
-    agent.connect()?;
-    agent.list_identities()?;
-    for identity in agent.identities()? {
-        if agent.userauth(username, &identity).is_ok() {
-            return Ok(());
-        }
-    }
-    Err(ssh2::Error::new(
-        ssh2::ErrorCode::Session(-18),
-        "no matching key found in SSH agent",
-    ))
-}
-
 /// Authenticate `session` for `username` using `auth`.
 /// Used by both the main session and jump-host hops.
 pub fn authenticate_session(
@@ -156,24 +140,17 @@ pub fn authenticate_session(
         AuthInfo::PubKey { key_data, passphrase } => {
             match session.userauth_pubkey_memory(username, None, key_data, passphrase.as_deref()) {
                 Ok(()) => {}
-                // LIBSSH2_ERROR_FILE (-16): key format unsupported; fall back to agent.
+                // LIBSSH2_ERROR_FILE (-16): key format not supported by libssh2.
                 Err(ref e) if matches!(e.code(), ssh2::ErrorCode::Session(-16)) => {
-                    auth_via_agent(session, username).map_err(|_| {
-                        AppError::Ssh(
-                            "Private key format not supported by the local libssh2 \
-                             (OpenSSH format requires libssh2 ≥1.9 + OpenSSL). \
-                             Add the key to your SSH agent (`ssh-add <keyfile>`) \
-                             and set the server auth method to 'Agent'."
-                                .into(),
-                        )
-                    })?;
+                    return Err(AppError::Ssh(
+                        "Private key format not supported. OpenSSH keys require libssh2 ≥1.9 \
+                         compiled with OpenSSL. Try converting the key: \
+                         ssh-keygen -p -m PEM -f <keyfile>"
+                            .into(),
+                    ));
                 }
                 Err(e) => return Err(AppError::Ssh(format!("Key auth failed: {e}"))),
             }
-        }
-        AuthInfo::Agent => {
-            auth_via_agent(session, username)
-                .map_err(|e| AppError::Ssh(format!("Agent auth failed: {e}")))?;
         }
     }
     Ok(())

@@ -214,7 +214,7 @@ export default function SftpBrowser({ sessionId }: Props) {
             }}
             className="flex-1 h-8 bg-surface-3 border border-[#333] rounded px-2 text-sm text-white outline-none focus:border-accent font-mono"
           />
-          <button onClick={() => { void commitRename(); }} className="text-xs text-accent px-2">OK</button>
+          <button onClick={() => { void commitRename(); }} className="text-xs text-accent-fg px-2">OK</button>
           <button onClick={() => setRenaming(null)} className="text-xs text-faint px-2">Cancel</button>
         </div>
       )}
@@ -234,7 +234,7 @@ export default function SftpBrowser({ sessionId }: Props) {
             placeholder="folder-name"
             className="flex-1 bg-surface-3 border border-[#333] rounded px-2 py-1 text-sm text-white outline-none focus:border-accent font-mono placeholder-[#444]"
           />
-          <button onClick={() => { void commitNewFolder(); }} className="text-xs text-accent px-2">Create</button>
+          <button onClick={() => { void commitNewFolder(); }} className="text-xs text-accent-fg px-2">Create</button>
           <button onClick={() => setCreatingFolder(false)} className="text-xs text-faint px-2">Cancel</button>
         </div>
       )}
@@ -250,7 +250,7 @@ export default function SftpBrowser({ sessionId }: Props) {
       {/* Transfer progress */}
       {transferProgress && (
         <div className="px-4 py-2 bg-[#0f1a0a] border-b border-stroke-subtle flex items-center gap-3 text-xs text-muted">
-          <svg className="w-3 h-3 animate-spin text-accent shrink-0" fill="none" viewBox="0 0 24 24">
+          <svg className="w-3 h-3 animate-spin text-accent-fg shrink-0" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>

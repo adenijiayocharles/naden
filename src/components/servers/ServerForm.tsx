@@ -294,7 +294,6 @@ export default function ServerForm() {
               >
                 <option value="key">SSH Key</option>
                 <option value="password">Password</option>
-                <option value="agent">SSH Agent</option>
               </select>
             </SelectWrapper>
           </Field>
@@ -420,7 +419,7 @@ export default function ServerForm() {
                 type="checkbox"
                 checked={form.isJumpHost}
                 onChange={set("isJumpHost")}
-                className="rounded border-stroke bg-surface-3 text-accent"
+                className="rounded border-stroke bg-surface-3 text-accent-fg"
               />
               <span className="text-sm text-secondary">This server is a jump host / bastion</span>
             </label>
@@ -465,7 +464,7 @@ export default function ServerForm() {
                       <span key={i} className="flex items-center gap-1">
                         <span className={i === 0 || i === chain.length - 1
                           ? "text-muted"
-                          : "text-accent font-medium"}>
+                          : "text-accent-fg font-medium"}>
                           {label}
                         </span>
                         {i < chain.length - 1 && <span className="text-dim">→</span>}
