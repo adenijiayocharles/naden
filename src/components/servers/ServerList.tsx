@@ -39,6 +39,24 @@ export default function ServerList() {
     ? "border border-stroke-subtle rounded-lg"
     : "grid gap-3 grid-cols-[repeat(auto-fill,minmax(240px,1fr))]";
 
+  // All hooks must be called before any early return.
+  const sortedSearch = useMemo(
+    () => sortServers(searchResults ?? [], sortMode, lastConnectedMap),
+    [searchResults, sortMode, lastConnectedMap],
+  );
+
+  const filtered = useMemo(() => {
+    if (filterFavourites) return servers.filter((s) => s.isFavourite);
+    if (filterGroupId) return servers.filter((s) => s.groupId === filterGroupId);
+    if (filterTagId) return servers.filter((s) => s.tags.some((t) => t.id === filterTagId));
+    return servers;
+  }, [servers, filterFavourites, filterGroupId, filterTagId]);
+
+  const sortedFiltered = useMemo(
+    () => sortServers(filtered, sortMode, lastConnectedMap),
+    [filtered, sortMode, lastConnectedMap],
+  );
+
   if (isLoading) {
     return (
       <div className={listClass}>
@@ -66,24 +84,6 @@ export default function ServerList() {
       </div>
     );
   }
-
-  // All sorted lists — computed once per render cycle when inputs change.
-  const sortedSearch = useMemo(
-    () => sortServers(searchResults ?? [], sortMode, lastConnectedMap),
-    [searchResults, sortMode, lastConnectedMap],
-  );
-
-  const filtered = useMemo(() => {
-    if (filterFavourites) return servers.filter((s) => s.isFavourite);
-    if (filterGroupId) return servers.filter((s) => s.groupId === filterGroupId);
-    if (filterTagId) return servers.filter((s) => s.tags.some((t) => t.id === filterTagId));
-    return servers;
-  }, [servers, filterFavourites, filterGroupId, filterTagId]);
-
-  const sortedFiltered = useMemo(
-    () => sortServers(filtered, sortMode, lastConnectedMap),
-    [filtered, sortMode, lastConnectedMap],
-  );
 
   // Search takes priority over all filters/sorting
   if (searchQuery.trim()) {
