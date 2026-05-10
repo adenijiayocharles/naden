@@ -138,13 +138,19 @@ pub fn authenticate_session(
                 .map_err(|e| AppError::Ssh(format!("Password auth failed: {e}")))?;
         }
         AuthInfo::PubKey { key_data, passphrase } => {
-            // LIBSSH2_ERROR_FILE (-16) is returned for both "unrecognised format" and
-            // "encrypted key but wrong/missing passphrase". Distinguish early so the
-            // user gets a clear action item rather than a generic file error.
+            // If the key is passphrase-protected and no passphrase is stored, try the
+            // system SSH agent first. On macOS the agent holds keys whose passphrases
+            // are stored in the Keychain, so `ssh` in the terminal never prompts —
+            // we want the same behaviour.
             if passphrase.is_none() && key_is_encrypted(key_data) {
+                if session.userauth_agent(username).is_ok() && session.authenticated() {
+                    return Ok(());
+                }
                 return Err(AppError::Ssh(
-                    "This private key is passphrase-protected. \
-                     Edit the server and enter the key passphrase in the password field."
+                    "This private key is passphrase-protected and the SSH agent does not \
+                     have it loaded. Either:\n\
+                     • Run `ssh-add ~/.ssh/id_ed25519` to add it to the agent, or\n\
+                     • Edit the server and enter the passphrase in the password field."
                         .into(),
                 ));
             }
