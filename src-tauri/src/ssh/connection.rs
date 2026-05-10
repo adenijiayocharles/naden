@@ -167,12 +167,18 @@ pub fn authenticate_session(
 
 /// Returns `true` if the key material requires a passphrase to decrypt.
 ///
-/// Handles both traditional PEM (looks for "ENCRYPTED" in the header line)
-/// and the modern OpenSSH private key format (parses the cipher field from the
-/// binary blob — "none" means unencrypted, anything else means encrypted).
+/// Handles both traditional PEM (looks for the specific header lines that
+/// OpenSSL/OpenSSH write for encrypted keys) and the modern OpenSSH binary format
+/// (parses the cipher field — "none" means unencrypted, anything else means encrypted).
 fn key_is_encrypted(pem: &str) -> bool {
-    // Traditional PEM: "Proc-Type: 4,ENCRYPTED" appears in the headers.
-    if pem.contains("ENCRYPTED") {
+    // Traditional encrypted PEM keys include this header line.
+    // Checking for the full "Proc-Type: 4,ENCRYPTED" header avoids false positives
+    // from the word "ENCRYPTED" appearing coincidentally in the base64-encoded key body.
+    if pem.contains("Proc-Type: 4,ENCRYPTED") {
+        return true;
+    }
+    // PKCS#8 encrypted format uses this specific PEM label.
+    if pem.contains("BEGIN ENCRYPTED PRIVATE KEY") {
         return true;
     }
     if !pem.contains("BEGIN OPENSSH PRIVATE KEY") {

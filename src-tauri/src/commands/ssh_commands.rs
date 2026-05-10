@@ -76,14 +76,34 @@ pub(crate) async fn auth_for_server(
             let key_path_raw = s
                 .identity_file_path
                 .as_deref()
-                .ok_or_else(|| AppError::Ssh("no identity file path for key auth".into()))?;
+                .ok_or_else(|| AppError::Ssh(
+                    "No identity file configured. Edit the server and set the SSH key path.".into()
+                ))?;
             let key_path = expand_path(key_path_raw, app);
             let key_data = tokio::fs::read_to_string(&key_path).await.map_err(|e| {
                 AppError::Ssh(format!(
-                    "failed to read key file {}: {e}",
+                    "Cannot read key file \"{}\": {e}",
                     key_path.display()
                 ))
             })?;
+
+            // Catch common mistake: user pointed at the public key (.pub) instead of private.
+            if key_data.contains(" PUBLIC KEY-----") {
+                return Err(AppError::Ssh(format!(
+                    "\"{}\" is a public key file. \
+                     Edit the server and set the identity file to the private key \
+                     (the file without the .pub extension).",
+                    key_path.display()
+                )));
+            }
+            if !key_data.contains("PRIVATE KEY") {
+                return Err(AppError::Ssh(format!(
+                    "\"{}\" does not look like an SSH private key. \
+                     Check the identity file path in the server settings.",
+                    key_path.display()
+                )));
+            }
+
             let passphrase = if let Some(vid) = &s.vault_credential_id {
                 if state.vault_key.lock().await.is_some() {
                     vault::retrieve_credential(vid).await.ok()
