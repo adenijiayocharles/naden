@@ -176,6 +176,12 @@ pub async fn confirm_ssh_config_import(
         };
         created.push(queries::create_server_db(&state.db, &payload).await?);
     }
+
+    // Flush the in-memory cache so list_servers returns the newly imported entries.
+    if let Ok(fresh) = queries::list_servers_db(&state.db).await {
+        *state.server_cache.write().await = fresh;
+    }
+
     Ok(created)
 }
 
