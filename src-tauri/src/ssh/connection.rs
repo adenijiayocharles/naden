@@ -138,13 +138,23 @@ pub fn authenticate_session(
                 .map_err(|e| AppError::Ssh(format!("Password auth failed: {e}")))?;
         }
         AuthInfo::PubKey { key_data, passphrase } => {
+            // LIBSSH2_ERROR_FILE (-16) is returned for both "unrecognised format" and
+            // "encrypted key but wrong/missing passphrase". Distinguish early so the
+            // user gets a clear action item rather than a generic file error.
+            if passphrase.is_none() && key_is_encrypted(key_data) {
+                return Err(AppError::Ssh(
+                    "This private key is passphrase-protected. \
+                     Edit the server and enter the key passphrase in the password field."
+                        .into(),
+                ));
+            }
+
             match session.userauth_pubkey_memory(username, None, key_data, passphrase.as_deref()) {
                 Ok(()) => {}
-                // LIBSSH2_ERROR_FILE (-16): key file could not be parsed.
                 Err(ref e) if matches!(e.code(), ssh2::ErrorCode::Session(-16)) => {
                     return Err(AppError::Ssh(
-                        "Could not read the private key file. \
-                         Check that the path is correct and the file is a valid SSH private key."
+                        "Could not load the private key. \
+                         The passphrase may be incorrect, or the key file may be corrupted."
                             .into(),
                     ));
                 }
@@ -153,6 +163,45 @@ pub fn authenticate_session(
         }
     }
     Ok(())
+}
+
+/// Returns `true` if the key material requires a passphrase to decrypt.
+///
+/// Handles both traditional PEM (looks for "ENCRYPTED" in the header line)
+/// and the modern OpenSSH private key format (parses the cipher field from the
+/// binary blob — "none" means unencrypted, anything else means encrypted).
+fn key_is_encrypted(pem: &str) -> bool {
+    // Traditional PEM: "Proc-Type: 4,ENCRYPTED" appears in the headers.
+    if pem.contains("ENCRYPTED") {
+        return true;
+    }
+    if !pem.contains("BEGIN OPENSSH PRIVATE KEY") {
+        return false;
+    }
+    // OpenSSH binary format:
+    //   "openssh-key-v1\0"  (16 bytes magic)
+    //   uint32 + cipher_name
+    //   uint32 + kdf_name
+    //   ...
+    // If cipher_name == "none" the key is unencrypted.
+    let b64: String = pem
+        .lines()
+        .filter(|l| !l.starts_with("-----"))
+        .collect::<Vec<_>>()
+        .join("");
+    let Ok(data) = base64::engine::general_purpose::STANDARD.decode(b64.trim()) else {
+        return false;
+    };
+    const MAGIC: &[u8] = b"openssh-key-v1\0";
+    if !data.starts_with(MAGIC) || data.len() < MAGIC.len() + 4 {
+        return false;
+    }
+    let pos = MAGIC.len();
+    let cipher_len = u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]])
+        as usize;
+    let cipher_start = pos + 4;
+    data.len() >= cipher_start + cipher_len
+        && &data[cipher_start..cipher_start + cipher_len] != b"none"
 }
 
 #[allow(clippy::too_many_arguments)]
