@@ -27,7 +27,11 @@ log = "0.4"
 tokio = { version = "1", features = ["full"] }
 sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio", "migrate", "chrono"] }
 keyring = { version = "3", features = ["apple-native", "windows-native"] }
-ssh2 = "0.9"
+ssh2 = { version = "0.9", features = ["vendored-openssl"] }
+# Force libssh2 to compile from source linked against vendored OpenSSL rather than
+# macOS Secure Transport, giving full OpenSSH key format support (Ed25519, ECDSA,
+# and modern RSA keys in "-----BEGIN OPENSSH PRIVATE KEY-----" format).
+libssh2-sys = { version = "0.3", features = ["vendored-openssl"] }
 ssh2-config = "0"
 nucleo = "0"
 nucleo-matcher = "0.3"

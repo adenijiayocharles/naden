@@ -140,12 +140,11 @@ pub fn authenticate_session(
         AuthInfo::PubKey { key_data, passphrase } => {
             match session.userauth_pubkey_memory(username, None, key_data, passphrase.as_deref()) {
                 Ok(()) => {}
-                // LIBSSH2_ERROR_FILE (-16): key format not supported by libssh2.
+                // LIBSSH2_ERROR_FILE (-16): key file could not be parsed.
                 Err(ref e) if matches!(e.code(), ssh2::ErrorCode::Session(-16)) => {
                     return Err(AppError::Ssh(
-                        "Private key format not supported. OpenSSH keys require libssh2 ≥1.9 \
-                         compiled with OpenSSL. Try converting the key: \
-                         ssh-keygen -p -m PEM -f <keyfile>"
+                        "Could not read the private key file. \
+                         Check that the path is correct and the file is a valid SSH private key."
                             .into(),
                     ));
                 }
