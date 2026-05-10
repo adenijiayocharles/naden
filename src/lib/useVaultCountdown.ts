@@ -1,19 +1,14 @@
 import { useEffect, useState } from "react";
 import { useVaultStore } from "../store/vaultStore";
-import { settingsCommands } from "./tauriCommands";
+import { useUiStore } from "../store/uiStore";
 import { getLastHeartbeatMs } from "./vaultActivity";
 
 export function useVaultCountdown() {
   const isUnlocked = useVaultStore((s) => s.isUnlocked);
   const isPasswordRequired = useVaultStore((s) => s.isPasswordRequired);
-  const [timeoutMins, setTimeoutMins] = useState(0);
+  // Read timeout reactively from the store so changes in Settings take effect immediately.
+  const timeoutMins = useUiStore((s) => s.vaultTimeoutMins);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
-
-  useEffect(() => {
-    settingsCommands.getSetting("vault_timeout_minutes")
-      .then((v) => setTimeoutMins(Number(v ?? "0")))
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     if (!isUnlocked || !isPasswordRequired || timeoutMins === 0) {

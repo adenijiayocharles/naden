@@ -1,6 +1,13 @@
 use crate::error::AppError;
 use crate::AppState;
 
+const ALLOWED_SETTINGS: &[&str] = &[
+    "vault_timeout_minutes",
+    "theme",
+    "accent",
+    "onboarding_complete",
+];
+
 #[tauri::command]
 pub async fn get_setting(
     key: String,
@@ -20,6 +27,9 @@ pub async fn set_setting(
     value: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
+    if !ALLOWED_SETTINGS.contains(&key.as_str()) {
+        return Err(AppError::Validation(format!("unknown setting key: {key}")));
+    }
     sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
         .bind(&key)
         .bind(&value)

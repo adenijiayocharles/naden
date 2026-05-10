@@ -62,10 +62,15 @@ pub(crate) async fn auth_for_server(
                 .vault_credential_id
                 .as_deref()
                 .ok_or_else(|| AppError::Vault("no vault credential for password auth".into()))?;
-            if state.vault_key.lock().await.is_none() {
+            // Hold the lock across the retrieval so the auto-lock task cannot fire
+            // in the window between the is_none() check and retrieve_credential().
+            let guard = state.vault_key.lock().await;
+            if guard.is_none() {
                 return Err(AppError::Vault("vault is locked".into()));
             }
-            Ok(AuthInfo::Password(vault::retrieve_credential(vault_id).await?))
+            let password = vault::retrieve_credential(vault_id).await?;
+            drop(guard);
+            Ok(AuthInfo::Password(password))
         }
         "key" => {
             let key_path_raw = s

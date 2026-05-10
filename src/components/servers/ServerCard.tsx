@@ -26,7 +26,7 @@ export function FavouriteButton({ isFavourite, onToggle }: { isFavourite: boolea
   );
 }
 
-function ReachabilityDot({ serverId }: { serverId: string }) {
+export function ReachabilityDot({ serverId }: { serverId: string }) {
   const info = useServerStore((s) => s.reachability[serverId]);
   if (!info) return null;
   if (info.checking) {
@@ -34,7 +34,7 @@ function ReachabilityDot({ serverId }: { serverId: string }) {
   }
   return (
     <span
-      className={`w-1.5 h-1.5 rounded-full shrink-0 ${info.reachable ? "bg-[#CDFF00]" : "bg-red-500"}`}
+      className={`w-1.5 h-1.5 rounded-full shrink-0 ${info.reachable ? "bg-accent" : "bg-red-500"}`}
       title={info.reachable ? `Reachable${info.latencyMs != null ? ` (${info.latencyMs}ms)` : ""}` : "Unreachable"}
     />
   );

@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { save, open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useVaultStore } from "../../store/vaultStore";
 import { useServerStore } from "../../store/serverStore";
+import { useUiStore } from "../../store/uiStore";
 import { useTerminalSettings } from "../../lib/terminalSettings";
 import { backupCommands, settingsCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
+import { passwordStrength } from "../../lib/passwordStrength";
 
 interface Props {
   onClose: () => void;
@@ -35,17 +37,10 @@ function PasswordInput({
   );
 }
 
-function strength(pwd: string): { label: string; color: string; pct: string } {
-  if (pwd.length === 0) return { label: "", color: "bg-surface-4", pct: "0%" };
-  if (pwd.length < 8)   return { label: "Too short", color: "bg-red-500",    pct: "25%" };
-  if (pwd.length < 12)  return { label: "Weak",      color: "bg-orange-500", pct: "50%" };
-  if (pwd.length < 16)  return { label: "Moderate",  color: "bg-yellow-400", pct: "75%" };
-  return                       { label: "Strong",    color: "bg-accent",     pct: "100%" };
-}
-
 export default function SettingsModal({ onClose }: Props) {
   const { isPasswordRequired, disablePassword, enablePassword, changePassword } = useVaultStore();
   const fetchAll = useServerStore((s) => s.fetchAll);
+  const setVaultTimeoutMins = useUiStore((s) => s.setVaultTimeoutMins);
   const { fontSize, scrollback, copyOnSelect, setFontSize, setScrollback, setCopyOnSelect } =
     useTerminalSettings();
   const [activeForm, setActiveForm] = useState<ActiveForm>("none");
@@ -100,9 +95,14 @@ export default function SettingsModal({ onClose }: Props) {
   const [timeoutMins, setTimeoutMins] = useState("0");
   useEffect(() => {
     settingsCommands.getSetting("vault_timeout_minutes")
-      .then((v) => { if (v !== null) setTimeoutMins(v); })
+      .then((v) => {
+        if (v !== null) {
+          setTimeoutMins(v);
+          setVaultTimeoutMins(Number(v));
+        }
+      })
       .catch(() => {});
-  }, []);
+  }, [setVaultTimeoutMins]);
   const [autoLockNeedsPassword, setAutoLockNeedsPassword] = useState(false);
   const saveTimeout = (v: string) => {
     if (v !== "0" && !isPasswordRequired) {
@@ -111,6 +111,7 @@ export default function SettingsModal({ onClose }: Props) {
     }
     setAutoLockNeedsPassword(false);
     setTimeoutMins(v);
+    setVaultTimeoutMins(Number(v));
     settingsCommands.setSetting("vault_timeout_minutes", v).catch(() => {});
   };
 
@@ -263,7 +264,7 @@ export default function SettingsModal({ onClose }: Props) {
   };
 
   const { label: strengthLabel, color: strengthColor, pct: strengthPct } =
-    strength(activeForm === "enable" ? enablePwd : changeNew);
+    passwordStrength(activeForm === "enable" ? enablePwd : changeNew);
 
   return (
     <div

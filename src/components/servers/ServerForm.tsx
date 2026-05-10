@@ -177,13 +177,15 @@ export default function ServerForm() {
     if (!validate()) return;
 
     setSubmitting(true);
+    let freshCredentialId: string | undefined;
     try {
       // Store password in vault if provided, reuse existing credential ID otherwise
       let vaultCredentialId: string | undefined = isEdit
         ? existingServer?.vaultCredentialId
         : undefined;
       if (form.authMethod === "password" && password.trim()) {
-        vaultCredentialId = await vaultCommands.storeCredential(password.trim());
+        freshCredentialId = await vaultCommands.storeCredential(password.trim());
+        vaultCredentialId = freshCredentialId;
       }
 
       const payload = {
@@ -209,6 +211,10 @@ export default function ServerForm() {
       setSaved(true);
       setTimeout(closeForm, 600);
     } catch (e) {
+      // Clean up the freshly-stored credential if the server row was never created.
+      if (freshCredentialId) {
+        vaultCommands.deleteCredential(freshCredentialId).catch(() => {});
+      }
       setErrors((errs) => ({ ...errs, submit: formatError(e) }));
     } finally {
       setSubmitting(false);
@@ -236,7 +242,7 @@ export default function ServerForm() {
         </div>
 
         {/* Form */}
-        <form onSubmit={(e) => { void handleSubmit(e); }} className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+        <form id="server-form" onSubmit={(e) => { void handleSubmit(e); }} className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
           {/* Display Name */}
           <Field label="Display Name" error={errors.displayName} required>
             <input
@@ -505,7 +511,8 @@ export default function ServerForm() {
             Cancel
           </button>
           <button
-            onClick={(e) => { void handleSubmit(e as unknown as React.FormEvent); }}
+            type="submit"
+            form="server-form"
             disabled={submitting}
             className="px-4 py-2 text-sm text-black bg-accent hover:bg-accent-hover rounded font-semibold transition-colors disabled:opacity-50"
           >

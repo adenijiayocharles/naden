@@ -187,6 +187,12 @@ pub async fn update_server_db(
     let vault_credential_id = payload.vault_credential_id.as_deref()
         .or(s.vault_credential_id.as_deref());
 
+    // Normalise empty strings to NULL for nullable optional fields so callers can
+    // clear group_id / identity_file_path by sending Some("") without breaking
+    // IS NULL queries (e.g. ungrouped server lookup).
+    let group_id = payload.group_id.as_deref().filter(|v| !v.is_empty());
+    let identity_file_path = payload.identity_file_path.as_deref().filter(|v| !v.is_empty());
+
     sqlx::query(
         "UPDATE servers SET
          display_name = ?, hostname = ?, port = ?, username = ?, auth_method = ?,
@@ -199,9 +205,9 @@ pub async fn update_server_db(
     .bind(port)
     .bind(payload.username.as_deref().unwrap_or(&s.username))
     .bind(payload.auth_method.as_deref().unwrap_or(&s.auth_method))
-    .bind(payload.identity_file_path.as_deref())
+    .bind(identity_file_path)
     .bind(vault_credential_id)
-    .bind(payload.group_id.as_deref())
+    .bind(group_id)
     .bind(payload.notes.as_deref())
     .bind(payload.is_jump_host.unwrap_or(s.is_jump_host))
     .bind(payload.jump_host_id.as_deref())

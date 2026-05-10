@@ -32,6 +32,7 @@
 
 @layer base {
   html {
+    font-size: 14px;
     font-family: -apple-system, "SF Pro Display", "SF Pro Text", BlinkMacSystemFont, system-ui, sans-serif;
   }
 

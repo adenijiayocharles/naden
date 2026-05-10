@@ -23,6 +23,7 @@ interface UiStore {
   auditSearchQuery: string;
   bulkMode: boolean;
   bulkSelected: string[];
+  vaultTimeoutMins: number;
 
   openAdd: () => void;
   openEdit: (serverId: string) => void;
@@ -45,6 +46,7 @@ interface UiStore {
   toggleSelected: (id: string) => void;
   selectAll: (ids: string[]) => void;
   clearSelected: () => void;
+  setVaultTimeoutMins: (mins: number) => void;
 }
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -67,6 +69,7 @@ export const useUiStore = create<UiStore>((set) => ({
   auditSearchQuery: "",
   bulkMode: false,
   bulkSelected: [],
+  vaultTimeoutMins: 0,
 
   openAdd: () => set({ activeView: "add", editingServerId: null }),
   openEdit: (serverId) => set({ activeView: "edit", editingServerId: serverId }),
@@ -97,6 +100,7 @@ export const useUiStore = create<UiStore>((set) => ({
   })),
   selectAll: (ids) => set({ bulkSelected: ids }),
   clearSelected: () => set({ bulkSelected: [] }),
+  setVaultTimeoutMins: (mins) => set({ vaultTimeoutMins: mins }),
 
   setSearch: (query) => {
     set({ searchQuery: query });

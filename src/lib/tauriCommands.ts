@@ -119,6 +119,9 @@ export const vaultCommands = {
 
   retrieveCredential: (vaultCredentialId: string) =>
     invoke<string>("retrieve_credential", { vaultCredentialId }),
+
+  deleteCredential: (vaultCredentialId: string) =>
+    invoke<void>("delete_credential", { vaultCredentialId }),
 };
 
 export const sftpCommands = {

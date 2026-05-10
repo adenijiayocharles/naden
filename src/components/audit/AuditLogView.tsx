@@ -114,6 +114,10 @@ export default function AuditLogView() {
   // sees it immediately (state updates are asynchronous, refs are not).
   const resettingRef = useRef(false);
 
+  // Synchronous loading guard — prevents a fast IntersectionObserver from
+  // firing twice before setLoading(true) has caused a re-render.
+  const loadingRef = useRef(false);
+
   // Always-current snapshot of entries for the append load offset.
   const entriesRef = useRef<AuditEntry[]>([]);
   entriesRef.current = entries;
@@ -159,11 +163,12 @@ export default function AuditLogView() {
     if (!sentinel) return;
 
     const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting || resettingRef.current) return;
+      if (!entry.isIntersecting || resettingRef.current || loadingRef.current) return;
 
       const { filterServer: fs, filterStart: fst, filterEnd: fe } = filtersRef.current;
       const offset = entriesRef.current.length;
 
+      loadingRef.current = true;
       setLoading(true);
       void (async () => {
         try {
@@ -176,6 +181,7 @@ export default function AuditLogView() {
         } catch (e) {
           setError(formatError(e));
         } finally {
+          loadingRef.current = false;
           setLoading(false);
         }
       })();
@@ -316,6 +322,13 @@ export default function AuditLogView() {
 
       {error && (
         <p className="text-sm text-red-400 px-5 py-2 border-b border-stroke-subtle shrink-0">{error}</p>
+      )}
+
+      {/* Outcome filter is client-side only — results come from the already-loaded page */}
+      {filterOutcome && (
+        <div className="px-5 py-1.5 bg-surface-0 border-b border-stroke-subtle text-xs text-faint shrink-0">
+          Showing from loaded entries only — scroll down to load more, then re-apply.
+        </div>
       )}
 
       {/* Table */}

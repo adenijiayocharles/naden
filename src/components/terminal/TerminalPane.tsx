@@ -6,6 +6,7 @@ import { terminalCommands } from "../../lib/tauriCommands";
 import { sessionBuffer } from "../../lib/sessionBuffer";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useTerminalSettings } from "../../lib/terminalSettings";
+import { ConnectingOverlay, ErrorOverlay } from "../shared/ConnectionOverlay";
 
 interface Props {
   sessionId: string;
@@ -49,18 +50,25 @@ export default function TerminalPane({ sessionId }: Props) {
     // Read settings at terminal creation time — changes apply to new sessions
     const { fontSize, scrollback, copyOnSelect } = useTerminalSettings.getState();
 
+    const getTermTheme = () => {
+      const root = document.documentElement;
+      const bg = getComputedStyle(root).getPropertyValue("--color-surface-1").trim() || "#111111";
+      const accent = getComputedStyle(root).getPropertyValue("--color-accent").trim() || "#CDFF00";
+      return {
+        background: bg,
+        foreground: "#e0e0e0",
+        cursor: accent,
+        cursorAccent: "#000000",
+        selectionBackground: `${accent}30`,
+      };
+    };
+
     const term = new Terminal({
       cursorBlink: true,
       fontFamily: "JetBrains Mono, Menlo, Consolas, monospace",
       fontSize,
       scrollback,
-      theme: {
-        background: "#0d0d0d",
-        foreground: "#e0e0e0",
-        cursor: "#CDFF00",
-        cursorAccent: "#000000",
-        selectionBackground: "#CDFF0030",
-      },
+      theme: getTermTheme(),
     });
 
     const fitAddon = new FitAddon();
@@ -116,7 +124,7 @@ export default function TerminalPane({ sessionId }: Props) {
     });
 
     // Rate-limit PTY resize to ≤1/100ms (xterm fires continuously during drag)
-    const observer = new ResizeObserver(() => {
+    const resizeObserver = new ResizeObserver(() => {
       if (resizeTimer.current) clearTimeout(resizeTimer.current);
       resizeTimer.current = setTimeout(() => {
         fitAddon.fit();
@@ -124,13 +132,23 @@ export default function TerminalPane({ sessionId }: Props) {
         if (dims) terminalCommands.resizeTerminal(sessionId, dims.cols, dims.rows).catch(() => {});
       }, 100);
     });
-    observer.observe(containerRef.current);
+    resizeObserver.observe(containerRef.current);
+
+    // Update terminal colours when the app theme or accent changes.
+    const themeObserver = new MutationObserver(() => {
+      term.options.theme = getTermTheme();
+    });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme", "style"],
+    });
 
     return () => {
       if (resizeTimer.current) clearTimeout(resizeTimer.current);
       searchAddonRef.current = null;
       unsub();
-      observer.disconnect();
+      resizeObserver.disconnect();
+      themeObserver.disconnect();
       dataDisposer.dispose();
       selectionDisposer?.dispose();
       term.dispose();
@@ -169,50 +187,18 @@ export default function TerminalPane({ sessionId }: Props) {
         </div>
       )}
 
-      {/* Connecting overlay */}
       {isConnecting && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-0 gap-4">
-          <p className="text-faint text-sm tracking-wide">
-            Connecting to{" "}
-            <span className="text-white font-medium">{session?.serverName}</span>…
-          </p>
-          <div className="relative w-48 h-0.5 bg-surface-4 rounded-full overflow-hidden">
-            <div
-              className="absolute top-0 h-full bg-accent rounded-full"
-              style={{ animation: "progress-slide 1.2s ease-in-out infinite" }}
-            />
-          </div>
-          <button
-            onClick={() => { void closeSession(sessionId); }}
-            className="bg-accent hover:bg-accent-hover text-black text-sm font-semibold px-4 py-1.5 rounded transition-colors mt-2"
-          >
-            Cancel
-          </button>
-        </div>
+        <ConnectingOverlay
+          serverName={session?.serverName ?? ""}
+          onCancel={() => { void closeSession(sessionId); }}
+        />
       )}
-
-      {/* Error overlay — user can reconnect or close the tab */}
       {isError && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-0/95 gap-4">
-          <p className="text-red-400 text-sm font-medium">Connection failed</p>
-          {session?.errorMessage && (
-            <p className="text-faint text-xs max-w-xs text-center">{session.errorMessage}</p>
-          )}
-          <div className="flex gap-3 mt-1">
-            <button
-              onClick={() => { void reconnectSession(sessionId); }}
-              className="px-4 py-2 text-sm text-black bg-accent hover:bg-accent-hover rounded font-semibold transition-colors"
-            >
-              Reconnect
-            </button>
-            <button
-              onClick={() => { void closeSession(sessionId); }}
-              className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+        <ErrorOverlay
+          errorMessage={session?.errorMessage}
+          onReconnect={() => { void reconnectSession(sessionId); }}
+          onClose={() => { void closeSession(sessionId); }}
+        />
       )}
     </div>
   );

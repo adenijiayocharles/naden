@@ -1,14 +1,7 @@
 import { useState } from "react";
 import { useVaultStore } from "../../store/vaultStore";
 import { formatError } from "../../lib/errors";
-
-function strength(pwd: string): { label: string; color: string; width: string } {
-  if (pwd.length === 0)  return { label: "",          color: "bg-surface-4",     width: "w-0" };
-  if (pwd.length < 8)   return { label: "Too short",  color: "bg-red-500",    width: "w-1/4" };
-  if (pwd.length < 12)  return { label: "Weak",       color: "bg-orange-500", width: "w-2/4" };
-  if (pwd.length < 16)  return { label: "Moderate",   color: "bg-yellow-400", width: "w-3/4" };
-  return                       { label: "Strong",     color: "bg-accent",     width: "w-full" };
-}
+import { passwordStrength } from "../../lib/passwordStrength";
 
 export default function VaultSetupModal() {
   const { setup, skipSetup } = useVaultStore();
@@ -17,7 +10,7 @@ export default function VaultSetupModal() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [skipping, setSkipping] = useState(false);
-  const { label, color, width } = strength(password);
+  const { label, color, pct } = passwordStrength(password);
 
   const handleSetup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +61,7 @@ export default function VaultSetupModal() {
             {password.length > 0 && (
               <div className="mt-1.5 flex items-center gap-2">
                 <div className="flex-1 h-1 bg-surface-4 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all ${color} ${width}`} />
+                  <div className={`h-full rounded-full transition-all ${color}`} style={{ width: pct }} />
                 </div>
                 <span className="text-xs text-muted w-16 text-right">{label}</span>
               </div>

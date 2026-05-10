@@ -69,7 +69,8 @@ pub async fn launch_in_system_terminal(
 /// contains only the UUID-based file path (which we control), not the SSH arguments.
 #[cfg(target_os = "macos")]
 async fn launch_macos(argv: Vec<String>) -> Result<(), AppError> {
-    use std::os::unix::fs::PermissionsExt;
+    use std::io::Write as _;
+    use std::os::unix::fs::OpenOptionsExt as _;
 
     let script_path = std::env::temp_dir()
         .join(format!("ssh-manager-{}.sh", uuid::Uuid::new_v4()));
@@ -81,8 +82,13 @@ async fn launch_macos(argv: Vec<String>) -> Result<(), AppError> {
         .collect::<Vec<_>>()
         .join(" ");
 
-    std::fs::write(&script_path, format!("#!/bin/sh\nexec {shell_cmd}\n"))?;
-    std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o700))?;
+    // Create the file with mode 0700 atomically — no world-readable window.
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o700)
+        .open(&script_path)?;
+    write!(file, "#!/bin/sh\nexec {shell_cmd}\n")?;
 
     // Only our UUID-based temp path enters the AppleScript string — no user data.
     let path_str = script_path.display().to_string();

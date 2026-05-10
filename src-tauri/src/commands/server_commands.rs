@@ -1,7 +1,7 @@
 use crate::db::queries;
 use crate::error::AppError;
 use crate::models::server::{CreateServerPayload, Group, ServerWithTags, Tag, UpdateServerPayload};
-use crate::AppState;
+use crate::{vault, AppState};
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -48,6 +48,18 @@ pub async fn update_server(
     payload: UpdateServerPayload,
     state: tauri::State<'_, AppState>,
 ) -> Result<ServerWithTags, AppError> {
+    // When auth_method changes away from "password", delete the orphaned keychain entry.
+    if let Some(ref new_method) = payload.auth_method {
+        if new_method != "password" {
+            if let Ok(existing) = queries::get_server_db(&state.db, &id).await {
+                if existing.server.auth_method == "password" {
+                    if let Some(cred_id) = existing.server.vault_credential_id {
+                        let _ = vault::delete_credential(&cred_id).await;
+                    }
+                }
+            }
+        }
+    }
     let result = queries::update_server_db(&state.db, &id, &payload).await?;
     refresh_cache(&state).await;
     Ok(result)
@@ -58,6 +70,12 @@ pub async fn delete_server(
     id: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
+    // Clean up the keychain entry before removing the DB row so it doesn't leak.
+    if let Ok(s) = queries::get_server_db(&state.db, &id).await {
+        if let Some(cred_id) = s.server.vault_credential_id {
+            let _ = vault::delete_credential(&cred_id).await;
+        }
+    }
     queries::delete_server_db(&state.db, &id).await?;
     refresh_cache(&state).await;
     Ok(())
@@ -104,6 +122,22 @@ pub async fn duplicate_server(
 ) -> Result<ServerWithTags, AppError> {
     let original = queries::get_server_db(&state.db, &server_id).await?;
     let s = &original.server;
+
+    // Provision a fresh keychain entry so the duplicate doesn't share the original's
+    // credential — sharing would cause a use-after-free when either server is deleted.
+    let new_vault_credential_id = if s.auth_method == "password" {
+        if let Some(cred_id) = &s.vault_credential_id {
+            match vault::retrieve_credential(cred_id).await {
+                Ok(secret) => Some(vault::store_credential(&secret).await?),
+                Err(_) => None,
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     let payload = CreateServerPayload {
         display_name: format!("Copy of {}", s.display_name),
         hostname: s.hostname.clone(),
@@ -111,7 +145,7 @@ pub async fn duplicate_server(
         username: Some(s.username.clone()),
         auth_method: Some(s.auth_method.clone()),
         identity_file_path: s.identity_file_path.clone(),
-        vault_credential_id: s.vault_credential_id.clone(),
+        vault_credential_id: new_vault_credential_id,
         group_id: s.group_id.clone(),
         notes: s.notes.clone(),
         is_jump_host: Some(s.is_jump_host),

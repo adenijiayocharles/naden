@@ -72,7 +72,7 @@ impl SessionManager {
 
         self.sessions
             .lock()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .insert(session_id.clone(), ActiveSession { tx });
 
         let sessions = Arc::clone(&self.sessions);
@@ -86,7 +86,7 @@ impl SessionManager {
                 );
             }));
             if result.is_err() {
-                sessions.lock().unwrap().remove(&sid);
+                sessions.lock().unwrap_or_else(|e| e.into_inner()).remove(&sid);
                 let _ = app_handle.emit(&format!("terminal:closed:{sid}"), ());
             }
         });
@@ -95,7 +95,7 @@ impl SessionManager {
     }
 
     pub fn send_input(&self, session_id: &str, data: Vec<u8>) -> Result<(), AppError> {
-        let sessions = self.sessions.lock().unwrap();
+        let sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
         let session = sessions
             .get(session_id)
             .ok_or_else(|| AppError::Ssh(format!("session {session_id} not found")))?;
@@ -106,7 +106,7 @@ impl SessionManager {
     }
 
     pub fn resize(&self, session_id: &str, cols: u16, rows: u16) -> Result<(), AppError> {
-        let sessions = self.sessions.lock().unwrap();
+        let sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
         let session = sessions
             .get(session_id)
             .ok_or_else(|| AppError::Ssh(format!("session {session_id} not found")))?;
@@ -117,7 +117,7 @@ impl SessionManager {
     }
 
     pub fn close_session(&self, session_id: &str) {
-        let sessions = self.sessions.lock().unwrap();
+        let sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(session) = sessions.get(session_id) {
             let _ = session.tx.send(SessionMessage::Close);
         }
@@ -263,7 +263,7 @@ fn run_session(
         Ok(())
     })();
 
-    sessions.lock().unwrap().remove(&session_id);
+    sessions.lock().unwrap_or_else(|e| e.into_inner()).remove(&session_id);
 
     // Determine outcome and invoke the audit callback before emitting events
     let (outcome, error_msg) = match &result {

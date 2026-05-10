@@ -133,14 +133,14 @@ pub async fn verify(
     }
 
     // Correct password but legacy rounds — transparently re-hash at current strength.
-    let new_key = derive_key(password, &salt);
-    let new_verification = verification_hash(&new_key);
+    // `key` was already derived above (600k rounds); reuse it rather than re-deriving.
+    let new_verification = verification_hash(&key);
     sqlx::query("INSERT OR REPLACE INTO vault_meta (key, value) VALUES ('verification', ?)")
         .bind(STANDARD.encode(new_verification))
         .execute(db)
         .await?;
 
-    Ok(Some(new_key))
+    Ok(Some(key))
 }
 
 #[cfg(test)]

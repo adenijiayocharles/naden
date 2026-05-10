@@ -88,7 +88,7 @@ impl SftpManager {
 
         self.sessions
             .lock()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .insert(session_id.clone(), SftpSessionHandle { tx });
 
         let sessions = Arc::clone(&self.sessions);
@@ -102,7 +102,7 @@ impl SftpManager {
     }
 
     pub(crate) fn send(&self, session_id: &str, msg: SftpMessage) -> Result<(), AppError> {
-        let sessions = self.sessions.lock().unwrap();
+        let sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
         let handle = sessions
             .get(session_id)
             .ok_or_else(|| AppError::Ssh(format!("SFTP session {session_id} not found")))?;
@@ -113,7 +113,7 @@ impl SftpManager {
     }
 
     pub fn close_session(&self, session_id: &str) {
-        if let Some(handle) = self.sessions.lock().unwrap().get(session_id) {
+        if let Some(handle) = self.sessions.lock().unwrap_or_else(|e| e.into_inner()).get(session_id) {
             let _ = handle.tx.send(SftpMessage::Close);
         }
     }

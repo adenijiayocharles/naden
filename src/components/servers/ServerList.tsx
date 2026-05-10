@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore, type SortMode } from "../../store/uiStore";
 import ServerCard from "./ServerCard";
@@ -66,27 +67,37 @@ export default function ServerList() {
     );
   }
 
+  // All sorted lists — computed once per render cycle when inputs change.
+  const sortedSearch = useMemo(
+    () => sortServers(searchResults ?? [], sortMode, lastConnectedMap),
+    [searchResults, sortMode, lastConnectedMap],
+  );
+
+  const filtered = useMemo(() => {
+    if (filterFavourites) return servers.filter((s) => s.isFavourite);
+    if (filterGroupId) return servers.filter((s) => s.groupId === filterGroupId);
+    if (filterTagId) return servers.filter((s) => s.tags.some((t) => t.id === filterTagId));
+    return servers;
+  }, [servers, filterFavourites, filterGroupId, filterTagId]);
+
+  const sortedFiltered = useMemo(
+    () => sortServers(filtered, sortMode, lastConnectedMap),
+    [filtered, sortMode, lastConnectedMap],
+  );
+
   // Search takes priority over all filters/sorting
   if (searchQuery.trim()) {
-    const results = searchResults ?? [];
-    return results.length === 0 ? (
+    return sortedSearch.length === 0 ? (
       <div className="flex flex-col items-center justify-center h-64 text-center">
         <p className="text-muted text-lg font-medium mb-1">No matches</p>
         <p className="text-dim text-sm">No servers match "{searchQuery}"</p>
       </div>
     ) : (
       <div className={listClass}>
-        {sortServers(results, sortMode, lastConnectedMap).map((s) => <Item key={s.id} server={s} />)}
+        {sortedSearch.map((s) => <Item key={s.id} server={s} />)}
       </div>
     );
   }
-
-  const filtered = (() => {
-    if (filterFavourites) return servers.filter((s) => s.isFavourite);
-    if (filterGroupId) return servers.filter((s) => s.groupId === filterGroupId);
-    if (filterTagId) return servers.filter((s) => s.tags.some((t) => t.id === filterTagId));
-    return servers;
-  })();
 
   if (filtered.length === 0) {
     const heading = filterFavourites
@@ -123,15 +134,15 @@ export default function ServerList() {
   if (filterFavourites || filterGroupId || filterTagId) {
     return (
       <div className={listClass}>
-        {sortServers(filtered, sortMode, lastConnectedMap).map((s) => <Item key={s.id} server={s} />)}
+        {sortedFiltered.map((s) => <Item key={s.id} server={s} />)}
       </div>
     );
   }
 
   // ── Default view ────────────────────────────────────────────────────────────
-  const ungrouped = filtered.filter((s) => !s.groupId);
+  const ungrouped = sortedFiltered.filter((s) => !s.groupId);
   const sections = groups
-    .map((g) => ({ group: g, items: filtered.filter((s) => s.groupId === g.id) }))
+    .map((g) => ({ group: g, items: sortedFiltered.filter((s) => s.groupId === g.id) }))
     .filter(({ items }) => items.length > 0);
 
   return (
@@ -161,7 +172,7 @@ export default function ServerList() {
             </button>
             {!collapsed && (
               <div className={listClass}>
-                {sortServers(items, sortMode, lastConnectedMap).map((s) => <Item key={s.id} server={s} />)}
+                {items.map((s) => <Item key={s.id} server={s} />)}
               </div>
             )}
           </section>
@@ -174,7 +185,7 @@ export default function ServerList() {
             Ungrouped
           </h2>
           <div className={listClass}>
-            {sortServers(ungrouped, sortMode, lastConnectedMap).map((s) => <Item key={s.id} server={s} />)}
+            {ungrouped.map((s) => <Item key={s.id} server={s} />)}
           </div>
         </section>
       )}

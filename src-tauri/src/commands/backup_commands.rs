@@ -11,7 +11,7 @@ use crate::db::queries;
 use crate::error::AppError;
 use crate::AppState;
 
-const PBKDF2_ITERATIONS: u32 = 100_000;
+const PBKDF2_ITERATIONS: u32 = 600_000;
 const SALT_LEN: usize = 16;
 const NONCE_LEN: usize = 12;
 
@@ -220,12 +220,13 @@ pub async fn import_backup(
     }
 
     for t in &backup.tags {
-        sqlx::query("INSERT OR IGNORE INTO tags (id, name) VALUES (?, ?)")
+        let n = sqlx::query("INSERT OR IGNORE INTO tags (id, name) VALUES (?, ?)")
             .bind(&t.id)
             .bind(&t.name)
             .execute(db)
-            .await?;
-        tags_imported += 1;
+            .await?
+            .rows_affected();
+        tags_imported += n as usize;
     }
 
     for s in &backup.servers {

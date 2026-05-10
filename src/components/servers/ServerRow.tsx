@@ -5,22 +5,8 @@ import { useServerStore } from "../../store/serverStore";
 import ServerKebabMenu from "./ServerKebabMenu";
 import DeleteServerModal from "./DeleteServerModal";
 import ConnectionErrorModal from "./ConnectionErrorModal";
-import { FavouriteButton } from "./ServerCard";
+import { FavouriteButton, ReachabilityDot } from "./ServerCard";
 import { timeAgo } from "../../lib/format";
-
-function ReachabilityDot({ serverId }: { serverId: string }) {
-  const info = useServerStore((s) => s.reachability[serverId]);
-  if (!info) return null;
-  if (info.checking) {
-    return <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse shrink-0" title="Checking…" />;
-  }
-  return (
-    <span
-      className={`w-1.5 h-1.5 rounded-full shrink-0 ${info.reachable ? "bg-[#CDFF00]" : "bg-red-500"}`}
-      title={info.reachable ? `Reachable${info.latencyMs != null ? ` (${info.latencyMs}ms)` : ""}` : "Unreachable"}
-    />
-  );
-}
 
 export default function ServerRow({ server }: { server: Server }) {
   const actions = useServerActions(server);

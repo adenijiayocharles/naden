@@ -5,6 +5,7 @@ import { sftpCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import SftpFileList from "./SftpFileList";
 import SftpToolbar from "./SftpToolbar";
+import { ConnectingOverlay, ErrorOverlay } from "../shared/ConnectionOverlay";
 
 interface Props {
   sessionId: string;
@@ -265,42 +266,17 @@ export default function SftpBrowser({ sessionId }: Props) {
         onNavigate={handleNavigateEntry}
       />
 
-      {/* Connecting overlay */}
       {isConnecting && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-0 gap-4">
-          <p className="text-faint text-sm">
-            Connecting to{" "}
-            <span className="text-white font-medium">{session.serverName}</span>…
-          </p>
-          <div className="relative w-48 h-0.5 bg-surface-4 rounded-full overflow-hidden">
-            <div
-              className="absolute top-0 h-full bg-accent rounded-full"
-              style={{ animation: "progress-slide 1.2s ease-in-out infinite" }}
-            />
-          </div>
-          <button
-            onClick={() => { void closeSession(sessionId); }}
-            className="bg-accent hover:bg-accent-hover text-black text-sm font-semibold px-4 py-1.5 rounded transition-colors mt-2"
-          >
-            Cancel
-          </button>
-        </div>
+        <ConnectingOverlay
+          serverName={session.serverName}
+          onCancel={() => { void closeSession(sessionId); }}
+        />
       )}
-
-      {/* Error overlay */}
       {isError && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-0/95 gap-4">
-          <p className="text-red-400 text-sm font-medium">Connection failed</p>
-          {session.errorMessage && (
-            <p className="text-faint text-xs max-w-xs text-center">{session.errorMessage}</p>
-          )}
-          <button
-            onClick={() => { void closeSession(sessionId); }}
-            className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
-          >
-            Close
-          </button>
-        </div>
+        <ErrorOverlay
+          errorMessage={session.errorMessage}
+          onClose={() => { void closeSession(sessionId); }}
+        />
       )}
     </div>
   );

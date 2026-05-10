@@ -27,11 +27,27 @@ export default function BulkActionBar() {
     setBusy(true);
     setError(null);
     setConfirmDelete(false);
-    try {
-      await Promise.all(bulkSelected.map((id) => deleteServer(id)));
+    const results = await Promise.allSettled(bulkSelected.map((id) => deleteServer(id)));
+    const failed = results
+      .map((r, i) => ({ r, id: bulkSelected[i] }))
+      .filter(({ r }) => r.status === "rejected");
+    const succeededIds = results
+      .map((r, i) => ({ r, id: bulkSelected[i] }))
+      .filter(({ r }) => r.status === "fulfilled")
+      .map(({ id }) => id);
+
+    if (succeededIds.length > 0) {
+      // Remove only the successfully deleted servers from the selection
+      useUiStore.setState((s) => ({
+        bulkSelected: s.bulkSelected.filter((id) => !succeededIds.includes(id)),
+      }));
+    }
+
+    if (failed.length === 0) {
       toggleBulkMode();
-    } catch (e) {
-      setError(formatError(e));
+    } else {
+      const firstErr = (failed[0].r as PromiseRejectedResult).reason as unknown;
+      setError(formatError(firstErr));
       setBusy(false);
     }
   };
