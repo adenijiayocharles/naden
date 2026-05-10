@@ -24,6 +24,7 @@ interface SftpStore {
 
   openSession: (serverId: string, serverName: string) => Promise<string>;
   closeSession: (sessionId: string) => Promise<void>;
+  reconnectSession: (sessionId: string) => Promise<void>;
   setActive: (sessionId: string) => void;
   navigateTo: (sessionId: string, path: string) => Promise<void>;
   removeSession: (sessionId: string) => void;
@@ -107,6 +108,27 @@ export const useSftpStore = create<SftpStore>((set, get) => ({
       // already closed
     }
     set((state) => dropFromState(state, sessionId));
+  },
+
+  reconnectSession: async (sessionId) => {
+    const session = get().sessions.find((s) => s.id === sessionId);
+    if (!session) return;
+    const { serverId, serverName, currentPath } = session;
+    teardown(sessionId);
+    set((state) => dropFromState(state, sessionId));
+    const newId = await get().openSession(serverId, serverName);
+    // Re-navigate to the path the user was on once the session connects.
+    if (currentPath && currentPath !== "~") {
+      const store = get();
+      const poll = setInterval(() => {
+        const s = get().sessions.find((x) => x.id === newId);
+        if (s?.status === "connected") {
+          clearInterval(poll);
+          store.navigateTo(newId, currentPath).catch(() => {});
+        }
+        if (!s || s.status === "error") clearInterval(poll);
+      }, 200);
+    }
   },
 
   setActive: (sessionId) => set({ activeSessionId: sessionId }),

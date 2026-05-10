@@ -15,6 +15,7 @@ export default function SftpBrowser({ sessionId }: Props) {
   const session = useSftpStore((s) => s.sessions.find((t) => t.id === sessionId));
   const navigateTo = useSftpStore((s) => s.navigateTo);
   const closeSession = useSftpStore((s) => s.closeSession);
+  const reconnectSession = useSftpStore((s) => s.reconnectSession);
 
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -275,6 +276,7 @@ export default function SftpBrowser({ sessionId }: Props) {
       {isError && (
         <ErrorOverlay
           errorMessage={session.errorMessage}
+          onReconnect={() => { void reconnectSession(sessionId); }}
           onClose={() => { void closeSession(sessionId); }}
         />
       )}

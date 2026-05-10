@@ -4,6 +4,7 @@ mod commands;
 mod db;
 pub mod error;
 mod models;
+mod power;
 mod search;
 mod sftp;
 mod ssh;
@@ -132,6 +133,9 @@ pub fn run() {
             tauri::async_runtime::spawn(async move {
                 auto_lock_task(handle).await;
             });
+
+            // Spawn the sleep-watcher thread that emits `system:wake` on resume.
+            power::start_sleep_watcher(app.handle().clone());
 
             Ok(())
         })

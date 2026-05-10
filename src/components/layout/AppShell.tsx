@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useState, useRef } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import { useVaultStore } from "../../store/vaultStore";
@@ -165,6 +166,21 @@ export default function AppShell() {
       })
       .catch(() => { setOnboardingChecked(); });
   }, [fetchAll, check, loadTerminalSettings, setOnboardingComplete, setOnboardingChecked]);
+
+  // Reconnect all sessions that died while the machine was asleep.
+  useEffect(() => {
+    const unlisten = listen("system:wake", () => {
+      const { sessions: tSessions, reconnectSession: tReconnect } = useTerminalStore.getState();
+      for (const s of tSessions) {
+        if (s.status === "error") void tReconnect(s.id);
+      }
+      const { sessions: sSessions, reconnectSession: sReconnect } = useSftpStore.getState();
+      for (const s of sSessions) {
+        if (s.status === "error") void sReconnect(s.id);
+      }
+    });
+    return () => { void unlisten.then((fn) => fn()); };
+  }, []);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
