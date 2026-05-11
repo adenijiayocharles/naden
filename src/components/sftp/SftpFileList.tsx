@@ -54,7 +54,7 @@ export default function SftpFileList({ entries, selected, onSelect, onNavigate }
                 if (entry.isDir) onNavigate(entry);
                 else onSelect(entry.path);
               }}
-              className={`cursor-pointer border-b border-[#111] transition-colors select-none ${
+              className={`cursor-pointer border-b border-stroke-subtle transition-colors select-none ${
                 selected === entry.path
                   ? "bg-accent/10 text-accent-fg"
                   : "text-secondary hover:bg-surface-2 hover:text-white"
@@ -63,7 +63,7 @@ export default function SftpFileList({ entries, selected, onSelect, onNavigate }
               <td className="px-4 py-2">
                 <div className="flex items-center gap-2">
                   <FileIcon isDir={entry.isDir} />
-                  <span className="truncate font-mono text-xs">{entry.name}</span>
+                  <span className="truncate font-mono text-xs" title={entry.name}>{entry.name}</span>
                 </div>
               </td>
               <td className="px-4 py-2 text-right text-faint font-mono text-xs tabular-nums">

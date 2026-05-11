@@ -8,9 +8,9 @@ export default function VaultCountdown() {
   return (
     <div className={`mx-2 mb-2 px-3 py-2 rounded-lg border text-xs flex items-center gap-2 ${
       urgent
-        ? "bg-red-950/30 border-red-900/40 text-red-400"
+        ? "bg-red-950/30 border-red-900/40 text-red-500"
         : warning
-          ? "bg-yellow-950/30 border-yellow-900/40 text-yellow-400"
+          ? "bg-amber-950/30 border-amber-900/40 text-amber-500"
           : "bg-surface-0 border-stroke-subtle text-faint"
     }`}>
       <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>

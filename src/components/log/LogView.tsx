@@ -354,7 +354,7 @@ export default function LogView() {
                 <td className="px-5 py-2.5 text-muted whitespace-nowrap font-mono text-xs">
                   {fmt(e.sessionStart)}
                 </td>
-                <td className="px-3 py-2.5 text-white max-w-[160px] truncate">
+                <td className="px-3 py-2.5 text-white max-w-[160px] truncate" title={e.serverDisplayName}>
                   {e.serverDisplayName}
                 </td>
                 <td className="px-3 py-2.5 text-faint font-mono text-xs whitespace-nowrap">

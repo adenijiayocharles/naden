@@ -35,7 +35,7 @@ export default function ServerRow({ server }: { server: Server }) {
     >
       {bulkMode ? (
         <div className={`w-4 h-4 rounded border shrink-0 flex items-center justify-center transition-colors ${
-          isSelected ? "bg-accent border-accent" : "border-[#444]"
+          isSelected ? "bg-accent border-accent" : "border-stroke"
         }`}>
           {isSelected && (
             <svg className="w-2.5 h-2.5 text-black" fill="none" viewBox="0 0 10 10" stroke="currentColor" strokeWidth={2}>
@@ -46,7 +46,7 @@ export default function ServerRow({ server }: { server: Server }) {
       ) : (
         <div
           className={`w-1.5 h-1.5 rounded-full shrink-0 ${actions.connecting ? "bg-accent animate-pulse" : ""}`}
-          style={!actions.connecting ? { backgroundColor: groupColor ?? "#333" } : undefined}
+          style={!actions.connecting ? { backgroundColor: groupColor ?? "var(--color-dim)" } : undefined}
         />
       )}
 
@@ -125,7 +125,7 @@ export default function ServerRow({ server }: { server: Server }) {
           onDuplicate={() => { void actions.handleDuplicate(); }}
           onCheckReachability={() => { void actions.handleCheckReachability(); }}
           onDelete={actions.handleDelete}
-          buttonClassName="text-dim hover:text-white p-1 rounded hover:bg-surface-3 transition-colors text-base leading-none opacity-0 group-hover:opacity-100"
+          buttonClassName="text-dim hover:text-white p-1 rounded hover:bg-surface-3 transition-colors transition-opacity duration-150 text-base leading-none opacity-0 group-hover:opacity-100"
           submenuLeft
         />
       )}

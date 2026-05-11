@@ -70,7 +70,7 @@ export default function TopBar() {
             <select
               value={sortMode}
               onChange={(e) => setSortMode(e.target.value as SortMode)}
-              className="h-8 bg-surface-3 border border-stroke rounded px-2 text-xs text-faint focus:outline-none focus:border-accent shrink-0 cursor-pointer"
+              className="h-8 bg-surface-3 border border-stroke rounded px-2 text-xs text-secondary focus:outline-none focus:border-accent shrink-0 cursor-pointer"
             >
               <option value="default">Sort: Default</option>
               <option value="name_asc">Name A → Z</option>
@@ -118,9 +118,9 @@ export default function TopBar() {
               title={`Vault locks in ${countdown.fmt()}`}
               className={`flex items-center gap-1 text-xs font-mono px-2 py-1 rounded border ${
                 countdown.urgent
-                  ? "bg-red-950/30 border-red-900/40 text-red-400"
+                  ? "bg-red-950/30 border-red-900/40 text-red-500"
                   : countdown.warning
-                    ? "bg-yellow-950/30 border-yellow-900/40 text-yellow-400"
+                    ? "bg-amber-950/30 border-amber-900/40 text-amber-500"
                     : "bg-surface-3 border-stroke text-faint"
               }`}
             >

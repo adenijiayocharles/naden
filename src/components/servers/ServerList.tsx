@@ -62,7 +62,7 @@ export default function ServerList() {
       <div className={listClass}>
         {Array.from({ length: 6 }).map((_, i) => (
           viewMode === "row" ? (
-            <div key={i} className="flex items-center gap-3 px-3 py-2.5 border-b border-[#1a1a1a] last:border-b-0 animate-pulse">
+            <div key={i} className="flex items-center gap-3 px-3 py-2.5 border-b border-stroke-subtle last:border-b-0 animate-pulse">
               <div className="w-1.5 h-1.5 rounded-full bg-surface-4 shrink-0" />
               <div className="w-32 h-3 bg-surface-3 rounded" />
               <div className="flex-1 h-3 bg-surface-2 rounded" />

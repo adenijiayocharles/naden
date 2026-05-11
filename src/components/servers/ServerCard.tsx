@@ -67,7 +67,7 @@ export default function ServerCard({ server }: { server: Server }) {
       <div className="flex items-start gap-2">
         {bulkMode ? (
           <div className={`w-4 h-4 rounded border mt-0.5 shrink-0 flex items-center justify-center transition-colors ${
-            isSelected ? "bg-accent border-accent" : "border-[#444]"
+            isSelected ? "bg-accent border-accent" : "border-stroke"
           }`}>
             {isSelected && (
               <svg className="w-2.5 h-2.5 text-black" fill="none" viewBox="0 0 10 10" stroke="currentColor" strokeWidth={2}>
@@ -78,13 +78,13 @@ export default function ServerCard({ server }: { server: Server }) {
         ) : (
           <div
             className={`w-2 h-2 rounded-full mt-1 shrink-0 ${actions.connecting ? "bg-accent animate-pulse" : ""}`}
-            style={!actions.connecting ? { backgroundColor: groupColor ?? "#333" } : undefined}
+            style={!actions.connecting ? { backgroundColor: groupColor ?? "var(--color-dim)" } : undefined}
           />
         )}
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-            <span className="font-medium text-white truncate">{server.displayName}</span>
+            <span className="font-medium text-white truncate" title={server.displayName}>{server.displayName}</span>
             {server.isJumpHost && (
               <span className="text-xs bg-accent/10 text-accent-fg px-1.5 py-0.5 rounded font-medium">Jump</span>
             )}
@@ -156,7 +156,7 @@ export default function ServerCard({ server }: { server: Server }) {
         </div>
       )}
 
-      {server.notes && <p className="text-xs text-faint truncate">{server.notes}</p>}
+      {server.notes && <p className="text-xs text-faint truncate" title={server.notes}>{server.notes}</p>}
       {actions.error && <p className="text-xs text-red-400">{actions.error}</p>}
     </div>
 

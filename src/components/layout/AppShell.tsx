@@ -319,7 +319,7 @@ export default function AppShell() {
                     onDragOver={handleDragOver(session.id, "terminal")}
                     onDrop={handleDrop(session.id, "terminal")}
                     onClick={() => { terminalSetActive(session.id); setActivePanelType("terminal"); }}
-                    title={session.status === "error" && session.errorMessage ? session.errorMessage : undefined}
+                    title={session.status === "error" && session.errorMessage ? `${session.serverName} — ${session.errorMessage}` : session.serverName}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer shrink-0 transition-colors select-none ${
                       activePanelType === "terminal" && session.id === terminalActiveId
                         ? "bg-accent/10 text-accent-fg"
@@ -349,6 +349,7 @@ export default function AppShell() {
                     onDragOver={handleDragOver(session.id, "sftp")}
                     onDrop={handleDrop(session.id, "sftp")}
                     onClick={() => { sftpSetActive(session.id); setActivePanelType("sftp"); }}
+                    title={session.serverName}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer shrink-0 transition-colors select-none ${
                       activePanelType === "sftp" && session.id === sftpActiveId
                         ? "bg-accent/10 text-accent-fg"
