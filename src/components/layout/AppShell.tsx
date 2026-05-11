@@ -172,11 +172,13 @@ export default function AppShell() {
     const unlisten = listen("system:wake", () => {
       const { sessions: tSessions, reconnectSession: tReconnect } = useTerminalStore.getState();
       for (const s of tSessions) {
-        if (s.status === "error") void tReconnect(s.id);
+        // Reconnect "connected" sessions too — the TCP connection is dead after
+        // sleep regardless of whether the session thread has detected it yet.
+        if (s.status === "connected" || s.status === "error") void tReconnect(s.id);
       }
       const { sessions: sSessions, reconnectSession: sReconnect } = useSftpStore.getState();
       for (const s of sSessions) {
-        if (s.status === "error") void sReconnect(s.id);
+        if (s.status === "connected" || s.status === "error") void sReconnect(s.id);
       }
     });
     return () => { void unlisten.then((fn) => fn()); };
