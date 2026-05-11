@@ -121,6 +121,20 @@
   background-color: transparent !important;
 }
 
+/* Scrollbar track is rendered by the OS/WebView and doesn't inherit any
+   background we set on the element — make it transparent so the terminal
+   background shows through, and keep the thumb subtle. */
+.xterm-viewport::-webkit-scrollbar {
+  width: 4px;
+}
+.xterm-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+.xterm-viewport::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: 2px;
+}
+
 @keyframes progress-slide {
   0% {
     left: -45%;
