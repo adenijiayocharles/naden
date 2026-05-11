@@ -183,7 +183,7 @@ export default function TerminalPane({ sessionId }: Props) {
   }, [fontSize]);
 
   return (
-    <div className="relative h-full w-full bg-surface-0">
+    <div className="relative h-full w-full bg-surface-1">
       <div ref={containerRef} className="absolute inset-4" />
 
       {/* Search bar — floats over terminal at top-right */}
