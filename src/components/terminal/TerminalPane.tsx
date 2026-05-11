@@ -54,12 +54,16 @@ export default function TerminalPane({ sessionId }: Props) {
       const root = document.documentElement;
       const bg = getComputedStyle(root).getPropertyValue("--color-surface-1").trim() || "#111111";
       const accent = getComputedStyle(root).getPropertyValue("--color-accent").trim() || "#CDFF00";
+      const accentHover = getComputedStyle(root).getPropertyValue("--color-accent-hover").trim() || accent;
       return {
         background: bg,
         foreground: "#e0e0e0",
         cursor: accent,
         cursorAccent: "#000000",
         selectionBackground: `${accent}30`,
+        // ANSI green (color 2) — used by default bash/zsh prompt for user@host
+        green: accent,
+        brightGreen: accentHover,
       };
     };
 
