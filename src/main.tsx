@@ -3,6 +3,13 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
 import "@xterm/xterm/css/xterm.css";
+import "@fontsource-variable/jetbrains-mono";
+import "@fontsource-variable/fira-code";
+import "@fontsource-variable/cascadia-code";
+import "@fontsource-variable/source-code-pro";
+import "@fontsource/ibm-plex-mono";
+import "@fontsource-variable/inconsolata";
+import "@fontsource/ubuntu-mono";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>

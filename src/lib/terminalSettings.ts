@@ -2,12 +2,12 @@ import { create } from "zustand";
 import { settingsCommands } from "./tauriCommands";
 
 export const TERMINAL_FONTS = [
-  { id: "jetbrains-mono",  label: "JetBrains Mono",  css: "'JetBrains Mono', monospace" },
-  { id: "fira-code",       label: "Fira Code",        css: "'Fira Code', monospace" },
-  { id: "cascadia-code",   label: "Cascadia Code",    css: "'Cascadia Code', monospace" },
-  { id: "source-code-pro", label: "Source Code Pro",  css: "'Source Code Pro', monospace" },
-  { id: "hack",            label: "Hack",             css: "Hack, monospace" },
-  { id: "inconsolata",     label: "Inconsolata",      css: "Inconsolata, monospace" },
+  { id: "jetbrains-mono",  label: "JetBrains Mono",  css: "'JetBrains Mono Variable', monospace" },
+  { id: "fira-code",       label: "Fira Code",        css: "'Fira Code Variable', monospace" },
+  { id: "cascadia-code",   label: "Cascadia Code",    css: "'Cascadia Code Variable', monospace" },
+  { id: "source-code-pro", label: "Source Code Pro",  css: "'Source Code Pro Variable', monospace" },
+  { id: "ibm-plex-mono",   label: "IBM Plex Mono",    css: "'IBM Plex Mono', monospace" },
+  { id: "inconsolata",     label: "Inconsolata",      css: "'Inconsolata Variable', monospace" },
   { id: "ubuntu-mono",     label: "Ubuntu Mono",      css: "'Ubuntu Mono', monospace" },
   { id: "menlo",           label: "Menlo",            css: "Menlo, monospace" },
   { id: "consolas",        label: "Consolas",         css: "Consolas, monospace" },
@@ -17,7 +17,7 @@ export const TERMINAL_FONTS = [
 export type TerminalFontId = typeof TERMINAL_FONTS[number]["id"];
 
 export function fontCss(id: TerminalFontId): string {
-  return TERMINAL_FONTS.find((f) => f.id === id)?.css ?? "'JetBrains Mono', monospace";
+  return TERMINAL_FONTS.find((f) => f.id === id)?.css ?? "'JetBrains Mono Variable', monospace";
 }
 
 interface TerminalSettingsStore {
