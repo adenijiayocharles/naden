@@ -262,6 +262,15 @@ pub async fn create_tag(
 }
 
 #[tauri::command]
+pub async fn update_tag(
+    id: String,
+    name: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<Tag, AppError> {
+    queries::update_tag_db(&state.db, &id, &name).await
+}
+
+#[tauri::command]
 pub async fn delete_tag(
     id: String,
     state: tauri::State<'_, AppState>,

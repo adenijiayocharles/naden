@@ -327,6 +327,21 @@ pub async fn list_tags_db(db: &SqlitePool) -> Result<Vec<Tag>, AppError> {
         .await?)
 }
 
+pub async fn update_tag_db(db: &SqlitePool, id: &str, name: &str) -> Result<Tag, AppError> {
+    if name.trim().is_empty() {
+        return Err(AppError::Validation("tag name is required".into()));
+    }
+    sqlx::query("UPDATE tags SET name = ? WHERE id = ?")
+        .bind(name.trim())
+        .bind(id)
+        .execute(db)
+        .await?;
+    Ok(sqlx::query_as("SELECT * FROM tags WHERE id = ?")
+        .bind(id)
+        .fetch_one(db)
+        .await?)
+}
+
 pub async fn delete_tag_db(db: &SqlitePool, id: &str) -> Result<(), AppError> {
     sqlx::query("DELETE FROM tags WHERE id = ?")
         .bind(id)

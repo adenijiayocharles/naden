@@ -61,6 +61,9 @@ export const serverCommands = {
   createTag: (name: string) =>
     invoke<Tag>("create_tag", { name }),
 
+  updateTag: (id: string, name: string) =>
+    invoke<Tag>("update_tag", { id, name }),
+
   deleteTag: (id: string) =>
     invoke<void>("delete_tag", { id }),
 };
