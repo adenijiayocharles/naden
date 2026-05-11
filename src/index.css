@@ -103,17 +103,22 @@
 
 /* xterm internal padding — the fit addon reads .xterm padding via
    getComputedStyle and subtracts it from available dimensions, so
-   column/row counts stay accurate. */
+   column/row counts stay accurate.
+   background-color is set here (not on .xterm-viewport) because xterm's
+   JS sets viewport.style.backgroundColor as an inline style, which
+   causes var() resolution to be unreliable when overridden with
+   !important across themes. .xterm itself is never touched by xterm's
+   JS, so the CSS variable always resolves from the root cascade. */
 .xterm {
   padding: 6px 10px;
+  background-color: var(--color-surface-1);
 }
 
-/* .xterm-viewport is position:absolute;inset:0 so it fills the full
-   .xterm element including the padding area. Its default background is
-   #000 which bleeds into the padding gap. Pin it to surface-1 so it
-   always matches the terminal background and the outer gutter. */
+/* .xterm-viewport is position:absolute;inset:0 inside .xterm (covering
+   the padding area) and defaults to background:#000. Making it
+   transparent lets .xterm's background show through uniformly. */
 .xterm-viewport {
-  background-color: var(--color-surface-1) !important;
+  background-color: transparent !important;
 }
 
 @keyframes progress-slide {
