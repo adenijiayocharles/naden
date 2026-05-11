@@ -42,6 +42,7 @@ interface UiStore {
   setSortMode: (mode: SortMode) => void;
   toggleGroupCollapse: (groupId: string) => void;
   toggleServerList: () => void;
+  collapseServerList: () => void;
   toggleBulkMode: () => void;
   toggleSelected: (id: string) => void;
   selectAll: (ids: string[]) => void;
@@ -92,6 +93,7 @@ export const useUiStore = create<UiStore>((set) => ({
     return { collapsedGroups: next };
   }),
   toggleServerList: () => set((s) => ({ serverListCollapsed: !s.serverListCollapsed })),
+  collapseServerList: () => set({ serverListCollapsed: true }),
   toggleBulkMode: () => set((s) => ({ bulkMode: !s.bulkMode, bulkSelected: [] })),
   toggleSelected: (id) => set((s) => ({
     bulkSelected: s.bulkSelected.includes(id)

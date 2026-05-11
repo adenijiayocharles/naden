@@ -44,6 +44,7 @@ export default function AppShell() {
   const activeView = useUiStore((s) => s.activeView);
   const serverListCollapsed = useUiStore((s) => s.serverListCollapsed);
   const toggleServerList = useUiStore((s) => s.toggleServerList);
+  const collapseServerList = useUiStore((s) => s.collapseServerList);
   const openAdd = useUiStore((s) => s.openAdd);
   const openSettings = useUiStore((s) => s.openSettings);
   const onboardingComplete = useUiStore((s) => s.onboardingComplete);
@@ -114,14 +115,20 @@ export default function AppShell() {
   const prevSftpCount = useRef(sftpSessions.length);
 
   useEffect(() => {
-    if (terminalSessions.length > prevTerminalCount.current) setActivePanelType("terminal");
+    if (terminalSessions.length > prevTerminalCount.current) {
+      setActivePanelType("terminal");
+      collapseServerList();
+    }
     prevTerminalCount.current = terminalSessions.length;
-  }, [terminalSessions.length]);
+  }, [terminalSessions.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (sftpSessions.length > prevSftpCount.current) setActivePanelType("sftp");
+    if (sftpSessions.length > prevSftpCount.current) {
+      setActivePanelType("sftp");
+      collapseServerList();
+    }
     prevSftpCount.current = sftpSessions.length;
-  }, [sftpSessions.length]);
+  }, [sftpSessions.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fall back when the active type's last session closes
   useEffect(() => {
