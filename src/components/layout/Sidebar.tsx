@@ -191,12 +191,12 @@ export default function Sidebar() {
   const servers = useServerStore((s) => s.servers);
   const groups = useServerStore((s) => s.groups);
   const tags = useServerStore((s) => s.tags);
-  const { filterGroupId, filterTagId, filterFavourites, setFilterGroup, setFilterTag, setFilterFavourites, activeView, openAudit, closeForm } = useUiStore();
+  const { filterGroupId, filterTagId, filterFavourites, setFilterGroup, setFilterTag, setFilterFavourites, activeView, openLogs, closeForm } = useUiStore();
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [creatingGroup, setCreatingGroup] = useState(false);
 
   const selectFilter = (fn: () => void) => () => {
-    if (activeView === "audit") closeForm();
+    if (activeView === "logs") closeForm();
     fn();
   };
 
@@ -245,14 +245,14 @@ export default function Sidebar() {
 
       <nav className="flex-1 p-2 space-y-0.5">
         {navItem(
-          !filterGroupId && !filterTagId && !filterFavourites && activeView !== "audit",
+          !filterGroupId && !filterTagId && !filterFavourites && activeView !== "logs",
           selectFilter(() => { setFilterGroup(null); setFilterTag(null); setFilterFavourites(false); }),
           "All Servers",
           servers.length,
         )}
 
         {navItem(
-          filterFavourites && activeView !== "audit",
+          filterFavourites && activeView !== "logs",
           selectFilter(() => setFilterFavourites(!filterFavourites)),
           <span className="flex items-center gap-2">
             <svg className={`w-3.5 h-3.5 shrink-0 ${filterFavourites ? "fill-yellow-400 text-yellow-400" : "fill-none text-muted"}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -283,7 +283,7 @@ export default function Sidebar() {
                 <button
                   onClick={selectFilter(() => setFilterGroup(g.id))}
                   className={`flex-1 text-left px-3 py-2 rounded-l text-sm flex items-center justify-between transition-colors min-w-0 ${
-                    filterGroupId === g.id && activeView !== "audit"
+                    filterGroupId === g.id && activeView !== "logs"
                       ? "bg-accent text-black font-medium"
                       : "text-secondary hover:bg-surface-3 hover:text-white"
                   }`}
@@ -294,14 +294,14 @@ export default function Sidebar() {
                     )}
                     <span className="truncate">{g.name}</span>
                   </span>
-                  <span className={`text-xs ml-2 shrink-0 ${filterGroupId === g.id && activeView !== "audit" ? "text-black/60" : "text-muted"}`}>
+                  <span className={`text-xs ml-2 shrink-0 ${filterGroupId === g.id && activeView !== "logs" ? "text-black/60" : "text-muted"}`}>
                     {countByGroup[g.id] ?? 0}
                   </span>
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setEditingGroup(g); }}
                   className={`px-1.5 py-2 rounded-r opacity-0 group-hover/item:opacity-100 transition-opacity ${
-                    filterGroupId === g.id && activeView !== "audit"
+                    filterGroupId === g.id && activeView !== "logs"
                       ? "text-black/50 hover:text-black"
                       : "text-dim hover:text-secondary hover:bg-surface-3"
                   }`}
@@ -323,7 +323,7 @@ export default function Sidebar() {
             </p>
             {tags.map((t) =>
               navItem(
-                filterTagId === t.id && activeView !== "audit",
+                filterTagId === t.id && activeView !== "logs",
                 selectFilter(() => setFilterTag(t.id)),
                 `#${t.name}`,
                 countByTag[t.id] ?? 0,
@@ -334,12 +334,12 @@ export default function Sidebar() {
       </nav>
       {/* Vault auto-lock countdown */}
       <VaultCountdown />
-      {/* Audit log link pinned to the bottom */}
+      {/* Logs link pinned to the bottom */}
       <div className="p-2 border-t border-stroke-subtle shrink-0">
         <button
-          onClick={() => { if (activeView === "audit") { closeForm(); } else { openAudit(); } }}
+          onClick={() => { if (activeView === "logs") { closeForm(); } else { openLogs(); } }}
           className={`w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors ${
-            activeView === "audit"
+            activeView === "logs"
               ? "bg-accent text-black font-medium"
               : "text-muted hover:bg-surface-3 hover:text-white"
           }`}

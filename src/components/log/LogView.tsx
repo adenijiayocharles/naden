@@ -1,15 +1,15 @@
 import { useEffect, useState, useRef } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
-import type { AuditEntry, AuditOutcome } from "../../types/audit";
-import { auditCommands } from "../../lib/tauriCommands";
+import type { LogEntry, LogOutcome } from "../../types/log";
+import { logCommands } from "../../lib/tauriCommands";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import { formatError } from "../../lib/errors";
 
 const PAGE = 50;
 
-const OUTCOME_STYLES: Record<AuditOutcome, string> = {
+const OUTCOME_STYLES: Record<LogOutcome, string> = {
   connecting: "text-yellow-400",
   success:    "text-accent-fg",
   user_closed:"text-muted",
@@ -17,7 +17,7 @@ const OUTCOME_STYLES: Record<AuditOutcome, string> = {
   timeout:    "text-orange-400",
 };
 
-const OUTCOME_LABEL: Record<AuditOutcome, string> = {
+const OUTCOME_LABEL: Record<LogOutcome, string> = {
   connecting: "Connecting",
   success:    "Success",
   user_closed:"Closed",
@@ -36,7 +36,7 @@ const OUTCOME_CHIPS: { value: string; label: string }[] = [
   { value: "user_closed", label: "Closed" },
 ];
 
-function durationMs(e: AuditEntry): number {
+function durationMs(e: LogEntry): number {
   if (!e.sessionEnd) return -1;
   return new Date(e.sessionEnd).getTime() - new Date(e.sessionStart).getTime();
 }
@@ -62,7 +62,7 @@ function fmt(iso: string): string {
   }
 }
 
-function sortEntries(list: AuditEntry[], col: SortCol | null, dir: SortDir): AuditEntry[] {
+function sortEntries(list: LogEntry[], col: SortCol | null, dir: SortDir): LogEntry[] {
   if (!col) return list;
   const f = dir === "asc" ? 1 : -1;
   return [...list].sort((a, b) => {
@@ -90,11 +90,11 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   );
 }
 
-export default function AuditLogView() {
+export default function LogView() {
   const servers = useServerStore((s) => s.servers);
-  const auditSearchQuery = useUiStore((s) => s.auditSearchQuery);
+  const logSearchQuery = useUiStore((s) => s.logSearchQuery);
 
-  const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [entries, setEntries] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +119,7 @@ export default function AuditLogView() {
   const loadingRef = useRef(false);
 
   // Always-current snapshot of entries for the append load offset.
-  const entriesRef = useRef<AuditEntry[]>([]);
+  const entriesRef = useRef<LogEntry[]>([]);
   entriesRef.current = entries;
 
   // Always-current snapshot of backend filters for the append load.
@@ -136,7 +136,7 @@ export default function AuditLogView() {
 
     void (async () => {
       try {
-        const rows = await auditCommands.listAuditLog(
+        const rows = await logCommands.listLogs(
           0, PAGE,
           filterServer || undefined,
           filterStart || undefined,
@@ -158,7 +158,7 @@ export default function AuditLogView() {
   // Disabled when any client-side filter is active (a short filtered list
   // would keep the sentinel in view and cause a continuous append loop).
   useEffect(() => {
-    if (!hasMore || loading || filterOutcome || auditSearchQuery.trim()) return;
+    if (!hasMore || loading || filterOutcome || logSearchQuery.trim()) return;
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
 
@@ -172,7 +172,7 @@ export default function AuditLogView() {
       setLoading(true);
       void (async () => {
         try {
-          const rows = await auditCommands.listAuditLog(
+          const rows = await logCommands.listLogs(
             offset, PAGE,
             fs || undefined, fst || undefined, fe || undefined,
           );
@@ -189,19 +189,19 @@ export default function AuditLogView() {
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, loading, filterOutcome, auditSearchQuery]);
+  }, [hasMore, loading, filterOutcome, logSearchQuery]);
 
   // ── Export ─────────────────────────────────────────────────────────────────
   const handleExport = async () => {
     setExporting(true);
     try {
-      const csv = await auditCommands.exportAuditCsv(
+      const csv = await logCommands.exportLogsCsv(
         filterServer || undefined,
         filterStart || undefined,
         filterEnd || undefined,
       );
       const path = await save({
-        defaultPath: "audit-log.csv",
+        defaultPath: "logs.csv",
         filters: [{ name: "CSV", extensions: ["csv"] }],
       });
       if (path) await writeTextFile(path, csv);
@@ -231,8 +231,8 @@ export default function AuditLogView() {
   const displayed = (() => {
     let list = entries;
     if (filterOutcome) list = list.filter((e) => e.outcome === filterOutcome);
-    if (auditSearchQuery.trim()) {
-      const q = auditSearchQuery.toLowerCase();
+    if (logSearchQuery.trim()) {
+      const q = logSearchQuery.toLowerCase();
       list = list.filter((e) =>
         e.serverDisplayName.toLowerCase().includes(q) ||
         e.hostname.toLowerCase().includes(q) ||
@@ -361,8 +361,8 @@ export default function AuditLogView() {
                   {e.hostname}:{e.port}
                 </td>
                 <td className="px-3 py-2.5 text-muted">{e.username || "—"}</td>
-                <td className={`px-3 py-2.5 font-medium ${OUTCOME_STYLES[e.outcome as AuditOutcome] ?? "text-muted"}`}>
-                  {OUTCOME_LABEL[e.outcome as AuditOutcome] ?? e.outcome}
+                <td className={`px-3 py-2.5 font-medium ${OUTCOME_STYLES[e.outcome as LogOutcome] ?? "text-muted"}`}>
+                  {OUTCOME_LABEL[e.outcome as LogOutcome] ?? e.outcome}
                 </td>
                 <td className="px-3 py-2.5 text-faint font-mono text-xs">
                   {duration(e.sessionStart, e.sessionEnd)}

@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { Server } from "../types/server";
 
-type ActiveView = "list" | "add" | "edit" | "audit";
+type ActiveView = "list" | "add" | "edit" | "logs";
 export type ViewMode = "card" | "row";
 export type SortMode = "default" | "name_asc" | "name_desc" | "host" | "last_connected";
 interface UiStore {
@@ -20,14 +20,14 @@ interface UiStore {
   filterFavourites: boolean;
   searchQuery: string;
   searchResults: Server[] | null;
-  auditSearchQuery: string;
+  logSearchQuery: string;
   bulkMode: boolean;
   bulkSelected: string[];
   vaultTimeoutMins: number;
 
   openAdd: () => void;
   openEdit: (serverId: string) => void;
-  openAudit: () => void;
+  openLogs: () => void;
   closeForm: () => void;
   openSettings: () => void;
   closeSettings: () => void;
@@ -37,7 +37,7 @@ interface UiStore {
   setFilterTag: (tagId: string | null) => void;
   setFilterFavourites: (v: boolean) => void;
   setSearch: (query: string) => void;
-  setAuditSearch: (query: string) => void;
+  setLogSearch: (query: string) => void;
   setViewMode: (mode: ViewMode) => void;
   setSortMode: (mode: SortMode) => void;
   toggleGroupCollapse: (groupId: string) => void;
@@ -66,14 +66,14 @@ export const useUiStore = create<UiStore>((set) => ({
   filterFavourites: false,
   searchQuery: "",
   searchResults: null,
-  auditSearchQuery: "",
+  logSearchQuery: "",
   bulkMode: false,
   bulkSelected: [],
   vaultTimeoutMins: 0,
 
   openAdd: () => set({ activeView: "add", editingServerId: null }),
   openEdit: (serverId) => set({ activeView: "edit", editingServerId: serverId }),
-  openAudit: () => set({ activeView: "audit", editingServerId: null }),
+  openLogs: () => set({ activeView: "logs", editingServerId: null }),
   closeForm: () => set({ activeView: "list", editingServerId: null }),
   openSettings: () => set({ settingsOpen: true }),
   closeSettings: () => set({ settingsOpen: false }),
@@ -83,7 +83,7 @@ export const useUiStore = create<UiStore>((set) => ({
   setFilterTag: (tagId) => set({ filterTagId: tagId, filterGroupId: null, filterFavourites: false }),
   setFilterFavourites: (v) => set({ filterFavourites: v, filterGroupId: null, filterTagId: null }),
 
-  setAuditSearch: (query) => set({ auditSearchQuery: query }),
+  setLogSearch: (query) => set({ logSearchQuery: query }),
   setViewMode: (mode) => set({ viewMode: mode }),
   setSortMode: (mode) => set({ sortMode: mode }),
   toggleGroupCollapse: (groupId) => set((s) => {

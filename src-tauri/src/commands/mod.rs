@@ -1,4 +1,4 @@
-pub mod audit_commands;
+pub mod log_commands;
 pub mod backup_commands;
 pub mod settings_commands;
 pub mod search_commands;

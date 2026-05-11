@@ -1,13 +1,13 @@
-export type AuditOutcome = "connecting" | "success" | "user_closed" | "failure" | "timeout";
+export type LogOutcome = "connecting" | "success" | "user_closed" | "failure" | "timeout";
 
-export interface AuditEntry {
+export interface LogEntry {
   id: string;
   serverId: string | null;
   serverDisplayName: string;
   hostname: string;
   port: number;
   username: string;
-  outcome: AuditOutcome;
+  outcome: LogOutcome;
   errorMessage: string | null;
   sessionStart: string;
   sessionEnd: string | null;

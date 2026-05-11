@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 #[serde(rename_all = "camelCase")]
-pub struct AuditEntry {
+pub struct LogEntry {
     pub id: String,
     pub server_id: Option<String>,
     pub server_display_name: String,

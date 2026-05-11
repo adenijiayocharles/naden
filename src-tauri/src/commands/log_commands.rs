@@ -3,12 +3,12 @@ use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::error::AppError;
-use crate::models::audit_entry::AuditEntry;
+use crate::models::log_entry::LogEntry;
 use crate::AppState;
 
 // ── DB helpers (pub so ssh_commands can call them) ────────────────────────────
 
-pub struct NewAuditEntry<'a> {
+pub struct NewLogEntry<'a> {
     pub server_id: Option<&'a str>,
     pub server_display_name: &'a str,
     pub hostname: &'a str,
@@ -16,10 +16,10 @@ pub struct NewAuditEntry<'a> {
     pub username: &'a str,
 }
 
-/// Insert a new audit_log row with outcome = 'connecting'. Returns the new id.
-pub async fn insert_audit_entry(
+/// Insert a new row into the log with outcome = 'connecting'. Returns the new id.
+pub async fn insert_log_entry(
     db: &SqlitePool,
-    entry: &NewAuditEntry<'_>,
+    entry: &NewLogEntry<'_>,
 ) -> Result<String, AppError> {
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
@@ -44,10 +44,10 @@ pub async fn insert_audit_entry(
     Ok(id)
 }
 
-/// Update an audit row when the session closes.
-pub async fn close_audit_entry(
+/// Update a log row when the session closes.
+pub async fn close_log_entry(
     db: &SqlitePool,
-    audit_id: &str,
+    log_id: &str,
     outcome: &str,
     error_message: Option<String>,
     session_end: &str,
@@ -60,7 +60,7 @@ pub async fn close_audit_entry(
     .bind(outcome)
     .bind(error_message)
     .bind(session_end)
-    .bind(audit_id)
+    .bind(log_id)
     .execute(db)
     .await?;
     Ok(())
@@ -69,18 +69,18 @@ pub async fn close_audit_entry(
 // ── Tauri commands ────────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub async fn list_audit_log(
+pub async fn list_logs(
     offset: i64,
     limit: i64,
     server_id: Option<String>,
     start_date: Option<String>,
     end_date: Option<String>,
     state: tauri::State<'_, AppState>,
-) -> Result<Vec<AuditEntry>, AppError> {
+) -> Result<Vec<LogEntry>, AppError> {
     // Append T23:59:59 so the end date is inclusive for the whole day
     let end_ts = end_date.as_deref().map(|d| format!("{d}T23:59:59"));
 
-    let entries = sqlx::query_as::<_, AuditEntry>(
+    let entries = sqlx::query_as::<_, LogEntry>(
         "SELECT * FROM audit_log
          WHERE (? IS NULL OR server_id = ?)
            AND (? IS NULL OR session_start >= ?)
@@ -103,7 +103,7 @@ pub async fn list_audit_log(
 }
 
 #[tauri::command]
-pub async fn export_audit_csv(
+pub async fn export_logs_csv(
     server_id: Option<String>,
     start_date: Option<String>,
     end_date: Option<String>,
@@ -111,7 +111,7 @@ pub async fn export_audit_csv(
 ) -> Result<String, AppError> {
     let end_ts = end_date.as_deref().map(|d| format!("{d}T23:59:59"));
 
-    let entries = sqlx::query_as::<_, AuditEntry>(
+    let entries = sqlx::query_as::<_, LogEntry>(
         "SELECT * FROM audit_log
          WHERE (? IS NULL OR server_id = ?)
            AND (? IS NULL OR session_start >= ?)

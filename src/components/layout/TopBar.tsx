@@ -16,23 +16,23 @@ export default function TopBar() {
   const sortMode = useUiStore((s) => s.sortMode);
   const setSortMode = useUiStore((s) => s.setSortMode);
   const activeView = useUiStore((s) => s.activeView);
-  const auditSearchQuery = useUiStore((s) => s.auditSearchQuery);
-  const setAuditSearch = useUiStore((s) => s.setAuditSearch);
+  const logSearchQuery = useUiStore((s) => s.logSearchQuery);
+  const setLogSearch = useUiStore((s) => s.setLogSearch);
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const openSettings = useUiStore((s) => s.openSettings);
   const closeSettings = useUiStore((s) => s.closeSettings);
   const countdown = useVaultCountdown();
-  const isAudit = activeView === "audit";
+  const isLogs = activeView === "logs";
   const [showImport, setShowImport] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
     <>
       <header className="h-14 shrink-0 border-b border-stroke-subtle bg-surface-base flex items-center px-4 gap-3">
-        {isAudit ? (
+        {isLogs ? (
           <input
-            value={auditSearchQuery}
-            onChange={(e) => setAuditSearch(e.target.value)}
+            value={logSearchQuery}
+            onChange={(e) => setLogSearch(e.target.value)}
             placeholder="Search logs…"
             className="flex-1 min-w-0 max-w-sm h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
           />

@@ -53,10 +53,10 @@ pub fn run() {
             commands::server_commands::create_tag,
             // Search
             commands::search_commands::fuzzy_search,
-            // Audit
-            commands::audit_commands::list_audit_log,
-            commands::audit_commands::export_audit_csv,
-            commands::audit_commands::get_last_connected_map,
+            // Logs
+            commands::log_commands::list_logs,
+            commands::log_commands::export_logs_csv,
+            commands::log_commands::get_last_connected_map,
             // Backup
             commands::backup_commands::export_backup,
             commands::backup_commands::import_backup,

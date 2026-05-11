@@ -12,7 +12,7 @@ import ServerForm from "../servers/ServerForm";
 import VaultLockScreen from "../vault/VaultLockScreen";
 import VaultSetupModal from "../vault/VaultSetupModal";
 import TerminalPane from "../terminal/TerminalPane";
-import AuditLogView from "../audit/AuditLogView";
+import LogView from "../log/LogView";
 import OnboardingWizard from "../onboarding/OnboardingWizard";
 import SftpBrowser from "../sftp/SftpBrowser";
 import BulkActionBar from "../servers/BulkActionBar";
@@ -246,10 +246,10 @@ export default function AppShell() {
       <div className="flex flex-col flex-1 min-w-0">
         <TopBar />
         <div className="flex flex-1 min-h-0">
-          {/* Server list / audit log */}
+          {/* Server list / logs */}
           <main
             className={`shrink-0 transition-[width,padding] duration-200 ${
-              activeView === "audit"
+              activeView === "logs"
                 ? "flex-1 overflow-hidden flex flex-col"
                 : hasPanel
                   ? serverListCollapsed
@@ -258,8 +258,8 @@ export default function AppShell() {
                   : "flex-1 overflow-hidden flex flex-col"
             }`}
           >
-            {activeView === "audit"
-              ? <AuditLogView />
+            {activeView === "logs"
+              ? <LogView />
               : (
                 <>
                   <div className="flex-1 overflow-y-auto p-5"><ServerList /></div>
@@ -269,7 +269,7 @@ export default function AppShell() {
           </main>
 
           {/* Collapse / expand handle */}
-          {hasPanel && activeView !== "audit" && (
+          {hasPanel && activeView !== "logs" && (
             <button
               onClick={toggleServerList}
               aria-label={serverListCollapsed ? "Expand server list" : "Collapse server list"}
@@ -294,7 +294,7 @@ export default function AppShell() {
           )}
 
           {/* Unified panel: terminals + SFTP browsers */}
-          {hasPanel && activeView !== "audit" && (
+          {hasPanel && activeView !== "logs" && (
             <div className="flex flex-col flex-1 min-w-0">
               {/* Unified tab bar */}
               <div

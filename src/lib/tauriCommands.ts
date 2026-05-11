@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { AuditEntry } from "../types/audit";
+import type { LogEntry } from "../types/log";
 import type {
   Server,
   Group,
@@ -150,15 +150,15 @@ export const sftpCommands = {
     invoke<void>("download_sftp_file", { sessionId, remotePath, localPath }),
 };
 
-export const auditCommands = {
-  listAuditLog: (
+export const logCommands = {
+  listLogs: (
     offset: number,
     limit: number,
     serverId?: string,
     startDate?: string,
     endDate?: string,
   ) =>
-    invoke<AuditEntry[]>("list_audit_log", {
+    invoke<LogEntry[]>("list_logs", {
       offset,
       limit,
       serverId: serverId ?? null,
@@ -166,8 +166,8 @@ export const auditCommands = {
       endDate: endDate ?? null,
     }),
 
-  exportAuditCsv: (serverId?: string, startDate?: string, endDate?: string) =>
-    invoke<string>("export_audit_csv", {
+  exportLogsCsv: (serverId?: string, startDate?: string, endDate?: string) =>
+    invoke<string>("export_logs_csv", {
       serverId: serverId ?? null,
       startDate: startDate ?? null,
       endDate: endDate ?? null,

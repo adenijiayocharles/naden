@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { serverCommands, auditCommands, type ReachabilityResult } from "../lib/tauriCommands";
+import { serverCommands, logCommands, type ReachabilityResult } from "../lib/tauriCommands";
 import type {
   Server,
   Group,
@@ -53,7 +53,7 @@ export const useServerStore = create<ServerStore>((set) => ({
         serverCommands.listTags(),
       ]);
       set({ servers, groups, tags });
-      auditCommands.getLastConnectedMap()
+      logCommands.getLastConnectedMap()
         .then((map) => set({ lastConnectedMap: map }))
         .catch(() => {});
     } catch (e) {

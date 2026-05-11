@@ -8,7 +8,7 @@ use crate::ssh::{
     launcher,
 };
 use crate::{vault, AppState};
-use crate::commands::audit_commands::{self, NewAuditEntry};
+use crate::commands::log_commands::{self, NewLogEntry};
 
 /// Expand a leading `~` to the user's home directory using Tauri's path resolver.
 fn expand_path(path: &str, app: &tauri::AppHandle) -> std::path::PathBuf {
@@ -129,9 +129,9 @@ pub async fn launch_in_terminal(
 
     let s = &server.server;
     // Insert with outcome = "success" immediately — we can't detect system terminal close
-    let audit_id = audit_commands::insert_audit_entry(
+    let log_id = log_commands::insert_log_entry(
         &state.db,
-        &NewAuditEntry {
+        &NewLogEntry {
             server_id: Some(&server_id),
             server_display_name: &s.display_name,
             hostname: &s.hostname,
@@ -143,7 +143,7 @@ pub async fn launch_in_terminal(
     let db = state.db.clone();
     tauri::async_runtime::spawn(async move {
         let session_end = chrono::Utc::now().to_rfc3339();
-        audit_commands::close_audit_entry(&db, &audit_id, "success", None, &session_end)
+        log_commands::close_log_entry(&db, &log_id, "success", None, &session_end)
             .await
             .ok();
     });
@@ -232,11 +232,11 @@ pub async fn open_terminal_session(
 
     let s = &server.server;
 
-    // Insert audit entry and pass a close callback so the session thread can
+    // Insert log entry and pass a close callback so the session thread can
     // update the outcome and duration when the session ends.
-    let audit_id = audit_commands::insert_audit_entry(
+    let log_id = log_commands::insert_log_entry(
         &state.db,
-        &NewAuditEntry {
+        &NewLogEntry {
             server_id: Some(&server_id),
             server_display_name: &s.display_name,
             hostname: &s.hostname,
@@ -253,8 +253,8 @@ pub async fn open_terminal_session(
             .enable_all()
             .build()
         {
-            rt.block_on(audit_commands::close_audit_entry(
-                &db, &audit_id, &outcome, error_msg, &session_end,
+            rt.block_on(log_commands::close_log_entry(
+                &db, &log_id, &outcome, error_msg, &session_end,
             ))
             .ok();
         }
