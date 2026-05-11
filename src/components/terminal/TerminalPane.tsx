@@ -57,15 +57,22 @@ export default function TerminalPane({ sessionId }: Props) {
       const bg = getComputedStyle(root).getPropertyValue("--color-surface-1").trim() || "#111111";
       const accent = getComputedStyle(root).getPropertyValue("--color-accent").trim() || "#CDFF00";
       const accentHover = getComputedStyle(root).getPropertyValue("--color-accent-hover").trim() || accent;
+      const isLight = root.dataset.theme === "light";
       return {
         background: bg,
-        foreground: "#e0e0e0",
+        foreground: isLight ? "#1e1e2e" : "#e0e0e0",
         cursor: accent,
-        cursorAccent: "#000000",
-        selectionBackground: `${accent}30`,
+        // In light mode the cursor is a coloured block — white text inside it reads fine
+        cursorAccent: isLight ? "#ffffff" : "#000000",
+        selectionBackground: `${accent}40`,
         // ANSI green (color 2) — used by default bash/zsh prompt for user@host
         green: accent,
         brightGreen: accentHover,
+        // ANSI black is invisible on a light background without an override
+        ...(isLight && {
+          black: "#3c3c3c",
+          brightBlack: "#6c6c6c",
+        }),
       };
     };
 
