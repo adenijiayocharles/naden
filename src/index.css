@@ -11,28 +11,28 @@
 
   /* Surfaces — 5 depth levels */
   --color-surface-base: #000000;
-  --color-surface-0:    #0d0d0d;
-  --color-surface-1:    #111111;
-  --color-surface-2:    #161616;
-  --color-surface-3:    #1a1a1a;
-  --color-surface-4:    #1e1e1e;
+  --color-surface-0: #0d0d0d;
+  --color-surface-1: #111111;
+  --color-surface-2: #161616;
+  --color-surface-3: #1a1a1a;
+  --color-surface-4: #1e1e1e;
 
   /* Borders */
-  --color-stroke:        #2a2a2a;
+  --color-stroke: #2a2a2a;
   --color-stroke-subtle: #1e1e1e;
 
   /* Text scale */
   --color-secondary: #bbbbbb;
-  --color-muted:     #888888;
-  --color-faint:     #666666;
-  --color-dim:       #444444;
+  --color-muted: #888888;
+  --color-faint: #666666;
+  --color-dim: #444444;
 
   --font-sans: -apple-system, "SF Pro Display", "SF Pro Text", BlinkMacSystemFont, system-ui, sans-serif;
 }
 
 @layer base {
   html {
-    font-size: 14px;
+    font-size: 15px;
     font-family: -apple-system, "SF Pro Display", "SF Pro Text", BlinkMacSystemFont, system-ui, sans-serif;
   }
 
@@ -45,29 +45,29 @@
   /* ── OLED ─────────────────────────────────────────────────── */
   [data-theme="oled"] {
     --color-surface-base: #000000;
-    --color-surface-0:    #000000;
-    --color-surface-1:    #090909;
-    --color-surface-2:    #0d0d0d;
-    --color-surface-3:    #111111;
-    --color-surface-4:    #161616;
-    --color-stroke:        #1a1a1a;
+    --color-surface-0: #000000;
+    --color-surface-1: #090909;
+    --color-surface-2: #0d0d0d;
+    --color-surface-3: #111111;
+    --color-surface-4: #161616;
+    --color-stroke: #1a1a1a;
     --color-stroke-subtle: #0d0d0d;
   }
 
   /* ── Dim ──────────────────────────────────────────────────── */
   [data-theme="dim"] {
     --color-surface-base: #1a1b1e;
-    --color-surface-0:    #1e2023;
-    --color-surface-1:    #25272b;
-    --color-surface-2:    #2d3035;
-    --color-surface-3:    #34373d;
-    --color-surface-4:    #3d4045;
-    --color-stroke:        #4a4d54;
+    --color-surface-0: #1e2023;
+    --color-surface-1: #25272b;
+    --color-surface-2: #2d3035;
+    --color-surface-3: #34373d;
+    --color-surface-4: #3d4045;
+    --color-stroke: #4a4d54;
     --color-stroke-subtle: #3d4045;
     --color-secondary: #b0b3b8;
-    --color-muted:     #8a8d91;
-    --color-faint:     #606770;
-    --color-dim:       #4a4d55;
+    --color-muted: #8a8d91;
+    --color-faint: #606770;
+    --color-dim: #4a4d55;
   }
 
   /* ── Light ─────────────────────────────────────────────────── */
@@ -79,21 +79,21 @@
 
     /* Surfaces — 0 = sidebar/recessed, 4 = most elevated */
     --color-surface-base: #e4e4e7;
-    --color-surface-0:    #e8e8eb;
-    --color-surface-1:    #f0f0f2;
-    --color-surface-2:    #f4f4f6;
-    --color-surface-3:    #f8f8fa;
-    --color-surface-4:    #ffffff;
+    --color-surface-0: #e8e8eb;
+    --color-surface-1: #f0f0f2;
+    --color-surface-2: #f4f4f6;
+    --color-surface-3: #f8f8fa;
+    --color-surface-4: #ffffff;
 
     /* Borders */
-    --color-stroke:        #d0d0d4;
+    --color-stroke: #d0d0d4;
     --color-stroke-subtle: #e0e0e3;
 
     /* Text scale — dark on light */
     --color-secondary: #27272a;
-    --color-muted:     #52525b;
-    --color-faint:     #71717a;
-    --color-dim:       #888888;
+    --color-muted: #52525b;
+    --color-faint: #71717a;
+    --color-dim: #888888;
 
     /* Accent foreground text — mix accent with black so neon colours stay
        readable on light surfaces regardless of which accent the user picked. */
@@ -101,7 +101,21 @@
   }
 }
 
+/* xterm internal padding — the fit addon reads .xterm padding via
+   getComputedStyle and subtracts it from available dimensions, so
+   column/row counts stay accurate. */
+.xterm {
+  padding: 6px 10px;
+}
+
 @keyframes progress-slide {
-  0%   { left: -45%; width: 45%; }
-  100% { left: 100%; width: 45%; }
+  0% {
+    left: -45%;
+    width: 45%;
+  }
+
+  100% {
+    left: 100%;
+    width: 45%;
+  }
 }
