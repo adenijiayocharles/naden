@@ -181,12 +181,25 @@ export default function ServerList() {
 
       {ungrouped.length > 0 && (
         <section>
-          <h2 className="text-xs font-semibold text-faint uppercase tracking-wider mb-2">
+          <button
+            onClick={() => toggleGroupCollapse("__ungrouped__")}
+            className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-2 w-full text-left select-none text-faint"
+          >
+            <svg
+              className={`w-2.5 h-2.5 shrink-0 transition-transform ${collapsedGroups.has("__ungrouped__") ? "" : "rotate-90"}`}
+              fill="none" viewBox="0 0 6 10" stroke="currentColor" strokeWidth={2}
+              strokeLinecap="round" strokeLinejoin="round"
+            >
+              <polyline points="1,1 5,5 1,9" />
+            </svg>
             Ungrouped
-          </h2>
-          <div className={listClass}>
-            {ungrouped.map((s) => <Item key={s.id} server={s} />)}
-          </div>
+            <span className="text-dim normal-case font-normal tracking-normal">{ungrouped.length}</span>
+          </button>
+          {!collapsedGroups.has("__ungrouped__") && (
+            <div className={listClass}>
+              {ungrouped.map((s) => <Item key={s.id} server={s} />)}
+            </div>
+          )}
         </section>
       )}
     </div>

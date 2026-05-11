@@ -16,15 +16,21 @@ export function ConnectingOverlay({ serverName, onCancel }: ConnectingProps) {
         Connecting to{" "}
         <span className="text-white font-medium">{serverName}</span>…
       </p>
-      <div className="relative w-48 h-0.5 bg-surface-4 rounded-full overflow-hidden">
+      <div
+        role="progressbar"
+        aria-label="Connecting…"
+        aria-valuetext="Establishing SSH connection"
+        className="relative w-52 h-1 bg-surface-4 rounded-full overflow-hidden"
+      >
         <div
           className="absolute top-0 h-full bg-accent rounded-full"
           style={{ animation: "progress-slide 1.2s ease-in-out infinite" }}
         />
       </div>
+      <p className="text-dim text-xs">Establishing SSH connection…</p>
       <button
         onClick={onCancel}
-        className="bg-accent hover:bg-accent-hover text-black text-sm font-semibold px-4 py-1.5 rounded transition-colors mt-2"
+        className="bg-accent hover:bg-accent-hover text-black text-sm font-semibold px-4 py-1.5 rounded transition-colors"
       >
         Cancel
       </button>

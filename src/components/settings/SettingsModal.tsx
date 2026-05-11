@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { save, open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useVaultStore } from "../../store/vaultStore";
 import { useServerStore } from "../../store/serverStore";
@@ -47,6 +47,13 @@ export default function SettingsModal({ onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [savedFlash, setSavedFlash] = useState(false);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flashSaved = useCallback(() => {
+    setSavedFlash(true);
+    if (savedTimer.current) clearTimeout(savedTimer.current);
+    savedTimer.current = setTimeout(() => setSavedFlash(false), 2000);
+  }, []);
 
   // Theme
   type Theme = "dark" | "oled" | "dim" | "light";
@@ -60,6 +67,7 @@ export default function SettingsModal({ onClose }: Props) {
     setTheme(t);
     document.documentElement.dataset.theme = t === "dark" ? "" : t;
     settingsCommands.setSetting("theme", t).catch(() => {});
+    flashSaved();
   };
 
   // Accent colour
@@ -89,6 +97,7 @@ export default function SettingsModal({ onClose }: Props) {
     root.style.setProperty("--color-accent-hover", a.hover);
     root.style.setProperty("--color-accent-dim", a.dim);
     settingsCommands.setSetting("accent", id).catch(() => {});
+    flashSaved();
   };
 
   // Vault timeout
@@ -113,6 +122,7 @@ export default function SettingsModal({ onClose }: Props) {
     setTimeoutMins(v);
     setVaultTimeoutMins(Number(v));
     settingsCommands.setSetting("vault_timeout_minutes", v).catch(() => {});
+    flashSaved();
   };
 
   // Backup state
@@ -275,7 +285,15 @@ export default function SettingsModal({ onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-stroke-subtle shrink-0">
           <h2 className="text-lg font-semibold text-white">Settings</h2>
-          <button onClick={onClose} className="text-muted hover:text-white p-1 rounded" aria-label="Close">✕</button>
+          <div className="flex items-center gap-3">
+            <span
+              className={`text-xs text-accent-fg transition-opacity duration-300 ${savedFlash ? "opacity-100" : "opacity-0"}`}
+              aria-live="polite"
+            >
+              ✓ Saved
+            </span>
+            <button onClick={onClose} className="text-muted hover:text-white p-1 rounded" aria-label="Close">✕</button>
+          </div>
         </div>
 
         {/* Section jump nav */}
@@ -354,7 +372,7 @@ export default function SettingsModal({ onClose }: Props) {
               <button
                 onClick={handleToggle}
                 className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ml-4 ${
-                  isPasswordRequired ? "bg-accent" : "bg-[#333]"
+                  isPasswordRequired ? "bg-accent" : "bg-dim"
                 }`}
                 aria-label="Toggle vault password"
               >
@@ -619,7 +637,7 @@ export default function SettingsModal({ onClose }: Props) {
               </div>
               <select
                 value={fontFamily}
-                onChange={(e) => setFontFamily(e.target.value as typeof fontFamily)}
+                onChange={(e) => { setFontFamily(e.target.value as typeof fontFamily); flashSaved(); }}
                 className="h-8 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
               >
                 {TERMINAL_FONTS.map(({ id, label }) => (
@@ -634,7 +652,7 @@ export default function SettingsModal({ onClose }: Props) {
               </div>
               <select
                 value={fontSize}
-                onChange={(e) => setFontSize(Number(e.target.value))}
+                onChange={(e) => { setFontSize(Number(e.target.value)); flashSaved(); }}
                 className="ml-4 h-8 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
               >
                 {[10, 12, 13, 14, 16, 18, 20].map((n) => (
@@ -650,7 +668,7 @@ export default function SettingsModal({ onClose }: Props) {
               </div>
               <select
                 value={scrollback}
-                onChange={(e) => setScrollback(Number(e.target.value))}
+                onChange={(e) => { setScrollback(Number(e.target.value)); flashSaved(); }}
                 className="ml-4 h-8 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
               >
                 {[[500,"500"],[1000,"1 000"],[5000,"5 000"],[10000,"10 000"],[50000,"50 000"]].map(([v, l]) => (
@@ -665,9 +683,9 @@ export default function SettingsModal({ onClose }: Props) {
                 <p className="text-xs text-muted mt-0.5">Automatically copy selected text to clipboard</p>
               </div>
               <button
-                onClick={() => setCopyOnSelect(!copyOnSelect)}
+                onClick={() => { setCopyOnSelect(!copyOnSelect); flashSaved(); }}
                 className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ml-4 ${
-                  copyOnSelect ? "bg-accent" : "bg-[#333]"
+                  copyOnSelect ? "bg-accent" : "bg-dim"
                 }`}
                 aria-label="Toggle copy on select"
               >
