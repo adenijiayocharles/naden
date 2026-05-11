@@ -14,6 +14,8 @@ interface Props {
 
 export default function TerminalPane({ sessionId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const termRef = useRef<Terminal | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
   const resizeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
   const searchVisibleRef = useRef(false);
@@ -77,6 +79,8 @@ export default function TerminalPane({ sessionId }: Props) {
 
     const fitAddon = new FitAddon();
     const searchAddon = new SearchAddon();
+    termRef.current = term;
+    fitAddonRef.current = fitAddon;
     term.loadAddon(fitAddon);
     term.loadAddon(searchAddon);
     searchAddonRef.current = searchAddon;
@@ -150,6 +154,8 @@ export default function TerminalPane({ sessionId }: Props) {
     return () => {
       if (resizeTimer.current) clearTimeout(resizeTimer.current);
       searchAddonRef.current = null;
+      termRef.current = null;
+      fitAddonRef.current = null;
       unsub();
       resizeObserver.disconnect();
       themeObserver.disconnect();
@@ -158,6 +164,16 @@ export default function TerminalPane({ sessionId }: Props) {
       term.dispose();
     };
   }, [sessionId]); // settings read via getState() intentionally — avoids recreating live sessions
+
+  // Live-reload font size into open tabs whenever the setting changes.
+  const fontSize = useTerminalSettings((s) => s.fontSize);
+  useEffect(() => {
+    const term = termRef.current;
+    const fitAddon = fitAddonRef.current;
+    if (!term || !fitAddon) return;
+    term.options.fontSize = fontSize;
+    fitAddon.fit();
+  }, [fontSize]);
 
   return (
     <div className="relative h-full w-full bg-surface-0">
