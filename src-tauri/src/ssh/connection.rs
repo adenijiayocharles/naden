@@ -4,7 +4,6 @@ use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
 use base64::Engine as _;
 use tauri::Emitter;
-use uuid::Uuid;
 
 use crate::error::AppError;
 use crate::ssh::jump_host::{self, JumpInfo};
@@ -58,6 +57,7 @@ impl SessionManager {
     #[allow(clippy::too_many_arguments)]
     pub fn open_session(
         &self,
+        session_id: String,
         host: String,
         port: u16,
         username: String,
@@ -66,8 +66,7 @@ impl SessionManager {
         server_name: String,
         on_close: Option<OnCloseCallback>,
         app_handle: tauri::AppHandle,
-    ) -> Result<String, AppError> {
-        let session_id = Uuid::new_v4().to_string();
+    ) -> Result<(), AppError> {
         let (tx, rx) = std::sync::mpsc::sync_channel(256);
 
         self.sessions
@@ -91,7 +90,7 @@ impl SessionManager {
             }
         });
 
-        Ok(session_id)
+        Ok(())
     }
 
     pub fn send_input(&self, session_id: &str, data: Vec<u8>) -> Result<(), AppError> {

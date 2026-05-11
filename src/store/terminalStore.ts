@@ -54,13 +54,14 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   openSession: async (serverId, serverName) => {
     if (get().sessions.length >= MAX_TABS) return null;
 
-    const sessionId = await terminalCommands.openTerminalSession(serverId);
+    // Generate the session ID here and register all listeners BEFORE invoking
+    // Rust. This closes a race where an immediate failure (e.g. no network
+    // after deep sleep) fires terminal:error/closed before JS listeners exist,
+    // leaving the tab stuck on "connecting" forever.
+    const sessionId = crypto.randomUUID();
 
-    // Attach output buffer before adding to state so no bytes are missed
     await sessionBuffer.attach(sessionId);
 
-    // Register status/closed/error listeners in the store so they fire even
-    // when no TerminalPane is mounted for this session
     const unlisteners = await Promise.all([
       listen<string>(`terminal:status:${sessionId}`, ({ payload }) => {
         if (payload === "connected") {
@@ -87,7 +88,6 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
             s.id === sessionId ? { ...s, status: "error", errorMessage: payload } : s,
           ),
         }));
-        // No auto-removal — the TerminalPane error overlay lets the user reconnect or close
       }),
     ]);
 
@@ -100,6 +100,15 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       ],
       activeSessionId: sessionId,
     }));
+
+    try {
+      await terminalCommands.openTerminalSession(serverId, sessionId);
+    } catch (e) {
+      // Synchronous Rust error (e.g. server not found, vault locked) — clean up.
+      teardownResources(sessionId);
+      set((state) => dropFromState(state, sessionId));
+      return null;
+    }
 
     return sessionId;
   },

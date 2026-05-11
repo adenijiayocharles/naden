@@ -52,7 +52,10 @@ export const useSftpStore = create<SftpStore>((set, get) => ({
   activeSessionId: null,
 
   openSession: async (serverId, serverName) => {
-    const sessionId = await sftpCommands.openSftpSession(serverId);
+    // Generate the session ID here and register all listeners BEFORE invoking
+    // Rust. This closes a race where an immediate failure (e.g. no network
+    // after deep sleep) fires sftp:error/closed before JS listeners exist.
+    const sessionId = crypto.randomUUID();
 
     const unlisteners = await Promise.all([
       listen<string>(`sftp:status:${sessionId}`, ({ payload }) => {
@@ -96,6 +99,13 @@ export const useSftpStore = create<SftpStore>((set, get) => ({
       ],
       activeSessionId: sessionId,
     }));
+
+    try {
+      await sftpCommands.openSftpSession(serverId, sessionId);
+    } catch {
+      teardown(sessionId);
+      set((state) => dropFromState(state, sessionId));
+    }
 
     return sessionId;
   },

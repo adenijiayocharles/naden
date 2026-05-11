@@ -8,9 +8,10 @@ use crate::commands::ssh_commands::{auth_for_server, resolve_jump_chain};
 #[tauri::command]
 pub async fn open_sftp_session(
     server_id: String,
+    session_id: String,
     state: tauri::State<'_, AppState>,
     app_handle: tauri::AppHandle,
-) -> Result<String, AppError> {
+) -> Result<(), AppError> {
     let server = queries::get_server_db(&state.db, &server_id).await?;
     let auth = auth_for_server(&server, &state, &app_handle).await?;
 
@@ -28,6 +29,7 @@ pub async fn open_sftp_session(
 
     let s = &server.server;
     state.sftp_manager.open_session(
+        session_id,
         s.hostname.clone(),
         s.port as u16,
         s.username.clone(),

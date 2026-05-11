@@ -3,7 +3,6 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use tauri::Emitter;
-use uuid::Uuid;
 
 use crate::error::AppError;
 use crate::ssh::connection::{authenticate_session, AuthInfo};
@@ -76,14 +75,14 @@ impl SftpManager {
     #[allow(clippy::too_many_arguments)]
     pub fn open_session(
         &self,
+        session_id: String,
         host: String,
         port: u16,
         username: String,
         auth: AuthInfo,
         jump_chain: Vec<JumpInfo>,
         app_handle: tauri::AppHandle,
-    ) -> Result<String, AppError> {
-        let session_id = Uuid::new_v4().to_string();
+    ) -> Result<(), AppError> {
         let (tx, rx) = std::sync::mpsc::sync_channel(64);
 
         self.sessions
@@ -92,13 +91,13 @@ impl SftpManager {
             .insert(session_id.clone(), SftpSessionHandle { tx });
 
         let sessions = Arc::clone(&self.sessions);
-        let sid = session_id.clone();
+        let sid = session_id;
 
         std::thread::spawn(move || {
             run_sftp_session(host, port, username, auth, jump_chain, sid, rx, app_handle, sessions);
         });
 
-        Ok(session_id)
+        Ok(())
     }
 
     pub(crate) fn send(&self, session_id: &str, msg: SftpMessage) -> Result<(), AppError> {

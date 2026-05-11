@@ -74,8 +74,8 @@ export const sshCommands = {
 };
 
 export const terminalCommands = {
-  openTerminalSession: (serverId: string) =>
-    invoke<string>("open_terminal_session", { serverId }),
+  openTerminalSession: (serverId: string, sessionId: string) =>
+    invoke<void>("open_terminal_session", { serverId, sessionId }),
 
   closeTerminalSession: (sessionId: string) =>
     invoke<void>("close_terminal_session", { sessionId }),
@@ -125,8 +125,8 @@ export const vaultCommands = {
 };
 
 export const sftpCommands = {
-  openSftpSession: (serverId: string) =>
-    invoke<string>("open_sftp_session", { serverId }),
+  openSftpSession: (serverId: string, sessionId: string) =>
+    invoke<void>("open_sftp_session", { serverId, sessionId }),
 
   closeSftpSession: (sessionId: string) =>
     invoke<void>("close_sftp_session", { sessionId }),

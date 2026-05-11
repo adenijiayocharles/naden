@@ -205,15 +205,15 @@ pub async fn confirm_ssh_config_import(
     Ok(created)
 }
 
-/// Opens a built-in terminal session. Returns a session_id for subsequent events
-/// and commands. The SSH connection (including jump-host tunnel if configured)
-/// is established asynchronously; status arrives via `terminal:status:{id}` events.
+/// Opens a built-in terminal session. The caller supplies `session_id` so it can
+/// register event listeners before this returns and the thread starts.
 #[tauri::command]
 pub async fn open_terminal_session(
     server_id: String,
+    session_id: String,
     state: tauri::State<'_, AppState>,
     app_handle: tauri::AppHandle,
-) -> Result<String, AppError> {
+) -> Result<(), AppError> {
     let server = queries::get_server_db(&state.db, &server_id).await?;
     let auth = auth_for_server(&server, &state, &app_handle).await?;
 
@@ -261,6 +261,7 @@ pub async fn open_terminal_session(
     });
 
     state.session_manager.open_session(
+        session_id,
         s.hostname.clone(),
         u16::try_from(s.port).unwrap_or(22),
         s.username.clone(),
