@@ -33,7 +33,7 @@ export default function TopBar() {
           <input
             value={auditSearchQuery}
             onChange={(e) => setAuditSearch(e.target.value)}
-            placeholder="Search audit log…"
+            placeholder="Search logs…"
             className="flex-1 min-w-0 max-w-sm h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
           />
         ) : (

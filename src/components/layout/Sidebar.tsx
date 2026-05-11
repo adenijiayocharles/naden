@@ -345,7 +345,7 @@ export default function Sidebar() {
           }`}
         >
           <ClockIcon />
-          Audit Log
+          Logs
         </button>
       </div>
 
