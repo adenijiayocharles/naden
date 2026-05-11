@@ -108,6 +108,14 @@
   padding: 6px 10px;
 }
 
+/* .xterm-viewport is position:absolute;inset:0 so it fills the full
+   .xterm element including the padding area. Its default background is
+   #000 which bleeds into the padding gap. Pin it to surface-1 so it
+   always matches the terminal background and the outer gutter. */
+.xterm-viewport {
+  background-color: var(--color-surface-1) !important;
+}
+
 @keyframes progress-slide {
   0% {
     left: -45%;
