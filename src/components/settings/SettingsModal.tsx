@@ -3,7 +3,7 @@ import { save, open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useVaultStore } from "../../store/vaultStore";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
-import { useTerminalSettings } from "../../lib/terminalSettings";
+import { useTerminalSettings, TERMINAL_FONTS, fontCss } from "../../lib/terminalSettings";
 import { backupCommands, settingsCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import { passwordStrength } from "../../lib/passwordStrength";
@@ -41,7 +41,7 @@ export default function SettingsModal({ onClose }: Props) {
   const { isPasswordRequired, disablePassword, enablePassword, changePassword } = useVaultStore();
   const fetchAll = useServerStore((s) => s.fetchAll);
   const setVaultTimeoutMins = useUiStore((s) => s.setVaultTimeoutMins);
-  const { fontSize, scrollback, copyOnSelect, setFontSize, setScrollback, setCopyOnSelect } =
+  const { fontSize, scrollback, copyOnSelect, fontFamily, setFontSize, setScrollback, setCopyOnSelect, setFontFamily } =
     useTerminalSettings();
   const [activeForm, setActiveForm] = useState<ActiveForm>("none");
   const [error, setError] = useState<string | null>(null);
@@ -606,6 +606,27 @@ export default function SettingsModal({ onClose }: Props) {
           <div id="settings-terminal">
             <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Terminal</p>
             <p className="text-xs text-faint mb-3">Changes apply to new sessions.</p>
+
+            <div className="flex items-center justify-between py-3 border-b border-stroke-subtle">
+              <div className="min-w-0 mr-4">
+                <p className="text-sm text-white font-medium">Font</p>
+                <p
+                  className="text-xs text-muted mt-0.5 truncate"
+                  style={{ fontFamily: fontCss(fontFamily) }}
+                >
+                  the quick brown fox
+                </p>
+              </div>
+              <select
+                value={fontFamily}
+                onChange={(e) => setFontFamily(e.target.value as typeof fontFamily)}
+                className="h-8 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+              >
+                {TERMINAL_FONTS.map(({ id, label }) => (
+                  <option key={id} value={id}>{label}</option>
+                ))}
+              </select>
+            </div>
 
             <div className="flex items-center justify-between py-3 border-b border-stroke-subtle">
               <div>

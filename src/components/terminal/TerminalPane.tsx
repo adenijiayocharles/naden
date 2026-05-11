@@ -5,7 +5,7 @@ import { SearchAddon } from "@xterm/addon-search";
 import { terminalCommands } from "../../lib/tauriCommands";
 import { sessionBuffer } from "../../lib/sessionBuffer";
 import { useTerminalStore } from "../../store/terminalStore";
-import { useTerminalSettings } from "../../lib/terminalSettings";
+import { useTerminalSettings, fontCss } from "../../lib/terminalSettings";
 import { ConnectingOverlay, ErrorOverlay } from "../shared/ConnectionOverlay";
 
 interface Props {
@@ -48,7 +48,7 @@ export default function TerminalPane({ sessionId }: Props) {
     if (!containerRef.current) return;
 
     // Read settings at terminal creation time — changes apply to new sessions
-    const { fontSize, scrollback, copyOnSelect } = useTerminalSettings.getState();
+    const { fontSize, scrollback, copyOnSelect, fontFamily } = useTerminalSettings.getState();
 
     const getTermTheme = () => {
       const root = document.documentElement;
@@ -69,7 +69,7 @@ export default function TerminalPane({ sessionId }: Props) {
 
     const term = new Terminal({
       cursorBlink: true,
-      fontFamily: "JetBrains Mono, Menlo, Consolas, monospace",
+      fontFamily: fontCss(fontFamily),
       fontSize,
       scrollback,
       theme: getTermTheme(),
