@@ -327,6 +327,14 @@ pub async fn list_tags_db(db: &SqlitePool) -> Result<Vec<Tag>, AppError> {
         .await?)
 }
 
+pub async fn delete_tag_db(db: &SqlitePool, id: &str) -> Result<(), AppError> {
+    sqlx::query("DELETE FROM tags WHERE id = ?")
+        .bind(id)
+        .execute(db)
+        .await?;
+    Ok(())
+}
+
 /// Inserts a new tag, or returns the existing one if the name already exists.
 pub async fn create_tag_db(db: &SqlitePool, name: &str) -> Result<Tag, AppError> {
     if name.trim().is_empty() {

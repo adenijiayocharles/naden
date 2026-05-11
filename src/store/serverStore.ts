@@ -32,6 +32,7 @@ interface ServerStore {
   updateGroup: (groupId: string, name: string, color?: string) => Promise<Group>;
   deleteGroup: (groupId: string) => Promise<void>;
   createTag: (name: string) => Promise<Tag>;
+  deleteTag: (id: string) => Promise<void>;
   checkReachability: (serverId: string) => Promise<void>;
 }
 
@@ -128,6 +129,17 @@ export const useServerStore = create<ServerStore>((set) => ({
       tags: s.tags.some((t) => t.id === tag.id) ? s.tags : [...s.tags, tag],
     }));
     return tag;
+  },
+
+  deleteTag: async (id) => {
+    await serverCommands.deleteTag(id);
+    set((s) => ({
+      tags: s.tags.filter((t) => t.id !== id),
+      servers: s.servers.map((sv) => ({
+        ...sv,
+        tags: sv.tags.filter((t) => t.id !== id),
+      })),
+    }));
   },
 
   checkReachability: async (serverId) => {

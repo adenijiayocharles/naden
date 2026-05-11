@@ -51,6 +51,7 @@ pub fn run() {
             commands::server_commands::delete_group,
             commands::server_commands::list_tags,
             commands::server_commands::create_tag,
+            commands::server_commands::delete_tag,
             // Search
             commands::search_commands::fuzzy_search,
             // Logs

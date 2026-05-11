@@ -191,6 +191,7 @@ export default function Sidebar() {
   const servers = useServerStore((s) => s.servers);
   const groups = useServerStore((s) => s.groups);
   const tags = useServerStore((s) => s.tags);
+  const deleteTag = useServerStore((s) => s.deleteTag);
   const { filterGroupId, filterTagId, filterFavourites, setFilterGroup, setFilterTag, setFilterFavourites, activeView, openLogs, closeForm, expandServerList } = useUiStore();
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [creatingGroup, setCreatingGroup] = useState(false);
@@ -322,14 +323,45 @@ export default function Sidebar() {
             <p className="px-3 pb-1 text-xs font-semibold text-faint uppercase tracking-wider">
               Tags
             </p>
-            {tags.map((t) =>
-              navItem(
-                filterTagId === t.id && activeView !== "logs",
-                selectFilter(() => setFilterTag(t.id)),
-                `#${t.name}`,
-                countByTag[t.id] ?? 0,
-              ),
-            )}
+            {tags.map((t) => {
+              const active = filterTagId === t.id && activeView !== "logs";
+              return (
+                <div key={t.id} className="group/tag flex items-center">
+                  <button
+                    onClick={selectFilter(() => setFilterTag(t.id))}
+                    className={`flex-1 text-left px-3 py-2 rounded-l text-sm flex items-center justify-between transition-colors min-w-0 ${
+                      active
+                        ? "bg-accent text-black font-medium"
+                        : "text-secondary hover:bg-surface-3 hover:text-white"
+                    }`}
+                  >
+                    <span className="truncate">#{t.name}</span>
+                    <span className={`text-xs ml-2 shrink-0 ${active ? "text-black/60" : "text-muted"}`}>
+                      {countByTag[t.id] ?? 0}
+                    </span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void deleteTag(t.id);
+                      if (filterTagId === t.id) setFilterTag(null);
+                    }}
+                    className={`px-1.5 py-2 rounded-r opacity-0 group-hover/tag:opacity-100 transition-opacity ${
+                      active
+                        ? "text-black/50 hover:text-black"
+                        : "text-dim hover:text-secondary hover:bg-surface-3"
+                    }`}
+                    title={`Delete #${t.name}`}
+                    aria-label={`Delete tag ${t.name}`}
+                  >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
+                      <line x1="2" y1="2" x2="10" y2="10" />
+                      <line x1="10" y1="2" x2="2" y2="10" />
+                    </svg>
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </nav>
