@@ -22,7 +22,6 @@ interface Props {
   onCheckReachability: () => void;
   onDelete: () => void;
   buttonClassName?: string;
-  submenuLeft?: boolean;
 }
 
 export default function ServerKebabMenu({
@@ -32,7 +31,6 @@ export default function ServerKebabMenu({
   onEdit, onCopyPassword, onSystemTerminal, onBrowseFiles, onMoveToGroup,
   onDuplicate, onCheckReachability, onDelete,
   buttonClassName = "text-faint hover:text-white p-1 rounded hover:bg-surface-3 transition-colors text-lg leading-none",
-  submenuLeft = false,
 }: Props) {
   const [showGroupPicker, setShowGroupPicker] = useState(false);
   const menuRef2 = useRef<HTMLDivElement>(null);
@@ -94,25 +92,28 @@ export default function ServerKebabMenu({
             </button>
           )}
 
-          {/* Move to group — submenu opens to the right */}
+          {/* Move to group — inline expanding list, no viewport overflow risk */}
           {(hasGroups || isGrouped) && (
-            <div className="relative">
+            <div>
               <button
                 onClick={() => setShowGroupPicker((v) => !v)}
                 className="w-full text-left px-3 py-2 text-sm text-secondary hover:bg-surface-4 hover:text-white transition-colors flex items-center justify-between"
               >
                 <span>Move to Group</span>
-                <svg className="w-3 h-3 text-faint" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.8}>
+                <svg
+                  className={`w-3 h-3 text-faint transition-transform ${showGroupPicker ? "rotate-90" : ""}`}
+                  fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.8}
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 2l4 4-4 4" />
                 </svg>
               </button>
 
               {showGroupPicker && (
-                <div className={`absolute top-0 ${submenuLeft ? "right-full mr-1" : "left-full ml-1"} bg-surface-2 border border-stroke rounded-lg shadow-2xl z-30 min-w-[150px] py-1`}>
+                <div className="border-t border-stroke-subtle bg-surface-3 py-1">
                   {isGrouped && (
                     <button
                       onClick={() => { onMoveToGroup(null); setShowGroupPicker(false); }}
-                      className="w-full text-left px-3 py-1.5 text-xs text-muted hover:bg-surface-4 hover:text-white transition-colors"
+                      className="w-full text-left pl-5 pr-3 py-1.5 text-xs text-muted hover:bg-surface-4 hover:text-white transition-colors"
                     >
                       Ungrouped
                     </button>
@@ -121,15 +122,15 @@ export default function ServerKebabMenu({
                     <button
                       key={g.id}
                       onClick={() => { onMoveToGroup(g.id); setShowGroupPicker(false); }}
-                      className={`w-full text-left px-3 py-1.5 text-xs hover:bg-surface-4 hover:text-white transition-colors flex items-center gap-2 ${
+                      className={`w-full text-left pl-5 pr-3 py-1.5 text-xs hover:bg-surface-4 hover:text-white transition-colors flex items-center gap-2 ${
                         g.id === currentGroupId ? "text-white font-medium" : "text-muted"
                       }`}
                     >
                       {g.color && (
                         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: g.color }} />
                       )}
-                      {g.name}
-                      {g.id === currentGroupId && <span className="ml-auto pl-3 text-accent-fg">✓</span>}
+                      <span className="truncate">{g.name}</span>
+                      {g.id === currentGroupId && <span className="ml-auto pl-2 text-accent-fg">✓</span>}
                     </button>
                   ))}
                 </div>

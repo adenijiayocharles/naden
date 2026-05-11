@@ -59,12 +59,12 @@ export default function ServerRow({ server }: { server: Server }) {
       </span>
 
       {server.authMethod === "password" ? (
-        <svg className="w-3 h-3 text-dim shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Password auth</title>
+        <svg className="w-3.5 h-3.5 text-muted shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Password auth</title>
           <rect x="3" y="7" width="10" height="8" rx="1.5" />
           <path strokeLinecap="round" d="M5 7V5a3 3 0 016 0v2" />
         </svg>
       ) : (
-        <svg className="w-3 h-3 text-dim shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Key auth</title>
+        <svg className="w-3.5 h-3.5 text-muted shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Key auth</title>
           <circle cx="6" cy="8" r="3.5" />
           <path strokeLinecap="round" d="M9 8h5M12 6v4" />
         </svg>
@@ -126,7 +126,6 @@ export default function ServerRow({ server }: { server: Server }) {
           onCheckReachability={() => { void actions.handleCheckReachability(); }}
           onDelete={actions.handleDelete}
           buttonClassName="text-dim hover:text-white p-1 rounded hover:bg-surface-3 transition-colors transition-opacity duration-150 text-base leading-none opacity-0 group-hover:opacity-100"
-          submenuLeft
         />
       )}
     </div>

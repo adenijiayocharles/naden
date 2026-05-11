@@ -166,7 +166,7 @@ export default function SftpToolbar({
       </div>
 
       {/* Path row */}
-      <div className="flex items-center px-3 py-1 border-t border-[#161616]">
+      <div className="flex items-center px-3 py-1 border-t border-stroke-subtle">
         <PathBreadcrumb path={currentPath} busy={busy} onNavigateTo={onNavigateTo} />
       </div>
     </div>

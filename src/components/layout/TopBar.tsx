@@ -57,7 +57,7 @@ export default function TopBar() {
             {/* Bulk select */}
             <button
               onClick={toggleBulkMode}
-              className={`px-2.5 py-1.5 rounded border text-xs transition-colors shrink-0 ${
+              className={`px-2.5 py-1.5 rounded border text-xs transition-colors shrink-0 min-w-[5.5rem] text-center ${
                 bulkMode
                   ? "bg-accent/10 border-accent/30 text-accent-fg"
                   : "bg-surface-3 border-stroke text-faint hover:text-muted"

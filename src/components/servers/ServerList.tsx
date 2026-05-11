@@ -155,7 +155,7 @@ export default function ServerList() {
             <button
               onClick={() => toggleGroupCollapse(group.id)}
               className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-2 w-full text-left select-none"
-              style={{ color: group.color ?? "#666" }}
+              style={{ color: group.color ?? "var(--color-faint)" }}
             >
               <svg
                 className={`w-2.5 h-2.5 shrink-0 transition-transform ${collapsed ? "" : "rotate-90"}`}
