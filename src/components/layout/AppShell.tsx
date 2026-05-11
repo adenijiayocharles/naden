@@ -249,11 +249,13 @@ export default function AppShell() {
           {/* Server list / audit log */}
           <main
             className={`shrink-0 transition-[width,padding] duration-200 ${
-              hasPanel
-                ? serverListCollapsed
-                  ? "w-0 p-0 overflow-hidden"
-                  : "w-72 border-r border-stroke-subtle overflow-hidden flex flex-col"
-                : "flex-1 overflow-hidden flex flex-col"
+              activeView === "audit"
+                ? "flex-1 overflow-hidden flex flex-col"
+                : hasPanel
+                  ? serverListCollapsed
+                    ? "w-0 p-0 overflow-hidden"
+                    : "w-72 border-r border-stroke-subtle overflow-hidden flex flex-col"
+                  : "flex-1 overflow-hidden flex flex-col"
             }`}
           >
             {activeView === "audit"
@@ -267,7 +269,7 @@ export default function AppShell() {
           </main>
 
           {/* Collapse / expand handle */}
-          {hasPanel && (
+          {hasPanel && activeView !== "audit" && (
             <button
               onClick={toggleServerList}
               aria-label={serverListCollapsed ? "Expand server list" : "Collapse server list"}
@@ -292,7 +294,7 @@ export default function AppShell() {
           )}
 
           {/* Unified panel: terminals + SFTP browsers */}
-          {hasPanel && (
+          {hasPanel && activeView !== "audit" && (
             <div className="flex flex-col flex-1 min-w-0">
               {/* Unified tab bar */}
               <div
