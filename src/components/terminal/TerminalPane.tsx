@@ -161,7 +161,7 @@ export default function TerminalPane({ sessionId }: Props) {
 
       {/* Search bar — floats over terminal at top-right */}
       {searchVisible && (
-        <div className="absolute top-3 right-4 z-30 flex items-center gap-1.5 bg-surface-3 border border-[#333] rounded-lg shadow-2xl px-2.5 py-1.5">
+        <div className="absolute top-3 right-4 z-30 flex items-center gap-1.5 bg-surface-3 border border-stroke rounded-lg shadow-2xl px-2.5 py-1.5">
           <input
             autoFocus
             type="text"

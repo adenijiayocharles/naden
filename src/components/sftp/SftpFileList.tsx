@@ -11,7 +11,7 @@ interface Props {
 function FileIcon({ isDir }: { isDir: boolean }) {
   if (isDir) {
     return (
-      <svg className="w-4 h-4 text-[#CDFF00] shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <svg className="w-4 h-4 text-accent-fg shrink-0" fill="currentColor" viewBox="0 0 20 20">
         <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
       </svg>
     );
@@ -56,7 +56,7 @@ export default function SftpFileList({ entries, selected, onSelect, onNavigate }
               }}
               className={`cursor-pointer border-b border-[#111] transition-colors select-none ${
                 selected === entry.path
-                  ? "bg-surface-4 text-white"
+                  ? "bg-accent/10 text-accent-fg"
                   : "text-secondary hover:bg-surface-2 hover:text-white"
               }`}
             >
