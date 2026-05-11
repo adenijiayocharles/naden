@@ -43,6 +43,7 @@ interface UiStore {
   toggleGroupCollapse: (groupId: string) => void;
   toggleServerList: () => void;
   collapseServerList: () => void;
+  expandServerList: () => void;
   toggleBulkMode: () => void;
   toggleSelected: (id: string) => void;
   selectAll: (ids: string[]) => void;
@@ -94,6 +95,7 @@ export const useUiStore = create<UiStore>((set) => ({
   }),
   toggleServerList: () => set((s) => ({ serverListCollapsed: !s.serverListCollapsed })),
   collapseServerList: () => set({ serverListCollapsed: true }),
+  expandServerList: () => set({ serverListCollapsed: false }),
   toggleBulkMode: () => set((s) => ({ bulkMode: !s.bulkMode, bulkSelected: [] })),
   toggleSelected: (id) => set((s) => ({
     bulkSelected: s.bulkSelected.includes(id)

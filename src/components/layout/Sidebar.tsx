@@ -191,12 +191,13 @@ export default function Sidebar() {
   const servers = useServerStore((s) => s.servers);
   const groups = useServerStore((s) => s.groups);
   const tags = useServerStore((s) => s.tags);
-  const { filterGroupId, filterTagId, filterFavourites, setFilterGroup, setFilterTag, setFilterFavourites, activeView, openLogs, closeForm } = useUiStore();
+  const { filterGroupId, filterTagId, filterFavourites, setFilterGroup, setFilterTag, setFilterFavourites, activeView, openLogs, closeForm, expandServerList } = useUiStore();
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [creatingGroup, setCreatingGroup] = useState(false);
 
   const selectFilter = (fn: () => void) => () => {
     if (activeView === "logs") closeForm();
+    expandServerList();
     fn();
   };
 
