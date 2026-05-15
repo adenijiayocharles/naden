@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useState, useRef } from "react";
-import { useUiStore } from "../../store/uiStore";
+import { useUiStore, type ViewMode, type SortMode } from "../../store/uiStore";
 import { useVaultStore } from "../../store/vaultStore";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
@@ -61,7 +61,18 @@ export default function AppShell() {
   useVaultHeartbeat();
 
   const activeView = useUiStore((s) => s.activeView);
+  const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
   const bulkMode = useUiStore((s) => s.bulkMode);
+  const toggleBulkMode = useUiStore((s) => s.toggleBulkMode);
+  const bulkSelected = useUiStore((s) => s.bulkSelected);
+  const viewMode = useUiStore((s) => s.viewMode);
+  const setViewMode = useUiStore((s) => s.setViewMode);
+  const sortMode = useUiStore((s) => s.sortMode);
+  const setSortMode = useUiStore((s) => s.setSortMode);
+  const searchQuery = useUiStore((s) => s.searchQuery);
+  const setSearch = useUiStore((s) => s.setSearch);
+  const logSearchQuery = useUiStore((s) => s.logSearchQuery);
+  const setLogSearch = useUiStore((s) => s.setLogSearch);
   const serverListCollapsed = useUiStore((s) => s.serverListCollapsed);
   const toggleServerList = useUiStore((s) => s.toggleServerList);
   const collapseServerList = useUiStore((s) => s.collapseServerList);
@@ -83,6 +94,7 @@ export default function AppShell() {
   const sftpReorder = useSftpStore((s) => s.reorderSessions);
 
   const [activePanelType, setActivePanelType] = useState<PanelType>("terminal");
+const searchRef = useRef<HTMLInputElement>(null);
 
   // Consolidated drag state — three separate atoms caused triple renders per drag-start.
   const [drag, setDrag] = useState<{ id: string; type: PanelType } | null>(null);
@@ -171,11 +183,13 @@ export default function AppShell() {
   if (isSetup && !isUnlocked && isPasswordRequired) return <VaultLockScreen />;
 
   return (
-    <div className="flex h-screen bg-surface-base text-white overflow-hidden">
-      <Sidebar />
+    <div className="flex flex-col h-screen bg-surface-base text-white overflow-hidden">
+      <TopBar />
+
+      <div className="flex flex-1 min-h-0">
+      {!sidebarCollapsed && <Sidebar />}
 
       <div className="flex flex-col flex-1 min-w-0">
-        <TopBar />
         <div className="flex flex-1 min-h-0">
           {/* Server list / logs */}
           <main
@@ -190,10 +204,78 @@ export default function AppShell() {
             }`}
           >
             {activeView === "logs" ? (
-              <LogView />
+              <>
+                <div className="px-4 py-2 border-b border-stroke-subtle shrink-0">
+                  <input
+                    value={logSearchQuery}
+                    onChange={(e) => setLogSearch(e.target.value)}
+                    placeholder="Search logs…"
+                    className="w-full h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
+                  />
+                </div>
+                <LogView />
+              </>
             ) : (
               <>
-                <div className="flex-1 overflow-y-auto p-5">
+                {/* Server list toolbar */}
+                <div className="px-3 py-2 border-b border-stroke-subtle shrink-0 flex items-center gap-2">
+                  <div className="relative flex-1 min-w-0">
+                    <input
+                      ref={searchRef}
+                      data-search-input
+                      value={searchQuery}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search…"
+                      className="w-full h-7 bg-surface-3 border border-stroke rounded px-3 pr-10 text-xs text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
+                    />
+                    {!searchQuery && (
+                      <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-dim pointer-events-none select-none">⌘K</kbd>
+                    )}
+                  </div>
+                  <select
+                    value={sortMode}
+                    onChange={(e) => setSortMode(e.target.value as SortMode)}
+                    className="h-7 bg-surface-3 border border-stroke rounded px-2 text-xs text-secondary focus:outline-none focus:border-accent shrink-0 cursor-pointer"
+                  >
+                    <option value="default">Default</option>
+                    <option value="name_asc">A → Z</option>
+                    <option value="name_desc">Z → A</option>
+                    <option value="host">Host</option>
+                    <option value="last_connected">Recent</option>
+                  </select>
+                  <div className="flex items-center bg-surface-3 border border-stroke rounded overflow-hidden shrink-0">
+                    {(["card", "row"] as ViewMode[]).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => setViewMode(mode)}
+                        aria-label={mode === "card" ? "Card view" : "List view"}
+                        className={`p-1 transition-colors ${viewMode === mode ? "bg-surface-4 text-white" : "text-faint hover:text-muted"}`}
+                      >
+                        {mode === "card" ? (
+                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
+                            <rect x="1" y="1" width="6" height="6" rx="1" />
+                            <rect x="9" y="1" width="6" height="6" rx="1" />
+                            <rect x="1" y="9" width="6" height="6" rx="1" />
+                            <rect x="9" y="9" width="6" height="6" rx="1" />
+                          </svg>
+                        ) : (
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
+                            <line x1="1" y1="4" x2="15" y2="4" />
+                            <line x1="1" y1="8" x2="15" y2="8" />
+                            <line x1="1" y1="12" x2="15" y2="12" />
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={toggleBulkMode}
+                    className={`h-7 px-2 rounded border text-xs transition-colors shrink-0 ${bulkMode ? "bg-accent/10 border-accent/30 text-accent-fg" : "bg-surface-3 border-stroke text-faint hover:text-muted"}`}
+                  >
+                    {bulkMode ? `Cancel${bulkSelected.length > 0 ? ` (${bulkSelected.length})` : ""}` : "Select"}
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4">
                   <ServerList />
                 </div>
                 {bulkMode && <BulkActionBar />}
@@ -303,8 +385,9 @@ export default function AppShell() {
           )}
         </div>
       </div>
+      </div>
 
-      <ClipboardClearBanner />
+<ClipboardClearBanner />
       {(activeView === "add" || activeView === "edit") && <ServerForm />}
       {onboardingChecked && !onboardingComplete && (
         <OnboardingWizard onComplete={() => setOnboardingComplete(true)} />

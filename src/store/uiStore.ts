@@ -10,6 +10,7 @@ interface UiStore {
   viewMode: ViewMode;
   sortMode: SortMode;
   collapsedGroups: Set<string>;
+  sidebarCollapsed: boolean;
   serverListCollapsed: boolean;
   settingsOpen: boolean;
   onboardingComplete: boolean;
@@ -41,6 +42,7 @@ interface UiStore {
   setViewMode: (mode: ViewMode) => void;
   setSortMode: (mode: SortMode) => void;
   toggleGroupCollapse: (groupId: string) => void;
+  toggleSidebar: () => void;
   toggleServerList: () => void;
   collapseServerList: () => void;
   expandServerList: () => void;
@@ -58,6 +60,7 @@ export const useUiStore = create<UiStore>((set) => ({
   viewMode: "card",
   sortMode: "default",
   collapsedGroups: new Set<string>(),
+  sidebarCollapsed: false,
   serverListCollapsed: false,
   settingsOpen: false,
   onboardingComplete: true, // assume complete until checked
@@ -93,6 +96,7 @@ export const useUiStore = create<UiStore>((set) => ({
     if (next.has(groupId)) next.delete(groupId); else next.add(groupId);
     return { collapsedGroups: next };
   }),
+  toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   toggleServerList: () => set((s) => ({ serverListCollapsed: !s.serverListCollapsed })),
   collapseServerList: () => set({ serverListCollapsed: true }),
   expandServerList: () => set({ serverListCollapsed: false }),
