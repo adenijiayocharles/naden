@@ -1,152 +1,75 @@
-import { useState, useRef } from "react";
-import { useUiStore, type ViewMode, type SortMode } from "../../store/uiStore";
-import { useVaultCountdown } from "../../lib/useVaultCountdown";
-import SshConfigImport from "../servers/SshConfigImport";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useUiStore } from "../../store/uiStore";
+import { useTerminalStore } from "../../store/terminalStore";
+import { useSftpStore } from "../../store/sftpStore";
 import SettingsModal from "../settings/SettingsModal";
 
 export default function TopBar() {
-  const openAdd = useUiStore((s) => s.openAdd);
-  const setSearch = useUiStore((s) => s.setSearch);
-  const searchQuery = useUiStore((s) => s.searchQuery);
-  const viewMode = useUiStore((s) => s.viewMode);
-  const setViewMode = useUiStore((s) => s.setViewMode);
-  const bulkMode = useUiStore((s) => s.bulkMode);
-  const toggleBulkMode = useUiStore((s) => s.toggleBulkMode);
-  const bulkSelected = useUiStore((s) => s.bulkSelected);
-  const sortMode = useUiStore((s) => s.sortMode);
-  const setSortMode = useUiStore((s) => s.setSortMode);
+  const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
+  const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const activeView = useUiStore((s) => s.activeView);
-  const logSearchQuery = useUiStore((s) => s.logSearchQuery);
-  const setLogSearch = useUiStore((s) => s.setLogSearch);
+  const openLogs = useUiStore((s) => s.openLogs);
+  const closeForm = useUiStore((s) => s.closeForm);
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const openSettings = useUiStore((s) => s.openSettings);
   const closeSettings = useUiStore((s) => s.closeSettings);
-  const countdown = useVaultCountdown();
-  const isLogs = activeView === "logs";
-  const [showImport, setShowImport] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+
+  const terminalSessions = useTerminalStore((s) => s.sessions);
+  const terminalActiveId = useTerminalStore((s) => s.activeSessionId);
+  const sftpSessions = useSftpStore((s) => s.sessions);
+  const sftpActiveId = useSftpStore((s) => s.activeSessionId);
+
+  const activeSession =
+    terminalSessions.find((s) => s.id === terminalActiveId) ??
+    sftpSessions.find((s) => s.id === sftpActiveId);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button")) return;
+    void getCurrentWindow().startDragging();
+  };
 
   return (
     <>
-      <header className="h-14 shrink-0 border-b border-stroke-subtle bg-surface-base flex items-center px-4 gap-3">
-        {isLogs ? (
-          <input
-            value={logSearchQuery}
-            onChange={(e) => setLogSearch(e.target.value)}
-            placeholder="Search logs…"
-            className="flex-1 min-w-0 max-w-sm h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
-          />
-        ) : (
-          <>
-            <div className="relative flex-1 min-w-0 max-w-sm">
-              <input
-                ref={inputRef}
-                data-search-input
-                value={searchQuery}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search servers…"
-                className="w-full h-8 bg-surface-3 border border-stroke rounded px-3 pr-12 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
-              />
-              {!searchQuery && (
-                <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-dim pointer-events-none select-none">
-                  ⌘K
-                </kbd>
-              )}
-            </div>
+      <header
+        data-tauri-drag-region
+        onMouseDown={handleMouseDown}
+        className="h-11 shrink-0 border-b border-stroke-subtle bg-surface-base flex items-center pl-[72px] pr-3"
+      >
+        <div data-tauri-drag-region className="flex-1 flex items-center justify-center pointer-events-none">
+          <span className="text-sm text-secondary select-none">
+            SSHManager{activeSession ? ` — ${activeSession.serverName}` : ""}
+          </span>
+        </div>
 
-            {/* Bulk select */}
-            <button
-              onClick={toggleBulkMode}
-              className={`px-2.5 py-1.5 rounded border text-xs transition-colors shrink-0 min-w-[5.5rem] text-center ${
-                bulkMode
-                  ? "bg-accent/10 border-accent/30 text-accent-fg"
-                  : "bg-surface-3 border-stroke text-faint hover:text-muted"
-              }`}
-            >
-              {bulkMode ? `Cancel${bulkSelected.length > 0 ? ` (${bulkSelected.length})` : ""}` : "Select"}
-            </button>
-
-            {/* Sort mode */}
-            <select
-              value={sortMode}
-              onChange={(e) => setSortMode(e.target.value as SortMode)}
-              className="h-8 bg-surface-3 border border-stroke rounded px-2 text-xs text-secondary focus:outline-none focus:border-accent shrink-0 cursor-pointer"
-            >
-              <option value="default">Sort: Default</option>
-              <option value="name_asc">Name A → Z</option>
-              <option value="name_desc">Name Z → A</option>
-              <option value="host">Host</option>
-              <option value="last_connected">Last connected</option>
-            </select>
-
-            {/* View mode toggle */}
-            <div className="flex items-center bg-surface-3 border border-stroke rounded overflow-hidden shrink-0">
-              {(["card", "row"] as ViewMode[]).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setViewMode(mode)}
-                  aria-label={mode === "card" ? "Card view" : "List view"}
-                  className={`p-1.5 transition-colors ${
-                    viewMode === mode
-                      ? "bg-surface-4 text-white"
-                      : "text-faint hover:text-muted"
-                  }`}
-                >
-                  {mode === "card" ? (
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                      <rect x="1" y="1" width="6" height="6" rx="1" />
-                      <rect x="9" y="1" width="6" height="6" rx="1" />
-                      <rect x="1" y="9" width="6" height="6" rx="1" />
-                      <rect x="9" y="9" width="6" height="6" rx="1" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
-                      <line x1="1" y1="4" x2="15" y2="4" />
-                      <line x1="1" y1="8" x2="15" y2="8" />
-                      <line x1="1" y1="12" x2="15" y2="12" />
-                    </svg>
-                  )}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-
-        <div className="ml-auto flex items-center gap-2 shrink-0">
-          {countdown && (
-            <span
-              title={`Vault locks in ${countdown.fmt()}`}
-              className={`flex items-center gap-1 text-xs font-mono px-2 py-1 rounded border ${
-                countdown.urgent
-                  ? "bg-red-950/30 border-red-900/40 text-red-500"
-                  : countdown.warning
-                    ? "bg-amber-950/30 border-amber-900/40 text-amber-500"
-                    : "bg-surface-3 border-stroke text-faint"
-              }`}
-            >
-              <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
-                <rect x="5" y="1" width="6" height="3" rx="1" />
-                <path strokeLinecap="round" d="M3 5.5A2.5 2.5 0 015.5 3h5A2.5 2.5 0 0113 5.5v7A2.5 2.5 0 0110.5 15h-5A2.5 2.5 0 013 12.5v-7z" />
-              </svg>
-              {countdown.fmt()}
-            </span>
-          )}
+        <div className="flex items-center gap-0.5 shrink-0">
+          {/* Toggle sidebar */}
           <button
-            onClick={() => setShowImport(true)}
-            className="text-muted hover:text-accent text-sm px-3 py-1.5 rounded hover:bg-surface-3 transition-colors hidden sm:block"
+            onClick={toggleSidebar}
+            aria-label="Toggle sidebar"
+            className={`p-1.5 rounded transition-colors ${!sidebarCollapsed ? "text-white" : "text-dim hover:text-white hover:bg-surface-3"}`}
           >
-            Import SSH Config
+            <svg className="w-[18px] h-[13px]" viewBox="0 0 18 13" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="0.75" y="0.75" width="16.5" height="11.5" rx="1.75" />
+              <line x1="5.5" y1="0.75" x2="5.5" y2="12.25" />
+            </svg>
           </button>
+
+          {/* Logs */}
           <button
-            onClick={openAdd}
-            className="bg-accent hover:bg-accent-hover text-black text-sm font-semibold px-4 py-1.5 rounded transition-colors"
+            onClick={() => activeView === "logs" ? closeForm() : openLogs()}
+            aria-label="Logs"
+            className={`p-1.5 rounded transition-colors ${activeView === "logs" ? "text-white" : "text-dim hover:text-white hover:bg-surface-3"}`}
           >
-            + Add Server
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h18M3 6h18M3 18h18" />
+            </svg>
           </button>
+
+          {/* Settings */}
           <button
             onClick={openSettings}
-            className="text-muted hover:text-white p-1.5 rounded hover:bg-surface-3 transition-colors"
             aria-label="Settings"
+            className="p-1.5 rounded text-dim hover:text-white hover:bg-surface-3 transition-colors ml-1"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -156,7 +79,6 @@ export default function TopBar() {
         </div>
       </header>
 
-      {showImport && <SshConfigImport onClose={() => setShowImport(false)} />}
       {settingsOpen && <SettingsModal onClose={closeSettings} />}
     </>
   );
