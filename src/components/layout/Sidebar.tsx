@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
+import { useTerminalStore } from "../../store/terminalStore";
+import { useSftpStore } from "../../store/sftpStore";
 import VaultCountdown from "./VaultCountdown";
+import SshConfigImport from "../servers/SshConfigImport";
 import { formatError } from "../../lib/errors";
 import type { Group, Tag } from "../../types/server";
 
@@ -273,14 +276,6 @@ function NavRow({
   );
 }
 
-// ── Icons ──────────────────────────────────────────────────────────────────────
-const ClockIcon = () => (
-  <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="12 6 12 12 16 14" />
-  </svg>
-);
-
 // ── Sidebar ────────────────────────────────────────────────────────────────────
 export default function Sidebar() {
   const servers = useServerStore((s) => s.servers);
@@ -290,12 +285,32 @@ export default function Sidebar() {
   const {
     filterGroupId, filterTagId, filterFavourites,
     setFilterGroup, setFilterTag, setFilterFavourites,
-    activeView, openLogs, closeForm, expandServerList,
+    activeView, openAdd, closeForm, expandServerList,
   } = useUiStore();
+
+  const terminalSessions = useTerminalStore((s) => s.sessions);
+  const sftpSessions = useSftpStore((s) => s.sessions);
+  const activeSessions = [...terminalSessions, ...sftpSessions].filter(
+    (s) => s.status === "connected",
+  ).length;
 
   const [editingGroup, setEditingGroup] = useState<{ group: Group; initialDelete: boolean } | null>(null);
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [renamingTag, setRenamingTag] = useState<Tag | null>(null);
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const addMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!addMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
+        setAddMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [addMenuOpen]);
 
   const selectFilter = (fn: () => void) => () => {
     if (activeView === "logs") closeForm();
@@ -315,10 +330,6 @@ export default function Sidebar() {
 
   return (
     <aside className="w-60 shrink-0 bg-surface-0 border-r border-stroke-subtle flex flex-col overflow-y-auto">
-      <div className="h-14 flex items-center px-4 border-b border-stroke-subtle shrink-0">
-        <span className="font-bold text-white text-base tracking-tight">SSH Manager</span>
-      </div>
-
       <nav className="flex-1 p-2 space-y-0.5">
         {/* All Servers */}
         <NavRow
@@ -406,15 +417,41 @@ export default function Sidebar() {
 
       <VaultCountdown />
 
-      {/* Logs */}
-      <div className="p-2 border-t border-stroke-subtle shrink-0">
-        <NavRow
-          active={activeView === "logs"}
-          onClick={() => { if (activeView === "logs") { closeForm(); } else { openLogs(); } }}
-          label={<span className="flex items-center gap-2"><ClockIcon />Logs</span>}
-        />
+      {/* Status bar */}
+      <div className="px-3 py-2.5 border-t border-stroke-subtle shrink-0 flex items-center gap-2">
+        <span className="flex-1 text-xs text-dim">
+          {servers.length} {servers.length === 1 ? "server" : "servers"}
+          {activeSessions > 0 && (
+            <> · <span className="text-accent-fg">{activeSessions} active</span></>
+          )}
+        </span>
+        <div ref={addMenuRef} className="relative shrink-0">
+          <button
+            onClick={() => setAddMenuOpen((v) => !v)}
+            className="text-xs font-medium text-secondary hover:text-white border border-stroke hover:border-stroke-subtle bg-surface-2 hover:bg-surface-3 px-4 py-1.5 rounded transition-colors"
+          >
+            + Add
+          </button>
+          {addMenuOpen && (
+            <div className="absolute bottom-full right-0 mb-1.5 bg-surface-2 border border-stroke rounded-lg shadow-2xl py-1 min-w-[160px] z-50">
+              <button
+                onClick={() => { openAdd(); setAddMenuOpen(false); }}
+                className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-surface-4 transition-colors"
+              >
+                Add manually
+              </button>
+              <button
+                onClick={() => { setShowImport(true); setAddMenuOpen(false); }}
+                className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-surface-4 transition-colors"
+              >
+                Import from SSH config
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
+      {showImport && <SshConfigImport onClose={() => setShowImport(false)} />}
       {editingGroup && <GroupEditModal group={editingGroup.group} initialDelete={editingGroup.initialDelete} onClose={() => setEditingGroup(null)} />}
       {creatingGroup && <GroupCreateModal onClose={() => setCreatingGroup(false)} />}
       {renamingTag && <TagRenameModal tag={renamingTag} onClose={() => setRenamingTag(null)} />}
