@@ -36,7 +36,10 @@ function teardownResources(sessionId: string) {
   sessionBuffer.detach(sessionId);
 }
 
-function dropFromState(state: TerminalStore, sessionId: string) {
+function dropFromState(
+  state: { sessions: TerminalSession[]; activeSessionId: string | null },
+  sessionId: string,
+) {
   const sessions = state.sessions.filter((s) => s.id !== sessionId);
   return {
     sessions,

@@ -267,7 +267,6 @@ pub async fn open_terminal_session(
         s.username.clone(),
         auth,
         jump_chain,
-        server.server.display_name.clone(),
         Some(on_close),
         app_handle,
     )

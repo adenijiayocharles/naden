@@ -1,12 +1,15 @@
 import { useEffect, useCallback, useState, useRef } from "react";
-import { listen } from "@tauri-apps/api/event";
-import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import { useVaultStore } from "../../store/vaultStore";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
+import { useAppInit } from "../../hooks/useAppInit";
+import { useWakeReconnect } from "../../hooks/useWakeReconnect";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
+import { useVaultHeartbeat } from "../../hooks/useVaultHeartbeat";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
+import TabItem from "./TabItem";
 import ServerList from "../servers/ServerList";
 import ServerForm from "../servers/ServerForm";
 import VaultLockScreen from "../vault/VaultLockScreen";
@@ -17,9 +20,6 @@ import OnboardingWizard from "../onboarding/OnboardingWizard";
 import SftpBrowser from "../sftp/SftpBrowser";
 import BulkActionBar from "../servers/BulkActionBar";
 import ClipboardClearBanner from "./ClipboardClearBanner";
-import { settingsCommands } from "../../lib/tauriCommands";
-import { recordHeartbeat } from "../../lib/vaultActivity";
-import { useTerminalSettings } from "../../lib/terminalSettings";
 import type { SessionStatus } from "../../store/terminalStore";
 import type { SftpStatus } from "../../store/sftpStore";
 
@@ -38,21 +38,37 @@ const SFTP_STATUS_COLORS: Record<SftpStatus, string> = {
   error: "bg-red-500",
 };
 
+const SFTP_FOLDER_ICON = (
+  <svg className="w-3 h-3 text-accent-fg shrink-0" fill="currentColor" viewBox="0 0 20 20">
+    <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+  </svg>
+);
+
+function reorderById<T extends { id: string }>(list: T[], fromId: string, toId: string): T[] {
+  const from = list.findIndex((s) => s.id === fromId);
+  const to = list.findIndex((s) => s.id === toId);
+  if (from === -1 || to === -1) return list;
+  const next = [...list];
+  next.splice(from, 1);
+  next.splice(to, 0, list[from]);
+  return next;
+}
+
 export default function AppShell() {
-  const fetchAll = useServerStore((s) => s.fetchAll);
-  const bulkMode = useUiStore((s) => s.bulkMode);
+  useAppInit();
+  useWakeReconnect();
+  useKeyboardShortcuts();
+  useVaultHeartbeat();
+
   const activeView = useUiStore((s) => s.activeView);
+  const bulkMode = useUiStore((s) => s.bulkMode);
   const serverListCollapsed = useUiStore((s) => s.serverListCollapsed);
   const toggleServerList = useUiStore((s) => s.toggleServerList);
   const collapseServerList = useUiStore((s) => s.collapseServerList);
-  const openAdd = useUiStore((s) => s.openAdd);
-  const openSettings = useUiStore((s) => s.openSettings);
   const onboardingComplete = useUiStore((s) => s.onboardingComplete);
   const onboardingChecked = useUiStore((s) => s.onboardingChecked);
   const setOnboardingComplete = useUiStore((s) => s.setOnboardingComplete);
-  const setOnboardingChecked = useUiStore((s) => s.setOnboardingChecked);
-  const { isSetup, isUnlocked, isChecking, isPasswordRequired, check } = useVaultStore();
-  const loadTerminalSettings = useTerminalSettings((s) => s.load);
+  const { isSetup, isUnlocked, isChecking, isPasswordRequired } = useVaultStore();
 
   const terminalSessions = useTerminalStore((s) => s.sessions);
   const terminalActiveId = useTerminalStore((s) => s.activeSessionId);
@@ -66,51 +82,55 @@ export default function AppShell() {
   const sftpClose = useSftpStore((s) => s.closeSession);
   const sftpReorder = useSftpStore((s) => s.reorderSessions);
 
-  // Which panel type is currently in the foreground
   const [activePanelType, setActivePanelType] = useState<PanelType>("terminal");
 
-  // Drag-and-drop tab reordering
-  const [dragId, setDragId] = useState<string | null>(null);
-  const [dragType, setDragType] = useState<PanelType | null>(null);
+  // Consolidated drag state — three separate atoms caused triple renders per drag-start.
+  const [drag, setDrag] = useState<{ id: string; type: PanelType } | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
-  const resetDrag = () => { setDragId(null); setDragType(null); setDragOverId(null); };
+  const resetDrag = useCallback(() => {
+    setDrag(null);
+    setDragOverId(null);
+  }, []);
 
-  const handleDragStart = (id: string, type: PanelType) => (e: React.DragEvent) => {
-    setDragId(id); setDragType(type);
+  const handleDragStart = useCallback((id: string, type: PanelType, e: React.DragEvent) => {
+    setDrag({ id, type });
     e.dataTransfer.effectAllowed = "move";
-  };
+  }, []);
 
-  const handleDragOver = (id: string, type: PanelType) => (e: React.DragEvent) => {
-    if (type !== dragType) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setDragOverId(id);
-  };
+  const handleDragOver = useCallback(
+    (id: string, type: PanelType, e: React.DragEvent) => {
+      if (drag?.type !== type) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      setDragOverId(id);
+    },
+    [drag?.type],
+  );
 
-  const handleDrop = (targetId: string, type: PanelType) => (e: React.DragEvent) => {
-    e.preventDefault();
-    if (!dragId || dragType !== type || dragId === targetId) { resetDrag(); return; }
-    const move = <T extends { id: string }>(list: T[]): T[] => {
-      const from = list.findIndex((s) => s.id === dragId);
-      const to = list.findIndex((s) => s.id === targetId);
-      if (from === -1 || to === -1) return list;
-      const next = [...list];
-      next.splice(from, 1);
-      next.splice(to, 0, list[from]);
-      return next;
-    };
-    if (type === "terminal") terminalReorder(move(terminalSessions));
-    else sftpReorder(move(sftpSessions));
-    resetDrag();
-  };
+  const handleDrop = useCallback(
+    (targetId: string, type: PanelType, e: React.DragEvent) => {
+      e.preventDefault();
+      if (!drag || drag.type !== type || drag.id === targetId) {
+        resetDrag();
+        return;
+      }
+      if (type === "terminal") {
+        terminalReorder(reorderById(terminalSessions, drag.id, targetId));
+      } else {
+        sftpReorder(reorderById(sftpSessions, drag.id, targetId));
+      }
+      resetDrag();
+    },
+    [drag, terminalSessions, sftpSessions, terminalReorder, sftpReorder, resetDrag],
+  );
 
   const hasTerminal = terminalSessions.length > 0;
   const hasSftp = sftpSessions.length > 0;
   const hasPanel = hasTerminal || hasSftp;
 
   // Bring a panel type to the foreground only when a NEW session is added
-  // (length increases), not when one closes. Refs track the previous count.
+  // (length increases), not when one closes.
   const prevTerminalCount = useRef(terminalSessions.length);
   const prevSftpCount = useRef(sftpSessions.length);
 
@@ -120,7 +140,7 @@ export default function AppShell() {
       collapseServerList();
     }
     prevTerminalCount.current = terminalSessions.length;
-  }, [terminalSessions.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [terminalSessions.length, collapseServerList]);
 
   useEffect(() => {
     if (sftpSessions.length > prevSftpCount.current) {
@@ -128,114 +148,16 @@ export default function AppShell() {
       collapseServerList();
     }
     prevSftpCount.current = sftpSessions.length;
-  }, [sftpSessions.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sftpSessions.length, collapseServerList]);
 
-  // Fall back when the active type's last session closes
+  // Fall back when the active type's last session closes.
   useEffect(() => {
-    if (activePanelType === "terminal" && !hasTerminal && hasSftp) setActivePanelType("sftp");
-    if (activePanelType === "sftp" && !hasSftp && hasTerminal) setActivePanelType("terminal");
-  }, [hasTerminal, hasSftp]); // intentionally omits activePanelType — only relevant when availability changes
-
-
-  useEffect(() => {
-    void fetchAll();
-    void check();
-    void loadTerminalSettings();
-    // Apply persisted theme and accent colour before anything renders
-    settingsCommands.getSetting("theme")
-      .then((t) => { if (t && t !== "dark") document.documentElement.dataset.theme = t; })
-      .catch(() => {});
-    const ACCENTS: Record<string, [string, string, string]> = {
-      lime:   ["#CDFF00", "#d8ff33", "#a8cc00"],
-      green:  ["#00e676", "#33eb91", "#00b85e"],
-      cyan:   ["#00d4ff", "#33ddff", "#00a8cc"],
-      blue:   ["#4f8ef7", "#7aaeff", "#3a6bc4"],
-      purple: ["#a78bfa", "#c4b0ff", "#7c5ccc"],
-      orange: ["#ff8c42", "#ffa566", "#cc6f35"],
-      pink:   ["#f472b6", "#f9a8d4", "#c4588c"],
-      red:    ["#ff5555", "#ff7777", "#cc4444"],
-      white:  ["#ffffff", "#eeeeee", "#cccccc"],
-    };
-    settingsCommands.getSetting("accent").then((id) => {
-      if (id && id !== "lime" && ACCENTS[id]) {
-        const [base, hover, dim] = ACCENTS[id];
-        const root = document.documentElement;
-        root.style.setProperty("--color-accent", base);
-        root.style.setProperty("--color-accent-hover", hover);
-        root.style.setProperty("--color-accent-dim", dim);
-      }
-    }).catch(() => {});
-    // Check onboarding once on mount
-    settingsCommands.getSetting("onboarding_complete")
-      .then((v) => {
-        setOnboardingComplete(v === "true");
-        setOnboardingChecked();
-      })
-      .catch(() => { setOnboardingChecked(); });
-  }, [fetchAll, check, loadTerminalSettings, setOnboardingComplete, setOnboardingChecked]);
-
-  // Reconnect all sessions that died while the machine was asleep.
-  useEffect(() => {
-    const unlisten = listen("system:wake", () => {
-      const { sessions: tSessions, reconnectSession: tReconnect } = useTerminalStore.getState();
-      for (const s of tSessions) {
-        // Reconnect "connected" sessions too — the TCP connection is dead after
-        // sleep regardless of whether the session thread has detected it yet.
-        if (s.status === "connected" || s.status === "error") void tReconnect(s.id);
-      }
-      const { sessions: sSessions, reconnectSession: sReconnect } = useSftpStore.getState();
-      for (const s of sSessions) {
-        if (s.status === "connected" || s.status === "error") void sReconnect(s.id);
-      }
-    });
-    return () => { void unlisten.then((fn) => fn()); };
-  }, []);
-
-  // Keyboard shortcuts
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    const meta = e.metaKey || e.ctrlKey;
-    if (!meta) return;
-    switch (e.key) {
-      case "k":
-        e.preventDefault();
-        document.querySelector<HTMLInputElement>("[data-search-input]")?.focus();
-        break;
-      case "n":
-        e.preventDefault();
-        openAdd();
-        break;
-      case ",":
-        e.preventDefault();
-        openSettings();
-        break;
+    if (activePanelType === "terminal" && !hasTerminal && hasSftp) {
+      setActivePanelType("sftp");
+    } else if (activePanelType === "sftp" && !hasSftp && hasTerminal) {
+      setActivePanelType("terminal");
     }
-  }, [openAdd, openSettings]);
-
-  useEffect(() => {
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
-
-  // Vault heartbeat — throttled to once per minute on user activity.
-  // recordHeartbeat() mirrors the Rust-side last_vault_activity reset so
-  // VaultCountdown can derive remaining time accurately.
-  useEffect(() => {
-    let lastBeat = 0;
-    const beat = () => {
-      const now = Date.now();
-      if (now - lastBeat > 60_000) {
-        lastBeat = now;
-        recordHeartbeat();
-        settingsCommands.vaultHeartbeat().catch(() => {});
-      }
-    };
-    window.addEventListener("mousemove", beat, { passive: true });
-    window.addEventListener("keydown", beat, { passive: true });
-    return () => {
-      window.removeEventListener("mousemove", beat);
-      window.removeEventListener("keydown", beat);
-    };
-  }, []);
+  }, [activePanelType, hasTerminal, hasSftp]);
 
   if (isChecking) {
     return (
@@ -267,14 +189,16 @@ export default function AppShell() {
                   : "flex-1 overflow-hidden flex flex-col"
             }`}
           >
-            {activeView === "logs"
-              ? <LogView />
-              : (
-                <>
-                  <div className="flex-1 overflow-y-auto p-5"><ServerList /></div>
-                  {bulkMode && <BulkActionBar />}
-                </>
-              )}
+            {activeView === "logs" ? (
+              <LogView />
+            ) : (
+              <>
+                <div className="flex-1 overflow-y-auto p-5">
+                  <ServerList />
+                </div>
+                {bulkMode && <BulkActionBar />}
+              </>
+            )}
           </main>
 
           {/* Collapse / expand handle */}
@@ -308,32 +232,34 @@ export default function AppShell() {
               {/* Unified tab bar */}
               <div
                 className="h-10 bg-surface-1 border-b border-stroke-subtle flex items-center gap-1 px-2 overflow-x-auto shrink-0"
-                onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) resetDrag(); }}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) resetDrag();
+                }}
                 onDragEnd={resetDrag}
               >
                 {terminalSessions.map((session) => (
-                  <div
+                  <TabItem
                     key={session.id}
-                    draggable
-                    onDragStart={handleDragStart(session.id, "terminal")}
-                    onDragOver={handleDragOver(session.id, "terminal")}
-                    onDrop={handleDrop(session.id, "terminal")}
-                    onClick={() => { terminalSetActive(session.id); setActivePanelType("terminal"); }}
-                    title={session.status === "error" && session.errorMessage ? `${session.serverName} — ${session.errorMessage}` : session.serverName}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer shrink-0 transition-colors select-none ${
-                      activePanelType === "terminal" && session.id === terminalActiveId
-                        ? "bg-accent/10 text-accent-fg"
-                        : "text-muted hover:text-white hover:bg-surface-2"
-                    } ${dragId === session.id ? "opacity-40" : ""} ${dragOverId === session.id && dragId !== session.id ? "ring-1 ring-inset ring-accent/50" : ""}`}
-                  >
-                    <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${TERMINAL_STATUS_COLORS[session.status]}`} />
-                    <span className="max-w-[120px] truncate">{session.serverName}</span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); void terminalClose(session.id); }}
-                      className="text-faint hover:text-white ml-1 leading-none transition-colors text-base"
-                      aria-label={`Close ${session.serverName}`}
-                    >×</button>
-                  </div>
+                    serverName={session.serverName}
+                    statusColor={TERMINAL_STATUS_COLORS[session.status]}
+                    isActive={activePanelType === "terminal" && session.id === terminalActiveId}
+                    isDragging={drag?.id === session.id}
+                    isDragOver={dragOverId === session.id && drag?.id !== session.id}
+                    title={
+                      session.status === "error" && session.errorMessage
+                        ? `${session.serverName} — ${session.errorMessage}`
+                        : session.serverName
+                    }
+                    closeLabel={`Close ${session.serverName}`}
+                    onActivate={() => {
+                      terminalSetActive(session.id);
+                      setActivePanelType("terminal");
+                    }}
+                    onClose={() => void terminalClose(session.id)}
+                    onDragStart={(e) => handleDragStart(session.id, "terminal", e)}
+                    onDragOver={(e) => handleDragOver(session.id, "terminal", e)}
+                    onDrop={(e) => handleDrop(session.id, "terminal", e)}
+                  />
                 ))}
 
                 {/* Separator between terminal and SFTP tab groups */}
@@ -342,31 +268,25 @@ export default function AppShell() {
                 )}
 
                 {sftpSessions.map((session) => (
-                  <div
+                  <TabItem
                     key={session.id}
-                    draggable
-                    onDragStart={handleDragStart(session.id, "sftp")}
-                    onDragOver={handleDragOver(session.id, "sftp")}
-                    onDrop={handleDrop(session.id, "sftp")}
-                    onClick={() => { sftpSetActive(session.id); setActivePanelType("sftp"); }}
+                    serverName={session.serverName}
+                    statusColor={SFTP_STATUS_COLORS[session.status]}
+                    isActive={activePanelType === "sftp" && session.id === sftpActiveId}
+                    isDragging={drag?.id === session.id}
+                    isDragOver={dragOverId === session.id && drag?.id !== session.id}
                     title={session.serverName}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-pointer shrink-0 transition-colors select-none ${
-                      activePanelType === "sftp" && session.id === sftpActiveId
-                        ? "bg-accent/10 text-accent-fg"
-                        : "text-muted hover:text-white hover:bg-surface-2"
-                    } ${dragId === session.id ? "opacity-40" : ""} ${dragOverId === session.id && dragId !== session.id ? "ring-1 ring-inset ring-accent/50" : ""}`}
-                  >
-                    <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${SFTP_STATUS_COLORS[session.status]}`} />
-                    <svg className="w-3 h-3 text-accent-fg shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-                    </svg>
-                    <span className="max-w-[120px] truncate">{session.serverName}</span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); void sftpClose(session.id); }}
-                      className="text-faint hover:text-white ml-1 leading-none transition-colors text-base"
-                      aria-label={`Close ${session.serverName} browser`}
-                    >×</button>
-                  </div>
+                    icon={SFTP_FOLDER_ICON}
+                    closeLabel={`Close ${session.serverName} browser`}
+                    onActivate={() => {
+                      sftpSetActive(session.id);
+                      setActivePanelType("sftp");
+                    }}
+                    onClose={() => void sftpClose(session.id)}
+                    onDragStart={(e) => handleDragStart(session.id, "sftp", e)}
+                    onDragOver={(e) => handleDragOver(session.id, "sftp", e)}
+                    onDrop={(e) => handleDrop(session.id, "sftp", e)}
+                  />
                 ))}
               </div>
 

@@ -129,12 +129,14 @@ export const useSftpStore = create<SftpStore>((set, get) => ({
     const newId = await get().openSession(serverId, serverName);
     // Re-navigate to the path the user was on once the session connects.
     if (currentPath && currentPath !== "~") {
-      const store = get();
       const poll = setInterval(() => {
         const s = get().sessions.find((x) => x.id === newId);
         if (s?.status === "connected") {
           clearInterval(poll);
-          store.navigateTo(newId, currentPath).catch(() => {});
+          get().navigateTo(newId, currentPath).catch(() => {
+            // Path may no longer be accessible after reconnect; fall back to home
+            get().navigateTo(newId, "").catch(() => {});
+          });
         }
         if (!s || s.status === "error") clearInterval(poll);
       }, 200);

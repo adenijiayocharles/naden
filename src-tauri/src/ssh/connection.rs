@@ -10,18 +10,29 @@ use crate::ssh::jump_host::{self, JumpInfo};
 
 const CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
-/// Resolve `host` and open a TCP connection with a fixed timeout.
+/// Try every address returned by DNS; succeed on the first that connects.
 /// Using connect_timeout avoids the OS default (~75 s on macOS) when a host
 /// is firewalled or unreachable.
 pub(crate) fn tcp_connect(host: &str, port: u16) -> Result<TcpStream, AppError> {
     use std::net::ToSocketAddrs;
-    let addr = (host, port)
+    let addrs: Vec<_> = (host, port)
         .to_socket_addrs()
         .map_err(|e| AppError::Ssh(format!("failed to resolve '{host}': {e}")))?
-        .next()
-        .ok_or_else(|| AppError::Ssh(format!("could not resolve hostname '{host}'")))?;
-    TcpStream::connect_timeout(&addr, CONNECT_TIMEOUT)
-        .map_err(|e| AppError::Ssh(format!("TCP connect to {host}:{port} failed: {e}")))
+        .collect();
+    if addrs.is_empty() {
+        return Err(AppError::Ssh(format!("could not resolve hostname '{host}'")));
+    }
+    let mut last_err = None;
+    for addr in &addrs {
+        match TcpStream::connect_timeout(addr, CONNECT_TIMEOUT) {
+            Ok(stream) => return Ok(stream),
+            Err(e) => last_err = Some(e),
+        }
+    }
+    Err(AppError::Ssh(format!(
+        "TCP connect to {host}:{port} failed: {}",
+        last_err.unwrap()
+    )))
 }
 
 /// Callback invoked when a terminal session ends.
@@ -47,6 +58,15 @@ pub struct SessionManager {
     sessions: Arc<Mutex<HashMap<String, ActiveSession>>>,
 }
 
+fn recover_lock<T>(
+    result: std::sync::LockResult<std::sync::MutexGuard<'_, T>>,
+) -> std::sync::MutexGuard<'_, T> {
+    result.unwrap_or_else(|e| {
+        eprintln!("[warn] session map mutex was poisoned; recovering state");
+        e.into_inner()
+    })
+}
+
 impl SessionManager {
     pub fn new() -> Self {
         Self {
@@ -63,15 +83,12 @@ impl SessionManager {
         username: String,
         auth: AuthInfo,
         jump_chain: Vec<JumpInfo>,
-        server_name: String,
         on_close: Option<OnCloseCallback>,
         app_handle: tauri::AppHandle,
     ) -> Result<(), AppError> {
         let (tx, rx) = std::sync::mpsc::sync_channel(256);
 
-        self.sessions
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
+        recover_lock(self.sessions.lock())
             .insert(session_id.clone(), ActiveSession { tx });
 
         let sessions = Arc::clone(&self.sessions);
@@ -81,11 +98,11 @@ impl SessionManager {
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 run_session(
                     host, port, username, auth, jump_chain,
-                    server_name, on_close, sid.clone(), rx, app_handle.clone(), Arc::clone(&sessions),
+                    on_close, sid.clone(), rx, app_handle.clone(), Arc::clone(&sessions),
                 );
             }));
             if result.is_err() {
-                sessions.lock().unwrap_or_else(|e| e.into_inner()).remove(&sid);
+                recover_lock(sessions.lock()).remove(&sid);
                 let _ = app_handle.emit(&format!("terminal:closed:{sid}"), ());
             }
         });
@@ -94,31 +111,40 @@ impl SessionManager {
     }
 
     pub fn send_input(&self, session_id: &str, data: Vec<u8>) -> Result<(), AppError> {
-        let sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
-        let session = sessions
-            .get(session_id)
-            .ok_or_else(|| AppError::Ssh(format!("session {session_id} not found")))?;
-        session
-            .tx
-            .send(SessionMessage::Input(data))
+        // Clone the sender before releasing the lock so we don't hold the mutex
+        // during send(), which blocks when the 256-slot channel is full.
+        let tx = {
+            let sessions = recover_lock(self.sessions.lock());
+            sessions
+                .get(session_id)
+                .ok_or_else(|| AppError::Ssh(format!("session {session_id} not found")))?
+                .tx
+                .clone()
+        };
+        tx.send(SessionMessage::Input(data))
             .map_err(|_| AppError::Ssh("session closed".into()))
     }
 
     pub fn resize(&self, session_id: &str, cols: u16, rows: u16) -> Result<(), AppError> {
-        let sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
-        let session = sessions
-            .get(session_id)
-            .ok_or_else(|| AppError::Ssh(format!("session {session_id} not found")))?;
-        session
-            .tx
-            .send(SessionMessage::Resize(cols, rows))
+        let tx = {
+            let sessions = recover_lock(self.sessions.lock());
+            sessions
+                .get(session_id)
+                .ok_or_else(|| AppError::Ssh(format!("session {session_id} not found")))?
+                .tx
+                .clone()
+        };
+        tx.send(SessionMessage::Resize(cols, rows))
             .map_err(|_| AppError::Ssh("session closed".into()))
     }
 
     pub fn close_session(&self, session_id: &str) {
-        let sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
-        if let Some(session) = sessions.get(session_id) {
-            let _ = session.tx.send(SessionMessage::Close);
+        let tx = {
+            let sessions = recover_lock(self.sessions.lock());
+            sessions.get(session_id).map(|s| s.tx.clone())
+        };
+        if let Some(tx) = tx {
+            let _ = tx.send(SessionMessage::Close);
         }
     }
 }
@@ -222,7 +248,6 @@ fn run_session(
     username: String,
     auth: AuthInfo,
     jump_chain: Vec<JumpInfo>,
-    _server_name: String,
     on_close: Option<OnCloseCallback>,
     session_id: String,
     rx: std::sync::mpsc::Receiver<SessionMessage>,
@@ -235,7 +260,6 @@ fn run_session(
     let _ = app_handle.emit(&format!("terminal:status:{session_id}"), "connecting");
 
     let result: Result<(), AppError> = (|| {
-        // Build the TCP stream: either a direct connection or a jump-host tunnel.
         let stream = if jump_chain.is_empty() {
             tcp_connect(&host, port)?
         } else {
@@ -270,33 +294,40 @@ fn run_session(
         session.set_blocking(false);
 
         let mut buf = vec![0u8; 4096];
-        let poll_interval = std::time::Duration::from_millis(5);
+        let mut active;
 
         'io: loop {
+            active = false;
+
+            // Drain SSH channel output.
             loop {
                 match channel.read(&mut buf) {
-                    Ok(0) => break 'io,
+                    Ok(0) => break 'io, // graceful EOF (e.g. user typed `exit`)
                     Ok(n) => {
+                        active = true;
                         let encoded =
                             base64::engine::general_purpose::STANDARD.encode(&buf[..n]);
                         let _ = app_handle.emit(&output_event, encoded);
                     }
                     Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => break,
-                    Err(_) => break 'io,
+                    Err(e) => return Err(AppError::Ssh(format!("Connection lost: {e}"))),
                 }
             }
 
+            // Drain user input from the message channel.
             loop {
                 match rx.try_recv() {
                     Ok(SessionMessage::Input(data)) => {
+                        active = true;
                         session.set_blocking(true);
                         session.set_timeout(2000);
                         if channel.write_all(&data).is_err() {
-                            break 'io;
+                            return Err(AppError::Ssh("Connection lost".into()));
                         }
                         session.set_blocking(false);
                     }
                     Ok(SessionMessage::Resize(cols, rows)) => {
+                        active = true;
                         let _ = channel.request_pty_size(cols.into(), rows.into(), None, None);
                     }
                     Ok(SessionMessage::Close)
@@ -309,7 +340,13 @@ fn run_session(
                 break;
             }
 
-            std::thread::sleep(poll_interval);
+            // When idle, sleep longer to reduce CPU wakeups (200 → 50 wakeups/s).
+            // When active, just yield so other threads can run without adding latency.
+            if active {
+                std::thread::yield_now();
+            } else {
+                std::thread::sleep(std::time::Duration::from_millis(20));
+            }
         }
 
         session.set_blocking(true);
@@ -322,9 +359,8 @@ fn run_session(
         Ok(())
     })();
 
-    sessions.lock().unwrap_or_else(|e| e.into_inner()).remove(&session_id);
+    recover_lock(sessions.lock()).remove(&session_id);
 
-    // Determine outcome and invoke the audit callback before emitting events
     let (outcome, error_msg) = match &result {
         Ok(()) => ("user_closed".to_string(), None),
         Err(e) => ("failure".to_string(), Some(e.to_string())),
