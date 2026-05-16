@@ -218,7 +218,7 @@ const searchRef = useRef<HTMLInputElement>(null);
             ) : (
               <>
                 {/* Server list toolbar */}
-                <div className="px-3 py-2 border-b border-stroke-subtle shrink-0 flex items-center gap-2">
+                <div className="px-3 h-10 border-b border-stroke-subtle shrink-0 flex items-center gap-2">
                   <div className="relative flex-1 min-w-0">
                     <input
                       ref={searchRef}

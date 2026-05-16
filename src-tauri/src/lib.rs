@@ -76,6 +76,7 @@ pub fn run() {
             commands::sftp_commands::rename_sftp,
             commands::sftp_commands::upload_sftp_file,
             commands::sftp_commands::download_sftp_file,
+            commands::sftp_commands::touch_sftp_file,
             // SSH
             commands::ssh_commands::launch_in_terminal,
             commands::ssh_commands::import_ssh_config,

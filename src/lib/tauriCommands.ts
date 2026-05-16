@@ -154,6 +154,9 @@ export const sftpCommands = {
 
   downloadSftpFile: (sessionId: string, remotePath: string, localPath: string) =>
     invoke<void>("download_sftp_file", { sessionId, remotePath, localPath }),
+
+  touchSftpFile: (sessionId: string, path: string) =>
+    invoke<void>("touch_sftp_file", { sessionId, path }),
 };
 
 export const logCommands = {

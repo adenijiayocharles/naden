@@ -438,13 +438,13 @@ export default function Sidebar() {
                 onClick={() => { openAdd(); setAddMenuOpen(false); }}
                 className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-surface-4 transition-colors"
               >
-                Add manually
+                Manually
               </button>
               <button
                 onClick={() => { setShowImport(true); setAddMenuOpen(false); }}
                 className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-surface-4 transition-colors"
               >
-                Import from SSH config
+                SSH Config
               </button>
             </div>
           )}

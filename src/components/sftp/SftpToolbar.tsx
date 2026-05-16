@@ -1,7 +1,8 @@
 interface Props {
   currentPath: string;
-  selectedPath: string | null;
-  selectedIsDir: boolean;
+  selectedCount: number;
+  selectedHasDir: boolean;
+  hasClipboard: boolean;
   busy: boolean;
   onNavigateTo: (path: string) => void;
   onNavigateUp: () => void;
@@ -9,8 +10,11 @@ interface Props {
   onUpload: () => void;
   onDownload: () => void;
   onNewFolder: () => void;
+  onNewFile: () => void;
   onDelete: () => void;
   onRename: () => void;
+  onCut: () => void;
+  onPaste: () => void;
 }
 
 function ToolbarBtn({
@@ -38,7 +42,6 @@ function ToolbarBtn({
 
 function PathBreadcrumb({ path, busy, onNavigateTo }: { path: string; busy: boolean; onNavigateTo: (p: string) => void }) {
   const segments = path.split("/").filter(Boolean);
-  // Show at most 3 segments; if truncated, show a collapsed ancestor indicator
   const MAX_VISIBLE = 3;
   const truncated = segments.length > MAX_VISIBLE;
   const visible = truncated ? segments.slice(-MAX_VISIBLE) : segments;
@@ -96,8 +99,9 @@ function PathBreadcrumb({ path, busy, onNavigateTo }: { path: string; busy: bool
 
 export default function SftpToolbar({
   currentPath,
-  selectedPath,
-  selectedIsDir,
+  selectedCount,
+  selectedHasDir,
+  hasClipboard,
   busy,
   onNavigateTo,
   onNavigateUp,
@@ -105,15 +109,18 @@ export default function SftpToolbar({
   onUpload,
   onDownload,
   onNewFolder,
+  onNewFile,
   onDelete,
   onRename,
+  onCut,
+  onPaste,
 }: Props) {
-  const hasSelection = Boolean(selectedPath);
-  const canDownload = hasSelection && !selectedIsDir;
+  const hasSelection = selectedCount > 0;
+  const canDownload = hasSelection && !selectedHasDir;
+  const canRename = selectedCount === 1;
 
   return (
     <div className="flex flex-col shrink-0 bg-surface-0 border-b border-stroke-subtle">
-      {/* Action buttons row */}
       <div className="h-10 flex items-center gap-1 px-2">
         <ToolbarBtn onClick={onNavigateUp} disabled={busy || currentPath === "/"} title="Up">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
@@ -139,11 +146,11 @@ export default function SftpToolbar({
           Upload
         </ToolbarBtn>
 
-        <ToolbarBtn onClick={onDownload} disabled={busy || !canDownload} title="Download selected file">
+        <ToolbarBtn onClick={onDownload} disabled={busy || !canDownload} title="Download selected">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 3v7M5 7l3 3 3-3M3 12h10" />
           </svg>
-          Download
+          Download{selectedCount > 1 && !selectedHasDir ? ` (${selectedCount})` : ""}
         </ToolbarBtn>
 
         <ToolbarBtn onClick={onNewFolder} disabled={busy} title="New folder">
@@ -154,20 +161,49 @@ export default function SftpToolbar({
           New Folder
         </ToolbarBtn>
 
+        <ToolbarBtn onClick={onNewFile} disabled={busy} title="New file">
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V6M9 2l4 4M9 2v4h4" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 9h4M8 7v4" />
+          </svg>
+          New File
+        </ToolbarBtn>
+
         <div className="w-px h-4 bg-surface-4 mx-1" />
 
-        <ToolbarBtn onClick={onRename} disabled={busy || !hasSelection} title="Rename selected">
+        <ToolbarBtn onClick={onCut} disabled={busy || !hasSelection} title="Cut selected (move)">
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+            <circle cx="4" cy="12" r="2" />
+            <circle cx="4" cy="4" r="2" />
+            <path strokeLinecap="round" d="M6 4l8 4M6 12l8-4" />
+          </svg>
+          Cut{selectedCount > 0 ? ` (${selectedCount})` : ""}
+        </ToolbarBtn>
+
+        <ToolbarBtn onClick={onPaste} disabled={busy || !hasClipboard} title="Paste (move here)">
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+            <rect x="2" y="4" width="10" height="11" rx="1" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1" />
+          </svg>
+          Paste
+        </ToolbarBtn>
+
+        <div className="w-px h-4 bg-surface-4 mx-1" />
+
+        <ToolbarBtn onClick={onRename} disabled={busy || !canRename} title="Rename (or double-click)">
           Rename
         </ToolbarBtn>
 
         <ToolbarBtn onClick={onDelete} disabled={busy || !hasSelection} title="Delete selected">
-          <span className="text-red-400">Delete</span>
+          <span className="text-red-400">Delete{selectedCount > 1 ? ` (${selectedCount})` : ""}</span>
         </ToolbarBtn>
       </div>
 
-      {/* Path row */}
-      <div className="flex items-center px-3 py-1 border-t border-stroke-subtle">
+      <div className="flex items-center px-3 py-1 border-t border-stroke-subtle gap-3">
         <PathBreadcrumb path={currentPath} busy={busy} onNavigateTo={onNavigateTo} />
+        {hasClipboard && (
+          <span className="text-xs text-accent-fg shrink-0">● clipboard ready</span>
+        )}
       </div>
     </div>
   );

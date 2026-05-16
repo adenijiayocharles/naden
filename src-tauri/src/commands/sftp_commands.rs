@@ -6,6 +6,22 @@ use crate::AppState;
 use crate::commands::ssh_commands::{auth_for_server, resolve_jump_chain};
 
 #[tauri::command]
+pub async fn touch_sftp_file(
+    session_id: String,
+    path: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+    state.sftp_manager.send(
+        &session_id,
+        SftpMessage::TouchFile { path, reply: reply_tx },
+    )?;
+    reply_rx
+        .await
+        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+}
+
+#[tauri::command]
 pub async fn open_sftp_session(
     server_id: String,
     session_id: String,

@@ -1,11 +1,18 @@
+import { useRef } from "react";
 import type { FileEntry } from "../../types/sftp";
 import { formatSize, formatDate } from "../../lib/format";
 
 interface Props {
   entries: FileEntry[];
-  selected: string | null;
-  onSelect: (path: string) => void;
+  selected: string[];
+  renaming: string | null;
+  renameValue: string;
+  onSelect: (path: string, meta: boolean, shift: boolean) => void;
   onNavigate: (entry: FileEntry) => void;
+  onRenameChange: (value: string) => void;
+  onRenameCommit: () => void;
+  onRenameCancel: () => void;
+  onRenameStart: (path: string) => void;
 }
 
 function FileIcon({ isDir }: { isDir: boolean }) {
@@ -27,7 +34,20 @@ function FileIcon({ isDir }: { isDir: boolean }) {
   );
 }
 
-export default function SftpFileList({ entries, selected, onSelect, onNavigate }: Props) {
+export default function SftpFileList({
+  entries,
+  selected,
+  renaming,
+  renameValue,
+  onSelect,
+  onNavigate,
+  onRenameChange,
+  onRenameCommit,
+  onRenameCancel,
+  onRenameStart,
+}: Props) {
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   if (entries.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-dim text-sm">
@@ -35,6 +55,24 @@ export default function SftpFileList({ entries, selected, onSelect, onNavigate }
       </div>
     );
   }
+
+  const handleRowClick = (entry: FileEntry, e: React.MouseEvent) => {
+    const meta = e.metaKey || e.ctrlKey;
+    const shift = e.shiftKey;
+    onSelect(entry.path, meta, shift);
+  };
+
+  const handleRowDoubleClick = (entry: FileEntry) => {
+    if (clickTimer.current) {
+      clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+    }
+    if (entry.isDir) {
+      onNavigate(entry);
+    } else {
+      onRenameStart(entry.path);
+    }
+  };
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -47,33 +85,55 @@ export default function SftpFileList({ entries, selected, onSelect, onNavigate }
           </tr>
         </thead>
         <tbody>
-          {entries.map((entry) => (
-            <tr
-              key={entry.path}
-              onClick={() => {
-                if (entry.isDir) onNavigate(entry);
-                else onSelect(entry.path);
-              }}
-              className={`cursor-pointer border-b border-stroke-subtle transition-colors select-none ${
-                selected === entry.path
-                  ? "bg-accent/10 text-accent-fg"
-                  : "text-secondary hover:bg-surface-2 hover:text-white"
-              }`}
-            >
-              <td className="px-4 py-2">
-                <div className="flex items-center gap-2">
-                  <FileIcon isDir={entry.isDir} />
-                  <span className="truncate font-mono text-xs" title={entry.name}>{entry.name}</span>
-                </div>
-              </td>
-              <td className="px-4 py-2 text-right text-faint font-mono text-xs tabular-nums">
-                {formatSize(entry.size, entry.isDir)}
-              </td>
-              <td className="px-4 py-2 text-right text-faint text-xs">
-                {formatDate(entry.modified)}
-              </td>
-            </tr>
-          ))}
+          {entries.map((entry) => {
+            const isSelected = selected.includes(entry.path);
+            const isRenaming = renaming === entry.path;
+
+            return (
+              <tr
+                key={entry.path}
+                onClick={(e) => handleRowClick(entry, e)}
+                onDoubleClick={() => handleRowDoubleClick(entry)}
+                className={`cursor-pointer border-b border-stroke-subtle transition-colors select-none ${
+                  isSelected
+                    ? "bg-accent/10 text-accent-fg"
+                    : "text-secondary hover:bg-surface-2 hover:text-white"
+                }`}
+              >
+                <td className="px-4 py-2">
+                  <div className="flex items-center gap-2">
+                    <FileIcon isDir={entry.isDir} />
+                    {isRenaming ? (
+                      <input
+                        autoFocus
+                        value={renameValue}
+                        onChange={(e) => onRenameChange(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        onDoubleClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          e.stopPropagation();
+                          if (e.key === "Enter") onRenameCommit();
+                          if (e.key === "Escape") onRenameCancel();
+                        }}
+                        onBlur={onRenameCommit}
+                        className="flex-1 h-6 bg-surface-3 border border-accent rounded px-1.5 text-xs text-white outline-none font-mono min-w-0"
+                      />
+                    ) : (
+                      <span className="truncate font-mono text-xs" title={entry.name}>
+                        {entry.name}
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-4 py-2 text-right text-faint font-mono text-xs tabular-nums">
+                  {formatSize(entry.size, entry.isDir)}
+                </td>
+                <td className="px-4 py-2 text-right text-faint text-xs">
+                  {formatDate(entry.modified)}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

@@ -54,6 +54,10 @@ pub(crate) enum SftpMessage {
         local_path: String,
         reply: tokio::sync::oneshot::Sender<Result<(), AppError>>,
     },
+    TouchFile {
+        path: String,
+        reply: tokio::sync::oneshot::Sender<Result<(), AppError>>,
+    },
     Close,
 }
 
@@ -238,6 +242,13 @@ fn handle_message(
         }
         SftpMessage::DownloadFile { remote_path, local_path, reply } => {
             let result = download_file(sftp, &remote_path, &local_path, session_id, app_handle);
+            let _ = reply.send(result);
+        }
+        SftpMessage::TouchFile { path, reply } => {
+            let result = sftp
+                .create(Path::new(&path))
+                .map(|_| ())
+                .map_err(|e| sftp_err("create this file", e));
             let _ = reply.send(result);
         }
         SftpMessage::Close => {}

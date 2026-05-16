@@ -11,6 +11,8 @@ import "@fontsource/ibm-plex-mono";
 import "@fontsource-variable/inconsolata";
 import "@fontsource/ubuntu-mono";
 
+document.addEventListener("contextmenu", (e) => e.preventDefault());
+
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <App />

@@ -32,7 +32,15 @@
       "WebSearch",
       "Bash(cargo tree *)",
       "Bash(nm /Users/adenijiayocharles/Projects/SSHManager/src-tauri/target/debug/build/libssh2-sys-064dc55ad3d4f774/out/build/f89bd02e425f6856-crypto.o)",
-      "Bash(xargs -I{} otool -L {})"
+      "Bash(xargs -I{} otool -L {})",
+      "Bash(npm info *)",
+      "Bash(mkdir *)",
+      "Bash(npx tsc *)",
+      "Bash(cp /Users/adenijiayocharles/Projects/SSHManager/.claude/worktrees/agent-a35baffb52929e9b0/src-tauri/src/ssh/connection.rs /Users/adenijiayocharles/Projects/SSHManager/src-tauri/src/ssh/connection.rs)",
+      "Bash(cp /Users/adenijiayocharles/Projects/SSHManager/.claude/worktrees/agent-a35baffb52929e9b0/src-tauri/src/commands/ssh_commands.rs /Users/adenijiayocharles/Projects/SSHManager/src-tauri/src/commands/ssh_commands.rs)",
+      "Bash(cp /Users/adenijiayocharles/Projects/SSHManager/.claude/worktrees/agent-a35baffb52929e9b0/src/store/terminalStore.ts /Users/adenijiayocharles/Projects/SSHManager/src/store/terminalStore.ts)",
+      "Bash(cp /Users/adenijiayocharles/Projects/SSHManager/.claude/worktrees/agent-a35baffb52929e9b0/src/store/sftpStore.ts /Users/adenijiayocharles/Projects/SSHManager/src/store/sftpStore.ts)",
+      "Bash(cp /Users/adenijiayocharles/Projects/SSHManager/.claude/worktrees/agent-a35baffb52929e9b0/src/components/layout/AppShell.tsx /Users/adenijiayocharles/Projects/SSHManager/src/components/layout/AppShell.tsx)"
     ]
   }
 }
