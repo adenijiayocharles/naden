@@ -1,3 +1,63 @@
+import { useState } from "react";
+
+function PathBar({ path, busy, onNavigateTo }: { path: string; busy: boolean; onNavigateTo: (p: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [input, setInput] = useState("");
+
+  const commit = () => {
+    setEditing(false);
+    const t = input.trim();
+    if (t && t !== path) onNavigateTo(t);
+  };
+
+  const segments = path.split("/").filter(Boolean);
+  const MAX = 4;
+  const truncated = segments.length > MAX;
+  const visible = truncated ? segments.slice(-MAX) : segments;
+  const hiddenDepth = segments.length - visible.length;
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
+        onBlur={commit}
+        className="flex-1 h-6 bg-surface-3 border border-accent rounded px-2 text-xs text-white font-mono outline-none"
+      />
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-0.5 min-w-0 font-mono text-xs overflow-hidden flex-1 cursor-text" onClick={() => { setInput(path); setEditing(true); }}>
+      {busy && (
+        <svg className="w-3 h-3 animate-spin text-accent-fg shrink-0 mr-1" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+        </svg>
+      )}
+      <button onClick={(e) => { e.stopPropagation(); onNavigateTo("/"); }} disabled={busy} className="text-faint hover:text-white disabled:pointer-events-none transition-colors shrink-0">/</button>
+      {truncated && (
+        <>
+          <button onClick={(e) => { e.stopPropagation(); onNavigateTo("/" + segments.slice(0, hiddenDepth).join("/")); }} disabled={busy} className="text-faint hover:text-white disabled:pointer-events-none transition-colors shrink-0 px-0.5" title={`/${segments.slice(0, hiddenDepth).join("/")}`}>…</button>
+          <span className="text-dim shrink-0">/</span>
+        </>
+      )}
+      {visible.map((seg, i) => {
+        const segPath = "/" + segments.slice(0, hiddenDepth + i + 1).join("/");
+        const isLast = i === visible.length - 1;
+        return (
+          <span key={segPath} className="flex items-center gap-0.5 min-w-0">
+            <button onClick={(e) => { e.stopPropagation(); if (!isLast) onNavigateTo(segPath); }} disabled={busy || isLast} className={`truncate transition-colors disabled:pointer-events-none ${isLast ? "text-secondary" : "text-faint hover:text-white"}`}>{seg}</button>
+            {!isLast && <span className="text-dim shrink-0">/</span>}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 interface Props {
   currentPath: string;
   selectedCount: number;
@@ -6,6 +66,7 @@ interface Props {
   showHidden: boolean;
   onToggleHidden: () => void;
   busy: boolean;
+  onNavigateTo: (path: string) => void;
   onRefresh: () => void;
   onUpload: () => void;
   onDownload: () => void;
@@ -47,6 +108,7 @@ export default function SftpToolbar({
   showHidden,
   onToggleHidden,
   busy,
+  onNavigateTo,
   onRefresh,
   onUpload,
   onDownload,
@@ -136,15 +198,9 @@ export default function SftpToolbar({
         )}
       </div>
 
-      {/* Path display */}
+      {/* Path row */}
       <div className="flex items-center px-3 py-1 border-t border-stroke-subtle gap-3 min-w-0">
-        {busy && (
-          <svg className="w-3 h-3 animate-spin text-accent-fg shrink-0" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-          </svg>
-        )}
-        <span className="font-mono text-xs text-secondary truncate flex-1 min-w-0">{currentPath}</span>
+        <PathBar path={currentPath} busy={busy} onNavigateTo={onNavigateTo} />
         {syncProgress ? (
           <span className="text-xs text-accent-fg shrink-0">{syncProgress}</span>
         ) : hasClipboard ? (

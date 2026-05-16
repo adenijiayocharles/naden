@@ -430,6 +430,7 @@ export default function SftpBrowser({ sessionId }: Props) {
         showHidden={showHidden}
         onToggleHidden={() => setShowHidden((v) => !v)}
         busy={isBusy || syncing}
+        onNavigateTo={(path) => { navigate(path).catch(() => {}); }}
         onRefresh={handleRefresh}
         onUpload={() => { void handleUpload(); }}
         onDownload={() => { void handleDownload(); }}
