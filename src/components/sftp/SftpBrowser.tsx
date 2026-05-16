@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { useSftpStore } from "../../store/sftpStore";
 import { sftpCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
-import SftpFileList from "./SftpFileList";
+import SftpFileList, { type SortKey, type SortDir } from "./SftpFileList";
 import SftpToolbar from "./SftpToolbar";
 import { ConnectingOverlay, ErrorOverlay } from "../shared/ConnectionOverlay";
 
@@ -37,44 +37,108 @@ export default function SftpBrowser({ sessionId }: Props) {
   const [creatingFile, setCreatingFile] = useState(false);
   const [fileName, setFileName] = useState("");
 
+  // Viewing options
+  const [showHidden, setShowHidden] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const handleSort = (key: SortKey) => {
+    if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("asc"); }
+  };
+
+  // Navigation history
+  const [history, setHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const historySeeded = useRef(false);
+
   // UI state
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [transferProgress, setTransferProgress] = useState<string | null>(null);
 
+  // Seed history once we have the real resolved home path
+  useEffect(() => {
+    if (!historySeeded.current && session?.currentPath && session.currentPath !== "~") {
+      historySeeded.current = true;
+      setHistory([session.currentPath]);
+      setHistoryIndex(0);
+    }
+  }, [session?.currentPath]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      // Let inputs handle their own Escape via onKeyDown; only cancel
-      // non-input state here so we don't fire twice for inline inputs.
       if (document.activeElement?.tagName === "INPUT") return;
-      setRenaming(null);
-      setCreatingFolder(false);
-      setCreatingFile(false);
-      setConfirmingDelete(false);
-      setClipboard(null);
-      setError(null);
+      const mod = e.metaKey || e.ctrlKey;
+
+      if (e.key === "Escape") {
+        setRenaming(null);
+        setCreatingFolder(false);
+        setCreatingFile(false);
+        setConfirmingDelete(false);
+        setClipboard(null);
+        setError(null);
+        return;
+      }
+      if (!session) return;
+      if (mod && (e.key === "[" || e.key === "ArrowLeft"))  { e.preventDefault(); handleBack(); }
+      if (mod && (e.key === "]" || e.key === "ArrowRight")) { e.preventDefault(); handleForward(); }
+      if (mod && e.key === "ArrowUp")  { e.preventDefault(); handleUp(); }
+      if (mod && e.key === "r")        { e.preventDefault(); handleRefresh(); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  });   // no dep array — closures capture latest history state
 
   if (!session) return null;
 
   const isBusy = busy || session.loadingEntries;
   const selectedEntries = session.entries.filter((e) => selected.includes(e.path));
   const selectedHasDir = selectedEntries.some((e) => e.isDir);
+  const canGoBack = historyIndex > 0;
+  const canGoForward = historyIndex < history.length - 1;
 
-  const navigate = async (path: string) => {
+  const visibleEntries = [...session.entries]
+    .filter((e) => showHidden || !e.name.startsWith("."))
+    .sort((a, b) => {
+      // Directories always before files
+      if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+      const dir = sortDir === "asc" ? 1 : -1;
+      if (sortKey === "size")     return dir * (a.size - b.size);
+      if (sortKey === "modified") return dir * ((a.modified ?? 0) - (b.modified ?? 0));
+      return dir * a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+    });
+
+  // navigate(path, push=true) — push adds to history; false is for back/forward
+  const navigate = async (path: string, push = true) => {
     setSelected([]);
     setLastClickedPath(null);
     setError(null);
     try {
       await navigateTo(sessionId, path);
+      if (push) {
+        const resolved = useSftpStore.getState().sessions.find((s) => s.id === sessionId)?.currentPath ?? path;
+        setHistory((h) => [...h.slice(0, historyIndex + 1), resolved]);
+        setHistoryIndex((i) => i + 1);
+      }
     } catch (e) {
       setError(formatError(e));
     }
+  };
+
+  const handleBack = () => {
+    if (!canGoBack) return;
+    const newIndex = historyIndex - 1;
+    setHistoryIndex(newIndex);
+    navigate(history[newIndex], false).catch(() => {});
+  };
+
+  const handleForward = () => {
+    if (!canGoForward) return;
+    const newIndex = historyIndex + 1;
+    setHistoryIndex(newIndex);
+    navigate(history[newIndex], false).catch(() => {});
   };
 
   const handleNavigateEntry = (entry: { isDir: boolean; path: string }) => {
@@ -86,7 +150,7 @@ export default function SftpBrowser({ sessionId }: Props) {
     navigate(parent).catch(() => {});
   };
 
-  const handleRefresh = () => navigate(session.currentPath).catch(() => {});
+  const handleRefresh = () => navigate(session.currentPath, false).catch(() => {});
 
   // ── Selection ──────────────────────────────────────────────────────────────
 
@@ -309,9 +373,15 @@ export default function SftpBrowser({ sessionId }: Props) {
         selectedCount={selected.length}
         selectedHasDir={selectedHasDir}
         hasClipboard={clipboard !== null}
+        canGoBack={canGoBack}
+        canGoForward={canGoForward}
+        showHidden={showHidden}
+        onToggleHidden={() => setShowHidden((v) => !v)}
         busy={isBusy}
         onNavigateTo={(path) => { navigate(path).catch(() => {}); }}
         onNavigateUp={handleUp}
+        onBack={handleBack}
+        onForward={handleForward}
         onRefresh={handleRefresh}
         onUpload={() => { void handleUpload(); }}
         onDownload={() => { void handleDownload(); }}
@@ -398,10 +468,13 @@ export default function SftpBrowser({ sessionId }: Props) {
       )}
 
       <SftpFileList
-        entries={session.entries}
+        entries={visibleEntries}
         selected={selected}
         renaming={renaming}
         renameValue={renameValue}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSort={handleSort}
         onSelect={handleSelect}
         onNavigate={handleNavigateEntry}
         onRenameStart={handleRenameStart}

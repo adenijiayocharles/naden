@@ -2,11 +2,17 @@ import { useRef } from "react";
 import type { FileEntry } from "../../types/sftp";
 import { formatSize, formatDate } from "../../lib/format";
 
+export type SortKey = "name" | "size" | "modified";
+export type SortDir = "asc" | "desc";
+
 interface Props {
   entries: FileEntry[];
   selected: string[];
   renaming: string | null;
   renameValue: string;
+  sortKey: SortKey;
+  sortDir: SortDir;
+  onSort: (key: SortKey) => void;
   onSelect: (path: string, meta: boolean, shift: boolean) => void;
   onNavigate: (entry: FileEntry) => void;
   onRenameChange: (value: string) => void;
@@ -34,11 +40,41 @@ function FileIcon({ isDir }: { isDir: boolean }) {
   );
 }
 
+function SortIndicator({ active, dir }: { active: boolean; dir: SortDir }) {
+  if (!active) return <span className="opacity-0 ml-1">↑</span>;
+  return <span className="ml-1 text-accent-fg">{dir === "asc" ? "↑" : "↓"}</span>;
+}
+
+function ColHeader({
+  label, colKey, sortKey, sortDir, align = "left", onSort,
+}: {
+  label: string; colKey: SortKey; sortKey: SortKey; sortDir: SortDir;
+  align?: "left" | "right"; onSort: (k: SortKey) => void;
+}) {
+  const active = sortKey === colKey;
+  return (
+    <th className={`px-4 py-2 font-medium text-xs uppercase tracking-wider text-${align}`}>
+      <button
+        onClick={() => onSort(colKey)}
+        className={`flex items-center gap-0.5 transition-colors ${
+          align === "right" ? "ml-auto" : ""
+        } ${active ? "text-white" : "text-faint hover:text-muted"}`}
+      >
+        {label}
+        <SortIndicator active={active} dir={sortDir} />
+      </button>
+    </th>
+  );
+}
+
 export default function SftpFileList({
   entries,
   selected,
   renaming,
   renameValue,
+  sortKey,
+  sortDir,
+  onSort,
   onSelect,
   onNavigate,
   onRenameChange,
@@ -57,31 +93,23 @@ export default function SftpFileList({
   }
 
   const handleRowClick = (entry: FileEntry, e: React.MouseEvent) => {
-    const meta = e.metaKey || e.ctrlKey;
-    const shift = e.shiftKey;
-    onSelect(entry.path, meta, shift);
+    onSelect(entry.path, e.metaKey || e.ctrlKey, e.shiftKey);
   };
 
   const handleRowDoubleClick = (entry: FileEntry) => {
-    if (clickTimer.current) {
-      clearTimeout(clickTimer.current);
-      clickTimer.current = null;
-    }
-    if (entry.isDir) {
-      onNavigate(entry);
-    } else {
-      onRenameStart(entry.path);
-    }
+    if (clickTimer.current) { clearTimeout(clickTimer.current); clickTimer.current = null; }
+    if (entry.isDir) onNavigate(entry);
+    else onRenameStart(entry.path);
   };
 
   return (
     <div className="flex-1 overflow-y-auto">
       <table className="w-full text-sm border-collapse">
-        <thead className="sticky top-0 bg-surface-0 z-10">
-          <tr className="text-faint text-xs uppercase tracking-wider">
-            <th className="text-left px-4 py-2 font-medium w-1/2">Name</th>
-            <th className="text-right px-4 py-2 font-medium w-24">Size</th>
-            <th className="text-right px-4 py-2 font-medium">Modified</th>
+        <thead className="sticky top-0 bg-surface-0 z-10 border-b border-stroke-subtle">
+          <tr>
+            <ColHeader label="Name"     colKey="name"     sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
+            <ColHeader label="Size"     colKey="size"     sortKey={sortKey} sortDir={sortDir} align="right" onSort={onSort} />
+            <ColHeader label="Modified" colKey="modified" sortKey={sortKey} sortDir={sortDir} align="right" onSort={onSort} />
           </tr>
         </thead>
         <tbody>
