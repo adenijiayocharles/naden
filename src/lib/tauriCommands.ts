@@ -157,6 +157,18 @@ export const sftpCommands = {
 
   touchSftpFile: (sessionId: string, path: string) =>
     invoke<void>("touch_sftp_file", { sessionId, path }),
+
+  chmodSftp: (sessionId: string, path: string, mode: number) =>
+    invoke<void>("chmod_sftp", { sessionId, path, mode }),
+
+  openSftpEdit: (sessionId: string, path: string) =>
+    invoke<string>("open_sftp_edit", { sessionId, path }),
+
+  closeSftpEdit: (sessionId: string, remotePath: string) =>
+    invoke<void>("close_sftp_edit", { sessionId, remotePath }),
+
+  syncSftpFolder: (sessionId: string, localPath: string, remotePath: string) =>
+    invoke<number>("sync_sftp_folder", { sessionId, localPath, remotePath }),
 };
 
 export const logCommands = {

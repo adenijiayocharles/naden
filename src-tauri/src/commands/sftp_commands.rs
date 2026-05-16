@@ -5,6 +5,7 @@ use crate::ssh::jump_host::JumpInfo;
 use crate::AppState;
 use crate::commands::ssh_commands::{auth_for_server, resolve_jump_chain};
 
+
 #[tauri::command]
 pub async fn touch_sftp_file(
     session_id: String,
@@ -157,6 +158,72 @@ pub async fn download_sftp_file(
     state.sftp_manager.send(
         &session_id,
         SftpMessage::DownloadFile { remote_path, local_path, reply: reply_tx },
+    )?;
+    reply_rx
+        .await
+        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+}
+
+#[tauri::command]
+pub async fn chmod_sftp(
+    session_id: String,
+    path: String,
+    mode: u32,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+    state.sftp_manager.send(
+        &session_id,
+        SftpMessage::SetPermissions { path, mode, reply: reply_tx },
+    )?;
+    reply_rx
+        .await
+        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+}
+
+#[tauri::command]
+pub async fn open_sftp_edit(
+    session_id: String,
+    path: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<String, AppError> {
+    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+    state.sftp_manager.send(
+        &session_id,
+        SftpMessage::OpenEdit { path, reply: reply_tx },
+    )?;
+    reply_rx
+        .await
+        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+}
+
+#[tauri::command]
+pub async fn close_sftp_edit(
+    session_id: String,
+    remote_path: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+    state.sftp_manager.send(
+        &session_id,
+        SftpMessage::CloseEdit { remote_path, reply: reply_tx },
+    )?;
+    reply_rx
+        .await
+        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+}
+
+#[tauri::command]
+pub async fn sync_sftp_folder(
+    session_id: String,
+    local_path: String,
+    remote_path: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<u32, AppError> {
+    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+    state.sftp_manager.send(
+        &session_id,
+        SftpMessage::SyncFolder { local_path, remote_path, reply: reply_tx },
     )?;
     reply_rx
         .await

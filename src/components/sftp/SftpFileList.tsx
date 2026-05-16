@@ -19,6 +19,23 @@ interface Props {
   onRenameCommit: () => void;
   onRenameCancel: () => void;
   onRenameStart: (path: string) => void;
+  onChmod?: (path: string, currentMode: number) => void;
+}
+
+/** Format a Unix permission integer as a 9-character string, e.g. `rwxr-xr-x`. */
+function formatPermissions(perm: number): string {
+  const bits = [
+    perm & 0o400 ? "r" : "-",
+    perm & 0o200 ? "w" : "-",
+    perm & 0o100 ? "x" : "-",
+    perm & 0o040 ? "r" : "-",
+    perm & 0o020 ? "w" : "-",
+    perm & 0o010 ? "x" : "-",
+    perm & 0o004 ? "r" : "-",
+    perm & 0o002 ? "w" : "-",
+    perm & 0o001 ? "x" : "-",
+  ];
+  return bits.join("");
 }
 
 function FileIcon({ isDir }: { isDir: boolean }) {
@@ -81,6 +98,7 @@ export default function SftpFileList({
   onRenameCommit,
   onRenameCancel,
   onRenameStart,
+  onChmod,
 }: Props) {
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -110,6 +128,9 @@ export default function SftpFileList({
             <ColHeader label="Name"     colKey="name"     sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <ColHeader label="Size"     colKey="size"     sortKey={sortKey} sortDir={sortDir} align="right" onSort={onSort} />
             <ColHeader label="Modified" colKey="modified" sortKey={sortKey} sortDir={sortDir} align="right" onSort={onSort} />
+            <th className="px-4 py-2 font-medium text-xs uppercase tracking-wider text-right">
+              <span className="text-faint">Permissions</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -151,6 +172,14 @@ export default function SftpFileList({
                         {entry.name}
                       </span>
                     )}
+                    {entry.isSymlink && (
+                      <span
+                        className="text-xs text-accent-fg opacity-70 shrink-0 font-mono"
+                        title="Symbolic link"
+                      >
+                        @
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="px-4 py-2 text-right text-faint font-mono text-xs tabular-nums">
@@ -158,6 +187,23 @@ export default function SftpFileList({
                 </td>
                 <td className="px-4 py-2 text-right text-faint text-xs">
                   {formatDate(entry.modified)}
+                </td>
+                <td className="px-4 py-2 text-right">
+                  {entry.permissions != null ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onChmod?.(entry.path, entry.permissions ?? 0o644);
+                      }}
+                      className="font-mono text-xs text-faint hover:text-accent-fg transition-colors disabled:pointer-events-none"
+                      title="Click to change permissions"
+                      disabled={!onChmod}
+                    >
+                      {formatPermissions(entry.permissions)}
+                    </button>
+                  ) : (
+                    <span className="font-mono text-xs text-dim">—</span>
+                  )}
                 </td>
               </tr>
             );

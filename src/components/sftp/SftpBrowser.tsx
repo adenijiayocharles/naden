@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
+import { listen } from "@tauri-apps/api/event";
 import { useSftpStore } from "../../store/sftpStore";
 import { sftpCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
@@ -58,6 +59,18 @@ export default function SftpBrowser({ sessionId }: Props) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [transferProgress, setTransferProgress] = useState<string | null>(null);
 
+  // Chmod dialog state
+  const [chmodTarget, setChmodTarget] = useState<{ path: string; mode: number } | null>(null);
+  const [chmodMode, setChmodMode] = useState(0o644);
+
+  // Edit (live-sync) state
+  const [editingFiles, setEditingFiles] = useState<string[]>([]);
+  const [fileSyncedFlash, setFileSyncedFlash] = useState<string | null>(null);
+
+  // Sync folder state
+  const [syncing, setSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<string | null>(null);
+
   // Seed history once we have the real resolved home path
   useEffect(() => {
     if (!historySeeded.current && session?.currentPath && session.currentPath !== "~") {
@@ -66,6 +79,28 @@ export default function SftpBrowser({ sessionId }: Props) {
       setHistoryIndex(0);
     }
   }, [session?.currentPath]);
+
+  // Listen for live-edit sync events
+  useEffect(() => {
+    const unlisten = listen<string>(`sftp:file_synced:${sessionId}`, ({ payload }) => {
+      const name = payload.split("/").pop() ?? payload;
+      setFileSyncedFlash(`Synced: ${name}`);
+      setTimeout(() => setFileSyncedFlash(null), 3000);
+    });
+    return () => { void unlisten.then((fn) => fn()); };
+  }, [sessionId]);
+
+  // Listen for folder sync progress events
+  useEffect(() => {
+    const unlisten = listen<{ file: string; count: number }>(
+      `sftp:sync_progress:${sessionId}`,
+      ({ payload }) => {
+        const name = payload.file.split("/").pop() ?? payload.file;
+        setSyncProgress(`Syncing… ${payload.count} file${payload.count > 1 ? "s" : ""} (${name})`);
+      },
+    );
+    return () => { void unlisten.then((fn) => fn()); };
+  }, [sessionId]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -363,6 +398,75 @@ export default function SftpBrowser({ sessionId }: Props) {
     setBusy(false);
   };
 
+  // ── Chmod ──────────────────────────────────────────────────────────────────
+
+  const handleChmod = (path: string, currentMode: number) => {
+    setChmodMode(currentMode & 0o777);
+    setChmodTarget({ path, mode: currentMode & 0o777 });
+  };
+
+  const commitChmod = async () => {
+    if (!chmodTarget) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await sftpCommands.chmodSftp(sessionId, chmodTarget.path, chmodMode);
+      setChmodTarget(null);
+      await navigate(session.currentPath, false);
+    } catch (e) {
+      setError(formatError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // ── Edit file (live-sync) ──────────────────────────────────────────────────
+
+  const handleOpenEdit = async () => {
+    const file = selectedEntries.find((e) => !e.isDir);
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await sftpCommands.openSftpEdit(sessionId, file.path);
+      setEditingFiles((prev) => [...new Set([...prev, file.path])]);
+    } catch (e) {
+      setError(formatError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleCloseEdit = async (remotePath: string) => {
+    try {
+      await sftpCommands.closeSftpEdit(sessionId, remotePath);
+    } catch {
+      // best-effort
+    }
+    setEditingFiles((prev) => prev.filter((p) => p !== remotePath));
+  };
+
+  // ── Sync folder ────────────────────────────────────────────────────────────
+
+  const handleSyncFolder = async () => {
+    const localFolder = await open({ directory: true, title: "Choose local folder to sync" });
+    if (typeof localFolder !== "string") return;
+    setSyncing(true);
+    setSyncProgress("Starting sync…");
+    setError(null);
+    try {
+      const count = await sftpCommands.syncSftpFolder(sessionId, localFolder, session.currentPath);
+      setSyncProgress(`Sync complete — ${count} file${count !== 1 ? "s" : ""} uploaded`);
+      await navigate(session.currentPath, false);
+      setTimeout(() => setSyncProgress(null), 4000);
+    } catch (e) {
+      setError(formatError(e));
+      setSyncProgress(null);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const isConnecting = session.status === "connecting";
   const isError = session.status === "error";
 
@@ -377,7 +481,7 @@ export default function SftpBrowser({ sessionId }: Props) {
         canGoForward={canGoForward}
         showHidden={showHidden}
         onToggleHidden={() => setShowHidden((v) => !v)}
-        busy={isBusy}
+        busy={isBusy || syncing}
         onNavigateTo={(path) => { navigate(path).catch(() => {}); }}
         onNavigateUp={handleUp}
         onBack={handleBack}
@@ -391,6 +495,10 @@ export default function SftpBrowser({ sessionId }: Props) {
         onRename={handleRenameFromToolbar}
         onCut={handleCut}
         onPaste={() => { void handlePaste(); }}
+        editingCount={editingFiles.length}
+        onOpenEdit={() => { void handleOpenEdit(); }}
+        onSync={() => { void handleSyncFolder(); }}
+        syncProgress={syncProgress}
       />
 
       {/* Inline delete confirmation */}
@@ -467,6 +575,34 @@ export default function SftpBrowser({ sessionId }: Props) {
         </div>
       )}
 
+      {/* File synced flash */}
+      {fileSyncedFlash && (
+        <div className="px-4 py-2 bg-green-950/30 border-b border-green-900/40 flex items-center gap-2 text-xs text-green-400">
+          <span>↑</span>
+          {fileSyncedFlash}
+        </div>
+      )}
+
+      {/* Watching files banner */}
+      {editingFiles.length > 0 && (
+        <div className="px-4 py-1.5 bg-amber-950/20 border-b border-amber-900/30 flex items-center gap-2 text-xs text-amber-400/80">
+          <span className="animate-pulse">●</span>
+          Watching {editingFiles.length} file{editingFiles.length > 1 ? "s" : ""} for changes
+          <div className="flex gap-1 ml-auto">
+            {editingFiles.map((p) => (
+              <button
+                key={p}
+                onClick={() => { void handleCloseEdit(p); }}
+                className="text-amber-600 hover:text-amber-400 transition-colors px-1 font-mono"
+                title={`Stop watching ${p}`}
+              >
+                {p.split("/").pop()} ×
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <SftpFileList
         entries={visibleEntries}
         selected={selected}
@@ -481,7 +617,74 @@ export default function SftpBrowser({ sessionId }: Props) {
         onRenameChange={setRenameValue}
         onRenameCommit={() => { void commitRename(); }}
         onRenameCancel={() => setRenaming(null)}
+        onChmod={handleChmod}
       />
+
+      {/* Chmod dialog */}
+      {chmodTarget && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/50">
+          <div className="bg-surface-1 border border-stroke-subtle rounded-lg shadow-xl w-80 p-5 flex flex-col gap-4">
+            <div>
+              <h3 className="text-sm font-semibold text-white">Change Permissions</h3>
+              <p className="text-xs text-faint mt-0.5 font-mono truncate">{chmodTarget.path}</p>
+            </div>
+
+            {/* Permission checkboxes */}
+            <div className="grid grid-cols-4 gap-y-2 text-xs">
+              <div /> {/* spacer */}
+              {["Owner", "Group", "Other"].map((label) => (
+                <div key={label} className="text-center text-faint font-medium">{label}</div>
+              ))}
+              {(["r", "w", "x"] as const).map((bit, row) => {
+                const shifts = [6, 3, 0]; // owner, group, other offsets
+                return (
+                  <React.Fragment key={bit}>
+                    <div className="text-muted font-mono pr-2">{bit}</div>
+                    {shifts.map((shift) => {
+                      const mask = 1 << (shift + (2 - row));
+                      const checked = (chmodMode & mask) !== 0;
+                      return (
+                        <div key={`${bit}-${shift}`} className="flex justify-center">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => setChmodMode((m) => checked ? m & ~mask : m | mask)}
+                            className="w-3.5 h-3.5 accent-accent"
+                          />
+                        </div>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+
+            {/* Octal display */}
+            <div className="text-xs text-center">
+              <span className="text-faint">Octal: </span>
+              <span className="font-mono text-white">
+                {chmodMode.toString(8).padStart(4, "0")}
+              </span>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setChmodTarget(null)}
+                className="px-3 py-1.5 text-xs text-muted hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { void commitChmod(); }}
+                disabled={busy}
+                className="px-3 py-1.5 bg-accent hover:bg-accent/80 text-white rounded text-xs font-medium transition-colors disabled:opacity-50"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isConnecting && (
         <ConnectingOverlay

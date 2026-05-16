@@ -77,6 +77,10 @@ pub fn run() {
             commands::sftp_commands::upload_sftp_file,
             commands::sftp_commands::download_sftp_file,
             commands::sftp_commands::touch_sftp_file,
+            commands::sftp_commands::chmod_sftp,
+            commands::sftp_commands::open_sftp_edit,
+            commands::sftp_commands::close_sftp_edit,
+            commands::sftp_commands::sync_sftp_folder,
             // SSH
             commands::ssh_commands::launch_in_terminal,
             commands::ssh_commands::import_ssh_config,

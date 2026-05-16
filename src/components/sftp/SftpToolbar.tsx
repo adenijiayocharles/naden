@@ -23,6 +23,10 @@ interface Props {
   onRename: () => void;
   onCut: () => void;
   onPaste: () => void;
+  editingCount?: number;
+  onOpenEdit?: () => void;
+  onSync?: () => void;
+  syncProgress?: string | null;
 }
 
 function ToolbarBtn({
@@ -170,10 +174,15 @@ export default function SftpToolbar({
   onRename,
   onCut,
   onPaste,
+  editingCount = 0,
+  onOpenEdit,
+  onSync,
+  syncProgress,
 }: Props) {
   const hasSelection = selectedCount > 0;
   const canDownload = hasSelection && !selectedHasDir;
   const canRename = selectedCount === 1;
+  const canEdit = selectedCount === 1 && !selectedHasDir;
 
   return (
     <div className="flex flex-col shrink-0 bg-surface-0 border-b border-stroke-subtle">
@@ -290,13 +299,50 @@ export default function SftpToolbar({
         <ToolbarBtn onClick={onDelete} disabled={busy || !hasSelection} title="Delete selected">
           <span className="text-red-400">Delete{selectedCount > 1 ? ` (${selectedCount})` : ""}</span>
         </ToolbarBtn>
+
+        {(onOpenEdit || onSync) && <div className="w-px h-4 bg-surface-4 mx-1" />}
+
+        {onOpenEdit && (
+          <ToolbarBtn
+            onClick={onOpenEdit}
+            disabled={busy || !canEdit}
+            title="Edit file in default app and auto-sync on save"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 2l3 3-8 8H3v-3L11 2z" />
+            </svg>
+            Edit
+          </ToolbarBtn>
+        )}
+
+        {onSync && (
+          <ToolbarBtn
+            onClick={onSync}
+            disabled={busy}
+            title="Sync local folder → current remote path"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2 8a6 6 0 0110.5-3.9M14 8a6 6 0 01-10.5 3.9" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4l2.5 0.1L14 7M4 12L1.5 11.9 2 9" />
+            </svg>
+            Sync Folder
+          </ToolbarBtn>
+        )}
       </div>
 
       {/* Path row */}
       <div className="flex items-center px-3 py-1 border-t border-stroke-subtle gap-3 min-w-0">
         <PathBar path={currentPath} busy={busy} onNavigateTo={onNavigateTo} />
-        {hasClipboard && (
+        {syncProgress ? (
+          <span className="text-xs text-accent-fg shrink-0">{syncProgress}</span>
+        ) : hasClipboard ? (
           <span className="text-xs text-accent-fg shrink-0">● clipboard ready</span>
+        ) : null}
+        {editingCount > 0 && (
+          <span className="text-xs text-amber-400 shrink-0 flex items-center gap-1">
+            <span className="animate-pulse">●</span>
+            Watching {editingCount} file{editingCount > 1 ? "s" : ""}
+          </span>
         )}
       </div>
     </div>
