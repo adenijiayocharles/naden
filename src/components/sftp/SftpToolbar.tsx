@@ -67,6 +67,7 @@ interface Props {
   onToggleHidden: () => void;
   busy: boolean;
   onNavigateTo: (path: string) => void;
+  onNavigateUp: () => void;
   onRefresh: () => void;
   onUpload: () => void;
   onDownload: () => void;
@@ -109,6 +110,7 @@ export default function SftpToolbar({
   onToggleHidden,
   busy,
   onNavigateTo,
+  onNavigateUp,
   onRefresh,
   onUpload,
   onDownload,
@@ -124,6 +126,12 @@ export default function SftpToolbar({
   return (
     <div className="flex flex-col shrink-0 bg-surface-0 border-b border-stroke-subtle">
       <div className="h-10 flex items-center gap-1 px-2">
+        <ToolbarBtn onClick={onNavigateUp} disabled={busy || currentPath === "/"} title="Up">
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12V4M4 8l4-4 4 4" />
+          </svg>
+        </ToolbarBtn>
+
         <ToolbarBtn onClick={onRefresh} disabled={busy} title="Refresh (⌘R)">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 8A5 5 0 113 8" />

@@ -140,6 +140,11 @@ export default function SftpBrowser({ sessionId }: Props) {
     if (entry.isDir) navigate(entry.path).catch(() => {});
   };
 
+  const handleUp = () => {
+    const parent = session.currentPath.split("/").slice(0, -1).join("/") || "/";
+    navigate(parent).catch(() => {});
+  };
+
   const handleRefresh = () => navigate(session.currentPath).catch(() => {});
 
   // ── Selection ──────────────────────────────────────────────────────────────
@@ -431,6 +436,7 @@ export default function SftpBrowser({ sessionId }: Props) {
         onToggleHidden={() => setShowHidden((v) => !v)}
         busy={isBusy || syncing}
         onNavigateTo={(path) => { navigate(path).catch(() => {}); }}
+        onNavigateUp={handleUp}
         onRefresh={handleRefresh}
         onUpload={() => { void handleUpload(); }}
         onDownload={() => { void handleDownload(); }}
