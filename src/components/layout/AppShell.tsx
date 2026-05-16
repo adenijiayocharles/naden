@@ -7,6 +7,8 @@ import { useAppInit } from "../../hooks/useAppInit";
 import { useWakeReconnect } from "../../hooks/useWakeReconnect";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { useVaultHeartbeat } from "../../hooks/useVaultHeartbeat";
+import { useMenuEvents } from "../../hooks/useMenuEvents";
+import SshConfigImport from "../servers/SshConfigImport";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import TabItem from "./TabItem";
@@ -59,6 +61,7 @@ export default function AppShell() {
   useWakeReconnect();
   useKeyboardShortcuts();
   useVaultHeartbeat();
+  useMenuEvents();
 
   const activeView = useUiStore((s) => s.activeView);
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
@@ -79,6 +82,8 @@ export default function AppShell() {
   const onboardingComplete = useUiStore((s) => s.onboardingComplete);
   const onboardingChecked = useUiStore((s) => s.onboardingChecked);
   const setOnboardingComplete = useUiStore((s) => s.setOnboardingComplete);
+  const importSshConfigOpen = useUiStore((s) => s.importSshConfigOpen);
+  const closeImportSshConfig = useUiStore((s) => s.closeImportSshConfig);
   const { isSetup, isUnlocked, isChecking, isPasswordRequired } = useVaultStore();
 
   const terminalSessions = useTerminalStore((s) => s.sessions);
@@ -396,6 +401,7 @@ const searchRef = useRef<HTMLInputElement>(null);
       {onboardingChecked && !onboardingComplete && (
         <OnboardingWizard onComplete={() => setOnboardingComplete(true)} />
       )}
+      {importSshConfigOpen && <SshConfigImport onClose={closeImportSshConfig} />}
     </div>
   );
 }

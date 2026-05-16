@@ -13,6 +13,7 @@ interface UiStore {
   sidebarCollapsed: boolean;
   serverListCollapsed: boolean;
   settingsOpen: boolean;
+  importSshConfigOpen: boolean;
   onboardingComplete: boolean;
   onboardingChecked: boolean;
   editingServerId: string | null;
@@ -32,6 +33,8 @@ interface UiStore {
   closeForm: () => void;
   openSettings: () => void;
   closeSettings: () => void;
+  openImportSshConfig: () => void;
+  closeImportSshConfig: () => void;
   setOnboardingComplete: (v: boolean) => void;
   setOnboardingChecked: () => void;
   setFilterGroup: (groupId: string | null) => void;
@@ -63,6 +66,7 @@ export const useUiStore = create<UiStore>((set) => ({
   sidebarCollapsed: false,
   serverListCollapsed: false,
   settingsOpen: false,
+  importSshConfigOpen: false,
   onboardingComplete: true, // assume complete until checked
   onboardingChecked: false,
   editingServerId: null,
@@ -82,6 +86,8 @@ export const useUiStore = create<UiStore>((set) => ({
   closeForm: () => set({ activeView: "list", editingServerId: null }),
   openSettings: () => set({ settingsOpen: true }),
   closeSettings: () => set({ settingsOpen: false }),
+  openImportSshConfig: () => set({ importSshConfigOpen: true }),
+  closeImportSshConfig: () => set({ importSshConfigOpen: false }),
   setOnboardingComplete: (v) => set({ onboardingComplete: v }),
   setOnboardingChecked: () => set({ onboardingChecked: true }),
   setFilterGroup: (groupId) => set({ filterGroupId: groupId, filterTagId: null, filterFavourites: false }),

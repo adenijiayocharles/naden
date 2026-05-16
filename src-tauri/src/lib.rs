@@ -105,7 +105,13 @@ pub fn run() {
             commands::vault_commands::retrieve_credential,
             commands::vault_commands::delete_credential,
         ])
+        .on_menu_event(|app, event| {
+            let _ = app.emit(&format!("menu:{}", event.id().as_ref()), ());
+        })
         .setup(|app| {
+            let menu = build_app_menu(app)?;
+            app.set_menu(menu)?;
+
             let data_dir = app.path().app_local_data_dir()?;
 
             let rt = tokio::runtime::Runtime::new()?;
@@ -202,4 +208,54 @@ async fn auto_lock_task(app: tauri::AppHandle) {
             let _ = app.emit("vault_auto_locked", ());
         }
     }
+}
+
+fn build_app_menu(app: &tauri::App) -> Result<tauri::menu::Menu<tauri::Wry>, Box<dyn std::error::Error>> {
+    use tauri::menu::{Menu, MenuItem, Submenu, PredefinedMenuItem};
+
+    let app_menu = Submenu::with_items(app, "SSH Manager", true, &[
+        &PredefinedMenuItem::about(app, None, None)?,
+        &PredefinedMenuItem::separator(app)?,
+        &PredefinedMenuItem::hide(app, None)?,
+        &PredefinedMenuItem::hide_others(app, None)?,
+        &PredefinedMenuItem::show_all(app, None)?,
+        &PredefinedMenuItem::separator(app)?,
+        &PredefinedMenuItem::quit(app, None)?,
+    ])?;
+
+    let file_menu = Submenu::with_items(app, "File", true, &[
+        &MenuItem::with_id(app, "new_connection", "New Connection", true, Some("CmdOrCtrl+N"))?,
+        &MenuItem::with_id(app, "import_ssh_config", "Import SSH Config…", true, None::<&str>)?,
+        &PredefinedMenuItem::separator(app)?,
+        &MenuItem::with_id(app, "settings", "Settings…", true, Some("CmdOrCtrl+,"))?,
+    ])?;
+
+    let edit_menu = Submenu::with_items(app, "Edit", true, &[
+        &PredefinedMenuItem::undo(app, None)?,
+        &PredefinedMenuItem::redo(app, None)?,
+        &PredefinedMenuItem::separator(app)?,
+        &PredefinedMenuItem::cut(app, None)?,
+        &PredefinedMenuItem::copy(app, None)?,
+        &PredefinedMenuItem::paste(app, None)?,
+        &PredefinedMenuItem::select_all(app, None)?,
+    ])?;
+
+    let view_menu = Submenu::with_items(app, "View", true, &[
+        &MenuItem::with_id(app, "show_logs", "Show Logs", true, None::<&str>)?,
+        &PredefinedMenuItem::separator(app)?,
+        &MenuItem::with_id(app, "toggle_sidebar", "Toggle Sidebar", true, Some("CmdOrCtrl+B"))?,
+    ])?;
+
+    let window_menu = Submenu::with_items(app, "Window", true, &[
+        &PredefinedMenuItem::minimize(app, None)?,
+        &PredefinedMenuItem::maximize(app, None)?,
+    ])?;
+
+    Ok(Menu::with_items(app, &[
+        &app_menu,
+        &file_menu,
+        &edit_menu,
+        &view_menu,
+        &window_menu,
+    ])?)
 }

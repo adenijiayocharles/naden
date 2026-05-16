@@ -4,7 +4,6 @@ import { useUiStore } from "../../store/uiStore";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
 import VaultCountdown from "./VaultCountdown";
-import SshConfigImport from "../servers/SshConfigImport";
 import { formatError } from "../../lib/errors";
 import type { Group, Tag } from "../../types/server";
 
@@ -285,7 +284,7 @@ export default function Sidebar() {
   const {
     filterGroupId, filterTagId, filterFavourites,
     setFilterGroup, setFilterTag, setFilterFavourites,
-    activeView, openAdd, closeForm, expandServerList,
+    activeView, openAdd, closeForm, expandServerList, openImportSshConfig,
   } = useUiStore();
 
   const terminalSessions = useTerminalStore((s) => s.sessions);
@@ -298,7 +297,6 @@ export default function Sidebar() {
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [renamingTag, setRenamingTag] = useState<Tag | null>(null);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
-  const [showImport, setShowImport] = useState(false);
   const addMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -441,7 +439,7 @@ export default function Sidebar() {
                 Manually
               </button>
               <button
-                onClick={() => { setShowImport(true); setAddMenuOpen(false); }}
+                onClick={() => { openImportSshConfig(); setAddMenuOpen(false); }}
                 className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-surface-4 transition-colors"
               >
                 SSH Config
@@ -451,7 +449,6 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {showImport && <SshConfigImport onClose={() => setShowImport(false)} />}
       {editingGroup && <GroupEditModal group={editingGroup.group} initialDelete={editingGroup.initialDelete} onClose={() => setEditingGroup(null)} />}
       {creatingGroup && <GroupCreateModal onClose={() => setCreatingGroup(false)} />}
       {renamingTag && <TagRenameModal tag={renamingTag} onClose={() => setRenamingTag(null)} />}
