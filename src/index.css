@@ -143,6 +143,15 @@ textarea:focus-visible {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
 }
 
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 button:focus-visible {
   outline: 2px solid var(--color-accent-dim);
   outline-offset: 2px;
