@@ -229,3 +229,20 @@ pub async fn sync_sftp_folder(
         .await
         .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
 }
+
+#[tauri::command]
+pub async fn copy_sftp_file(
+    session_id: String,
+    src: String,
+    dest: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+    state.sftp_manager.send(
+        &session_id,
+        SftpMessage::CopyFile { src, dest, reply: reply_tx },
+    )?;
+    reply_rx
+        .await
+        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+}

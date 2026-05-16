@@ -77,6 +77,11 @@ pub(crate) enum SftpMessage {
         remote_path: String,
         reply: tokio::sync::oneshot::Sender<Result<u32, AppError>>,
     },
+    CopyFile {
+        src: String,
+        dest: String,
+        reply: tokio::sync::oneshot::Sender<Result<(), AppError>>,
+    },
     Close,
 }
 
@@ -329,6 +334,18 @@ fn handle_message(
         }
         SftpMessage::SyncFolder { local_path, remote_path, reply } => {
             let result = sync_folder(sftp, &local_path, &remote_path, session_id, app_handle);
+            let _ = reply.send(result);
+        }
+        SftpMessage::CopyFile { src, dest, reply } => {
+            // SFTP has no native copy — download to a temp file then re-upload.
+            let tmp = std::env::temp_dir()
+                .join("ssh-manager-copy")
+                .join(std::path::Path::new(&src).file_name().unwrap_or_default());
+            let _ = std::fs::create_dir_all(tmp.parent().unwrap_or(&std::env::temp_dir()));
+            let tmp_str = tmp.to_string_lossy().into_owned();
+            let result = download_file(sftp, &src, &tmp_str, session_id, app_handle)
+                .and_then(|_| upload_file(sftp, &tmp_str, &dest, session_id, app_handle));
+            let _ = std::fs::remove_file(&tmp);
             let _ = reply.send(result);
         }
         SftpMessage::Close => {}

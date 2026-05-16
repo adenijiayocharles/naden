@@ -21,6 +21,7 @@ interface Props {
   onRenameCancel: () => void;
   onRenameStart: (path: string) => void;
   onCut: () => void;
+  onCopy: () => void;
   onPaste: () => void;
   onDelete: () => void;
   onEdit?: (path: string) => void;
@@ -96,7 +97,7 @@ export default function SftpFileList({
   entries, selected, renaming, renameValue, sortKey, sortDir, hasClipboard,
   onSort, onSelect, onNavigate,
   onRenameChange, onRenameCommit, onRenameCancel, onRenameStart,
-  onCut, onPaste, onDelete, onEdit, onChmod,
+  onCut, onCopy, onPaste, onDelete, onEdit, onChmod,
 }: Props) {
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
@@ -237,6 +238,9 @@ export default function SftpFileList({
           style={{ left: cm.x, top: cm.y }}
           className="fixed z-50 bg-surface-2 border border-stroke rounded-lg shadow-2xl py-1 min-w-[160px]"
         >
+          <MenuItem onClick={() => { onCopy(); closeMenu(); }} disabled={selCount === 0}>
+            Copy{selCount > 1 ? ` (${selCount})` : ""}
+          </MenuItem>
           <MenuItem onClick={() => { onCut(); closeMenu(); }} disabled={selCount === 0}>
             Cut{selCount > 1 ? ` (${selCount})` : ""}
           </MenuItem>

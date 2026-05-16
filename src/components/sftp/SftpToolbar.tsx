@@ -63,6 +63,8 @@ interface Props {
   selectedCount: number;
   selectedHasDir: boolean;
   hasClipboard: boolean;
+  clipboardMode: "cut" | "copy" | null;
+  onPaste: () => void;
   showHidden: boolean;
   onToggleHidden: () => void;
   busy: boolean;
@@ -106,6 +108,8 @@ export default function SftpToolbar({
   selectedCount,
   selectedHasDir,
   hasClipboard,
+  clipboardMode,
+  onPaste,
   showHidden,
   onToggleHidden,
   busy,
@@ -163,6 +167,19 @@ export default function SftpToolbar({
           {showHidden ? "Hide hidden" : "Show hidden"}
         </button>
 
+        {hasClipboard && (
+          <>
+            <div className="w-px h-4 bg-surface-4 mx-1" />
+            <ToolbarBtn onClick={onPaste} disabled={busy} title={`Paste ${clipboardMode === "copy" ? "(copy)" : "(move)"} here`}>
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+                <rect x="2" y="4" width="10" height="11" rx="1" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1" />
+              </svg>
+              Paste {clipboardMode === "copy" ? "copy" : "move"}
+            </ToolbarBtn>
+          </>
+        )}
+
         <div className="w-px h-4 bg-surface-4 mx-1" />
 
         <ToolbarBtn onClick={onUpload} disabled={busy} title="Upload file">
@@ -207,12 +224,14 @@ export default function SftpToolbar({
       </div>
 
       {/* Path row */}
-      <div className="flex items-center px-3 py-1 border-t border-stroke-subtle gap-3 min-w-0">
+      <div className="flex items-center px-3 py-2 border-t border-stroke-subtle gap-3 min-w-0">
         <PathBar path={currentPath} busy={busy} onNavigateTo={onNavigateTo} />
         {syncProgress ? (
           <span className="text-xs text-accent-fg shrink-0">{syncProgress}</span>
         ) : hasClipboard ? (
-          <span className="text-xs text-accent-fg shrink-0">● clipboard ready</span>
+          <span className="text-xs text-accent-fg shrink-0">
+            ● {clipboardMode === "copy" ? "copied" : "cut"} — paste to move here
+          </span>
         ) : null}
         {editingCount > 0 && (
           <span className="text-xs text-amber-400 shrink-0 flex items-center gap-1">

@@ -15,6 +15,7 @@ interface Props {
 interface Clipboard {
   paths: string[];
   sourceDir: string;
+  mode: "cut" | "copy";
 }
 
 export default function SftpBrowser({ sessionId }: Props) {
@@ -331,7 +332,12 @@ export default function SftpBrowser({ sessionId }: Props) {
 
   const handleCut = () => {
     if (selected.length === 0) return;
-    setClipboard({ paths: selected, sourceDir: session.currentPath });
+    setClipboard({ paths: selected, sourceDir: session.currentPath, mode: "cut" });
+  };
+
+  const handleCopy = () => {
+    if (selected.length === 0) return;
+    setClipboard({ paths: selected, sourceDir: session.currentPath, mode: "copy" });
   };
 
   const handlePaste = async () => {
@@ -343,12 +349,17 @@ export default function SftpBrowser({ sessionId }: Props) {
       const name = srcPath.split("/").pop() ?? srcPath;
       const destPath = `${session.currentPath}/${name}`;
       try {
-        await sftpCommands.renameSftp(sessionId, srcPath, destPath);
+        if (clipboard.mode === "cut") {
+          await sftpCommands.renameSftp(sessionId, srcPath, destPath);
+        } else {
+          await sftpCommands.copySftpFile(sessionId, srcPath, destPath);
+        }
       } catch {
         failed++;
       }
     }
-    if (failed > 0) setError(`${failed} item(s) could not be moved.`);
+    const verb = clipboard.mode === "cut" ? "moved" : "copied";
+    if (failed > 0) setError(`${failed} item(s) could not be ${verb}.`);
     setClipboard(null);
     setSelected([]);
     await navigate(session.currentPath);
@@ -432,6 +443,8 @@ export default function SftpBrowser({ sessionId }: Props) {
         selectedCount={selected.length}
         selectedHasDir={selectedHasDir}
         hasClipboard={clipboard !== null}
+        clipboardMode={clipboard?.mode ?? null}
+        onPaste={() => { void handlePaste(); }}
         showHidden={showHidden}
         onToggleHidden={() => setShowHidden((v) => !v)}
         busy={isBusy || syncing}
@@ -565,6 +578,7 @@ export default function SftpBrowser({ sessionId }: Props) {
         onRenameCommit={() => { void commitRename(); }}
         onRenameCancel={() => setRenaming(null)}
         onCut={handleCut}
+        onCopy={handleCopy}
         onPaste={() => { void handlePaste(); }}
         onDelete={handleDelete}
         onEdit={(path) => { void handleOpenEdit(path); }}

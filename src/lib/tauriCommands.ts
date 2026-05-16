@@ -169,6 +169,9 @@ export const sftpCommands = {
 
   syncSftpFolder: (sessionId: string, localPath: string, remotePath: string) =>
     invoke<number>("sync_sftp_folder", { sessionId, localPath, remotePath }),
+
+  copySftpFile: (sessionId: string, src: string, dest: string) =>
+    invoke<void>("copy_sftp_file", { sessionId, src, dest }),
 };
 
 export const logCommands = {
