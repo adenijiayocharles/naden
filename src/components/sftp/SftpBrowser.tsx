@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
 import { useSftpStore } from "../../store/sftpStore";
@@ -39,7 +39,7 @@ export default function SftpBrowser({ sessionId }: Props) {
   const [fileName, setFileName] = useState("");
 
   // Viewing options
-  const [showHidden, setShowHidden] = useState(false);
+  const [showHidden, setShowHidden] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -47,11 +47,6 @@ export default function SftpBrowser({ sessionId }: Props) {
     if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir("asc"); }
   };
-
-  // Navigation history
-  const [history, setHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  const historySeeded = useRef(false);
 
   // UI state
   const [busy, setBusy] = useState(false);
@@ -70,15 +65,6 @@ export default function SftpBrowser({ sessionId }: Props) {
   // Sync folder state
   const [syncing, setSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<string | null>(null);
-
-  // Seed history once we have the real resolved home path
-  useEffect(() => {
-    if (!historySeeded.current && session?.currentPath && session.currentPath !== "~") {
-      historySeeded.current = true;
-      setHistory([session.currentPath]);
-      setHistoryIndex(0);
-    }
-  }, [session?.currentPath]);
 
   // Listen for live-edit sync events
   useEffect(() => {
@@ -117,10 +103,7 @@ export default function SftpBrowser({ sessionId }: Props) {
         return;
       }
       if (!session) return;
-      if (mod && (e.key === "[" || e.key === "ArrowLeft"))  { e.preventDefault(); handleBack(); }
-      if (mod && (e.key === "]" || e.key === "ArrowRight")) { e.preventDefault(); handleForward(); }
-      if (mod && e.key === "ArrowUp")  { e.preventDefault(); handleUp(); }
-      if (mod && e.key === "r")        { e.preventDefault(); handleRefresh(); }
+      if (mod && e.key === "r") { e.preventDefault(); handleRefresh(); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -131,13 +114,10 @@ export default function SftpBrowser({ sessionId }: Props) {
   const isBusy = busy || session.loadingEntries;
   const selectedEntries = session.entries.filter((e) => selected.includes(e.path));
   const selectedHasDir = selectedEntries.some((e) => e.isDir);
-  const canGoBack = historyIndex > 0;
-  const canGoForward = historyIndex < history.length - 1;
 
   const visibleEntries = [...session.entries]
     .filter((e) => showHidden || !e.name.startsWith("."))
     .sort((a, b) => {
-      // Directories always before files
       if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
       const dir = sortDir === "asc" ? 1 : -1;
       if (sortKey === "size")     return dir * (a.size - b.size);
@@ -145,47 +125,22 @@ export default function SftpBrowser({ sessionId }: Props) {
       return dir * a.name.toLowerCase().localeCompare(b.name.toLowerCase());
     });
 
-  // navigate(path, push=true) — push adds to history; false is for back/forward
-  const navigate = async (path: string, push = true) => {
+  const navigate = async (path: string) => {
     setSelected([]);
     setLastClickedPath(null);
     setError(null);
     try {
       await navigateTo(sessionId, path);
-      if (push) {
-        const resolved = useSftpStore.getState().sessions.find((s) => s.id === sessionId)?.currentPath ?? path;
-        setHistory((h) => [...h.slice(0, historyIndex + 1), resolved]);
-        setHistoryIndex((i) => i + 1);
-      }
     } catch (e) {
       setError(formatError(e));
     }
-  };
-
-  const handleBack = () => {
-    if (!canGoBack) return;
-    const newIndex = historyIndex - 1;
-    setHistoryIndex(newIndex);
-    navigate(history[newIndex], false).catch(() => {});
-  };
-
-  const handleForward = () => {
-    if (!canGoForward) return;
-    const newIndex = historyIndex + 1;
-    setHistoryIndex(newIndex);
-    navigate(history[newIndex], false).catch(() => {});
   };
 
   const handleNavigateEntry = (entry: { isDir: boolean; path: string }) => {
     if (entry.isDir) navigate(entry.path).catch(() => {});
   };
 
-  const handleUp = () => {
-    const parent = session.currentPath.split("/").slice(0, -1).join("/") || "/";
-    navigate(parent).catch(() => {});
-  };
-
-  const handleRefresh = () => navigate(session.currentPath, false).catch(() => {});
+  const handleRefresh = () => navigate(session.currentPath).catch(() => {});
 
   // ── Selection ──────────────────────────────────────────────────────────────
 
@@ -409,7 +364,7 @@ export default function SftpBrowser({ sessionId }: Props) {
     try {
       await sftpCommands.chmodSftp(sessionId, chmodTarget.path, chmodMode);
       setChmodTarget(null);
-      await navigate(session.currentPath, false);
+      await navigate(session.currentPath);
     } catch (e) {
       setError(formatError(e));
     } finally {
@@ -452,7 +407,7 @@ export default function SftpBrowser({ sessionId }: Props) {
     try {
       const count = await sftpCommands.syncSftpFolder(sessionId, localFolder, session.currentPath);
       setSyncProgress(`Sync complete — ${count} file${count !== 1 ? "s" : ""} uploaded`);
-      await navigate(session.currentPath, false);
+      await navigate(session.currentPath);
       setTimeout(() => setSyncProgress(null), 4000);
     } catch (e) {
       setError(formatError(e));
@@ -472,15 +427,9 @@ export default function SftpBrowser({ sessionId }: Props) {
         selectedCount={selected.length}
         selectedHasDir={selectedHasDir}
         hasClipboard={clipboard !== null}
-        canGoBack={canGoBack}
-        canGoForward={canGoForward}
         showHidden={showHidden}
         onToggleHidden={() => setShowHidden((v) => !v)}
         busy={isBusy || syncing}
-        onNavigateTo={(path) => { navigate(path).catch(() => {}); }}
-        onNavigateUp={handleUp}
-        onBack={handleBack}
-        onForward={handleForward}
         onRefresh={handleRefresh}
         onUpload={() => { void handleUpload(); }}
         onDownload={() => { void handleDownload(); }}

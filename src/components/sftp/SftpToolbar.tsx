@@ -1,19 +1,11 @@
-import { useState } from "react";
-
 interface Props {
   currentPath: string;
   selectedCount: number;
   selectedHasDir: boolean;
   hasClipboard: boolean;
-  canGoBack: boolean;
-  canGoForward: boolean;
   showHidden: boolean;
   onToggleHidden: () => void;
   busy: boolean;
-  onNavigateTo: (path: string) => void;
-  onNavigateUp: () => void;
-  onBack: () => void;
-  onForward: () => void;
   onRefresh: () => void;
   onUpload: () => void;
   onDownload: () => void;
@@ -47,119 +39,14 @@ function ToolbarBtn({
   );
 }
 
-function PathBar({
-  path,
-  busy,
-  onNavigateTo,
-}: {
-  path: string;
-  busy: boolean;
-  onNavigateTo: (p: string) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [input, setInput] = useState("");
-
-  const startEdit = () => {
-    setInput(path);
-    setEditing(true);
-  };
-
-  const commit = () => {
-    setEditing(false);
-    const trimmed = input.trim();
-    if (trimmed && trimmed !== path) onNavigateTo(trimmed);
-  };
-
-  const segments = path.split("/").filter(Boolean);
-  const MAX_VISIBLE = 4;
-  const truncated = segments.length > MAX_VISIBLE;
-  const visible = truncated ? segments.slice(-MAX_VISIBLE) : segments;
-  const hiddenDepth = segments.length - visible.length;
-
-  if (editing) {
-    return (
-      <input
-        autoFocus
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") commit();
-          if (e.key === "Escape") setEditing(false);
-        }}
-        onBlur={commit}
-        className="flex-1 h-6 bg-surface-3 border border-accent rounded px-2 text-xs text-white font-mono outline-none"
-      />
-    );
-  }
-
-  return (
-    <div
-      className="flex items-center gap-0.5 min-w-0 font-mono text-xs overflow-hidden flex-1 cursor-text"
-      title="Click to edit path"
-      onClick={startEdit}
-    >
-      {busy && (
-        <svg className="w-3 h-3 animate-spin text-accent-fg shrink-0 mr-1" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-        </svg>
-      )}
-      <button
-        onClick={(e) => { e.stopPropagation(); onNavigateTo("/"); }}
-        disabled={busy}
-        className="text-faint hover:text-white disabled:pointer-events-none transition-colors shrink-0"
-      >
-        /
-      </button>
-      {truncated && (
-        <>
-          <button
-            onClick={(e) => { e.stopPropagation(); onNavigateTo("/" + segments.slice(0, hiddenDepth).join("/")); }}
-            disabled={busy}
-            className="text-faint hover:text-white disabled:pointer-events-none transition-colors shrink-0 px-0.5"
-            title={`/${segments.slice(0, hiddenDepth).join("/")}`}
-          >
-            …
-          </button>
-          <span className="text-dim shrink-0">/</span>
-        </>
-      )}
-      {visible.map((seg, i) => {
-        const segPath = "/" + segments.slice(0, hiddenDepth + i + 1).join("/");
-        const isLast = i === visible.length - 1;
-        return (
-          <span key={segPath} className="flex items-center gap-0.5 min-w-0">
-            <button
-              onClick={(e) => { e.stopPropagation(); if (!isLast) onNavigateTo(segPath); }}
-              disabled={busy || isLast}
-              className={`truncate transition-colors disabled:pointer-events-none ${
-                isLast ? "text-secondary" : "text-faint hover:text-white"
-              }`}
-            >
-              {seg}
-            </button>
-            {!isLast && <span className="text-dim shrink-0">/</span>}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-
 export default function SftpToolbar({
   currentPath,
   selectedCount,
   selectedHasDir,
   hasClipboard,
-  canGoBack,
-  canGoForward,
   showHidden,
   onToggleHidden,
   busy,
-  onNavigateTo,
-  onNavigateUp,
-  onBack,
-  onForward,
   onRefresh,
   onUpload,
   onDownload,
@@ -174,27 +61,7 @@ export default function SftpToolbar({
 
   return (
     <div className="flex flex-col shrink-0 bg-surface-0 border-b border-stroke-subtle">
-      {/* Action row */}
       <div className="h-10 flex items-center gap-1 px-2">
-        {/* Navigation */}
-        <ToolbarBtn onClick={onBack} disabled={busy || !canGoBack} title="Back (⌘[)">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10 12L6 8l4-4" />
-          </svg>
-        </ToolbarBtn>
-
-        <ToolbarBtn onClick={onForward} disabled={busy || !canGoForward} title="Forward (⌘])">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12l4-4-4-4" />
-          </svg>
-        </ToolbarBtn>
-
-        <ToolbarBtn onClick={onNavigateUp} disabled={busy || currentPath === "/"} title="Up (⌘↑)">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12V4M4 8l4-4 4 4" />
-          </svg>
-        </ToolbarBtn>
-
         <ToolbarBtn onClick={onRefresh} disabled={busy} title="Refresh (⌘R)">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 8A5 5 0 113 8" />
@@ -228,7 +95,6 @@ export default function SftpToolbar({
 
         <div className="w-px h-4 bg-surface-4 mx-1" />
 
-        {/* File operations */}
         <ToolbarBtn onClick={onUpload} disabled={busy} title="Upload file">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 10V3M5 6l3-3 3 3M3 12h10" />
@@ -260,11 +126,7 @@ export default function SftpToolbar({
         </ToolbarBtn>
 
         {onSync && (
-          <ToolbarBtn
-            onClick={onSync}
-            disabled={busy}
-            title="Sync local folder → current remote path"
-          >
+          <ToolbarBtn onClick={onSync} disabled={busy} title="Sync local folder → current remote path">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M2 8a6 6 0 0110.5-3.9M14 8a6 6 0 01-10.5 3.9" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4l2.5 0.1L14 7M4 12L1.5 11.9 2 9" />
@@ -274,9 +136,15 @@ export default function SftpToolbar({
         )}
       </div>
 
-      {/* Path row */}
+      {/* Path display */}
       <div className="flex items-center px-3 py-1 border-t border-stroke-subtle gap-3 min-w-0">
-        <PathBar path={currentPath} busy={busy} onNavigateTo={onNavigateTo} />
+        {busy && (
+          <svg className="w-3 h-3 animate-spin text-accent-fg shrink-0" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+        )}
+        <span className="font-mono text-xs text-secondary truncate flex-1 min-w-0">{currentPath}</span>
         {syncProgress ? (
           <span className="text-xs text-accent-fg shrink-0">{syncProgress}</span>
         ) : hasClipboard ? (
