@@ -154,7 +154,7 @@ export default function SftpFileList({
   return (
     <div className="flex-1 overflow-y-auto relative">
       <table className="w-full text-sm border-collapse">
-        <thead className="sticky top-0 bg-surface-0 z-10 border-b border-stroke-subtle">
+        <thead className="sticky top-0 bg-surface-1 z-10 border-b border-stroke-subtle">
           <tr>
             <ColHeader label="Name"     colKey="name"     sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <ColHeader label="Size"     colKey="size"     sortKey={sortKey} sortDir={sortDir} align="right" onSort={onSort} />

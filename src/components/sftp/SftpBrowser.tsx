@@ -426,7 +426,7 @@ export default function SftpBrowser({ sessionId }: Props) {
   const isError = session.status === "error";
 
   return (
-    <div className="relative h-full w-full flex flex-col bg-surface-0">
+    <div className="relative h-full w-full flex flex-col bg-surface-1">
       <SftpToolbar
         currentPath={session.currentPath}
         selectedCount={selected.length}

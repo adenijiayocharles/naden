@@ -124,7 +124,7 @@ export default function SftpToolbar({
   const canDownload = hasSelection && !selectedHasDir;
 
   return (
-    <div className="flex flex-col shrink-0 bg-surface-0 border-b border-stroke-subtle">
+    <div className="flex flex-col shrink-0 bg-surface-2 border-b border-stroke-subtle">
       <div className="h-10 flex items-center gap-1 px-2">
         <ToolbarBtn onClick={onNavigateUp} disabled={busy || currentPath === "/"} title="Up">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
