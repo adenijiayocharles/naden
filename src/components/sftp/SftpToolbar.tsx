@@ -19,12 +19,7 @@ interface Props {
   onDownload: () => void;
   onNewFolder: () => void;
   onNewFile: () => void;
-  onDelete: () => void;
-  onRename: () => void;
-  onCut: () => void;
-  onPaste: () => void;
   editingCount?: number;
-  onOpenEdit?: () => void;
   onSync?: () => void;
   syncProgress?: string | null;
 }
@@ -170,19 +165,12 @@ export default function SftpToolbar({
   onDownload,
   onNewFolder,
   onNewFile,
-  onDelete,
-  onRename,
-  onCut,
-  onPaste,
   editingCount = 0,
-  onOpenEdit,
   onSync,
   syncProgress,
 }: Props) {
   const hasSelection = selectedCount > 0;
   const canDownload = hasSelection && !selectedHasDir;
-  const canRename = selectedCount === 1;
-  const canEdit = selectedCount === 1 && !selectedHasDir;
 
   return (
     <div className="flex flex-col shrink-0 bg-surface-0 border-b border-stroke-subtle">
@@ -270,50 +258,6 @@ export default function SftpToolbar({
           </svg>
           New File
         </ToolbarBtn>
-
-        <div className="w-px h-4 bg-surface-4 mx-1" />
-
-        <ToolbarBtn onClick={onCut} disabled={busy || !hasSelection} title="Cut selected (move)">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
-            <circle cx="4" cy="12" r="2" />
-            <circle cx="4" cy="4" r="2" />
-            <path strokeLinecap="round" d="M6 4l8 4M6 12l8-4" />
-          </svg>
-          Cut{selectedCount > 0 ? ` (${selectedCount})` : ""}
-        </ToolbarBtn>
-
-        <ToolbarBtn onClick={onPaste} disabled={busy || !hasClipboard} title="Paste (move here)">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
-            <rect x="2" y="4" width="10" height="11" rx="1" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1" />
-          </svg>
-          Paste
-        </ToolbarBtn>
-
-        <div className="w-px h-4 bg-surface-4 mx-1" />
-
-        <ToolbarBtn onClick={onRename} disabled={busy || !canRename} title="Rename (or double-click)">
-          Rename
-        </ToolbarBtn>
-
-        <ToolbarBtn onClick={onDelete} disabled={busy || !hasSelection} title="Delete selected">
-          <span className="text-red-400">Delete{selectedCount > 1 ? ` (${selectedCount})` : ""}</span>
-        </ToolbarBtn>
-
-        {(onOpenEdit || onSync) && <div className="w-px h-4 bg-surface-4 mx-1" />}
-
-        {onOpenEdit && (
-          <ToolbarBtn
-            onClick={onOpenEdit}
-            disabled={busy || !canEdit}
-            title="Edit file in default app and auto-sync on save"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11 2l3 3-8 8H3v-3L11 2z" />
-            </svg>
-            Edit
-          </ToolbarBtn>
-        )}
 
         {onSync && (
           <ToolbarBtn

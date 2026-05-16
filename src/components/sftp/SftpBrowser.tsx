@@ -347,9 +347,6 @@ export default function SftpBrowser({ sessionId }: Props) {
     setSelected([path]);
   };
 
-  const handleRenameFromToolbar = () => {
-    if (selected.length === 1) handleRenameStart(selected[0]);
-  };
 
   const commitRename = async () => {
     if (!renaming || !renameValue.trim()) { setRenaming(null); return; }
@@ -422,14 +419,12 @@ export default function SftpBrowser({ sessionId }: Props) {
 
   // ── Edit file (live-sync) ──────────────────────────────────────────────────
 
-  const handleOpenEdit = async () => {
-    const file = selectedEntries.find((e) => !e.isDir);
-    if (!file) return;
+  const handleOpenEdit = async (remotePath: string) => {
     setBusy(true);
     setError(null);
     try {
-      await sftpCommands.openSftpEdit(sessionId, file.path);
-      setEditingFiles((prev) => [...new Set([...prev, file.path])]);
+      await sftpCommands.openSftpEdit(sessionId, remotePath);
+      setEditingFiles((prev) => [...new Set([...prev, remotePath])]);
     } catch (e) {
       setError(formatError(e));
     } finally {
@@ -491,12 +486,7 @@ export default function SftpBrowser({ sessionId }: Props) {
         onDownload={() => { void handleDownload(); }}
         onNewFolder={handleNewFolder}
         onNewFile={handleNewFile}
-        onDelete={handleDelete}
-        onRename={handleRenameFromToolbar}
-        onCut={handleCut}
-        onPaste={() => { void handlePaste(); }}
         editingCount={editingFiles.length}
-        onOpenEdit={() => { void handleOpenEdit(); }}
         onSync={() => { void handleSyncFolder(); }}
         syncProgress={syncProgress}
       />
@@ -613,10 +603,15 @@ export default function SftpBrowser({ sessionId }: Props) {
         onSort={handleSort}
         onSelect={handleSelect}
         onNavigate={handleNavigateEntry}
+        hasClipboard={clipboard !== null}
         onRenameStart={handleRenameStart}
         onRenameChange={setRenameValue}
         onRenameCommit={() => { void commitRename(); }}
         onRenameCancel={() => setRenaming(null)}
+        onCut={handleCut}
+        onPaste={() => { void handlePaste(); }}
+        onDelete={handleDelete}
+        onEdit={(path) => { void handleOpenEdit(path); }}
         onChmod={handleChmod}
       />
 
