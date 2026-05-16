@@ -1,4 +1,3 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useUiStore } from "../../store/uiStore";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
@@ -23,26 +22,18 @@ export default function TopBar() {
     terminalSessions.find((s) => s.id === terminalActiveId) ??
     sftpSessions.find((s) => s.id === sftpActiveId);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest("button")) return;
-    void getCurrentWindow().startDragging();
-  };
-
   return (
     <>
       <header
-        data-tauri-drag-region
-        onMouseDown={handleMouseDown}
         className="h-11 shrink-0 border-b border-stroke-subtle bg-surface-base flex items-center pl-[72px] pr-3"
       >
-        <div data-tauri-drag-region className="flex-1 flex items-center justify-center pointer-events-none">
+        <div className="flex-1 flex items-center justify-center pointer-events-none">
           <span className="text-sm text-secondary select-none">
             SSHManager{activeSession ? ` — ${activeSession.serverName}` : ""}
           </span>
         </div>
 
         <div className="flex items-center gap-0.5 shrink-0">
-          {/* Toggle sidebar */}
           <button
             onClick={toggleSidebar}
             aria-label="Toggle sidebar"
@@ -54,7 +45,6 @@ export default function TopBar() {
             </svg>
           </button>
 
-          {/* Logs */}
           <button
             onClick={() => activeView === "logs" ? closeForm() : openLogs()}
             aria-label="Logs"
@@ -65,7 +55,6 @@ export default function TopBar() {
             </svg>
           </button>
 
-          {/* Settings */}
           <button
             onClick={openSettings}
             aria-label="Settings"

@@ -4,6 +4,7 @@ mod commands;
 mod db;
 pub mod error;
 mod models;
+mod platform;
 mod power;
 mod search;
 mod sftp;
@@ -138,6 +139,12 @@ pub fn run() {
 
             // Spawn the sleep-watcher thread that emits `system:wake` on resume.
             power::start_sleep_watcher(app.handle().clone());
+
+            // Install the native macOS drag region monitor for the custom title bar.
+            #[cfg(target_os = "macos")]
+            if let Some(window) = app.get_webview_window("main") {
+                platform::macos::install_drag_region(&window);
+            }
 
             Ok(())
         })
