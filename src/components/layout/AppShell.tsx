@@ -232,48 +232,52 @@ const searchRef = useRef<HTMLInputElement>(null);
                       <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-dim pointer-events-none select-none">⌘K</kbd>
                     )}
                   </div>
-                  <select
-                    value={sortMode}
-                    onChange={(e) => setSortMode(e.target.value as SortMode)}
-                    className="h-7 bg-surface-3 border border-stroke rounded px-2 text-xs text-secondary focus:outline-none focus:border-accent shrink-0 cursor-pointer"
-                  >
-                    <option value="default">Default</option>
-                    <option value="name_asc">A → Z</option>
-                    <option value="name_desc">Z → A</option>
-                    <option value="host">Host</option>
-                    <option value="last_connected">Recent</option>
-                  </select>
-                  <div className="flex items-center bg-surface-3 border border-stroke rounded overflow-hidden shrink-0">
-                    {(["card", "row"] as ViewMode[]).map((mode) => (
-                      <button
-                        key={mode}
-                        onClick={() => setViewMode(mode)}
-                        aria-label={mode === "card" ? "Card view" : "List view"}
-                        className={`p-1 transition-colors ${viewMode === mode ? "bg-surface-4 text-white" : "text-faint hover:text-muted"}`}
+                  {!(hasPanel && !serverListCollapsed) && (
+                    <>
+                      <select
+                        value={sortMode}
+                        onChange={(e) => setSortMode(e.target.value as SortMode)}
+                        className="h-7 bg-surface-3 border border-stroke rounded px-2 text-xs text-secondary focus:outline-none focus:border-accent shrink-0 cursor-pointer"
                       >
-                        {mode === "card" ? (
-                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
-                            <rect x="1" y="1" width="6" height="6" rx="1" />
-                            <rect x="9" y="1" width="6" height="6" rx="1" />
-                            <rect x="1" y="9" width="6" height="6" rx="1" />
-                            <rect x="9" y="9" width="6" height="6" rx="1" />
-                          </svg>
-                        ) : (
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
-                            <line x1="1" y1="4" x2="15" y2="4" />
-                            <line x1="1" y1="8" x2="15" y2="8" />
-                            <line x1="1" y1="12" x2="15" y2="12" />
-                          </svg>
-                        )}
+                        <option value="default">Default</option>
+                        <option value="name_asc">A → Z</option>
+                        <option value="name_desc">Z → A</option>
+                        <option value="host">Host</option>
+                        <option value="last_connected">Recent</option>
+                      </select>
+                      <div className="flex items-center bg-surface-3 border border-stroke rounded overflow-hidden shrink-0">
+                        {(["card", "row"] as ViewMode[]).map((mode) => (
+                          <button
+                            key={mode}
+                            onClick={() => setViewMode(mode)}
+                            aria-label={mode === "card" ? "Card view" : "List view"}
+                            className={`p-1 transition-colors ${viewMode === mode ? "bg-surface-4 text-white" : "text-faint hover:text-muted"}`}
+                          >
+                            {mode === "card" ? (
+                              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
+                                <rect x="1" y="1" width="6" height="6" rx="1" />
+                                <rect x="9" y="1" width="6" height="6" rx="1" />
+                                <rect x="1" y="9" width="6" height="6" rx="1" />
+                                <rect x="9" y="9" width="6" height="6" rx="1" />
+                              </svg>
+                            ) : (
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
+                                <line x1="1" y1="4" x2="15" y2="4" />
+                                <line x1="1" y1="8" x2="15" y2="8" />
+                                <line x1="1" y1="12" x2="15" y2="12" />
+                              </svg>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        onClick={toggleBulkMode}
+                        className={`h-7 px-2 rounded border text-xs transition-colors shrink-0 ${bulkMode ? "bg-accent/10 border-accent/30 text-accent-fg" : "bg-surface-3 border-stroke text-faint hover:text-muted"}`}
+                      >
+                        {bulkMode ? `Cancel${bulkSelected.length > 0 ? ` (${bulkSelected.length})` : ""}` : "Select"}
                       </button>
-                    ))}
-                  </div>
-                  <button
-                    onClick={toggleBulkMode}
-                    className={`h-7 px-2 rounded border text-xs transition-colors shrink-0 ${bulkMode ? "bg-accent/10 border-accent/30 text-accent-fg" : "bg-surface-3 border-stroke text-faint hover:text-muted"}`}
-                  >
-                    {bulkMode ? `Cancel${bulkSelected.length > 0 ? ` (${bulkSelected.length})` : ""}` : "Select"}
-                  </button>
+                    </>
+                  )}
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
                   <ServerList />

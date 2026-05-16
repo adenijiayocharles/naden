@@ -11,12 +11,19 @@ export interface TerminalSession {
   serverName: string;
   status: SessionStatus;
   errorMessage?: string;
+  reconnectAt?: number; // epoch ms when the auto-reconnect will fire
 }
 
 const MAX_TABS = 20;
 
 // Held outside Zustand so cleanup functions are never serialised into state
 const sessionUnlisteners = new Map<string, UnlistenFn[]>();
+// Pending auto-reconnect timers — cancelled if the user closes the tab first
+const sessionReconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+// Sessions that reached "connected" at least once (so a later drop triggers auto-reconnect)
+const connectedSessions = new Set<string>();
+// Sessions that were opened as an auto-reconnect attempt — one shot only, close silently on failure
+const autoReconnectSessions = new Set<string>();
 
 interface TerminalStore {
   sessions: TerminalSession[];
@@ -31,6 +38,12 @@ interface TerminalStore {
 }
 
 function teardownResources(sessionId: string) {
+  if (sessionReconnectTimers.has(sessionId)) {
+    clearTimeout(sessionReconnectTimers.get(sessionId)!);
+    sessionReconnectTimers.delete(sessionId);
+  }
+  connectedSessions.delete(sessionId);
+  autoReconnectSessions.delete(sessionId);
   sessionUnlisteners.get(sessionId)?.forEach((fn) => fn());
   sessionUnlisteners.delete(sessionId);
   sessionBuffer.detach(sessionId);
@@ -68,6 +81,11 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     const unlisteners = await Promise.all([
       listen<string>(`terminal:status:${sessionId}`, ({ payload }) => {
         if (payload === "connected") {
+          // Mark as successfully connected. If it drops later, terminal:closed
+          // will schedule auto-reconnect rather than just removing the tab.
+          connectedSessions.add(sessionId);
+          // No longer a pending reconnect attempt — future drops start fresh.
+          autoReconnectSessions.delete(sessionId);
           set((state) => ({
             sessions: state.sessions.map((s) =>
               s.id === sessionId ? { ...s, status: "connected" } : s,
@@ -77,15 +95,56 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       }),
 
       listen<null>(`terminal:closed:${sessionId}`, () => {
-        // If the session is in error state keep it alive so the error overlay
-        // stays visible — the user closes it explicitly via the Reconnect/Close
-        // buttons in TerminalPane, which calls closeSession().
         const session = get().sessions.find((s) => s.id === sessionId);
-        if (session?.status === "error") return;
+        if (!session) return;
+
+        // Auto-reconnect attempt ended — close silently (one shot, no retry).
+        if (autoReconnectSessions.has(sessionId)) {
+          get().removeSession(sessionId); // teardownResources called inside
+          return;
+        }
+
+        // Session was connected at some point — unexpected drop.
+        // Schedule one auto-reconnect attempt after 20 s regardless of whether
+        // terminal:error also fired (error fires before closed on most drops).
+        if (connectedSessions.has(sessionId)) {
+          connectedSessions.delete(sessionId);
+          const reconnectAt = Date.now() + 20_000;
+          set((state) => ({
+            sessions: state.sessions.map((s) =>
+              s.id === sessionId
+                ? { ...s, status: "disconnected", reconnectAt, errorMessage: undefined }
+                : s,
+            ),
+          }));
+          const timer = setTimeout(async () => {
+            sessionReconnectTimers.delete(sessionId);
+            const s = get().sessions.find((s) => s.id === sessionId);
+            if (!s) return; // user cancelled during the wait
+            const { serverId, serverName } = s;
+            teardownResources(sessionId);
+            set((state) => dropFromState(state, sessionId));
+            const newId = await get().openSession(serverId, serverName);
+            if (newId) autoReconnectSessions.add(newId);
+          }, 20_000);
+          sessionReconnectTimers.set(sessionId, timer);
+          return;
+        }
+
+        // Never reached "connected" (initial connection failure):
+        // keep the error overlay visible so the user can act on it.
+        if (session.status === "error") return;
+
+        // Anything else (e.g. cancelled while still connecting).
         get().removeSession(sessionId);
       }),
 
       listen<string>(`terminal:error:${sessionId}`, ({ payload }) => {
+        // Suppress errors for sessions that were previously connected — the
+        // terminal:closed handler will show the reconnect countdown instead.
+        if (connectedSessions.has(sessionId)) return;
+        // Suppress errors for auto-reconnect attempts — they close silently.
+        if (autoReconnectSessions.has(sessionId)) return;
         set((state) => ({
           sessions: state.sessions.map((s) =>
             s.id === sessionId ? { ...s, status: "error", errorMessage: payload } : s,

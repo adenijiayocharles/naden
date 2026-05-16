@@ -6,7 +6,7 @@ import { terminalCommands } from "../../lib/tauriCommands";
 import { sessionBuffer } from "../../lib/sessionBuffer";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useTerminalSettings, fontCss } from "../../lib/terminalSettings";
-import { ConnectingOverlay, ErrorOverlay } from "../shared/ConnectionOverlay";
+import { ConnectingOverlay, ErrorOverlay, ReconnectingOverlay } from "../shared/ConnectionOverlay";
 
 interface Props {
   sessionId: string;
@@ -29,6 +29,7 @@ export default function TerminalPane({ sessionId }: Props) {
 
   const isConnecting = session?.status === "connecting";
   const isError = session?.status === "error";
+  const isDisconnected = session?.status === "disconnected";
 
   // Keep ref in sync so xterm's key handler (a stale closure) can read current value
   useEffect(() => { searchVisibleRef.current = searchVisible; }, [searchVisible]);
@@ -217,6 +218,12 @@ export default function TerminalPane({ sessionId }: Props) {
       {isConnecting && (
         <ConnectingOverlay
           serverName={session?.serverName ?? ""}
+          onCancel={() => { void closeSession(sessionId); }}
+        />
+      )}
+      {isDisconnected && session?.reconnectAt && (
+        <ReconnectingOverlay
+          reconnectAt={session.reconnectAt}
           onCancel={() => { void closeSession(sessionId); }}
         />
       )}
