@@ -345,21 +345,25 @@ export default function SftpBrowser({ sessionId }: Props) {
     setBusy(true);
     setError(null);
     let failed = 0;
+    let firstError: string | null = null;
     for (const srcPath of clipboard.paths) {
       const name = srcPath.split("/").pop() ?? srcPath;
-      const destPath = `${session.currentPath}/${name}`;
+      const destPath = `${session.currentPath}/${name}`.replace(/\/+/g, "/");
+      // Skip if source and destination are identical (pasting into same folder with cut)
+      if (srcPath === destPath) continue;
       try {
         if (clipboard.mode === "cut") {
           await sftpCommands.renameSftp(sessionId, srcPath, destPath);
         } else {
           await sftpCommands.copySftpFile(sessionId, srcPath, destPath);
         }
-      } catch {
+      } catch (e) {
         failed++;
+        if (!firstError) firstError = formatError(e);
       }
     }
     const verb = clipboard.mode === "cut" ? "moved" : "copied";
-    if (failed > 0) setError(`${failed} item(s) could not be ${verb}.`);
+    if (failed > 0) setError(`${failed} item(s) could not be ${verb}: ${firstError ?? "unknown error"}`);
     setClipboard(null);
     setSelected([]);
     await navigate(session.currentPath);
