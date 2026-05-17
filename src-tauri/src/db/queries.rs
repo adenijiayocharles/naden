@@ -168,20 +168,34 @@ pub async fn update_server_db(
     id: &str,
     payload: &UpdateServerPayload,
 ) -> Result<ServerWithTags, AppError> {
-    let existing = get_server_db(db, id).await?;
-    let s = &existing.server;
-    let now = Utc::now().to_rfc3339();
-
+    // Validate before acquiring the transaction so we don't hold a write lock
+    // during pure-CPU work.
     if let Some(ref h) = payload.hostname {
         validate_hostname(h)?;
     }
     if let Some(ref u) = payload.username {
         validate_username(u)?;
     }
-    let port = payload.port.unwrap_or(s.port);
-    if !(1..=65535).contains(&port) {
-        return Err(AppError::Validation("port must be between 1 and 65535".into()));
+    if let Some(port) = payload.port {
+        if !(1..=65535).contains(&port) {
+            return Err(AppError::Validation("port must be between 1 and 65535".into()));
+        }
     }
+
+    // Wrap the read-then-write in a transaction so concurrent updates cannot
+    // interleave and silently overwrite each other's changes.
+    let mut tx = db.begin().await?;
+
+    let existing: Option<crate::models::server::Server> =
+        sqlx::query_as("SELECT * FROM servers WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&mut *tx)
+            .await?;
+    let existing = existing.ok_or_else(|| AppError::NotFound(format!("server '{id}' not found")))?;
+    let s = &existing;
+    let now = Utc::now().to_rfc3339();
+
+    let port = payload.port.unwrap_or(s.port);
 
     // vault_credential_id: if payload provides a new one use it; if not keep existing
     let vault_credential_id = payload.vault_credential_id.as_deref()
@@ -214,22 +228,24 @@ pub async fn update_server_db(
     .bind(payload.is_favourite.unwrap_or(s.is_favourite))
     .bind(&now)
     .bind(id)
-    .execute(db)
+    .execute(&mut *tx)
     .await?;
 
     if let Some(tag_ids) = &payload.tag_ids {
         sqlx::query("DELETE FROM server_tags WHERE server_id = ?")
             .bind(id)
-            .execute(db)
+            .execute(&mut *tx)
             .await?;
         for tag_id in tag_ids {
             sqlx::query("INSERT INTO server_tags (server_id, tag_id) VALUES (?, ?)")
                 .bind(id)
                 .bind(tag_id)
-                .execute(db)
+                .execute(&mut *tx)
                 .await?;
         }
     }
+
+    tx.commit().await?;
 
     get_server_db(db, id).await
 }
@@ -331,11 +347,15 @@ pub async fn update_tag_db(db: &SqlitePool, id: &str, name: &str) -> Result<Tag,
     if name.trim().is_empty() {
         return Err(AppError::Validation("tag name is required".into()));
     }
-    sqlx::query("UPDATE tags SET name = ? WHERE id = ?")
+    let rows = sqlx::query("UPDATE tags SET name = ? WHERE id = ?")
         .bind(name.trim())
         .bind(id)
         .execute(db)
-        .await?;
+        .await?
+        .rows_affected();
+    if rows == 0 {
+        return Err(AppError::NotFound(format!("tag '{id}' not found")));
+    }
     Ok(sqlx::query_as("SELECT * FROM tags WHERE id = ?")
         .bind(id)
         .fetch_one(db)
@@ -398,6 +418,7 @@ mod tests {
             username: Some("ubuntu".into()),
             auth_method: None,
             identity_file_path: None,
+            vault_credential_id: None,
             group_id: None,
             notes: None,
             is_jump_host: None,

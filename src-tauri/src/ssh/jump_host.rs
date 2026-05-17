@@ -88,16 +88,20 @@ fn one_hop(
     let ss = SendSession(session);
     let sc = SendChannel(channel);
     std::thread::spawn(move || {
-        let SendSession(s) = ss;
-        s.set_blocking(false);
-        let SendChannel(mut c) = sc;
-        let mut sock = proxy_sock;
-        sock.set_nonblocking(true).unwrap_or_default();
+        // catch_unwind ensures the proxy socket is closed (breaking the consumer's
+        // read) even if libssh2 panics, rather than leaving the consumer blocked.
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let SendSession(s) = ss;
+            s.set_blocking(false);
+            let SendChannel(mut c) = sc;
+            let mut sock = proxy_sock;
+            sock.set_nonblocking(true).unwrap_or_default();
 
-        proxy_loop(&mut c, &mut sock);
+            proxy_loop(&mut c, &mut sock);
 
-        drop(c);
-        drop(s);
+            drop(c);
+            drop(s);
+        }));
     });
 
     // Convert the consumer Unix socket to a TcpStream by fd.

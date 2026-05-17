@@ -164,21 +164,15 @@ pub fn run() {
         .expect("error while running SSH Manager");
 }
 
-/// Checks every 30 seconds whether the vault should be auto-locked based on
-/// the `vault_timeout_minutes` setting and time since last vault activity.
+/// Checks whether the vault should be auto-locked based on the
+/// `vault_timeout_minutes` setting and time since last vault activity.
+/// Wakes every 30 seconds when a timeout is active; otherwise sleeps for
+/// 5 minutes to avoid burning wakeups when auto-lock is disabled.
 async fn auto_lock_task(app: tauri::AppHandle) {
-    let interval = std::time::Duration::from_secs(30);
     loop {
-        tokio::time::sleep(interval).await;
-
         let state = app.state::<AppState>();
 
-        // Skip if vault is already locked
-        if state.vault_key.lock().await.is_none() {
-            continue;
-        }
-
-        // Read timeout setting (0 = disabled)
+        // Read timeout setting first so we can choose the right sleep interval.
         let timeout_mins: u64 = match sqlx::query_scalar::<_, String>(
             "SELECT value FROM settings WHERE key = 'vault_timeout_minutes'",
         )
@@ -189,24 +183,32 @@ async fn auto_lock_task(app: tauri::AppHandle) {
             Ok(None) => 0,
             Err(e) => {
                 eprintln!("[auto-lock] failed to read vault_timeout_minutes: {e}");
-                continue; // skip this tick rather than silently disabling auto-lock
+                // Sleep briefly then retry rather than silently disabling auto-lock.
+                tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+                continue;
             }
         };
 
         if timeout_mins == 0 {
+            // Auto-lock is disabled — poll infrequently to detect when it's re-enabled.
+            tokio::time::sleep(std::time::Duration::from_secs(300)).await;
             continue;
         }
 
-        let elapsed = state
-            .last_vault_activity
-            .lock()
-            .await
-            .elapsed();
+        // Skip lock check if vault is already locked.
+        if state.vault_key.lock().await.is_none() {
+            tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+            continue;
+        }
+
+        let elapsed = state.last_vault_activity.lock().await.elapsed();
 
         if elapsed >= std::time::Duration::from_secs(timeout_mins * 60) {
             *state.vault_key.lock().await = None;
             let _ = app.emit("vault_auto_locked", ());
         }
+
+        tokio::time::sleep(std::time::Duration::from_secs(30)).await;
     }
 }
 

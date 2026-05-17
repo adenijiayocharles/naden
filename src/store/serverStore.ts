@@ -57,7 +57,7 @@ export const useServerStore = create<ServerStore>((set) => ({
       set({ servers, groups, tags });
       logCommands.getLastConnectedMap()
         .then((map) => set({ lastConnectedMap: map }))
-        .catch(() => {});
+        .catch((e) => console.error("Failed to load last-connected map:", e));
     } catch (e) {
       set({ error: String(e) });
     } finally {

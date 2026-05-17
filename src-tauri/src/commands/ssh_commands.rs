@@ -248,16 +248,13 @@ pub async fn open_terminal_session(
     let db = state.db.clone();
     let on_close = Box::new(move |outcome: String, error_msg: Option<String>| {
         let session_end = chrono::Utc::now().to_rfc3339();
-        // run_session is a std::thread — use a small local runtime for the DB write
-        if let Ok(rt) = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-        {
-            rt.block_on(log_commands::close_log_entry(
-                &db, &log_id, &outcome, error_msg, &session_end,
-            ))
-            .ok();
-        }
+        // run_session runs on a std::thread with no async runtime. Dispatch the
+        // DB write onto Tauri's existing runtime rather than constructing a new one.
+        tauri::async_runtime::spawn(async move {
+            log_commands::close_log_entry(&db, &log_id, &outcome, error_msg, &session_end)
+                .await
+                .ok();
+        });
     });
 
     state.session_manager.open_session(

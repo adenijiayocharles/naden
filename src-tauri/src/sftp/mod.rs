@@ -135,14 +135,17 @@ impl SftpManager {
     }
 
     pub(crate) fn send(&self, session_id: &str, msg: SftpMessage) -> Result<(), AppError> {
-        let sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
-        let handle = sessions
-            .get(session_id)
-            .ok_or_else(|| AppError::Ssh(format!("SFTP session {session_id} not found")))?;
-        handle
-            .tx
-            .send(msg)
-            .map_err(|_| AppError::Ssh("SFTP session closed".into()))
+        // Clone the sender before releasing the lock so we don't hold the mutex
+        // during send(), which blocks when the 64-slot channel is full.
+        let tx = {
+            let sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
+            sessions
+                .get(session_id)
+                .ok_or_else(|| AppError::Ssh(format!("SFTP session {session_id} not found")))?
+                .tx
+                .clone()
+        };
+        tx.send(msg).map_err(|_| AppError::Ssh("SFTP session closed".into()))
     }
 
     pub fn close_session(&self, session_id: &str) {
@@ -338,9 +341,10 @@ fn handle_message(
         }
         SftpMessage::CopyFile { src, dest, reply } => {
             // SFTP has no native copy — download to a temp file then re-upload.
-            let tmp = std::env::temp_dir()
-                .join("ssh-manager-copy")
-                .join(std::path::Path::new(&src).file_name().unwrap_or_default());
+            // UUID prefix prevents collisions when two files share the same base name.
+            let base = std::path::Path::new(&src).file_name().unwrap_or_default();
+            let unique_name = format!("{}-{}", uuid::Uuid::new_v4().simple(), base.to_string_lossy());
+            let tmp = std::env::temp_dir().join("ssh-manager-copy").join(unique_name);
             let _ = std::fs::create_dir_all(tmp.parent().unwrap_or(&std::env::temp_dir()));
             let tmp_str = tmp.to_string_lossy().into_owned();
             let result = download_file(sftp, &src, &tmp_str, session_id, app_handle)
@@ -475,7 +479,11 @@ fn open_edit(
     std::fs::create_dir_all(&temp_dir)
         .map_err(|e| AppError::Io(format!("cannot create temp dir: {e}")))?;
 
-    let temp_path = temp_dir.join(&filename);
+    // Prefix with a UUID so two files with the same base name in the same session
+    // never share a temp path — they would otherwise clobber each other on download
+    // and the poll loop would re-upload the wrong content to the remote.
+    let unique_name = format!("{}-{}", uuid::Uuid::new_v4().simple(), filename);
+    let temp_path = temp_dir.join(&unique_name);
     let temp_path_str = temp_path.to_string_lossy().into_owned();
 
     // Download the file to temp location.

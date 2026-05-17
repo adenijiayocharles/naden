@@ -129,9 +129,40 @@ pub async fn vault_disable_password(
     current_password: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    if master_password::verify(&state.db, &current_password).await?.is_none() {
-        return Err(AppError::Vault("incorrect password".into()));
+    // Apply the same brute-force lockout as vault_unlock so this command cannot
+    // be used to bypass the rate limit on password verification.
+    {
+        let mut failures = state.unlock_failures.lock().await;
+        let (_count, lockout_until) = &mut *failures;
+        if let Some(until) = *lockout_until {
+            if std::time::Instant::now() < until {
+                return Err(AppError::Vault(
+                    "too many failed attempts — please wait before trying again".into(),
+                ));
+            }
+            *lockout_until = None;
+        }
+        drop(failures);
     }
+
+    match master_password::verify(&state.db, &current_password).await? {
+        None => {
+            let mut failures = state.unlock_failures.lock().await;
+            let (count, lockout_until) = &mut *failures;
+            *count += 1;
+            if *count >= 5 {
+                let extra = (*count - 5).min(7);
+                let secs = 30u64 * (1u64 << extra);
+                *lockout_until =
+                    Some(std::time::Instant::now() + std::time::Duration::from_secs(secs));
+            }
+            return Err(AppError::Vault("incorrect password".into()));
+        }
+        Some(_) => {
+            *state.unlock_failures.lock().await = (0, None);
+        }
+    }
+
     master_password::disable_password(&state.db).await?;
     // Ensure the vault stays unlocked with a placeholder key.
     let mut key_guard = state.vault_key.lock().await;
@@ -184,10 +215,41 @@ pub async fn vault_change_password(
             "master password must be at least 8 characters".into(),
         ));
     }
-    if master_password::verify(&state.db, &current_password).await?.is_none() {
-        return Err(AppError::Vault("incorrect current password".into()));
+
+    // Apply the same brute-force lockout as vault_unlock so this command cannot
+    // be used to bypass the rate limit on password verification.
+    {
+        let mut failures = state.unlock_failures.lock().await;
+        let (_count, lockout_until) = &mut *failures;
+        if let Some(until) = *lockout_until {
+            if std::time::Instant::now() < until {
+                return Err(AppError::Vault(
+                    "too many failed attempts — please wait before trying again".into(),
+                ));
+            }
+            *lockout_until = None;
+        }
+        drop(failures);
     }
-    *state.unlock_failures.lock().await = (0, None);
+
+    match master_password::verify(&state.db, &current_password).await? {
+        None => {
+            let mut failures = state.unlock_failures.lock().await;
+            let (count, lockout_until) = &mut *failures;
+            *count += 1;
+            if *count >= 5 {
+                let extra = (*count - 5).min(7);
+                let secs = 30u64 * (1u64 << extra);
+                *lockout_until =
+                    Some(std::time::Instant::now() + std::time::Duration::from_secs(secs));
+            }
+            return Err(AppError::Vault("incorrect current password".into()));
+        }
+        Some(_) => {
+            *state.unlock_failures.lock().await = (0, None);
+        }
+    }
+
     let key = master_password::setup(&state.db, &new_password).await?;
     *state.vault_key.lock().await = Some(key);
     Ok(())

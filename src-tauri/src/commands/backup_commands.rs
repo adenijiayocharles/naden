@@ -6,6 +6,7 @@ use chrono::Utc;
 use pbkdf2::pbkdf2_hmac;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
+use zeroize::Zeroizing;
 
 use crate::db::queries;
 use crate::error::AppError;
@@ -80,9 +81,9 @@ pub struct ImportSummary {
 
 // ── Crypto ────────────────────────────────────────────────────────────────────
 
-fn derive_key(password: &str, salt: &[u8]) -> [u8; 32] {
-    let mut key = [0u8; 32];
-    pbkdf2_hmac::<Sha256>(password.as_bytes(), salt, PBKDF2_ITERATIONS, &mut key);
+fn derive_key(password: &str, salt: &[u8]) -> Zeroizing<[u8; 32]> {
+    let mut key = Zeroizing::new([0u8; 32]);
+    pbkdf2_hmac::<Sha256>(password.as_bytes(), salt, PBKDF2_ITERATIONS, key.as_mut());
     key
 }
 
@@ -93,7 +94,7 @@ fn encrypt(plaintext: &[u8], password: &str) -> Result<Vec<u8>, AppError> {
     getrandom::getrandom(&mut nonce_bytes).map_err(|e| AppError::Vault(e.to_string()))?;
 
     let key = derive_key(password, &salt);
-    let cipher = Aes256Gcm::new_from_slice(&key)
+    let cipher = Aes256Gcm::new_from_slice(key.as_ref())
         .map_err(|e| AppError::Vault(e.to_string()))?;
     let ciphertext = cipher
         .encrypt(Nonce::from_slice(&nonce_bytes), plaintext)
@@ -115,7 +116,7 @@ fn decrypt(data: &[u8], password: &str) -> Result<Vec<u8>, AppError> {
     let (nonce_bytes, ciphertext) = rest.split_at(NONCE_LEN);
 
     let key = derive_key(password, salt);
-    let cipher = Aes256Gcm::new_from_slice(&key)
+    let cipher = Aes256Gcm::new_from_slice(key.as_ref())
         .map_err(|e| AppError::Vault(e.to_string()))?;
     cipher
         .decrypt(Nonce::from_slice(nonce_bytes), ciphertext)
@@ -132,6 +133,11 @@ pub async fn export_backup(
     path: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
+    if password.len() < 8 {
+        return Err(AppError::Validation(
+            "backup password must be at least 8 characters".into(),
+        ));
+    }
     let db = &state.db;
 
     let groups: Vec<BackupGroup> = sqlx::query_as(

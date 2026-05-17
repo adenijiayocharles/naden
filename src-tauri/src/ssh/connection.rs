@@ -321,8 +321,11 @@ fn run_session(
                         active = true;
                         session.set_blocking(true);
                         session.set_timeout(2000);
-                        if channel.write_all(&data).is_err() {
-                            return Err(AppError::Ssh("Connection lost".into()));
+                        if let Err(e) = channel.write_all(&data) {
+                            return Err(AppError::Ssh(format!(
+                                "Failed to send input to remote host: {e}. \
+                                 The connection may be slow or unreachable."
+                            )));
                         }
                         session.set_blocking(false);
                     }

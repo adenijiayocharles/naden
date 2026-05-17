@@ -188,23 +188,27 @@ pub async fn check_reachability(
         use std::net::ToSocketAddrs;
         use std::time::Instant;
 
-        let addr = format!("{host}:{port}")
-            .to_socket_addrs()
-            .ok()
-            .and_then(|mut it| it.next());
-
-        let Some(addr) = addr else {
-            return ReachabilityResult { reachable: false, latency_ms: None };
+        let addrs: Vec<_> = match format!("{host}:{port}").to_socket_addrs() {
+            Ok(it) => it.collect(),
+            Err(_) => return ReachabilityResult { reachable: false, latency_ms: None },
         };
 
-        let start = Instant::now();
-        match std::net::TcpStream::connect_timeout(&addr, std::time::Duration::from_secs(3)) {
-            Ok(_) => ReachabilityResult {
-                reachable: true,
-                latency_ms: Some(start.elapsed().as_millis() as u64),
-            },
-            Err(_) => ReachabilityResult { reachable: false, latency_ms: None },
+        if addrs.is_empty() {
+            return ReachabilityResult { reachable: false, latency_ms: None };
         }
+
+        // Try every resolved address — matches the behaviour of tcp_connect in
+        // connection.rs so round-robin DNS hosts aren't falsely reported as down.
+        let start = Instant::now();
+        for addr in &addrs {
+            if std::net::TcpStream::connect_timeout(addr, std::time::Duration::from_secs(3)).is_ok() {
+                return ReachabilityResult {
+                    reachable: true,
+                    latency_ms: Some(start.elapsed().as_millis() as u64),
+                };
+            }
+        }
+        ReachabilityResult { reachable: false, latency_ms: None }
     })
     .await
     .map_err(|_| AppError::Ssh("connectivity check failed".into()))?;
