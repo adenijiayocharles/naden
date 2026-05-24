@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-function PathBar({ path, busy, onNavigateTo }: { path: string; busy: boolean; onNavigateTo: (p: string) => void }) {
+export function PathBar({ path, busy, onNavigateTo }: { path: string; busy: boolean; onNavigateTo: (p: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [input, setInput] = useState("");
 
@@ -241,23 +241,25 @@ export default function SftpToolbar({
         )}
       </div>
 
-      {/* Path row */}
-      <div className="flex items-center px-3 py-2 border-t border-stroke-subtle gap-3 min-w-0">
-        <PathBar path={currentPath} busy={busy} onNavigateTo={onNavigateTo} />
-        {syncProgress ? (
-          <span className="text-xs text-accent-fg shrink-0">{syncProgress}</span>
-        ) : hasClipboard ? (
-          <span className="text-xs text-accent-fg shrink-0">
-            ● {clipboardMode === "copy" ? "copied" : "cut"} — paste to move here
-          </span>
-        ) : null}
-        {editingCount > 0 && (
-          <span className="text-xs text-amber-400 shrink-0 flex items-center gap-1">
-            <span className="animate-pulse">●</span>
-            Watching {editingCount} file{editingCount > 1 ? "s" : ""}
-          </span>
-        )}
-      </div>
+      {/* Path row — hidden in split mode; each pane owns its own path bar */}
+      {!showLocalPane && (
+        <div className="flex items-center px-3 py-2 border-t border-stroke-subtle gap-3 min-w-0">
+          <PathBar path={currentPath} busy={busy} onNavigateTo={onNavigateTo} />
+          {syncProgress ? (
+            <span className="text-xs text-accent-fg shrink-0">{syncProgress}</span>
+          ) : hasClipboard ? (
+            <span className="text-xs text-accent-fg shrink-0">
+              ● {clipboardMode === "copy" ? "copied" : "cut"} — paste to move here
+            </span>
+          ) : null}
+          {editingCount > 0 && (
+            <span className="text-xs text-amber-400 shrink-0 flex items-center gap-1">
+              <span className="animate-pulse">●</span>
+              Watching {editingCount} file{editingCount > 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

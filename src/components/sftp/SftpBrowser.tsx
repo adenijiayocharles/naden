@@ -5,7 +5,7 @@ import { useSftpStore } from "../../store/sftpStore";
 import { sftpCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import SftpFileList, { type SortKey, type SortDir } from "./SftpFileList";
-import SftpToolbar from "./SftpToolbar";
+import SftpToolbar, { PathBar } from "./SftpToolbar";
 import LocalFileBrowser from "./LocalFileBrowser";
 import { ConnectingOverlay, ErrorOverlay } from "../shared/ConnectionOverlay";
 
@@ -551,6 +551,30 @@ export default function SftpBrowser({ sessionId }: Props) {
 
         {/* Remote pane */}
         <div className="flex-1 min-w-0 flex flex-col">
+
+      {/* Per-pane remote path bar — only in split mode */}
+      {showLocalPane && (
+        <div className="flex items-center px-3 py-2 border-b border-stroke-subtle bg-surface-1 shrink-0 gap-3">
+          <PathBar
+            path={session.currentPath}
+            busy={isBusy || syncing}
+            onNavigateTo={(p) => { navigate(p).catch(() => {}); }}
+          />
+          {syncProgress ? (
+            <span className="text-xs text-accent-fg shrink-0">{syncProgress}</span>
+          ) : clipboard ? (
+            <span className="text-xs text-accent-fg shrink-0">
+              ● {clipboard.mode === "copy" ? "copied" : "cut"} — paste to move here
+            </span>
+          ) : null}
+          {editingFiles.length > 0 && (
+            <span className="text-xs text-amber-400 shrink-0 flex items-center gap-1">
+              <span className="animate-pulse">●</span>
+              Watching {editingFiles.length} file{editingFiles.length > 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Inline delete confirmation */}
       {confirmingDelete && (

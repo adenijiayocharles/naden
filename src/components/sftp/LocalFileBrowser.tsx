@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { LocalFileEntry } from "../../types/local";
 import { localCommands } from "../../lib/tauriCommands";
 import { formatSize, formatDate } from "../../lib/format";
+import { PathBar } from "./SftpToolbar";
 
 interface Props {
   onSelectedChange: (paths: string[]) => void;
@@ -95,8 +96,6 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
     setLastClickedPath(entry.path);
   };
 
-  const pathLabel = currentPath.replace(/^\/Users\/[^/]+/, "~");
-
   return (
     <div className="flex flex-col h-full min-w-0">
       {/* Pane header */}
@@ -111,9 +110,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
           </svg>
         </button>
-        <span className="flex-1 text-xs text-muted font-mono truncate" title={currentPath}>
-          {pathLabel || "/"}
-        </span>
+        <PathBar path={currentPath} busy={loading} onNavigateTo={(p) => { void navigateTo(p); }} />
         <button
           onClick={() => { void navigateTo(currentPath); }}
           disabled={loading}
