@@ -59,13 +59,13 @@ function SortIndicator({ active, dir }: { active: boolean; dir: SortDir }) {
   return <span className="ml-1 text-accent-fg">{dir === "asc" ? "↑" : "↓"}</span>;
 }
 
-function ColHeader({ label, colKey, sortKey, sortDir, align = "left", onSort }: {
+function ColHeader({ label, colKey, sortKey, sortDir, align = "left", className = "px-2", onSort }: {
   label: string; colKey: SortKey; sortKey: SortKey; sortDir: SortDir;
-  align?: "left" | "right"; onSort: (k: SortKey) => void;
+  align?: "left" | "right"; className?: string; onSort: (k: SortKey) => void;
 }) {
   const active = sortKey === colKey;
   return (
-    <th className={`px-4 py-2 font-medium text-xs uppercase tracking-wider text-${align}`}>
+    <th className={`${className} py-2 font-medium text-xs uppercase tracking-wider text-${align}`}>
       <button
         onClick={() => onSort(colKey)}
         className={`flex items-center gap-0.5 transition-colors ${align === "right" ? "ml-auto" : ""} ${active ? "text-white" : "text-faint hover:text-muted"}`}
@@ -99,7 +99,6 @@ export default function SftpFileList({
   onRenameChange, onRenameCommit, onRenameCancel, onRenameStart,
   onCut, onCopy, onPaste, onDelete, onEdit, onChmod,
 }: Props) {
-  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -125,13 +124,12 @@ export default function SftpFileList({
   }
 
   const handleRowClick = (entry: FileEntry, e: React.MouseEvent) => {
-    onSelect(entry.path, e.metaKey || e.ctrlKey, e.shiftKey);
-  };
-
-  const handleRowDoubleClick = (entry: FileEntry) => {
-    if (clickTimer.current) { clearTimeout(clickTimer.current); clickTimer.current = null; }
-    if (entry.isDir) onNavigate(entry);
-    else onRenameStart(entry.path);
+    if (e.detail === 2) {
+      if (entry.isDir) onNavigate(entry);
+      else onRenameStart(entry.path);
+    } else {
+      onSelect(entry.path, e.metaKey || e.ctrlKey, e.shiftKey);
+    }
   };
 
   const handleContextMenu = (entry: FileEntry, e: React.MouseEvent) => {
@@ -154,13 +152,13 @@ export default function SftpFileList({
 
   return (
     <div className="flex-1 overflow-y-auto relative">
-      <table className="w-full text-sm border-collapse">
+      <table className="w-full text-sm border-collapse table-fixed">
         <thead className="sticky top-0 bg-surface-1 z-10 border-b border-stroke-subtle">
           <tr>
-            <ColHeader label="Name"     colKey="name"     sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
-            <ColHeader label="Size"     colKey="size"     sortKey={sortKey} sortDir={sortDir} align="right" onSort={onSort} />
-            <ColHeader label="Modified" colKey="modified" sortKey={sortKey} sortDir={sortDir} align="right" onSort={onSort} />
-            <th className="px-4 py-2 font-medium text-xs uppercase tracking-wider text-right">
+            <ColHeader label="Name"     colKey="name"     sortKey={sortKey} sortDir={sortDir} className="w-1/4 px-2" onSort={onSort} />
+            <ColHeader label="Size"     colKey="size"     sortKey={sortKey} sortDir={sortDir} align="right" className="w-1/4 px-2" onSort={onSort} />
+            <ColHeader label="Modified" colKey="modified" sortKey={sortKey} sortDir={sortDir} align="right" className="w-1/4 px-2" onSort={onSort} />
+            <th className="w-1/4 pl-2 pr-4 py-2 font-medium text-xs tracking-wider text-right">
               <span className="text-faint">Permissions</span>
             </th>
           </tr>
@@ -173,13 +171,12 @@ export default function SftpFileList({
               <tr
                 key={entry.path}
                 onClick={(e) => handleRowClick(entry, e)}
-                onDoubleClick={() => handleRowDoubleClick(entry)}
                 onContextMenu={(e) => handleContextMenu(entry, e)}
                 className={`cursor-pointer border-b border-stroke-subtle transition-colors select-none ${
                   isSelected ? "bg-accent/10 text-accent-fg" : "text-secondary hover:bg-surface-2 hover:text-white"
                 }`}
               >
-                <td className="px-4 py-2">
+                <td className="px-2 py-2">
                   <div className="flex items-center gap-2">
                     <FileIcon isDir={entry.isDir} />
                     {isRenaming ? (
@@ -205,13 +202,13 @@ export default function SftpFileList({
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-2 text-right text-faint font-mono text-xs tabular-nums">
+                <td className="px-2 py-2 text-right text-faint font-mono text-xs tabular-nums">
                   {formatSize(entry.size, entry.isDir)}
                 </td>
-                <td className="px-4 py-2 text-right text-faint text-xs">
+                <td className="px-2 py-2 text-right text-faint text-xs">
                   {formatDate(entry.modified)}
                 </td>
-                <td className="px-4 py-2 text-right">
+                <td className="pl-2 pr-4 py-2 text-right">
                   {entry.permissions != null ? (
                     <button
                       onClick={(e) => { e.stopPropagation(); onChmod?.(entry.path, entry.permissions ?? 0o644); }}
