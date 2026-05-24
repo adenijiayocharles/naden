@@ -85,6 +85,12 @@ pub fn run() {
             // Local filesystem
             commands::local_commands::get_local_home_dir,
             commands::local_commands::list_local_dir,
+            commands::local_commands::create_local_dir,
+            commands::local_commands::create_local_file,
+            commands::local_commands::rename_local,
+            commands::local_commands::delete_local,
+            commands::local_commands::reveal_in_finder,
+            commands::local_commands::open_local,
             // SSH
             commands::ssh_commands::launch_in_terminal,
             commands::ssh_commands::import_ssh_config,
@@ -163,8 +169,24 @@ pub fn run() {
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running SSH Manager");
+        .build(tauri::generate_context!())
+        .expect("error while building SSH Manager")
+        .run(|app, event| {
+            // On macOS, clicking the Dock icon fires Reopen regardless of
+            // whether the window is hidden or miniaturized. A miniaturized
+            // window is still "visible" to the OS (hasVisibleWindows == YES),
+            // so guarding on has_visible_windows never fires for minimized
+            // windows. Instead, unconditionally unminimize + show + focus —
+            // these are no-ops when the window is already in the foreground.
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = event {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.unminimize();
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+        });
 }
 
 /// Checks whether the vault should be auto-locked based on the

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-function PathBar({ path, busy, onNavigateTo }: { path: string; busy: boolean; onNavigateTo: (p: string) => void }) {
+export function PathBar({ path, busy, onNavigateTo }: { path: string; busy: boolean; onNavigateTo: (p: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [input, setInput] = useState("");
 
@@ -80,6 +80,8 @@ interface Props {
   syncProgress?: string | null;
   showLocalPane: boolean;
   onToggleLocalPane: () => void;
+  activePane?: "local" | "remote";
+  localSelectedCount?: number;
 }
 
 function ToolbarBtn({
@@ -127,9 +129,12 @@ export default function SftpToolbar({
   syncProgress,
   showLocalPane,
   onToggleLocalPane,
+  activePane = "remote",
+  localSelectedCount = 0,
 }: Props) {
   const hasSelection = selectedCount > 0;
   const canDownload = hasSelection && !selectedHasDir;
+  const remoteActive = !showLocalPane || activePane === "remote";
 
   return (
     <div className="flex flex-col shrink-0 bg-surface-2 border-b border-stroke-subtle">
@@ -147,117 +152,138 @@ export default function SftpToolbar({
           </svg>
           Local
         </button>
-        <div className="w-px h-4 bg-surface-4 mx-1" />
-        <ToolbarBtn onClick={onNavigateUp} disabled={busy || currentPath === "/"} title="Up">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12V4M4 8l4-4 4 4" />
-          </svg>
-        </ToolbarBtn>
 
-        <ToolbarBtn onClick={onRefresh} disabled={busy} title="Refresh (⌘R)">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13 8A5 5 0 113 8" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13 4v4h-4" />
-          </svg>
-        </ToolbarBtn>
-
-        <button
-          onClick={onToggleHidden}
-          title={showHidden ? "Hide dotfiles" : "Show hidden files"}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
-            showHidden ? "text-white bg-surface-4" : "text-muted hover:text-white hover:bg-surface-4"
-          }`}
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
-            {showHidden ? (
-              <>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" />
-                <circle cx="8" cy="8" r="2" />
-              </>
-            ) : (
-              <>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" />
-                <circle cx="8" cy="8" r="2" />
-                <path strokeLinecap="round" d="M2 2l12 12" />
-              </>
-            )}
-          </svg>
-          {showHidden ? "Hide hidden" : "Show hidden"}
-        </button>
-
-        {hasClipboard && (
-          <>
-            <div className="w-px h-4 bg-surface-4 mx-1" />
-            <ToolbarBtn onClick={onPaste} disabled={busy} title={`Paste ${clipboardMode === "copy" ? "(copy)" : "(move)"} here`}>
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
-                <rect x="2" y="4" width="10" height="11" rx="1" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1" />
-              </svg>
-              Paste {clipboardMode === "copy" ? "copy" : "move"}
-            </ToolbarBtn>
-          </>
+        {/* Active-pane indicator — only visible in split mode */}
+        {showLocalPane && (
+          <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
+            remoteActive
+              ? "bg-surface-4 text-secondary"
+              : "bg-accent/15 text-accent-fg"
+          }`}>
+            {remoteActive ? "Remote" : "Local"}
+          </span>
         )}
 
-        <div className="w-px h-4 bg-surface-4 mx-1" />
-
-        <ToolbarBtn onClick={onUpload} disabled={busy} title="Upload file">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 10V3M5 6l3-3 3 3M3 12h10" />
-          </svg>
-          Upload
-        </ToolbarBtn>
-
-        <ToolbarBtn onClick={onDownload} disabled={busy || !canDownload} title="Download selected">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 3v7M5 7l3 3 3-3M3 12h10" />
-          </svg>
-          Download{selectedCount > 1 && !selectedHasDir ? ` (${selectedCount})` : ""}
-        </ToolbarBtn>
-
-        <ToolbarBtn onClick={onNewFolder} disabled={busy} title="New folder">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2 5a2 2 0 012-2h2.586l2 2H12a2 2 0 012 2v5a2 2 0 01-2 2H4a2 2 0 01-2-2V5z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 8v4M6 10h4" />
-          </svg>
-          New Folder
-        </ToolbarBtn>
-
-        <ToolbarBtn onClick={onNewFile} disabled={busy} title="New file">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V6M9 2l4 4M9 2v4h4" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 9h4M8 7v4" />
-          </svg>
-          New File
-        </ToolbarBtn>
-
-        {onSync && (
-          <ToolbarBtn onClick={onSync} disabled={busy} title="Sync local folder → current remote path">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2 8a6 6 0 0110.5-3.9M14 8a6 6 0 01-10.5 3.9" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4l2.5 0.1L14 7M4 12L1.5 11.9 2 9" />
+        {/* Remote controls — dimmed when local pane is focused */}
+        <div className={`flex items-center gap-1 transition-opacity duration-150 ${remoteActive ? "" : "opacity-40"}`}>
+          <div className="w-px h-4 bg-surface-4 mx-1" />
+          <ToolbarBtn onClick={onNavigateUp} disabled={busy || currentPath === "/"} title="Up (remote)">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 12V4M4 8l4-4 4 4" />
             </svg>
-            Sync Folder
           </ToolbarBtn>
-        )}
+
+          <ToolbarBtn onClick={onRefresh} disabled={busy} title="Refresh remote (⌘R)">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 8A5 5 0 113 8" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 4v4h-4" />
+            </svg>
+          </ToolbarBtn>
+
+          <button
+            onClick={onToggleHidden}
+            title={showHidden ? "Hide dotfiles" : "Show hidden files"}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+              showHidden ? "text-white bg-surface-4" : "text-muted hover:text-white hover:bg-surface-4"
+            }`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+              {showHidden ? (
+                <>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" />
+                  <circle cx="8" cy="8" r="2" />
+                </>
+              ) : (
+                <>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" />
+                  <circle cx="8" cy="8" r="2" />
+                  <path strokeLinecap="round" d="M2 2l12 12" />
+                </>
+              )}
+            </svg>
+            {showHidden ? "Hide hidden" : "Show hidden"}
+          </button>
+
+          {hasClipboard && (
+            <>
+              <div className="w-px h-4 bg-surface-4 mx-1" />
+              <ToolbarBtn onClick={onPaste} disabled={busy} title={`Paste ${clipboardMode === "copy" ? "(copy)" : "(move)"} here`}>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+                  <rect x="2" y="4" width="10" height="11" rx="1" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1" />
+                </svg>
+                Paste {clipboardMode === "copy" ? "copy" : "move"}
+              </ToolbarBtn>
+            </>
+          )}
+
+          <div className="w-px h-4 bg-surface-4 mx-1" />
+
+          <ToolbarBtn
+            onClick={onUpload}
+            disabled={remoteActive ? busy : busy || localSelectedCount === 0}
+            title={remoteActive ? "Upload file to remote" : "Upload selected local files to remote"}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 10V3M5 6l3-3 3 3M3 12h10" />
+            </svg>
+            Upload
+          </ToolbarBtn>
+
+          <ToolbarBtn onClick={onDownload} disabled={busy || !canDownload} title={remoteActive ? "Download selected from remote" : "Download selected remote files to local dir"}>
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 3v7M5 7l3 3 3-3M3 12h10" />
+            </svg>
+            Download{selectedCount > 1 && !selectedHasDir ? ` (${selectedCount})` : ""}
+          </ToolbarBtn>
+
+          <ToolbarBtn onClick={onNewFolder} disabled={busy} title="New folder on remote">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2 5a2 2 0 012-2h2.586l2 2H12a2 2 0 012 2v5a2 2 0 01-2 2H4a2 2 0 01-2-2V5z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 8v4M6 10h4" />
+            </svg>
+            New Folder
+          </ToolbarBtn>
+
+          <ToolbarBtn onClick={onNewFile} disabled={busy} title="New file on remote">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V6M9 2l4 4M9 2v4h4" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 9h4M8 7v4" />
+            </svg>
+            New File
+          </ToolbarBtn>
+
+          {onSync && (
+            <ToolbarBtn onClick={onSync} disabled={busy} title="Sync local folder → current remote path">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2 8a6 6 0 0110.5-3.9M14 8a6 6 0 01-10.5 3.9" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4l2.5 0.1L14 7M4 12L1.5 11.9 2 9" />
+              </svg>
+              Sync Folder
+            </ToolbarBtn>
+          )}
+        </div>
       </div>
 
-      {/* Path row */}
-      <div className="flex items-center px-3 py-2 border-t border-stroke-subtle gap-3 min-w-0">
-        <PathBar path={currentPath} busy={busy} onNavigateTo={onNavigateTo} />
-        {syncProgress ? (
-          <span className="text-xs text-accent-fg shrink-0">{syncProgress}</span>
-        ) : hasClipboard ? (
-          <span className="text-xs text-accent-fg shrink-0">
-            ● {clipboardMode === "copy" ? "copied" : "cut"} — paste to move here
-          </span>
-        ) : null}
-        {editingCount > 0 && (
-          <span className="text-xs text-amber-400 shrink-0 flex items-center gap-1">
-            <span className="animate-pulse">●</span>
-            Watching {editingCount} file{editingCount > 1 ? "s" : ""}
-          </span>
-        )}
-      </div>
+      {/* Path row — hidden in split mode; each pane owns its own path bar */}
+      {!showLocalPane && (
+        <div className="flex items-center px-3 py-2 border-t border-stroke-subtle gap-3 min-w-0">
+          <PathBar path={currentPath} busy={busy} onNavigateTo={onNavigateTo} />
+          {syncProgress ? (
+            <span className="text-xs text-accent-fg shrink-0">{syncProgress}</span>
+          ) : hasClipboard ? (
+            <span className="text-xs text-accent-fg shrink-0">
+              ● {clipboardMode === "copy" ? "copied" : "cut"} — paste to move here
+            </span>
+          ) : null}
+          {editingCount > 0 && (
+            <span className="text-xs text-amber-400 shrink-0 flex items-center gap-1">
+              <span className="animate-pulse">●</span>
+              Watching {editingCount} file{editingCount > 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

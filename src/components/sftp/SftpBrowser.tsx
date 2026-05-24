@@ -5,7 +5,7 @@ import { useSftpStore } from "../../store/sftpStore";
 import { sftpCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import SftpFileList, { type SortKey, type SortDir } from "./SftpFileList";
-import SftpToolbar from "./SftpToolbar";
+import SftpToolbar, { PathBar } from "./SftpToolbar";
 import LocalFileBrowser from "./LocalFileBrowser";
 import { ConnectingOverlay, ErrorOverlay } from "../shared/ConnectionOverlay";
 
@@ -40,8 +40,11 @@ export default function SftpBrowser({ sessionId }: Props) {
   const [creatingFile, setCreatingFile] = useState(false);
   const [fileName, setFileName] = useState("");
 
-  // Viewing options
-  const [showHidden, setShowHidden] = useState(true);
+  // Viewing options — separate state per pane
+  const [showHidden, setShowHidden] = useState(true);       // remote
+  const [showHiddenLocal, setShowHiddenLocal] = useState(true); // local
+  const [localNewFolderTrigger, setLocalNewFolderTrigger] = useState(0);
+  const [localNewFileTrigger, setLocalNewFileTrigger] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -186,6 +189,11 @@ export default function SftpBrowser({ sessionId }: Props) {
   // ── Upload / Download ──────────────────────────────────────────────────────
 
   const handleUpload = async () => {
+    // When local pane is active, upload the selected local files directly.
+    if (showLocalPane && activePane === "local") {
+      await handleUploadFromLocal();
+      return;
+    }
     const result = await open({ multiple: false, title: "Choose file to upload" });
     if (typeof result !== "string") return;
     const localPath = result;
@@ -207,6 +215,11 @@ export default function SftpBrowser({ sessionId }: Props) {
   };
 
   const handleDownload = async () => {
+    // When local pane is active, download remote selection into the current local dir.
+    if (showLocalPane && activePane === "local") {
+      await handleDownloadToLocal();
+      return;
+    }
     const files = selectedEntries.filter((e) => !e.isDir);
     if (files.length === 0) return;
 
@@ -250,7 +263,14 @@ export default function SftpBrowser({ sessionId }: Props) {
 
   // ── New Folder / New File ──────────────────────────────────────────────────
 
-  const handleNewFolder = () => { setCreatingFolder(true); setFolderName(""); };
+  const handleNewFolder = () => {
+    if (showLocalPane && activePane === "local") {
+      setLocalNewFolderTrigger((n) => n + 1);
+    } else {
+      setCreatingFolder(true);
+      setFolderName("");
+    }
+  };
 
   const commitNewFolder = async () => {
     if (!folderName.trim()) { setCreatingFolder(false); return; }
@@ -267,7 +287,14 @@ export default function SftpBrowser({ sessionId }: Props) {
     }
   };
 
-  const handleNewFile = () => { setCreatingFile(true); setFileName(""); };
+  const handleNewFile = () => {
+    if (showLocalPane && activePane === "local") {
+      setLocalNewFileTrigger((n) => n + 1);
+    } else {
+      setCreatingFile(true);
+      setFileName("");
+    }
+  };
 
   const commitNewFile = async () => {
     if (!fileName.trim()) { setCreatingFile(false); return; }
@@ -498,8 +525,11 @@ export default function SftpBrowser({ sessionId }: Props) {
         hasClipboard={clipboard !== null}
         clipboardMode={clipboard?.mode ?? null}
         onPaste={() => { void handlePaste(); }}
-        showHidden={showHidden}
-        onToggleHidden={() => setShowHidden((v) => !v)}
+        showHidden={showLocalPane && activePane === "local" ? showHiddenLocal : showHidden}
+        onToggleHidden={() => {
+          if (showLocalPane && activePane === "local") setShowHiddenLocal((v) => !v);
+          else setShowHidden((v) => !v);
+        }}
         busy={isBusy || syncing}
         onNavigateTo={(path) => { navigate(path).catch(() => {}); }}
         onNavigateUp={handleUp}
@@ -513,6 +543,8 @@ export default function SftpBrowser({ sessionId }: Props) {
         syncProgress={syncProgress}
         showLocalPane={showLocalPane}
         onToggleLocalPane={() => setShowLocalPane((v) => !v)}
+        activePane={activePane}
+        localSelectedCount={localSelected.length}
       />
 
       <div className="flex flex-1 min-h-0">
@@ -524,6 +556,9 @@ export default function SftpBrowser({ sessionId }: Props) {
                 onSelectedChange={setLocalSelected}
                 onPathChange={setLocalCurrentPath}
                 onActivate={() => setActivePane("local")}
+                showHidden={showHiddenLocal}
+                newFolderTrigger={localNewFolderTrigger}
+                newFileTrigger={localNewFileTrigger}
               />
             </div>
 
@@ -551,6 +586,30 @@ export default function SftpBrowser({ sessionId }: Props) {
 
         {/* Remote pane */}
         <div className="flex-1 min-w-0 flex flex-col">
+
+      {/* Per-pane remote path bar — only in split mode */}
+      {showLocalPane && (
+        <div className="flex items-center px-3 py-2 border-b border-stroke-subtle bg-surface-1 shrink-0 gap-3">
+          <PathBar
+            path={session.currentPath}
+            busy={isBusy || syncing}
+            onNavigateTo={(p) => { navigate(p).catch(() => {}); }}
+          />
+          {syncProgress ? (
+            <span className="text-xs text-accent-fg shrink-0">{syncProgress}</span>
+          ) : clipboard ? (
+            <span className="text-xs text-accent-fg shrink-0">
+              ● {clipboard.mode === "copy" ? "copied" : "cut"} — paste to move here
+            </span>
+          ) : null}
+          {editingFiles.length > 0 && (
+            <span className="text-xs text-amber-400 shrink-0 flex items-center gap-1">
+              <span className="animate-pulse">●</span>
+              Watching {editingFiles.length} file{editingFiles.length > 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Inline delete confirmation */}
       {confirmingDelete && (

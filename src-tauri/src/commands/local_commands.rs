@@ -2,6 +2,51 @@ use std::os::unix::fs::PermissionsExt;
 
 use crate::error::AppError;
 
+#[tauri::command]
+pub fn create_local_dir(path: String) -> Result<(), AppError> {
+    std::fs::create_dir(&path).map_err(|e| AppError::Io(e.to_string()))
+}
+
+#[tauri::command]
+pub fn create_local_file(path: String) -> Result<(), AppError> {
+    std::fs::File::create(&path)
+        .map(|_| ())
+        .map_err(|e| AppError::Io(e.to_string()))
+}
+
+#[tauri::command]
+pub fn rename_local(from: String, to: String) -> Result<(), AppError> {
+    std::fs::rename(&from, &to).map_err(|e| AppError::Io(format!("Cannot rename: {e}")))
+}
+
+#[tauri::command]
+pub fn delete_local(path: String) -> Result<(), AppError> {
+    let meta = std::fs::metadata(&path).map_err(|e| AppError::Io(e.to_string()))?;
+    if meta.is_dir() {
+        std::fs::remove_dir_all(&path).map_err(|e| AppError::Io(e.to_string()))
+    } else {
+        std::fs::remove_file(&path).map_err(|e| AppError::Io(e.to_string()))
+    }
+}
+
+#[tauri::command]
+pub fn reveal_in_finder(path: String) -> Result<(), AppError> {
+    std::process::Command::new("open")
+        .args(["-R", &path])
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| AppError::Io(format!("Cannot reveal in Finder: {e}")))
+}
+
+#[tauri::command]
+pub fn open_local(path: String) -> Result<(), AppError> {
+    std::process::Command::new("open")
+        .arg(&path)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| AppError::Io(format!("Cannot open: {e}")))
+}
+
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LocalFileEntry {
