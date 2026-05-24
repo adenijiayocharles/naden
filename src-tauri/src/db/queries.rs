@@ -16,7 +16,9 @@ fn validate_hostname(hostname: &str) -> Result<(), AppError> {
         return Err(AppError::Validation("hostname is required".into()));
     }
     if hostname.len() > 253 {
-        return Err(AppError::Validation("hostname must be 253 characters or fewer".into()));
+        return Err(AppError::Validation(
+            "hostname must be 253 characters or fewer".into(),
+        ));
     }
     if !hostname
         .chars()
@@ -35,9 +37,14 @@ fn validate_username(username: &str) -> Result<(), AppError> {
         return Ok(());
     }
     if username.len() > 64 {
-        return Err(AppError::Validation("username must be 64 characters or fewer".into()));
+        return Err(AppError::Validation(
+            "username must be 64 characters or fewer".into(),
+        ));
     }
-    if !username.chars().all(|c| c.is_ascii_alphanumeric() || "-_.@".contains(c)) {
+    if !username
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || "-_.@".contains(c))
+    {
         return Err(AppError::Validation(
             "username contains invalid characters (allowed: letters, digits, - _ . @)".into(),
         ));
@@ -80,10 +87,10 @@ pub async fn list_servers_db(db: &SqlitePool) -> Result<Vec<ServerWithTags>, App
 
     let mut tags_map: HashMap<String, Vec<Tag>> = HashMap::new();
     for (server_id, tag_id, tag_name) in rows {
-        tags_map
-            .entry(server_id)
-            .or_default()
-            .push(Tag { id: tag_id, name: tag_name });
+        tags_map.entry(server_id).or_default().push(Tag {
+            id: tag_id,
+            name: tag_name,
+        });
     }
 
     Ok(servers
@@ -119,7 +126,9 @@ pub async fn create_server_db(
     }
     let port = payload.port.unwrap_or(22);
     if !(1..=65535).contains(&port) {
-        return Err(AppError::Validation("port must be between 1 and 65535".into()));
+        return Err(AppError::Validation(
+            "port must be between 1 and 65535".into(),
+        ));
     }
 
     let id = Uuid::new_v4().to_string();
@@ -178,7 +187,9 @@ pub async fn update_server_db(
     }
     if let Some(port) = payload.port {
         if !(1..=65535).contains(&port) {
-            return Err(AppError::Validation("port must be between 1 and 65535".into()));
+            return Err(AppError::Validation(
+                "port must be between 1 and 65535".into(),
+            ));
         }
     }
 
@@ -191,21 +202,27 @@ pub async fn update_server_db(
             .bind(id)
             .fetch_optional(&mut *tx)
             .await?;
-    let existing = existing.ok_or_else(|| AppError::NotFound(format!("server '{id}' not found")))?;
+    let existing =
+        existing.ok_or_else(|| AppError::NotFound(format!("server '{id}' not found")))?;
     let s = &existing;
     let now = Utc::now().to_rfc3339();
 
     let port = payload.port.unwrap_or(s.port);
 
     // vault_credential_id: if payload provides a new one use it; if not keep existing
-    let vault_credential_id = payload.vault_credential_id.as_deref()
+    let vault_credential_id = payload
+        .vault_credential_id
+        .as_deref()
         .or(s.vault_credential_id.as_deref());
 
     // Normalise empty strings to NULL for nullable optional fields so callers can
     // clear group_id / identity_file_path by sending Some("") without breaking
     // IS NULL queries (e.g. ungrouped server lookup).
     let group_id = payload.group_id.as_deref().filter(|v| !v.is_empty());
-    let identity_file_path = payload.identity_file_path.as_deref().filter(|v| !v.is_empty());
+    let identity_file_path = payload
+        .identity_file_path
+        .as_deref()
+        .filter(|v| !v.is_empty());
 
     sqlx::query(
         "UPDATE servers SET
@@ -248,6 +265,36 @@ pub async fn update_server_db(
     tx.commit().await?;
 
     get_server_db(db, id).await
+}
+
+pub async fn move_server_group_db(
+    db: &SqlitePool,
+    server_id: &str,
+    group_id: Option<&str>,
+) -> Result<ServerWithTags, AppError> {
+    let now = Utc::now().to_rfc3339();
+    sqlx::query("UPDATE servers SET group_id = ?, updated_at = ? WHERE id = ?")
+        .bind(group_id)
+        .bind(&now)
+        .bind(server_id)
+        .execute(db)
+        .await?;
+    get_server_db(db, server_id).await
+}
+
+pub async fn toggle_favourite_db(
+    db: &SqlitePool,
+    server_id: &str,
+) -> Result<ServerWithTags, AppError> {
+    let server = get_server_db(db, server_id).await?;
+    let now = Utc::now().to_rfc3339();
+    sqlx::query("UPDATE servers SET is_favourite = ?, updated_at = ? WHERE id = ?")
+        .bind(!server.server.is_favourite)
+        .bind(&now)
+        .bind(server_id)
+        .execute(db)
+        .await?;
+    get_server_db(db, server_id).await
 }
 
 pub async fn delete_server_db(db: &SqlitePool, id: &str) -> Result<(), AppError> {
@@ -466,7 +513,10 @@ mod tests {
 
         let servers = list_servers_db(&db).await.unwrap();
         assert_eq!(servers.len(), 2);
-        let db_server = servers.iter().find(|s| s.server.hostname == "db.example.com").unwrap();
+        let db_server = servers
+            .iter()
+            .find(|s| s.server.hostname == "db.example.com")
+            .unwrap();
         assert_eq!(db_server.tags.len(), 1);
         assert_eq!(db_server.tags[0].name, "production");
     }
@@ -573,7 +623,9 @@ mod tests {
     #[tokio::test]
     async fn create_and_list_groups() {
         let db = make_pool().await;
-        let g = create_group_db(&db, "Production", Some("#e53e3e")).await.unwrap();
+        let g = create_group_db(&db, "Production", Some("#e53e3e"))
+            .await
+            .unwrap();
         assert_eq!(g.name, "Production");
         assert_eq!(g.color.as_deref(), Some("#e53e3e"));
 

@@ -1,23 +1,24 @@
 import type { Server } from "../../types/server";
 import { useServerActions, formatHost } from "./useServerActions";
 import { useUiStore } from "../../store/uiStore";
-import { useServerStore } from "../../store/serverStore";
 import ServerKebabMenu from "./ServerKebabMenu";
 import DeleteServerModal from "./DeleteServerModal";
 import ConnectionErrorModal from "./ConnectionErrorModal";
 import { FavouriteButton, ReachabilityDot } from "./ServerCard";
 import { timeAgo } from "../../lib/format";
 
-export default function ServerRow({ server }: { server: Server }) {
+interface ServerRowProps {
+  server: Server;
+  groupColor?: string;
+  lastConnected?: string;
+}
+
+export default function ServerRow({ server, groupColor, lastConnected }: ServerRowProps) {
   const actions = useServerActions(server);
   const bulkMode = useUiStore((s) => s.bulkMode);
   const bulkSelected = useUiStore((s) => s.bulkSelected);
   const toggleSelected = useUiStore((s) => s.toggleSelected);
   const isSelected = bulkSelected.includes(server.id);
-  const groups = useServerStore((s) => s.groups);
-  const lastConnectedMap = useServerStore((s) => s.lastConnectedMap);
-  const groupColor = server.groupId ? groups.find((g) => g.id === server.groupId)?.color : undefined;
-  const lastConnected = lastConnectedMap[server.id];
 
   const handleClick = () => {
     if (bulkMode) { toggleSelected(server.id); return; }

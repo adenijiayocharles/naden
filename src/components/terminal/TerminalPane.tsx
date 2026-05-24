@@ -156,7 +156,7 @@ export default function TerminalPane({ sessionId }: Props) {
     });
     themeObserver.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["data-theme", "style"],
+      attributeFilter: ["data-theme"],
     });
 
     return () => {

@@ -94,8 +94,8 @@ fn encrypt(plaintext: &[u8], password: &str) -> Result<Vec<u8>, AppError> {
     getrandom::getrandom(&mut nonce_bytes).map_err(|e| AppError::Vault(e.to_string()))?;
 
     let key = derive_key(password, &salt);
-    let cipher = Aes256Gcm::new_from_slice(key.as_ref())
-        .map_err(|e| AppError::Vault(e.to_string()))?;
+    let cipher =
+        Aes256Gcm::new_from_slice(key.as_ref()).map_err(|e| AppError::Vault(e.to_string()))?;
     let ciphertext = cipher
         .encrypt(Nonce::from_slice(&nonce_bytes), plaintext)
         .map_err(|e| AppError::Vault(format!("encryption failed: {e}")))?;
@@ -110,14 +110,16 @@ fn encrypt(plaintext: &[u8], password: &str) -> Result<Vec<u8>, AppError> {
 
 fn decrypt(data: &[u8], password: &str) -> Result<Vec<u8>, AppError> {
     if data.len() < SALT_LEN + NONCE_LEN + 16 {
-        return Err(AppError::Vault("file is too short to be a valid backup".into()));
+        return Err(AppError::Vault(
+            "file is too short to be a valid backup".into(),
+        ));
     }
     let (salt, rest) = data.split_at(SALT_LEN);
     let (nonce_bytes, ciphertext) = rest.split_at(NONCE_LEN);
 
     let key = derive_key(password, salt);
-    let cipher = Aes256Gcm::new_from_slice(key.as_ref())
-        .map_err(|e| AppError::Vault(e.to_string()))?;
+    let cipher =
+        Aes256Gcm::new_from_slice(key.as_ref()).map_err(|e| AppError::Vault(e.to_string()))?;
     cipher
         .decrypt(Nonce::from_slice(nonce_bytes), ciphertext)
         .map_err(|_| AppError::Vault("incorrect password or corrupted backup file".into()))
@@ -133,6 +135,9 @@ pub async fn export_backup(
     path: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
+    if state.vault_key.lock().await.is_none() {
+        return Err(AppError::Vault("vault is locked".into()));
+    }
     if password.len() < 8 {
         return Err(AppError::Validation(
             "backup password must be at least 8 characters".into(),
@@ -140,16 +145,14 @@ pub async fn export_backup(
     }
     let db = &state.db;
 
-    let groups: Vec<BackupGroup> = sqlx::query_as(
-        "SELECT id, name, color, created_at, updated_at FROM groups ORDER BY name",
-    )
-    .fetch_all(db)
-    .await?;
-
-    let tags: Vec<BackupTag> =
-        sqlx::query_as("SELECT id, name FROM tags ORDER BY name")
+    let groups: Vec<BackupGroup> =
+        sqlx::query_as("SELECT id, name, color, created_at, updated_at FROM groups ORDER BY name")
             .fetch_all(db)
             .await?;
+
+    let tags: Vec<BackupTag> = sqlx::query_as("SELECT id, name FROM tags ORDER BY name")
+        .fetch_all(db)
+        .await?;
 
     // Explicitly list columns — vault_credential_id is intentionally excluded
     let servers: Vec<BackupServer> = sqlx::query_as(
@@ -175,8 +178,7 @@ pub async fn export_backup(
         server_tags,
     };
 
-    let json =
-        serde_json::to_vec(&backup).map_err(|e| AppError::Validation(e.to_string()))?;
+    let json = serde_json::to_vec(&backup).map_err(|e| AppError::Validation(e.to_string()))?;
     let encrypted = encrypt(&json, &password)?;
 
     tokio::fs::write(&path, &encrypted).await?;
@@ -191,6 +193,9 @@ pub async fn import_backup(
     password: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<ImportSummary, AppError> {
+    if state.vault_key.lock().await.is_none() {
+        return Err(AppError::Vault("vault is locked".into()));
+    }
     let data = tokio::fs::read(&path).await?;
     let json = decrypt(&data, &password)?;
     let backup: Backup =
@@ -268,13 +273,11 @@ pub async fn import_backup(
     }
 
     for st in &backup.server_tags {
-        sqlx::query(
-            "INSERT OR IGNORE INTO server_tags (server_id, tag_id) VALUES (?, ?)",
-        )
-        .bind(&st.server_id)
-        .bind(&st.tag_id)
-        .execute(db)
-        .await?;
+        sqlx::query("INSERT OR IGNORE INTO server_tags (server_id, tag_id) VALUES (?, ?)")
+            .bind(&st.server_id)
+            .bind(&st.tag_id)
+            .execute(db)
+            .await?;
     }
 
     // Refresh the in-memory server cache

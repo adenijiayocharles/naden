@@ -67,8 +67,14 @@ mod tests {
         .await
         .unwrap();
 
-        assert!(tables.contains(&"groups".to_string()), "groups table missing");
-        assert!(tables.contains(&"servers".to_string()), "servers table missing");
+        assert!(
+            tables.contains(&"groups".to_string()),
+            "groups table missing"
+        );
+        assert!(
+            tables.contains(&"servers".to_string()),
+            "servers table missing"
+        );
         assert!(tables.contains(&"tags".to_string()), "tags table missing");
         assert!(
             tables.contains(&"server_tags".to_string()),
@@ -109,11 +115,10 @@ mod tests {
         .await
         .unwrap();
 
-        let name: String =
-            sqlx::query_scalar("SELECT display_name FROM servers WHERE id = 's1'")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+        let name: String = sqlx::query_scalar("SELECT display_name FROM servers WHERE id = 's1'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
 
         assert_eq!(name, "Prod Web");
     }

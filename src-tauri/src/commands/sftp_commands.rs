@@ -1,10 +1,22 @@
+use crate::commands::ssh_commands::{auth_for_server, resolve_jump_chain};
 use crate::db::queries;
 use crate::error::AppError;
 use crate::sftp::{DirListing, SftpMessage};
 use crate::ssh::jump_host::JumpInfo;
 use crate::AppState;
-use crate::commands::ssh_commands::{auth_for_server, resolve_jump_chain};
 
+/// Creates a oneshot channel, sends an SftpMessage built by `$msg(reply_tx)`,
+/// and awaits the reply. `$msg` must be a closure `|reply_tx| SftpMessage::Variant { ..., reply: reply_tx }`.
+macro_rules! sftp_call {
+    ($state:expr, $session_id:expr, $msg:expr) => {{
+        let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+        let msg = $msg(reply_tx);
+        $state.sftp_manager.send(&$session_id, msg)?;
+        reply_rx
+            .await
+            .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+    }};
+}
 
 #[tauri::command]
 pub async fn touch_sftp_file(
@@ -12,14 +24,10 @@ pub async fn touch_sftp_file(
     path: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    state.sftp_manager.send(
-        &session_id,
-        SftpMessage::TouchFile { path, reply: reply_tx },
-    )?;
-    reply_rx
-        .await
-        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+    sftp_call!(state, session_id, |reply| SftpMessage::TouchFile {
+        path,
+        reply,
+    })
 }
 
 #[tauri::command]
@@ -71,14 +79,10 @@ pub async fn list_sftp_dir(
     path: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<DirListing, AppError> {
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    state.sftp_manager.send(
-        &session_id,
-        SftpMessage::ListDir { path, reply: reply_tx },
-    )?;
-    reply_rx
-        .await
-        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+    sftp_call!(state, session_id, |reply| SftpMessage::ListDir {
+        path,
+        reply,
+    })
 }
 
 #[tauri::command]
@@ -87,14 +91,10 @@ pub async fn mkdir_sftp(
     path: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    state.sftp_manager.send(
-        &session_id,
-        SftpMessage::MkDir { path, reply: reply_tx },
-    )?;
-    reply_rx
-        .await
-        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+    sftp_call!(state, session_id, |reply| SftpMessage::MkDir {
+        path,
+        reply,
+    })
 }
 
 #[tauri::command]
@@ -103,14 +103,10 @@ pub async fn delete_sftp(
     path: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    state.sftp_manager.send(
-        &session_id,
-        SftpMessage::Delete { path, reply: reply_tx },
-    )?;
-    reply_rx
-        .await
-        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+    sftp_call!(state, session_id, |reply| SftpMessage::Delete {
+        path,
+        reply,
+    })
 }
 
 #[tauri::command]
@@ -120,14 +116,11 @@ pub async fn rename_sftp(
     to: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    state.sftp_manager.send(
-        &session_id,
-        SftpMessage::Rename { from, to, reply: reply_tx },
-    )?;
-    reply_rx
-        .await
-        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+    sftp_call!(state, session_id, |reply| SftpMessage::Rename {
+        from,
+        to,
+        reply,
+    })
 }
 
 #[tauri::command]
@@ -137,14 +130,21 @@ pub async fn upload_sftp_file(
     remote_path: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    state.sftp_manager.send(
-        &session_id,
-        SftpMessage::UploadFile { local_path, remote_path, reply: reply_tx },
-    )?;
-    reply_rx
-        .await
-        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+    // The local file must exist for an upload — canonicalize and verify home boundary.
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
+    let canonical_home =
+        std::fs::canonicalize(&home).unwrap_or_else(|_| std::path::PathBuf::from(&home));
+    let canonical = std::fs::canonicalize(&local_path).map_err(|e| AppError::Io(e.to_string()))?;
+    if !canonical.starts_with(&canonical_home) {
+        return Err(AppError::Io(format!(
+            "Upload source is outside home directory: {local_path}"
+        )));
+    }
+    sftp_call!(state, session_id, |reply| SftpMessage::UploadFile {
+        local_path,
+        remote_path,
+        reply,
+    })
 }
 
 #[tauri::command]
@@ -154,14 +154,26 @@ pub async fn download_sftp_file(
     local_path: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    state.sftp_manager.send(
-        &session_id,
-        SftpMessage::DownloadFile { remote_path, local_path, reply: reply_tx },
-    )?;
-    reply_rx
-        .await
-        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+    // The destination may not exist yet — canonicalize the parent and check home boundary.
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
+    let canonical_home =
+        std::fs::canonicalize(&home).unwrap_or_else(|_| std::path::PathBuf::from(&home));
+    let dest = std::path::Path::new(&local_path);
+    let parent = dest
+        .parent()
+        .ok_or_else(|| AppError::Io(format!("Invalid download path: {local_path}")))?;
+    let canonical_parent =
+        std::fs::canonicalize(parent).map_err(|e| AppError::Io(e.to_string()))?;
+    if !canonical_parent.starts_with(&canonical_home) {
+        return Err(AppError::Io(format!(
+            "Download destination is outside home directory: {local_path}"
+        )));
+    }
+    sftp_call!(state, session_id, |reply| SftpMessage::DownloadFile {
+        remote_path,
+        local_path,
+        reply,
+    })
 }
 
 #[tauri::command]
@@ -171,14 +183,11 @@ pub async fn chmod_sftp(
     mode: u32,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    state.sftp_manager.send(
-        &session_id,
-        SftpMessage::SetPermissions { path, mode, reply: reply_tx },
-    )?;
-    reply_rx
-        .await
-        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+    sftp_call!(state, session_id, |reply| SftpMessage::SetPermissions {
+        path,
+        mode,
+        reply,
+    })
 }
 
 #[tauri::command]
@@ -187,14 +196,10 @@ pub async fn open_sftp_edit(
     path: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<String, AppError> {
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    state.sftp_manager.send(
-        &session_id,
-        SftpMessage::OpenEdit { path, reply: reply_tx },
-    )?;
-    reply_rx
-        .await
-        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+    sftp_call!(state, session_id, |reply| SftpMessage::OpenEdit {
+        path,
+        reply,
+    })
 }
 
 #[tauri::command]
@@ -203,14 +208,10 @@ pub async fn close_sftp_edit(
     remote_path: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    state.sftp_manager.send(
-        &session_id,
-        SftpMessage::CloseEdit { remote_path, reply: reply_tx },
-    )?;
-    reply_rx
-        .await
-        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+    sftp_call!(state, session_id, |reply| SftpMessage::CloseEdit {
+        remote_path,
+        reply,
+    })
 }
 
 #[tauri::command]
@@ -220,14 +221,11 @@ pub async fn sync_sftp_folder(
     remote_path: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<u32, AppError> {
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    state.sftp_manager.send(
-        &session_id,
-        SftpMessage::SyncFolder { local_path, remote_path, reply: reply_tx },
-    )?;
-    reply_rx
-        .await
-        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+    sftp_call!(state, session_id, |reply| SftpMessage::SyncFolder {
+        local_path,
+        remote_path,
+        reply,
+    })
 }
 
 #[tauri::command]
@@ -237,12 +235,9 @@ pub async fn copy_sftp_file(
     dest: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    state.sftp_manager.send(
-        &session_id,
-        SftpMessage::CopyFile { src, dest, reply: reply_tx },
-    )?;
-    reply_rx
-        .await
-        .map_err(|_| AppError::Ssh("SFTP session closed".into()))?
+    sftp_call!(state, session_id, |reply| SftpMessage::CopyFile {
+        src,
+        dest,
+        reply,
+    })
 }

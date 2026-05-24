@@ -64,8 +64,8 @@ fn one_hop(
     next_host: &str,
     next_port: u16,
 ) -> Result<TcpStream, AppError> {
-    let mut session = ssh2::Session::new()
-        .map_err(|e| AppError::Ssh(format!("session create failed: {e}")))?;
+    let mut session =
+        ssh2::Session::new().map_err(|e| AppError::Ssh(format!("session create failed: {e}")))?;
     session.set_tcp_stream(stream);
     session
         .handshake()
@@ -76,11 +76,13 @@ fn one_hop(
     let channel = session
         .channel_direct_tcpip(next_host, next_port, None)
         .map_err(|e| {
-            AppError::Ssh(format!("direct-tcpip to {next_host}:{next_port} failed: {e}"))
+            AppError::Ssh(format!(
+                "direct-tcpip to {next_host}:{next_port} failed: {e}"
+            ))
         })?;
 
-    let (proxy_sock, consumer_sock) = UnixStream::pair()
-        .map_err(|e| AppError::Ssh(format!("socketpair failed: {e}")))?;
+    let (proxy_sock, consumer_sock) =
+        UnixStream::pair().map_err(|e| AppError::Ssh(format!("socketpair failed: {e}")))?;
 
     // Move both session and channel into the proxy thread.
     // Drop order inside the thread: channel drops first (declared after session),

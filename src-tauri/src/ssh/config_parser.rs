@@ -17,13 +17,19 @@ pub struct ImportPreview {
     pub identity_file_path: Option<String>,
 }
 
-pub fn parse_ssh_config(path: &PathBuf, app: &tauri::AppHandle) -> Result<Vec<ImportPreview>, AppError> {
+pub fn parse_ssh_config(
+    path: &PathBuf,
+    app: &tauri::AppHandle,
+) -> Result<Vec<ImportPreview>, AppError> {
     use tauri::Manager;
     let home_dir = app.path().home_dir().ok();
     parse_ssh_config_inner(path, home_dir.as_ref())
 }
 
-fn parse_ssh_config_inner(path: &PathBuf, home_dir: Option<&std::path::PathBuf>) -> Result<Vec<ImportPreview>, AppError> {
+fn parse_ssh_config_inner(
+    path: &PathBuf,
+    home_dir: Option<&std::path::PathBuf>,
+) -> Result<Vec<ImportPreview>, AppError> {
     let file = std::fs::File::open(path).map_err(|e| AppError::Io(e.to_string()))?;
     let mut reader = BufReader::new(file);
 
@@ -77,17 +83,15 @@ mod tests {
     use std::fs;
 
     fn write_config(content: &str) -> PathBuf {
-        let path = std::env::temp_dir()
-            .join(format!("ssh_config_test_{}.conf", uuid::Uuid::new_v4()));
+        let path =
+            std::env::temp_dir().join(format!("ssh_config_test_{}.conf", uuid::Uuid::new_v4()));
         fs::write(&path, content).expect("write temp config");
         path
     }
 
     #[test]
     fn parses_basic_host() {
-        let path = write_config(
-            "Host web\n  HostName 10.0.0.1\n  User ubuntu\n  Port 2222\n",
-        );
+        let path = write_config("Host web\n  HostName 10.0.0.1\n  User ubuntu\n  Port 2222\n");
         let previews = parse_ssh_config_inner(&path, None).unwrap();
         fs::remove_file(&path).ok();
 

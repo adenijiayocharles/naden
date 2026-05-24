@@ -7,6 +7,12 @@ import DeleteServerModal from "./DeleteServerModal";
 import ConnectionErrorModal from "./ConnectionErrorModal";
 import { timeAgo } from "../../lib/format";
 
+interface ServerCardProps {
+  server: Server;
+  groupColor?: string;
+  lastConnected?: string;
+}
+
 export function FavouriteButton({ isFavourite, onToggle }: { isFavourite: boolean; onToggle: () => void }) {
   return (
     <button
@@ -40,16 +46,12 @@ export function ReachabilityDot({ serverId }: { serverId: string }) {
   );
 }
 
-export default function ServerCard({ server }: { server: Server }) {
+export default function ServerCard({ server, groupColor, lastConnected }: ServerCardProps) {
   const actions = useServerActions(server);
   const bulkMode = useUiStore((s) => s.bulkMode);
   const bulkSelected = useUiStore((s) => s.bulkSelected);
   const toggleSelected = useUiStore((s) => s.toggleSelected);
   const isSelected = bulkSelected.includes(server.id);
-  const groups = useServerStore((s) => s.groups);
-  const lastConnectedMap = useServerStore((s) => s.lastConnectedMap);
-  const groupColor = server.groupId ? groups.find((g) => g.id === server.groupId)?.color : undefined;
-  const lastConnected = lastConnectedMap[server.id];
 
   const handleClick = () => {
     if (bulkMode) { toggleSelected(server.id); return; }

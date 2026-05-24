@@ -13,11 +13,10 @@ pub async fn get_setting(
     key: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<Option<String>, AppError> {
-    let val: Option<String> =
-        sqlx::query_scalar("SELECT value FROM settings WHERE key = ?")
-            .bind(&key)
-            .fetch_optional(&state.db)
-            .await?;
+    let val: Option<String> = sqlx::query_scalar("SELECT value FROM settings WHERE key = ?")
+        .bind(&key)
+        .fetch_optional(&state.db)
+        .await?;
     Ok(val)
 }
 

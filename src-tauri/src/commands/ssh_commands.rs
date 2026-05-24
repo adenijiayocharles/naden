@@ -1,3 +1,4 @@
+use crate::commands::log_commands::{self, NewLogEntry};
 use crate::db::queries;
 use crate::error::AppError;
 use crate::models::server::{CreateServerPayload, ServerWithTags};
@@ -8,7 +9,6 @@ use crate::ssh::{
     launcher,
 };
 use crate::{vault, AppState};
-use crate::commands::log_commands::{self, NewLogEntry};
 
 /// Expand a leading `~` to the user's home directory using Tauri's path resolver.
 fn expand_path(path: &str, app: &tauri::AppHandle) -> std::path::PathBuf {
@@ -34,10 +34,14 @@ pub(crate) async fn resolve_jump_chain(
 
     while let Some(id) = next_id {
         if !visited.insert(id.clone()) {
-            return Err(AppError::Ssh("circular jump-host reference detected".into()));
+            return Err(AppError::Ssh(
+                "circular jump-host reference detected".into(),
+            ));
         }
         if chain.len() >= 10 {
-            return Err(AppError::Ssh("jump-host chain exceeds maximum depth of 10".into()));
+            return Err(AppError::Ssh(
+                "jump-host chain exceeds maximum depth of 10".into(),
+            ));
         }
         let hop = queries::get_server_db(db, &id).await?;
         next_id = hop.server.jump_host_id.clone();
@@ -73,12 +77,11 @@ pub(crate) async fn auth_for_server(
             Ok(AuthInfo::Password(password))
         }
         "key" => {
-            let key_path_raw = s
-                .identity_file_path
-                .as_deref()
-                .ok_or_else(|| AppError::Ssh(
-                    "No identity file configured. Edit the server and set the SSH key path.".into()
-                ))?;
+            let key_path_raw = s.identity_file_path.as_deref().ok_or_else(|| {
+                AppError::Ssh(
+                    "No identity file configured. Edit the server and set the SSH key path.".into(),
+                )
+            })?;
             let key_path = expand_path(key_path_raw, app);
             let key_data = tokio::fs::read_to_string(&key_path).await.map_err(|e| {
                 AppError::Ssh(format!(
@@ -113,9 +116,15 @@ pub(crate) async fn auth_for_server(
             } else {
                 None
             };
-            Ok(AuthInfo::PubKey { key_data, passphrase })
+            Ok(AuthInfo::PubKey {
+                key_data,
+                passphrase,
+            })
         }
-        _ => Err(AppError::Ssh(format!("unsupported auth method: {}", s.auth_method))),
+        _ => Err(AppError::Ssh(format!(
+            "unsupported auth method: {}",
+            s.auth_method
+        ))),
     }
 }
 
@@ -185,7 +194,10 @@ pub async fn confirm_ssh_config_import(
                 .unwrap_or_else(|| preview.pattern.clone()),
             port: preview.port,
             username: preview.username.clone(),
-            auth_method: preview.identity_file_path.is_some().then(|| "key".to_string()),
+            auth_method: preview
+                .identity_file_path
+                .is_some()
+                .then(|| "key".to_string()),
             identity_file_path: preview.identity_file_path.clone(),
             vault_credential_id: None,
             group_id: None,
@@ -284,7 +296,9 @@ pub async fn send_terminal_input(
     data: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    state.session_manager.send_input(&session_id, data.into_bytes())
+    state
+        .session_manager
+        .send_input(&session_id, data.into_bytes())
 }
 
 #[tauri::command]
