@@ -167,8 +167,23 @@ pub fn run() {
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running SSH Manager");
+        .build(tauri::generate_context!())
+        .expect("error while building SSH Manager")
+        .run(|app, event| {
+            // On macOS, clicking the Dock icon when all windows are minimized or
+            // hidden emits Reopen. Show and focus the main window so the app
+            // comes back to the foreground as expected.
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { has_visible_windows, .. } = event {
+                if !has_visible_windows {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.unminimize();
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                }
+            }
+        });
 }
 
 /// Checks whether the vault should be auto-locked based on the
