@@ -85,6 +85,10 @@ pub fn run() {
             // Local filesystem
             commands::local_commands::get_local_home_dir,
             commands::local_commands::list_local_dir,
+            commands::local_commands::rename_local,
+            commands::local_commands::delete_local,
+            commands::local_commands::reveal_in_finder,
+            commands::local_commands::open_local,
             // SSH
             commands::ssh_commands::launch_in_terminal,
             commands::ssh_commands::import_ssh_config,

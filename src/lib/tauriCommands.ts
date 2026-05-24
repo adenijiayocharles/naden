@@ -137,6 +137,18 @@ export const localCommands = {
 
   listLocalDir: (path: string) =>
     invoke<LocalFileEntry[]>("list_local_dir", { path }),
+
+  renameLocal: (from: string, to: string) =>
+    invoke<void>("rename_local", { from, to }),
+
+  deleteLocal: (path: string) =>
+    invoke<void>("delete_local", { path }),
+
+  revealInFinder: (path: string) =>
+    invoke<void>("reveal_in_finder", { path }),
+
+  openLocal: (path: string) =>
+    invoke<void>("open_local", { path }),
 };
 
 export const sftpCommands = {

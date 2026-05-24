@@ -77,7 +77,7 @@ function ColHeader({ label, colKey, sortKey, sortDir, align = "left", className 
   );
 }
 
-function MenuItem({ onClick, danger, disabled, children }: {
+export function MenuItem({ onClick, danger, disabled, children }: {
   onClick: () => void; danger?: boolean; disabled?: boolean; children: React.ReactNode;
 }) {
   return (
@@ -93,21 +93,18 @@ function MenuItem({ onClick, danger, disabled, children }: {
   );
 }
 
-export default function SftpFileList({
-  entries, selected, renaming, renameValue, sortKey, sortDir, hasClipboard,
-  onSort, onSelect, onNavigate,
-  onRenameChange, onRenameCommit, onRenameCancel, onRenameStart,
-  onCut, onCopy, onPaste, onDelete, onEdit, onChmod,
-}: Props) {
-  const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
+export function ContextMenuPopup({ x, y, onClose, children }: {
+  x: number; y: number; onClose: () => void; children: React.ReactNode;
+}) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
-    if (!contextMenu) return;
     const close = (e: MouseEvent | KeyboardEvent) => {
       if (e instanceof KeyboardEvent && e.key !== "Escape") return;
       if (e instanceof MouseEvent && menuRef.current?.contains(e.target as Node)) return;
-      setContextMenu(null);
+      onCloseRef.current();
     };
     document.addEventListener("mousedown", close);
     document.addEventListener("keydown", close);
@@ -115,8 +112,26 @@ export default function SftpFileList({
       document.removeEventListener("mousedown", close);
       document.removeEventListener("keydown", close);
     };
-  }, [contextMenu]);
+  }, []);
 
+  return (
+    <div
+      ref={menuRef}
+      style={{ left: x, top: y }}
+      className="fixed z-50 bg-surface-2 border border-stroke rounded-lg shadow-2xl py-1 min-w-[160px]"
+    >
+      {children}
+    </div>
+  );
+}
+
+export default function SftpFileList({
+  entries, selected, renaming, renameValue, sortKey, sortDir, hasClipboard,
+  onSort, onSelect, onNavigate,
+  onRenameChange, onRenameCommit, onRenameCancel, onRenameStart,
+  onCut, onCopy, onPaste, onDelete, onEdit, onChmod,
+}: Props) {
+  const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const closeMenu = () => setContextMenu(null);
 
   if (entries.length === 0) {
@@ -230,11 +245,7 @@ export default function SftpFileList({
 
       {/* Context menu */}
       {cm && (
-        <div
-          ref={menuRef}
-          style={{ left: cm.x, top: cm.y }}
-          className="fixed z-50 bg-surface-2 border border-stroke rounded-lg shadow-2xl py-1 min-w-[160px]"
-        >
+        <ContextMenuPopup x={cm.x} y={cm.y} onClose={closeMenu}>
           <MenuItem onClick={() => { onCopy(); closeMenu(); }} disabled={selCount === 0}>
             Copy{selCount > 1 ? ` (${selCount})` : ""}
           </MenuItem>
@@ -269,7 +280,7 @@ export default function SftpFileList({
               Permissions…
             </MenuItem>
           )}
-        </div>
+        </ContextMenuPopup>
       )}
     </div>
   );
