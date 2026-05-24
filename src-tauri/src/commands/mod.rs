@@ -1,8 +1,9 @@
-pub mod log_commands;
 pub mod backup_commands;
-pub mod settings_commands;
+pub mod local_commands;
+pub mod log_commands;
 pub mod search_commands;
 pub mod server_commands;
+pub mod settings_commands;
 pub mod sftp_commands;
 pub mod ssh_commands;
 pub mod vault_commands;

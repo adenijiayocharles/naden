@@ -78,6 +78,8 @@ interface Props {
   editingCount?: number;
   onSync?: () => void;
   syncProgress?: string | null;
+  showLocalPane: boolean;
+  onToggleLocalPane: () => void;
 }
 
 function ToolbarBtn({
@@ -123,6 +125,8 @@ export default function SftpToolbar({
   editingCount = 0,
   onSync,
   syncProgress,
+  showLocalPane,
+  onToggleLocalPane,
 }: Props) {
   const hasSelection = selectedCount > 0;
   const canDownload = hasSelection && !selectedHasDir;
@@ -130,6 +134,20 @@ export default function SftpToolbar({
   return (
     <div className="flex flex-col shrink-0 bg-surface-2 border-b border-stroke-subtle">
       <div className="h-10 flex items-center gap-1 px-2">
+        <button
+          onClick={onToggleLocalPane}
+          title={showLocalPane ? "Hide local pane" : "Show local files"}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+            showLocalPane ? "text-white bg-surface-4" : "text-muted hover:text-white hover:bg-surface-4"
+          }`}
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+            <rect x="1" y="2" width="14" height="12" rx="1.5" />
+            <path strokeLinecap="round" d="M6 2v12" />
+          </svg>
+          Local
+        </button>
+        <div className="w-px h-4 bg-surface-4 mx-1" />
         <ToolbarBtn onClick={onNavigateUp} disabled={busy || currentPath === "/"} title="Up">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 12V4M4 8l4-4 4 4" />
