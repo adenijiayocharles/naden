@@ -21,11 +21,20 @@ pub fn rename_local(from: String, to: String) -> Result<(), AppError> {
 
 #[tauri::command]
 pub fn delete_local(path: String) -> Result<(), AppError> {
-    let meta = std::fs::metadata(&path).map_err(|e| AppError::Io(e.to_string()))?;
-    if meta.is_dir() {
-        std::fs::remove_dir_all(&path).map_err(|e| AppError::Io(e.to_string()))
+    // Canonicalize first so symlinks cannot escape the home boundary.
+    let canonical = std::fs::canonicalize(&path).map_err(|e| AppError::Io(e.to_string()))?;
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
+    let canonical_home =
+        std::fs::canonicalize(&home).unwrap_or_else(|_| std::path::PathBuf::from(&home));
+    if !canonical.starts_with(&canonical_home) {
+        return Err(AppError::Io(format!(
+            "Cannot delete outside home directory: {path}"
+        )));
+    }
+    if canonical.is_dir() {
+        std::fs::remove_dir_all(&canonical).map_err(|e| AppError::Io(e.to_string()))
     } else {
-        std::fs::remove_file(&path).map_err(|e| AppError::Io(e.to_string()))
+        std::fs::remove_file(&canonical).map_err(|e| AppError::Io(e.to_string()))
     }
 }
 

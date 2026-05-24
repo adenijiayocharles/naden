@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
 import { useSftpStore } from "../../store/sftpStore";
@@ -99,26 +99,29 @@ export default function SftpBrowser({ sessionId }: Props) {
     return () => { void unlisten.then((fn) => fn()); };
   }, [sessionId]);
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (document.activeElement?.tagName === "INPUT") return;
-      const mod = e.metaKey || e.ctrlKey;
+  // Ref keeps the handler current without re-registering the listener on every render.
+  const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  keyHandlerRef.current = (e: KeyboardEvent) => {
+    if (document.activeElement?.tagName === "INPUT") return;
+    const mod = e.metaKey || e.ctrlKey;
+    if (e.key === "Escape") {
+      setRenaming(null);
+      setCreatingFolder(false);
+      setCreatingFile(false);
+      setConfirmingDelete(false);
+      setClipboard(null);
+      setError(null);
+      return;
+    }
+    if (!session) return;
+    if (mod && e.key === "r") { e.preventDefault(); handleRefresh(); }
+  };
 
-      if (e.key === "Escape") {
-        setRenaming(null);
-        setCreatingFolder(false);
-        setCreatingFile(false);
-        setConfirmingDelete(false);
-        setClipboard(null);
-        setError(null);
-        return;
-      }
-      if (!session) return;
-      if (mod && e.key === "r") { e.preventDefault(); handleRefresh(); }
-    };
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => keyHandlerRef.current(e);
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  });   // no dep array — closures capture latest history state
+  }, []); // stable: ref always holds the latest handler
 
   if (!session) return null;
 
@@ -479,7 +482,7 @@ export default function SftpBrowser({ sessionId }: Props) {
     try {
       for (const entry of files) {
         const name = entry.path.split("/").pop() ?? entry.path;
-        const localPath = `${localCurrentPath}/${name}`.replace("//", "/");
+        const localPath = `${localCurrentPath}/${name}`.replace(/\/+/g, "/");
         await sftpCommands.downloadSftpFile(sessionId, entry.path, localPath);
       }
     } catch (e) {
@@ -551,7 +554,7 @@ export default function SftpBrowser({ sessionId }: Props) {
         {/* Local pane */}
         {showLocalPane && (
           <>
-            <div className="w-1/2 min-w-0 border-r border-stroke-subtle flex flex-col">
+            <div className="flex-1 min-w-0 border-r border-stroke-subtle flex flex-col">
               <LocalFileBrowser
                 onSelectedChange={setLocalSelected}
                 onPathChange={setLocalCurrentPath}

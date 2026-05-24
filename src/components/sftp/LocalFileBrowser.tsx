@@ -80,13 +80,13 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
   }, [selected, onSelectedChange]);
 
   useEffect(() => {
-    if (!newFolderTrigger) return;
+    if (newFolderTrigger === 0) return;
     setCreatingFolder(true);
     setFolderName("");
   }, [newFolderTrigger]);
 
   useEffect(() => {
-    if (!newFileTrigger) return;
+    if (newFileTrigger === 0) return;
     setCreatingFile(true);
     setFileName("");
   }, [newFileTrigger]);

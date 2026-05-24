@@ -128,7 +128,9 @@ impl SftpManager {
         let sid = session_id;
 
         std::thread::spawn(move || {
-            run_sftp_session(host, port, username, auth, jump_chain, sid, rx, app_handle, sessions);
+            run_sftp_session(
+                host, port, username, auth, jump_chain, sid, rx, app_handle, sessions,
+            );
         });
 
         Ok(())
@@ -145,11 +147,17 @@ impl SftpManager {
                 .tx
                 .clone()
         };
-        tx.send(msg).map_err(|_| AppError::Ssh("SFTP session closed".into()))
+        tx.send(msg)
+            .map_err(|_| AppError::Ssh("SFTP session closed".into()))
     }
 
     pub fn close_session(&self, session_id: &str) {
-        if let Some(handle) = self.sessions.lock().unwrap_or_else(|e| e.into_inner()).get(session_id) {
+        if let Some(handle) = self
+            .sessions
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(session_id)
+        {
             let _ = handle.tx.send(SftpMessage::Close);
         }
     }
@@ -183,7 +191,10 @@ fn run_sftp_session(
     sessions: Arc<Mutex<HashMap<String, SftpSessionHandle>>>,
 ) {
     // Guarantees removal from the sessions map on exit, including panics.
-    let _guard = SessionGuard { sessions: &sessions, id: &session_id };
+    let _guard = SessionGuard {
+        sessions: &sessions,
+        id: &session_id,
+    };
 
     let _ = app_handle.emit(&format!("sftp:status:{session_id}"), "connecting");
 
@@ -218,15 +229,27 @@ fn run_sftp_session(
 
         loop {
             match rx.recv_timeout(std::time::Duration::from_millis(1000)) {
-                Ok(SftpMessage::Close) | Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+                Ok(SftpMessage::Close) | Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                    break
+                }
                 Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
                     // Poll watched files for changes and re-upload if mtime changed.
                     for (remote_path, wf) in watched.iter_mut() {
-                        let Ok(meta) = std::fs::metadata(&wf.temp_path) else { continue };
+                        let Ok(meta) = std::fs::metadata(&wf.temp_path) else {
+                            continue;
+                        };
                         let Ok(mtime) = meta.modified() else { continue };
                         if wf.last_mtime.map_or(true, |prev| mtime > prev) {
                             wf.last_mtime = Some(mtime);
-                            if upload_file(&sftp, &wf.temp_path, remote_path, &session_id, &app_handle).is_ok() {
+                            if upload_file(
+                                &sftp,
+                                &wf.temp_path,
+                                remote_path,
+                                &session_id,
+                                &app_handle,
+                            )
+                            .is_ok()
+                            {
                                 let _ = app_handle.emit(
                                     &format!("sftp:file_synced:{session_id}"),
                                     remote_path.clone(),
@@ -294,11 +317,19 @@ fn handle_message(
                 .map_err(|e| sftp_err("rename this item", e));
             let _ = reply.send(result);
         }
-        SftpMessage::UploadFile { local_path, remote_path, reply } => {
+        SftpMessage::UploadFile {
+            local_path,
+            remote_path,
+            reply,
+        } => {
             let result = upload_file(sftp, &local_path, &remote_path, session_id, app_handle);
             let _ = reply.send(result);
         }
-        SftpMessage::DownloadFile { remote_path, local_path, reply } => {
+        SftpMessage::DownloadFile {
+            remote_path,
+            local_path,
+            reply,
+        } => {
             let result = download_file(sftp, &remote_path, &local_path, session_id, app_handle);
             let _ = reply.send(result);
         }
@@ -335,7 +366,11 @@ fn handle_message(
             };
             let _ = reply.send(result);
         }
-        SftpMessage::SyncFolder { local_path, remote_path, reply } => {
+        SftpMessage::SyncFolder {
+            local_path,
+            remote_path,
+            reply,
+        } => {
             let result = sync_folder(sftp, &local_path, &remote_path, session_id, app_handle);
             let _ = reply.send(result);
         }
@@ -343,8 +378,14 @@ fn handle_message(
             // SFTP has no native copy — download to a temp file then re-upload.
             // UUID prefix prevents collisions when two files share the same base name.
             let base = std::path::Path::new(&src).file_name().unwrap_or_default();
-            let unique_name = format!("{}-{}", uuid::Uuid::new_v4().simple(), base.to_string_lossy());
-            let tmp = std::env::temp_dir().join("ssh-manager-copy").join(unique_name);
+            let unique_name = format!(
+                "{}-{}",
+                uuid::Uuid::new_v4().simple(),
+                base.to_string_lossy()
+            );
+            let tmp = std::env::temp_dir()
+                .join("ssh-manager-copy")
+                .join(unique_name);
             let _ = std::fs::create_dir_all(tmp.parent().unwrap_or(&std::env::temp_dir()));
             let tmp_str = tmp.to_string_lossy().into_owned();
             let result = download_file(sftp, &src, &tmp_str, session_id, app_handle)
@@ -372,7 +413,7 @@ fn list_dir(sftp: &ssh2::Sftp, path: &str) -> Result<DirListing, AppError> {
             if name == "." || name == ".." {
                 return None;
             }
-            let is_symlink = stat.perm.map_or(false, |p| p & 0o170000 == 0o120000);
+            let is_symlink = stat.perm.is_some_and(|p| p & 0o170000 == 0o120000);
             Some(FileEntry {
                 path: path_buf.to_string_lossy().into_owned(),
                 name,
@@ -473,9 +514,7 @@ fn open_edit(
         .unwrap_or_else(|| "file".to_string());
 
     // Build temp dir: <os_tmp>/ssh-manager/<session_id>/
-    let temp_dir = std::env::temp_dir()
-        .join("ssh-manager")
-        .join(session_id);
+    let temp_dir = std::env::temp_dir().join("ssh-manager").join(session_id);
     std::fs::create_dir_all(&temp_dir)
         .map_err(|e| AppError::Io(format!("cannot create temp dir: {e}")))?;
 
@@ -490,7 +529,9 @@ fn open_edit(
     download_file(sftp, remote_path, &temp_path_str, session_id, app_handle)?;
 
     // Read initial mtime.
-    let last_mtime = std::fs::metadata(&temp_path).ok().and_then(|m| m.modified().ok());
+    let last_mtime = std::fs::metadata(&temp_path)
+        .ok()
+        .and_then(|m| m.modified().ok());
 
     // Open with platform default application.
     #[cfg(target_os = "macos")]
@@ -509,10 +550,13 @@ fn open_edit(
         .spawn()
         .map_err(|e| AppError::Io(format!("cannot open file: {e}")))?;
 
-    watched.insert(remote_path.to_string(), WatchedFile {
-        temp_path: temp_path_str.clone(),
-        last_mtime,
-    });
+    watched.insert(
+        remote_path.to_string(),
+        WatchedFile {
+            temp_path: temp_path_str.clone(),
+            last_mtime,
+        },
+    );
 
     Ok(temp_path_str)
 }
@@ -553,10 +597,18 @@ fn sync_folder_recursive(
         let file_name = entry.file_name().to_string_lossy().into_owned();
         let remote_entry_path = format!("{}/{}", remote_path.trim_end_matches('/'), file_name);
 
-        let file_type = entry.file_type().map_err(|e| AppError::Io(format!("stat error: {e}")))?;
+        let file_type = entry
+            .file_type()
+            .map_err(|e| AppError::Io(format!("stat error: {e}")))?;
 
         if file_type.is_dir() {
-            count += sync_folder_recursive(sftp, &local_entry_str, &remote_entry_path, session_id, app_handle)?;
+            count += sync_folder_recursive(
+                sftp,
+                &local_entry_str,
+                &remote_entry_path,
+                session_id,
+                app_handle,
+            )?;
         } else if file_type.is_file() {
             // Compare local mtime vs remote mtime.
             let should_upload = match (
@@ -576,7 +628,13 @@ fn sync_folder_recursive(
             };
 
             if should_upload {
-                upload_file(sftp, &local_entry_str, &remote_entry_path, session_id, app_handle)?;
+                upload_file(
+                    sftp,
+                    &local_entry_str,
+                    &remote_entry_path,
+                    session_id,
+                    app_handle,
+                )?;
                 count += 1;
                 let _ = app_handle.emit(
                     &format!("sftp:sync_progress:{session_id}"),
