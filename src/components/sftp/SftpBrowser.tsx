@@ -646,7 +646,7 @@ export default function SftpBrowser({ sessionId }: Props) {
               <button
                 onClick={() => { void commitChmod(); }}
                 disabled={busy}
-                className="px-3 py-1.5 bg-accent hover:bg-accent/80 text-white rounded text-xs font-medium transition-colors disabled:opacity-50"
+                className="px-3 py-1.5 bg-accent hover:bg-accent/80 text-black rounded text-xs font-medium transition-colors disabled:opacity-50"
               >
                 Apply
               </button>
