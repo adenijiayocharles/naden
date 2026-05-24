@@ -81,6 +81,7 @@ interface Props {
   showLocalPane: boolean;
   onToggleLocalPane: () => void;
   activePane?: "local" | "remote";
+  localSelectedCount?: number;
 }
 
 function ToolbarBtn({
@@ -129,6 +130,7 @@ export default function SftpToolbar({
   showLocalPane,
   onToggleLocalPane,
   activePane = "remote",
+  localSelectedCount = 0,
 }: Props) {
   const hasSelection = selectedCount > 0;
   const canDownload = hasSelection && !selectedHasDir;
@@ -217,14 +219,18 @@ export default function SftpToolbar({
 
           <div className="w-px h-4 bg-surface-4 mx-1" />
 
-          <ToolbarBtn onClick={onUpload} disabled={busy} title="Upload file to remote">
+          <ToolbarBtn
+            onClick={onUpload}
+            disabled={remoteActive ? busy : busy || localSelectedCount === 0}
+            title={remoteActive ? "Upload file to remote" : "Upload selected local files to remote"}
+          >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 10V3M5 6l3-3 3 3M3 12h10" />
             </svg>
             Upload
           </ToolbarBtn>
 
-          <ToolbarBtn onClick={onDownload} disabled={busy || !canDownload} title="Download selected from remote">
+          <ToolbarBtn onClick={onDownload} disabled={busy || !canDownload} title={remoteActive ? "Download selected from remote" : "Download selected remote files to local dir"}>
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 3v7M5 7l3 3 3-3M3 12h10" />
             </svg>

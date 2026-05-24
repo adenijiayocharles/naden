@@ -85,6 +85,8 @@ pub fn run() {
             // Local filesystem
             commands::local_commands::get_local_home_dir,
             commands::local_commands::list_local_dir,
+            commands::local_commands::create_local_dir,
+            commands::local_commands::create_local_file,
             commands::local_commands::rename_local,
             commands::local_commands::delete_local,
             commands::local_commands::reveal_in_finder,

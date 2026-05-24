@@ -10,6 +10,9 @@ interface Props {
   onSelectedChange: (paths: string[]) => void;
   onPathChange: (path: string) => void;
   onActivate: () => void;
+  showHidden?: boolean;
+  newFolderTrigger?: number;
+  newFileTrigger?: number;
 }
 
 interface ContextMenu { x: number; y: number; entry: LocalFileEntry }
@@ -30,7 +33,7 @@ function FileIcon({ isDir }: { isDir: boolean }) {
   );
 }
 
-export default function LocalFileBrowser({ onSelectedChange, onPathChange, onActivate }: Props) {
+export default function LocalFileBrowser({ onSelectedChange, onPathChange, onActivate, showHidden = true, newFolderTrigger = 0, newFileTrigger = 0 }: Props) {
   const [currentPath, setCurrentPath] = useState("");
   const [entries, setEntries] = useState<LocalFileEntry[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
@@ -41,6 +44,10 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
   const [renameValue, setRenameValue] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const [folderName, setFolderName] = useState("");
+  const [creatingFile, setCreatingFile] = useState(false);
+  const [fileName, setFileName] = useState("");
   const initialised = useRef(false);
 
   const navigateTo = useCallback(async (path: string) => {
@@ -71,6 +78,42 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
   useEffect(() => {
     onSelectedChange(selected);
   }, [selected, onSelectedChange]);
+
+  useEffect(() => {
+    if (!newFolderTrigger) return;
+    setCreatingFolder(true);
+    setFolderName("");
+  }, [newFolderTrigger]);
+
+  useEffect(() => {
+    if (!newFileTrigger) return;
+    setCreatingFile(true);
+    setFileName("");
+  }, [newFileTrigger]);
+
+  const commitNewFolder = async () => {
+    if (!folderName.trim()) { setCreatingFolder(false); return; }
+    setError(null);
+    try {
+      await localCommands.createLocalDir(`${currentPath}/${folderName.trim()}`);
+      setCreatingFolder(false);
+      await navigateTo(currentPath);
+    } catch (e) {
+      setError(formatError(e));
+    }
+  };
+
+  const commitNewFile = async () => {
+    if (!fileName.trim()) { setCreatingFile(false); return; }
+    setError(null);
+    try {
+      await localCommands.createLocalFile(`${currentPath}/${fileName.trim()}`);
+      setCreatingFile(false);
+      await navigateTo(currentPath);
+    } catch (e) {
+      setError(formatError(e));
+    }
+  };
 
   const handleUp = () => {
     const parent = currentPath.split("/").slice(0, -1).join("/") || "/";
@@ -160,6 +203,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
 
   const cm = contextMenu;
   const selCount = selected.length;
+  const visibleEntries = showHidden ? entries : entries.filter((e) => !e.name.startsWith("."));
 
   return (
     <div className="flex flex-col h-full min-w-0">
@@ -212,14 +256,54 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
         </div>
       )}
 
+      {/* New folder input */}
+      {creatingFolder && (
+        <div className="px-4 py-2 bg-surface-1 border-b border-stroke-subtle flex items-center gap-2 shrink-0">
+          <span className="text-xs text-muted">New folder:</span>
+          <input
+            autoFocus
+            value={folderName}
+            onChange={(e) => setFolderName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void commitNewFolder();
+              if (e.key === "Escape") setCreatingFolder(false);
+            }}
+            placeholder="folder-name"
+            className="flex-1 bg-surface-3 border border-[#333] rounded px-2 py-1 text-sm text-white outline-none focus:border-accent font-mono placeholder-[#444]"
+          />
+          <button onClick={() => { void commitNewFolder(); }} className="text-xs text-accent-fg px-2">Create</button>
+          <button onClick={() => setCreatingFolder(false)} className="text-xs text-faint px-2">Cancel</button>
+        </div>
+      )}
+
+      {/* New file input */}
+      {creatingFile && (
+        <div className="px-4 py-2 bg-surface-1 border-b border-stroke-subtle flex items-center gap-2 shrink-0">
+          <span className="text-xs text-muted">New file:</span>
+          <input
+            autoFocus
+            value={fileName}
+            onChange={(e) => setFileName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void commitNewFile();
+              if (e.key === "Escape") setCreatingFile(false);
+            }}
+            placeholder="filename.txt"
+            className="flex-1 bg-surface-3 border border-[#333] rounded px-2 py-1 text-sm text-white outline-none focus:border-accent font-mono placeholder-[#444]"
+          />
+          <button onClick={() => { void commitNewFile(); }} className="text-xs text-accent-fg px-2">Create</button>
+          <button onClick={() => setCreatingFile(false)} className="text-xs text-faint px-2">Cancel</button>
+        </div>
+      )}
+
       {/* File list */}
       <div className="flex-1 overflow-y-auto scroll-smooth relative">
-        {!error && entries.length === 0 && !loading && (
+        {!error && visibleEntries.length === 0 && !loading && (
           <div className="flex-1 flex items-center justify-center text-dim text-sm p-8">
             Empty directory
           </div>
         )}
-        {entries.length > 0 && (
+        {visibleEntries.length > 0 && (
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="sticky top-0 bg-surface-1 z-10 border-b border-stroke-subtle">
               <tr>
@@ -229,7 +313,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
               </tr>
             </thead>
             <tbody>
-              {entries.map((entry) => {
+              {visibleEntries.map((entry) => {
                 const isSelected = selected.includes(entry.path);
                 const isRenaming = renaming === entry.path;
                 return (

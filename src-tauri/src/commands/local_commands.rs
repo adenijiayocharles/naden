@@ -3,6 +3,18 @@ use std::os::unix::fs::PermissionsExt;
 use crate::error::AppError;
 
 #[tauri::command]
+pub fn create_local_dir(path: String) -> Result<(), AppError> {
+    std::fs::create_dir(&path).map_err(|e| AppError::Io(e.to_string()))
+}
+
+#[tauri::command]
+pub fn create_local_file(path: String) -> Result<(), AppError> {
+    std::fs::File::create(&path)
+        .map(|_| ())
+        .map_err(|e| AppError::Io(e.to_string()))
+}
+
+#[tauri::command]
 pub fn rename_local(from: String, to: String) -> Result<(), AppError> {
     std::fs::rename(&from, &to).map_err(|e| AppError::Io(format!("Cannot rename: {e}")))
 }

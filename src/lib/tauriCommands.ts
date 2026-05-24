@@ -138,6 +138,12 @@ export const localCommands = {
   listLocalDir: (path: string) =>
     invoke<LocalFileEntry[]>("list_local_dir", { path }),
 
+  createLocalDir: (path: string) =>
+    invoke<void>("create_local_dir", { path }),
+
+  createLocalFile: (path: string) =>
+    invoke<void>("create_local_file", { path }),
+
   renameLocal: (from: string, to: string) =>
     invoke<void>("rename_local", { from, to }),
 
