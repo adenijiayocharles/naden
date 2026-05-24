@@ -170,17 +170,18 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building SSH Manager")
         .run(|app, event| {
-            // On macOS, clicking the Dock icon when all windows are minimized or
-            // hidden emits Reopen. Show and focus the main window so the app
-            // comes back to the foreground as expected.
+            // On macOS, clicking the Dock icon fires Reopen regardless of
+            // whether the window is hidden or miniaturized. A miniaturized
+            // window is still "visible" to the OS (hasVisibleWindows == YES),
+            // so guarding on has_visible_windows never fires for minimized
+            // windows. Instead, unconditionally unminimize + show + focus —
+            // these are no-ops when the window is already in the foreground.
             #[cfg(target_os = "macos")]
-            if let tauri::RunEvent::Reopen { has_visible_windows, .. } = event {
-                if !has_visible_windows {
-                    if let Some(window) = app.get_webview_window("main") {
-                        let _ = window.unminimize();
-                        let _ = window.show();
-                        let _ = window.set_focus();
-                    }
+            if let tauri::RunEvent::Reopen { .. } = event {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.unminimize();
+                    let _ = window.show();
+                    let _ = window.set_focus();
                 }
             }
         });
