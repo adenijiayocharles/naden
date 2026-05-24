@@ -513,6 +513,7 @@ export default function SftpBrowser({ sessionId }: Props) {
         syncProgress={syncProgress}
         showLocalPane={showLocalPane}
         onToggleLocalPane={() => setShowLocalPane((v) => !v)}
+        activePane={activePane}
       />
 
       <div className="flex flex-1 min-h-0">

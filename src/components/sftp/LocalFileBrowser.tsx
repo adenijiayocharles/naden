@@ -213,7 +213,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
       )}
 
       {/* File list */}
-      <div className="flex-1 overflow-y-auto relative">
+      <div className="flex-1 overflow-y-auto scroll-smooth relative">
         {!error && entries.length === 0 && !loading && (
           <div className="flex-1 flex items-center justify-center text-dim text-sm p-8">
             Empty directory

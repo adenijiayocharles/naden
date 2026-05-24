@@ -166,7 +166,7 @@ export default function SftpFileList({
   const hasPerms = cm?.entry.permissions != null;
 
   return (
-    <div className="flex-1 overflow-y-auto relative">
+    <div className="flex-1 overflow-y-auto scroll-smooth relative">
       <table className="w-full text-sm border-collapse table-fixed">
         <thead className="sticky top-0 bg-surface-1 z-10 border-b border-stroke-subtle">
           <tr>
