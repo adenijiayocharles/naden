@@ -17,6 +17,7 @@ export interface SftpSession {
 }
 
 const sessionUnlisteners = new Map<string, UnlistenFn[]>();
+const sessionReconnectPolls = new Map<string, ReturnType<typeof setInterval>>();
 
 interface SftpStore {
   sessions: SftpSession[];
@@ -34,6 +35,11 @@ interface SftpStore {
 function teardown(sessionId: string) {
   sessionUnlisteners.get(sessionId)?.forEach((fn) => fn());
   sessionUnlisteners.delete(sessionId);
+  const poll = sessionReconnectPolls.get(sessionId);
+  if (poll !== undefined) {
+    clearInterval(poll);
+    sessionReconnectPolls.delete(sessionId);
+  }
 }
 
 function dropFromState(state: { sessions: SftpSession[]; activeSessionId: string | null }, sessionId: string) {
@@ -133,13 +139,18 @@ export const useSftpStore = create<SftpStore>((set, get) => ({
         const s = get().sessions.find((x) => x.id === newId);
         if (s?.status === "connected") {
           clearInterval(poll);
+          sessionReconnectPolls.delete(newId);
           get().navigateTo(newId, currentPath).catch(() => {
             // Path may no longer be accessible after reconnect; fall back to home
             get().navigateTo(newId, "").catch(() => {});
           });
         }
-        if (!s || s.status === "error") clearInterval(poll);
+        if (!s || s.status === "error") {
+          clearInterval(poll);
+          sessionReconnectPolls.delete(newId);
+        }
       }, 200);
+      sessionReconnectPolls.set(newId, poll);
     }
   },
 

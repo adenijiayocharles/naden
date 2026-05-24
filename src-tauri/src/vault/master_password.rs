@@ -1,8 +1,8 @@
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use pbkdf2::pbkdf2_hmac;
 use sha2::{Digest, Sha256};
-use subtle::ConstantTimeEq;
 use sqlx::SqlitePool;
+use subtle::ConstantTimeEq;
 use zeroize::Zeroizing;
 
 use crate::error::AppError;
@@ -46,12 +46,10 @@ pub async fn is_password_required(db: &SqlitePool) -> Result<bool, AppError> {
 }
 
 pub async fn set_password_required(db: &SqlitePool, required: bool) -> Result<(), AppError> {
-    sqlx::query(
-        "INSERT OR REPLACE INTO vault_meta (key, value) VALUES ('password_required', ?)",
-    )
-    .bind(if required { "true" } else { "false" })
-    .execute(db)
-    .await?;
+    sqlx::query("INSERT OR REPLACE INTO vault_meta (key, value) VALUES ('password_required', ?)")
+        .bind(if required { "true" } else { "false" })
+        .execute(db)
+        .await?;
     Ok(())
 }
 
@@ -152,12 +150,10 @@ mod tests {
             .connect("sqlite::memory:")
             .await
             .unwrap();
-        sqlx::query(
-            "CREATE TABLE vault_meta (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
+        sqlx::query("CREATE TABLE vault_meta (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)")
+            .execute(&pool)
+            .await
+            .unwrap();
         pool
     }
 

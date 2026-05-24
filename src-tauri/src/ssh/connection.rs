@@ -1,8 +1,8 @@
+use base64::Engine as _;
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
-use base64::Engine as _;
 use tauri::Emitter;
 
 use crate::error::AppError;
@@ -20,7 +20,9 @@ pub(crate) fn tcp_connect(host: &str, port: u16) -> Result<TcpStream, AppError> 
         .map_err(|e| AppError::Ssh(format!("failed to resolve '{host}': {e}")))?
         .collect();
     if addrs.is_empty() {
-        return Err(AppError::Ssh(format!("could not resolve hostname '{host}'")));
+        return Err(AppError::Ssh(format!(
+            "could not resolve hostname '{host}'"
+        )));
     }
     let mut last_err = None;
     for addr in &addrs {
@@ -41,7 +43,10 @@ pub type OnCloseCallback = Box<dyn FnOnce(String, Option<String>) + Send>;
 
 pub enum AuthInfo {
     Password(String),
-    PubKey { key_data: String, passphrase: Option<String> },
+    PubKey {
+        key_data: String,
+        passphrase: Option<String>,
+    },
 }
 
 enum SessionMessage {
@@ -88,8 +93,7 @@ impl SessionManager {
     ) -> Result<(), AppError> {
         let (tx, rx) = std::sync::mpsc::sync_channel(256);
 
-        recover_lock(self.sessions.lock())
-            .insert(session_id.clone(), ActiveSession { tx });
+        recover_lock(self.sessions.lock()).insert(session_id.clone(), ActiveSession { tx });
 
         let sessions = Arc::clone(&self.sessions);
         let sid = session_id.clone();
@@ -97,8 +101,16 @@ impl SessionManager {
         std::thread::spawn(move || {
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 run_session(
-                    host, port, username, auth, jump_chain,
-                    on_close, sid.clone(), rx, app_handle.clone(), Arc::clone(&sessions),
+                    host,
+                    port,
+                    username,
+                    auth,
+                    jump_chain,
+                    on_close,
+                    sid.clone(),
+                    rx,
+                    app_handle.clone(),
+                    Arc::clone(&sessions),
                 );
             }));
             if result.is_err() {
@@ -162,7 +174,10 @@ pub fn authenticate_session(
                 .userauth_password(username, pass)
                 .map_err(|e| AppError::Ssh(format!("Password auth failed: {e}")))?;
         }
-        AuthInfo::PubKey { key_data, passphrase } => {
+        AuthInfo::PubKey {
+            key_data,
+            passphrase,
+        } => {
             // If the key is passphrase-protected and no passphrase is stored, try the
             // system SSH agent first. On macOS the agent holds keys whose passphrases
             // are stored in the Keychain, so `ssh` in the terminal never prompts —
@@ -234,8 +249,8 @@ fn key_is_encrypted(pem: &str) -> bool {
         return false;
     }
     let pos = MAGIC.len();
-    let cipher_len = u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]])
-        as usize;
+    let cipher_len =
+        u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
     let cipher_start = pos + 4;
     data.len() >= cipher_start + cipher_len
         && &data[cipher_start..cipher_start + cipher_len] != b"none"
@@ -305,8 +320,7 @@ fn run_session(
                     Ok(0) => break 'io, // graceful EOF (e.g. user typed `exit`)
                     Ok(n) => {
                         active = true;
-                        let encoded =
-                            base64::engine::general_purpose::STANDARD.encode(&buf[..n]);
+                        let encoded = base64::engine::general_purpose::STANDARD.encode(&buf[..n]);
                         let _ = app_handle.emit(&output_event, encoded);
                     }
                     Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => break,

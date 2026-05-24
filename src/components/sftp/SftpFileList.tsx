@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import type { FileEntry } from "../../types/sftp";
 import { formatSize, formatDate } from "../../lib/format";
 
@@ -39,7 +39,7 @@ function formatPermissions(perm: number): string {
   ].join("");
 }
 
-function FileIcon({ isDir }: { isDir: boolean }) {
+export function FileIcon({ isDir }: { isDir: boolean }) {
   if (isDir) {
     return (
       <svg className="w-4 h-4 text-accent-fg shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -133,6 +133,7 @@ export default function SftpFileList({
 }: Props) {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const closeMenu = () => setContextMenu(null);
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
 
   if (entries.length === 0) {
     return <div className="flex-1 flex items-center justify-center text-dim text-sm">Empty directory</div>;
@@ -150,7 +151,7 @@ export default function SftpFileList({
   const handleContextMenu = (entry: FileEntry, e: React.MouseEvent) => {
     e.preventDefault();
     // Select the right-clicked item if not already selected
-    if (!selected.includes(entry.path)) onSelect(entry.path, false, false);
+    if (!selectedSet.has(entry.path)) onSelect(entry.path, false, false);
 
     // Keep menu within viewport
     const x = Math.min(e.clientX, window.innerWidth - 180);
@@ -180,7 +181,7 @@ export default function SftpFileList({
         </thead>
         <tbody>
           {entries.map((entry) => {
-            const isSelected = selected.includes(entry.path);
+            const isSelected = selectedSet.has(entry.path);
             const isRenaming = renaming === entry.path;
             return (
               <tr

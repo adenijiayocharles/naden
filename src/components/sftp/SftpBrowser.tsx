@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
 import { useSftpStore } from "../../store/sftpStore";
@@ -8,6 +8,10 @@ import SftpFileList, { type SortKey, type SortDir } from "./SftpFileList";
 import SftpToolbar, { PathBar } from "./SftpToolbar";
 import LocalFileBrowser from "./LocalFileBrowser";
 import { ConnectingOverlay, ErrorOverlay } from "../shared/ConnectionOverlay";
+import InlineCreateInput from "./InlineCreateInput";
+import DeleteConfirmBanner from "./DeleteConfirmBanner";
+import ErrorBanner from "./ErrorBanner";
+import { joinPath, parentPath } from "../../lib/path";
 
 interface Props {
   sessionId: string;
@@ -36,9 +40,7 @@ export default function SftpBrowser({ sessionId }: Props) {
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [creatingFolder, setCreatingFolder] = useState(false);
-  const [folderName, setFolderName] = useState("");
   const [creatingFile, setCreatingFile] = useState(false);
-  const [fileName, setFileName] = useState("");
 
   // Viewing options — separate state per pane
   const [showHidden, setShowHidden] = useState(true);       // remote
@@ -123,21 +125,24 @@ export default function SftpBrowser({ sessionId }: Props) {
     return () => window.removeEventListener("keydown", handler);
   }, []); // stable: ref always holds the latest handler
 
+  const visibleEntries = useMemo(() =>
+    [...(session?.entries ?? [])]
+      .filter((e) => showHidden || !e.name.startsWith("."))
+      .sort((a, b) => {
+        if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+        const dir = sortDir === "asc" ? 1 : -1;
+        if (sortKey === "size")     return dir * (a.size - b.size);
+        if (sortKey === "modified") return dir * ((a.modified ?? 0) - (b.modified ?? 0));
+        return dir * a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+      }),
+    [session?.entries, showHidden, sortKey, sortDir],
+  );
+
   if (!session) return null;
 
   const isBusy = busy || session.loadingEntries;
   const selectedEntries = session.entries.filter((e) => selected.includes(e.path));
   const selectedHasDir = selectedEntries.some((e) => e.isDir);
-
-  const visibleEntries = [...session.entries]
-    .filter((e) => showHidden || !e.name.startsWith("."))
-    .sort((a, b) => {
-      if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
-      const dir = sortDir === "asc" ? 1 : -1;
-      if (sortKey === "size")     return dir * (a.size - b.size);
-      if (sortKey === "modified") return dir * ((a.modified ?? 0) - (b.modified ?? 0));
-      return dir * a.name.toLowerCase().localeCompare(b.name.toLowerCase());
-    });
 
   const navigate = async (path: string) => {
     setSelected([]);
@@ -155,8 +160,7 @@ export default function SftpBrowser({ sessionId }: Props) {
   };
 
   const handleUp = () => {
-    const parent = session.currentPath.split("/").slice(0, -1).join("/") || "/";
-    navigate(parent).catch(() => {});
+    navigate(parentPath(session.currentPath)).catch(() => {});
   };
 
   const handleRefresh = () => navigate(session.currentPath).catch(() => {});
@@ -201,7 +205,7 @@ export default function SftpBrowser({ sessionId }: Props) {
     if (typeof result !== "string") return;
     const localPath = result;
     const remoteName = localPath.split("/").pop() ?? "upload";
-    const remotePath = `${session.currentPath}/${remoteName}`;
+    const remotePath = joinPath(session.currentPath, remoteName);
     setBusy(true);
     setTransferProgress(`Uploading ${remoteName}…`);
     setError(null);
@@ -254,7 +258,7 @@ export default function SftpBrowser({ sessionId }: Props) {
       const file = files[i];
       setTransferProgress(`Downloading ${file.name} (${i + 1}/${files.length})…`);
       try {
-        await sftpCommands.downloadSftpFile(sessionId, file.path, `${folder}/${file.name}`);
+        await sftpCommands.downloadSftpFile(sessionId, file.path, joinPath(folder, file.name));
       } catch (e) {
         setError(formatError(e));
         break;
@@ -271,16 +275,15 @@ export default function SftpBrowser({ sessionId }: Props) {
       setLocalNewFolderTrigger((n) => n + 1);
     } else {
       setCreatingFolder(true);
-      setFolderName("");
     }
   };
 
-  const commitNewFolder = async () => {
-    if (!folderName.trim()) { setCreatingFolder(false); return; }
+  const commitNewFolder = async (name: string) => {
+    if (!name) { setCreatingFolder(false); return; }
     setBusy(true);
     setError(null);
     try {
-      await sftpCommands.mkdirSftp(sessionId, `${session.currentPath}/${folderName.trim()}`);
+      await sftpCommands.mkdirSftp(sessionId, joinPath(session.currentPath, name));
       setCreatingFolder(false);
       await navigate(session.currentPath);
     } catch (e) {
@@ -295,16 +298,15 @@ export default function SftpBrowser({ sessionId }: Props) {
       setLocalNewFileTrigger((n) => n + 1);
     } else {
       setCreatingFile(true);
-      setFileName("");
     }
   };
 
-  const commitNewFile = async () => {
-    if (!fileName.trim()) { setCreatingFile(false); return; }
+  const commitNewFile = async (name: string) => {
+    if (!name) { setCreatingFile(false); return; }
     setBusy(true);
     setError(null);
     try {
-      await sftpCommands.touchSftpFile(sessionId, `${session.currentPath}/${fileName.trim()}`);
+      await sftpCommands.touchSftpFile(sessionId, joinPath(session.currentPath, name));
       setCreatingFile(false);
       await navigate(session.currentPath);
     } catch (e) {
@@ -322,18 +324,21 @@ export default function SftpBrowser({ sessionId }: Props) {
     setConfirmingDelete(false);
     setBusy(true);
     setError(null);
-    let failed = 0;
-    for (const path of selected) {
-      try {
-        await sftpCommands.deleteSftp(sessionId, path);
-      } catch {
-        failed++;
+    try {
+      let failed = 0;
+      for (const path of selected) {
+        try {
+          await sftpCommands.deleteSftp(sessionId, path);
+        } catch {
+          failed++;
+        }
       }
+      if (failed > 0) setError(`${failed} item(s) could not be deleted.`);
+      setSelected([]);
+      await navigate(session.currentPath);
+    } finally {
+      setBusy(false);
     }
-    if (failed > 0) setError(`${failed} item(s) could not be deleted.`);
-    setSelected([]);
-    await navigate(session.currentPath);
-    setBusy(false);
   };
 
   // ── Rename (inline) ────────────────────────────────────────────────────────
@@ -386,7 +391,7 @@ export default function SftpBrowser({ sessionId }: Props) {
     let firstError: string | null = null;
     for (const srcPath of clipboard.paths) {
       const name = srcPath.split("/").pop() ?? srcPath;
-      const destPath = `${session.currentPath}/${name}`.replace(/\/+/g, "/");
+      const destPath = joinPath(session.currentPath, name);
       // Skip if source and destination are identical (pasting into same folder with cut)
       if (srcPath === destPath) continue;
       try {
@@ -463,7 +468,7 @@ export default function SftpBrowser({ sessionId }: Props) {
     try {
       for (const localPath of localSelected) {
         const name = localPath.split("/").pop() ?? localPath;
-        const remotePath = `${session.currentPath}/${name}`.replace("//", "/");
+        const remotePath = joinPath(session.currentPath, name);
         await sftpCommands.uploadSftpFile(sessionId, localPath, remotePath);
       }
       await navigate(session.currentPath);
@@ -482,7 +487,7 @@ export default function SftpBrowser({ sessionId }: Props) {
     try {
       for (const entry of files) {
         const name = entry.path.split("/").pop() ?? entry.path;
-        const localPath = `${localCurrentPath}/${name}`.replace(/\/+/g, "/");
+        const localPath = joinPath(localCurrentPath, name);
         await sftpCommands.downloadSftpFile(sessionId, entry.path, localPath);
       }
     } catch (e) {
@@ -616,66 +621,17 @@ export default function SftpBrowser({ sessionId }: Props) {
 
       {/* Inline delete confirmation */}
       {confirmingDelete && (
-        <div className="px-4 py-2 bg-red-950/30 border-b border-red-900/40 flex items-center gap-3 text-xs">
-          <span className="text-red-300 flex-1">
-            Delete <span className="font-semibold">{selected.length} item{selected.length > 1 ? "s" : ""}</span>? This cannot be undone.
-          </span>
-          <button onClick={() => { void commitDelete(); }} className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white rounded transition-colors font-semibold">
-            Delete
-          </button>
-          <button onClick={() => setConfirmingDelete(false)} className="text-faint hover:text-white transition-colors">
-            Cancel
-          </button>
-        </div>
+        <DeleteConfirmBanner count={selected.length} onConfirm={() => { void commitDelete(); }} onCancel={() => setConfirmingDelete(false)} />
       )}
 
       {/* New folder input */}
-      {creatingFolder && (
-        <div className="px-4 py-2 bg-surface-1 border-b border-stroke-subtle flex items-center gap-2">
-          <span className="text-xs text-muted">New folder:</span>
-          <input
-            autoFocus
-            value={folderName}
-            onChange={(e) => setFolderName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void commitNewFolder();
-              if (e.key === "Escape") setCreatingFolder(false);
-            }}
-            placeholder="folder-name"
-            className="flex-1 bg-surface-3 border border-[#333] rounded px-2 py-1 text-sm text-white outline-none focus:border-accent font-mono placeholder-[#444]"
-          />
-          <button onClick={() => { void commitNewFolder(); }} className="text-xs text-accent-fg px-2">Create</button>
-          <button onClick={() => setCreatingFolder(false)} className="text-xs text-faint px-2">Cancel</button>
-        </div>
-      )}
+      {creatingFolder && <InlineCreateInput label="New folder:" placeholder="folder-name" onCommit={(v) => { void commitNewFolder(v); }} onCancel={() => setCreatingFolder(false)} />}
 
       {/* New file input */}
-      {creatingFile && (
-        <div className="px-4 py-2 bg-surface-1 border-b border-stroke-subtle flex items-center gap-2">
-          <span className="text-xs text-muted">New file:</span>
-          <input
-            autoFocus
-            value={fileName}
-            onChange={(e) => setFileName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void commitNewFile();
-              if (e.key === "Escape") setCreatingFile(false);
-            }}
-            placeholder="filename.txt"
-            className="flex-1 bg-surface-3 border border-[#333] rounded px-2 py-1 text-sm text-white outline-none focus:border-accent font-mono placeholder-[#444]"
-          />
-          <button onClick={() => { void commitNewFile(); }} className="text-xs text-accent-fg px-2">Create</button>
-          <button onClick={() => setCreatingFile(false)} className="text-xs text-faint px-2">Cancel</button>
-        </div>
-      )}
+      {creatingFile && <InlineCreateInput label="New file:" placeholder="filename.txt" onCommit={(v) => { void commitNewFile(v); }} onCancel={() => setCreatingFile(false)} />}
 
       {/* Error banner */}
-      {error && (
-        <div className="px-4 py-2 bg-red-950/40 border-b border-red-900/50 text-xs text-red-400 flex items-center justify-between">
-          {error}
-          <button onClick={() => setError(null)} className="text-red-600 hover:text-red-400 ml-4">×</button>
-        </div>
-      )}
+      {error && <ErrorBanner error={error} onDismiss={() => setError(null)} />}
 
       {/* Transfer progress */}
       {transferProgress && (

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { serverCommands, logCommands, type ReachabilityResult } from "../lib/tauriCommands";
+import { formatError } from "../lib/errors";
 import type {
   Server,
   Group,
@@ -10,6 +11,7 @@ import type {
 
 interface ReachabilityInfo extends ReachabilityResult {
   checking: boolean;
+  error?: string;
 }
 
 interface ServerStore {
@@ -163,9 +165,10 @@ export const useServerStore = create<ServerStore>((set) => ({
       set((s) => ({
         reachability: { ...s.reachability, [serverId]: { ...result, checking: false } },
       }));
-    } catch {
+    } catch (e) {
+      console.warn(`[reachability] check failed for ${serverId}:`, e);
       set((s) => ({
-        reachability: { ...s.reachability, [serverId]: { reachable: false, checking: false } },
+        reachability: { ...s.reachability, [serverId]: { reachable: false, checking: false, error: formatError(e) } },
       }));
     }
   },

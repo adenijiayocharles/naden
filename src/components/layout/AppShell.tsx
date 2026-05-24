@@ -84,7 +84,10 @@ export default function AppShell() {
   const setOnboardingComplete = useUiStore((s) => s.setOnboardingComplete);
   const importSshConfigOpen = useUiStore((s) => s.importSshConfigOpen);
   const closeImportSshConfig = useUiStore((s) => s.closeImportSshConfig);
-  const { isSetup, isUnlocked, isChecking, isPasswordRequired } = useVaultStore();
+  const isSetup = useVaultStore((s) => s.isSetup);
+  const isUnlocked = useVaultStore((s) => s.isUnlocked);
+  const isChecking = useVaultStore((s) => s.isChecking);
+  const isPasswordRequired = useVaultStore((s) => s.isPasswordRequired);
 
   const terminalSessions = useTerminalStore((s) => s.sessions);
   const terminalActiveId = useTerminalStore((s) => s.activeSessionId);

@@ -4,6 +4,47 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use tauri::Emitter;
 
+/// Extensions (lowercase, without leading dot) that are safe to open in the
+/// user's default text editor via `open`/`xdg-open`. Files with no extension
+/// are also permitted (treated as plain text).
+const EDIT_ALLOWED_EXTENSIONS: &[&str] = &[
+    "txt",
+    "md",
+    "rs",
+    "py",
+    "js",
+    "ts",
+    "tsx",
+    "jsx",
+    "json",
+    "toml",
+    "yaml",
+    "yml",
+    "sh",
+    "bash",
+    "zsh",
+    "conf",
+    "cfg",
+    "ini",
+    "env",
+    "sql",
+    "html",
+    "css",
+    "xml",
+    "log",
+    "csv",
+    "go",
+    "rb",
+    "php",
+    "c",
+    "h",
+    "cpp",
+    "java",
+    "kt",
+    "swift",
+    "gitignore",
+];
+
 use crate::error::AppError;
 use crate::ssh::connection::{authenticate_session, AuthInfo};
 use crate::ssh::jump_host::{self, JumpInfo};
@@ -513,6 +554,20 @@ fn open_edit(
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| "file".to_string());
 
+    // Reject file types not on the safe-to-edit allowlist to prevent accidentally
+    // opening executables, binaries, or other dangerous file types.
+    let ext = Path::new(&filename)
+        .extension()
+        .map(|e| e.to_string_lossy().to_lowercase());
+    match &ext {
+        Some(e) if !EDIT_ALLOWED_EXTENSIONS.contains(&e.as_str()) => {
+            return Err(AppError::Io(
+                "File type not supported for editing: use Download instead".into(),
+            ));
+        }
+        _ => {} // None (no extension) is permitted as plain text
+    }
+
     // Build temp dir: <os_tmp>/ssh-manager/<session_id>/
     let temp_dir = std::env::temp_dir().join("ssh-manager").join(session_id);
     std::fs::create_dir_all(&temp_dir)
@@ -595,6 +650,14 @@ fn sync_folder_recursive(
         let local_entry_path = entry.path();
         let local_entry_str = local_entry_path.to_string_lossy().into_owned();
         let file_name = entry.file_name().to_string_lossy().into_owned();
+
+        // Reject names that could escape the sync root via path traversal.
+        // A well-behaved local filesystem won't produce these, but be explicit.
+        if file_name == "." || file_name == ".." || file_name.contains('/') {
+            eprintln!("[sftp sync] skipping unsafe filename: {file_name:?}");
+            continue;
+        }
+
         let remote_entry_path = format!("{}/{}", remote_path.trim_end_matches('/'), file_name);
 
         let file_type = entry

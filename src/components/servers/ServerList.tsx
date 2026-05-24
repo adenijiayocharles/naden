@@ -3,7 +3,7 @@ import { useServerStore } from "../../store/serverStore";
 import { useUiStore, type SortMode } from "../../store/uiStore";
 import ServerCard from "./ServerCard";
 import ServerRow from "./ServerRow";
-import type { Server } from "../../types/server";
+import type { Server, Group } from "../../types/server";
 
 function sortServers(list: Server[], mode: SortMode, lastConnectedMap: Record<string, string>): Server[] {
   if (mode === "default") return list;
@@ -22,6 +22,11 @@ function sortServers(list: Server[], mode: SortMode, lastConnectedMap: Record<st
   });
 }
 
+function groupColorFor(groups: Group[], groupId: string | undefined): string | undefined {
+  if (!groupId) return undefined;
+  return groups.find((g) => g.id === groupId)?.color;
+}
+
 export default function ServerList() {
   const servers = useServerStore((s) => s.servers);
   const groups = useServerStore((s) => s.groups);
@@ -32,12 +37,25 @@ export default function ServerList() {
   const sortMode = useUiStore((s) => s.sortMode);
   const collapsedGroups = useUiStore((s) => s.collapsedGroups);
   const toggleGroupCollapse = useUiStore((s) => s.toggleGroupCollapse);
-  const { filterGroupId, filterTagId, filterFavourites, searchQuery, searchResults } = useUiStore();
+  const filterGroupId = useUiStore((s) => s.filterGroupId);
+  const filterTagId = useUiStore((s) => s.filterTagId);
+  const filterFavourites = useUiStore((s) => s.filterFavourites);
+  const searchQuery = useUiStore((s) => s.searchQuery);
+  const searchResults = useUiStore((s) => s.searchResults);
 
   const Item = viewMode === "row" ? ServerRow : ServerCard;
   const listClass = viewMode === "row"
     ? "border border-stroke-subtle rounded-lg"
     : "grid gap-3 grid-cols-[repeat(auto-fill,minmax(240px,1fr))]";
+
+  const renderItem = (s: Server) => (
+    <Item
+      key={s.id}
+      server={s}
+      groupColor={groupColorFor(groups, s.groupId)}
+      lastConnected={lastConnectedMap[s.id]}
+    />
+  );
 
   // All hooks must be called before any early return.
   const sortedSearch = useMemo(
@@ -94,7 +112,7 @@ export default function ServerList() {
       </div>
     ) : (
       <div className={listClass}>
-        {sortedSearch.map((s) => <Item key={s.id} server={s} />)}
+        {sortedSearch.map((s) => renderItem(s))}
       </div>
     );
   }
@@ -134,7 +152,7 @@ export default function ServerList() {
   if (filterFavourites || filterGroupId || filterTagId) {
     return (
       <div className={listClass}>
-        {sortedFiltered.map((s) => <Item key={s.id} server={s} />)}
+        {sortedFiltered.map((s) => renderItem(s))}
       </div>
     );
   }
@@ -172,7 +190,7 @@ export default function ServerList() {
             </button>
             {!collapsed && (
               <div className={listClass}>
-                {items.map((s) => <Item key={s.id} server={s} />)}
+                {items.map((s) => renderItem(s))}
               </div>
             )}
           </section>
@@ -197,7 +215,7 @@ export default function ServerList() {
           </button>
           {!collapsedGroups.has("__ungrouped__") && (
             <div className={listClass}>
-              {ungrouped.map((s) => <Item key={s.id} server={s} />)}
+              {ungrouped.map((s) => renderItem(s))}
             </div>
           )}
         </section>

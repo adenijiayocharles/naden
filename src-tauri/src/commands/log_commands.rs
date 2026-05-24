@@ -127,9 +127,7 @@ pub async fn export_logs_csv(
     .fetch_all(&state.db)
     .await?;
 
-    let mut csv = String::from(
-        "Time,Server,Host,Port,Username,Outcome,Duration (s),Error\n",
-    );
+    let mut csv = String::from("Time,Server,Host,Port,Username,Outcome,Duration (s),Error\n");
 
     for e in &entries {
         let duration_secs = match (&e.session_start, &e.session_end) {

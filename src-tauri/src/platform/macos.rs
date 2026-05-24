@@ -63,8 +63,8 @@ fn install_monitor(ns_window: *mut AnyObject) {
         // The drag zone is the top HEADER_HEIGHT pixels, excluding the
         // traffic-lights area on the left and the action-buttons area on the right.
         let in_header = location.y >= bounds.size.height - HEADER_HEIGHT;
-        let in_drag_x = location.x >= TRAFFIC_LIGHTS_INSET
-            && location.x <= bounds.size.width - BUTTONS_INSET;
+        let in_drag_x =
+            location.x >= TRAFFIC_LIGHTS_INSET && location.x <= bounds.size.width - BUTTONS_INSET;
 
         if in_header && in_drag_x {
             // performWindowDragWithEvent: blocks until the drag or click

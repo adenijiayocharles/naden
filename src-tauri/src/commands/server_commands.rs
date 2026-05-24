@@ -66,10 +66,7 @@ pub async fn update_server(
 }
 
 #[tauri::command]
-pub async fn delete_server(
-    id: String,
-    state: tauri::State<'_, AppState>,
-) -> Result<(), AppError> {
+pub async fn delete_server(id: String, state: tauri::State<'_, AppState>) -> Result<(), AppError> {
     // Clean up the keychain entry before removing the DB row so it doesn't leak.
     if let Ok(s) = queries::get_server_db(&state.db, &id).await {
         if let Some(cred_id) = s.server.vault_credential_id {
@@ -87,15 +84,9 @@ pub async fn move_server_group(
     group_id: Option<String>,
     state: tauri::State<'_, AppState>,
 ) -> Result<ServerWithTags, AppError> {
-    let now = chrono::Utc::now().to_rfc3339();
-    sqlx::query("UPDATE servers SET group_id = ?, updated_at = ? WHERE id = ?")
-        .bind(group_id.as_deref())
-        .bind(&now)
-        .bind(&server_id)
-        .execute(&state.db)
-        .await?;
+    let result = queries::move_server_group_db(&state.db, &server_id, group_id.as_deref()).await?;
     refresh_cache(&state).await;
-    queries::get_server_db(&state.db, &server_id).await
+    Ok(result)
 }
 
 #[tauri::command]
@@ -103,16 +94,9 @@ pub async fn toggle_favourite(
     server_id: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<ServerWithTags, AppError> {
-    let server = queries::get_server_db(&state.db, &server_id).await?;
-    let now = chrono::Utc::now().to_rfc3339();
-    sqlx::query("UPDATE servers SET is_favourite = ?, updated_at = ? WHERE id = ?")
-        .bind(!server.server.is_favourite)
-        .bind(&now)
-        .bind(&server_id)
-        .execute(&state.db)
-        .await?;
+    let result = queries::toggle_favourite_db(&state.db, &server_id).await?;
     refresh_cache(&state).await;
-    queries::get_server_db(&state.db, &server_id).await
+    Ok(result)
 }
 
 #[tauri::command]
@@ -190,25 +174,37 @@ pub async fn check_reachability(
 
         let addrs: Vec<_> = match format!("{host}:{port}").to_socket_addrs() {
             Ok(it) => it.collect(),
-            Err(_) => return ReachabilityResult { reachable: false, latency_ms: None },
+            Err(_) => {
+                return ReachabilityResult {
+                    reachable: false,
+                    latency_ms: None,
+                }
+            }
         };
 
         if addrs.is_empty() {
-            return ReachabilityResult { reachable: false, latency_ms: None };
+            return ReachabilityResult {
+                reachable: false,
+                latency_ms: None,
+            };
         }
 
         // Try every resolved address — matches the behaviour of tcp_connect in
         // connection.rs so round-robin DNS hosts aren't falsely reported as down.
         let start = Instant::now();
         for addr in &addrs {
-            if std::net::TcpStream::connect_timeout(addr, std::time::Duration::from_secs(3)).is_ok() {
+            if std::net::TcpStream::connect_timeout(addr, std::time::Duration::from_secs(3)).is_ok()
+            {
                 return ReachabilityResult {
                     reachable: true,
                     latency_ms: Some(start.elapsed().as_millis() as u64),
                 };
             }
         }
-        ReachabilityResult { reachable: false, latency_ms: None }
+        ReachabilityResult {
+            reachable: false,
+            latency_ms: None,
+        }
     })
     .await
     .map_err(|_| AppError::Ssh("connectivity check failed".into()))?;
@@ -258,10 +254,7 @@ pub async fn list_tags(state: tauri::State<'_, AppState>) -> Result<Vec<Tag>, Ap
 }
 
 #[tauri::command]
-pub async fn create_tag(
-    name: String,
-    state: tauri::State<'_, AppState>,
-) -> Result<Tag, AppError> {
+pub async fn create_tag(name: String, state: tauri::State<'_, AppState>) -> Result<Tag, AppError> {
     queries::create_tag_db(&state.db, &name).await
 }
 
@@ -275,9 +268,6 @@ pub async fn update_tag(
 }
 
 #[tauri::command]
-pub async fn delete_tag(
-    id: String,
-    state: tauri::State<'_, AppState>,
-) -> Result<(), AppError> {
+pub async fn delete_tag(id: String, state: tauri::State<'_, AppState>) -> Result<(), AppError> {
     queries::delete_tag_db(&state.db, &id).await
 }

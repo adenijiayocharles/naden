@@ -31,7 +31,11 @@ pub fn filter_servers(servers: &[ServerWithTags], query: &str) -> Vec<ServerWith
 
 fn build_haystack(server: &ServerWithTags) -> String {
     let s = &server.server;
-    let mut parts = vec![s.display_name.as_str(), s.hostname.as_str(), s.username.as_str()];
+    let mut parts = vec![
+        s.display_name.as_str(),
+        s.hostname.as_str(),
+        s.username.as_str(),
+    ];
     for tag in &server.tags {
         parts.push(tag.name.as_str());
     }

@@ -1,6 +1,68 @@
-use crate::vault::{self, master_password};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
 use crate::error::AppError;
+use crate::vault::{self, master_password};
 use crate::AppState;
+
+// ── Lockout persistence ───────────────────────────────────────────────────────
+
+/// Writes the current failure count and lockout expiry to the settings table
+/// so the brute-force lockout survives app restarts.
+pub(crate) async fn persist_lockout(
+    db: &sqlx::SqlitePool,
+    failures: u32,
+    until: Option<SystemTime>,
+) {
+    let failures_str = failures.to_string();
+    let until_str = until
+        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+        .map(|d| d.as_secs().to_string())
+        .unwrap_or_default();
+
+    let _ = sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+        .bind("vault_lockout_failures")
+        .bind(&failures_str)
+        .execute(db)
+        .await;
+
+    let _ = sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+        .bind("vault_lockout_until")
+        .bind(&until_str)
+        .execute(db)
+        .await;
+}
+
+/// Reads the persisted failure count and lockout expiry from the settings table.
+/// Returns `(0, None)` on any parse or DB error, and clears a lockout that has
+/// already expired so it is not presented to the user.
+pub async fn load_lockout(db: &sqlx::SqlitePool) -> (u32, Option<SystemTime>) {
+    let failures: u32 = sqlx::query_scalar::<_, String>(
+        "SELECT value FROM settings WHERE key = 'vault_lockout_failures'",
+    )
+    .fetch_optional(db)
+    .await
+    .ok()
+    .flatten()
+    .and_then(|v| v.parse().ok())
+    .unwrap_or(0);
+
+    let until: Option<SystemTime> = sqlx::query_scalar::<_, String>(
+        "SELECT value FROM settings WHERE key = 'vault_lockout_until'",
+    )
+    .fetch_optional(db)
+    .await
+    .ok()
+    .flatten()
+    .filter(|v| !v.is_empty())
+    .and_then(|v| v.parse::<u64>().ok())
+    .map(|secs| UNIX_EPOCH + Duration::from_secs(secs))
+    // Discard if already in the past so stale rows don't lock out the user.
+    .filter(|&t| t > SystemTime::now());
+
+    (failures, until)
+}
+
+// ── Vault commands ────────────────────────────────────────────────────────────
 
 #[tauri::command]
 pub async fn vault_is_setup(state: tauri::State<'_, AppState>) -> Result<bool, AppError> {
@@ -33,7 +95,7 @@ pub async fn vault_unlock(
         let (_count, lockout_until) = &mut *failures;
 
         if let Some(until) = *lockout_until {
-            if std::time::Instant::now() < until {
+            if SystemTime::now() < until {
                 return Err(AppError::Vault(
                     "too many failed attempts — please wait before trying again".into(),
                 ));
@@ -48,6 +110,7 @@ pub async fn vault_unlock(
     match crate::vault::master_password::verify(&state.db, &master_password).await? {
         Some(key) => {
             *state.unlock_failures.lock().await = (0, None);
+            persist_lockout(&state.db, 0, None).await;
             *state.vault_key.lock().await = Some(key);
             // Reset auto-lock timer on successful unlock
             *state.last_vault_activity.lock().await = std::time::Instant::now();
@@ -61,9 +124,9 @@ pub async fn vault_unlock(
             if *count >= 5 {
                 let extra = (*count - 5).min(7);
                 let secs = 30u64 * (1u64 << extra);
-                *lockout_until =
-                    Some(std::time::Instant::now() + std::time::Duration::from_secs(secs));
+                *lockout_until = Some(SystemTime::now() + Duration::from_secs(secs));
             }
+            persist_lockout(&state.db, *count, *lockout_until).await;
             Ok(false)
         }
     }
@@ -135,7 +198,7 @@ pub async fn vault_disable_password(
         let mut failures = state.unlock_failures.lock().await;
         let (_count, lockout_until) = &mut *failures;
         if let Some(until) = *lockout_until {
-            if std::time::Instant::now() < until {
+            if SystemTime::now() < until {
                 return Err(AppError::Vault(
                     "too many failed attempts — please wait before trying again".into(),
                 ));
@@ -153,8 +216,7 @@ pub async fn vault_disable_password(
             if *count >= 5 {
                 let extra = (*count - 5).min(7);
                 let secs = 30u64 * (1u64 << extra);
-                *lockout_until =
-                    Some(std::time::Instant::now() + std::time::Duration::from_secs(secs));
+                *lockout_until = Some(SystemTime::now() + Duration::from_secs(secs));
             }
             return Err(AppError::Vault("incorrect password".into()));
         }
@@ -222,7 +284,7 @@ pub async fn vault_change_password(
         let mut failures = state.unlock_failures.lock().await;
         let (_count, lockout_until) = &mut *failures;
         if let Some(until) = *lockout_until {
-            if std::time::Instant::now() < until {
+            if SystemTime::now() < until {
                 return Err(AppError::Vault(
                     "too many failed attempts — please wait before trying again".into(),
                 ));
@@ -240,8 +302,7 @@ pub async fn vault_change_password(
             if *count >= 5 {
                 let extra = (*count - 5).min(7);
                 let secs = 30u64 * (1u64 << extra);
-                *lockout_until =
-                    Some(std::time::Instant::now() + std::time::Duration::from_secs(secs));
+                *lockout_until = Some(SystemTime::now() + Duration::from_secs(secs));
             }
             return Err(AppError::Vault("incorrect current password".into()));
         }

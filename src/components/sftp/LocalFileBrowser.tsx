@@ -1,10 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { LocalFileEntry } from "../../types/local";
 import { localCommands } from "../../lib/tauriCommands";
 import { formatSize, formatDate } from "../../lib/format";
 import { formatError } from "../../lib/errors";
 import { PathBar } from "./SftpToolbar";
-import { MenuItem, ContextMenuPopup } from "./SftpFileList";
+import { FileIcon, MenuItem, ContextMenuPopup } from "./SftpFileList";
+import DeleteConfirmBanner from "./DeleteConfirmBanner";
+import ErrorBanner from "./ErrorBanner";
+import InlineCreateInput from "./InlineCreateInput";
+import { joinPath, parentPath } from "../../lib/path";
 
 interface Props {
   onSelectedChange: (paths: string[]) => void;
@@ -16,22 +20,6 @@ interface Props {
 }
 
 interface ContextMenu { x: number; y: number; entry: LocalFileEntry }
-
-function FileIcon({ isDir }: { isDir: boolean }) {
-  if (isDir) {
-    return (
-      <svg className="w-4 h-4 text-accent-fg shrink-0" fill="currentColor" viewBox="0 0 20 20">
-        <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-      </svg>
-    );
-  }
-  return (
-    <svg className="w-4 h-4 text-muted shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-  );
-}
 
 export default function LocalFileBrowser({ onSelectedChange, onPathChange, onActivate, showHidden = true, newFolderTrigger = 0, newFileTrigger = 0 }: Props) {
   const [currentPath, setCurrentPath] = useState("");
@@ -45,9 +33,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [creatingFolder, setCreatingFolder] = useState(false);
-  const [folderName, setFolderName] = useState("");
   const [creatingFile, setCreatingFile] = useState(false);
-  const [fileName, setFileName] = useState("");
   const initialised = useRef(false);
 
   const navigateTo = useCallback(async (path: string) => {
@@ -82,20 +68,18 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
   useEffect(() => {
     if (newFolderTrigger === 0) return;
     setCreatingFolder(true);
-    setFolderName("");
   }, [newFolderTrigger]);
 
   useEffect(() => {
     if (newFileTrigger === 0) return;
     setCreatingFile(true);
-    setFileName("");
   }, [newFileTrigger]);
 
-  const commitNewFolder = async () => {
-    if (!folderName.trim()) { setCreatingFolder(false); return; }
+  const commitNewFolder = async (name: string) => {
+    if (!name) { setCreatingFolder(false); return; }
     setError(null);
     try {
-      await localCommands.createLocalDir(`${currentPath}/${folderName.trim()}`);
+      await localCommands.createLocalDir(joinPath(currentPath, name));
       setCreatingFolder(false);
       await navigateTo(currentPath);
     } catch (e) {
@@ -103,11 +87,11 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
     }
   };
 
-  const commitNewFile = async () => {
-    if (!fileName.trim()) { setCreatingFile(false); return; }
+  const commitNewFile = async (name: string) => {
+    if (!name) { setCreatingFile(false); return; }
     setError(null);
     try {
-      await localCommands.createLocalFile(`${currentPath}/${fileName.trim()}`);
+      await localCommands.createLocalFile(joinPath(currentPath, name));
       setCreatingFile(false);
       await navigateTo(currentPath);
     } catch (e) {
@@ -116,8 +100,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
   };
 
   const handleUp = () => {
-    const parent = currentPath.split("/").slice(0, -1).join("/") || "/";
-    void navigateTo(parent);
+    void navigateTo(parentPath(currentPath));
   };
 
   const handleRowClick = (entry: LocalFileEntry, e: React.MouseEvent) => {
@@ -146,7 +129,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
     }
     if (e.metaKey || e.ctrlKey) {
       setSelected((prev) =>
-        prev.includes(entry.path) ? prev.filter((p) => p !== entry.path) : [...prev, entry.path],
+        selectedSet.has(entry.path) ? prev.filter((p) => p !== entry.path) : [...prev, entry.path],
       );
     } else {
       setSelected([entry.path]);
@@ -157,7 +140,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
   const handleContextMenu = (entry: LocalFileEntry, e: React.MouseEvent) => {
     e.preventDefault();
     onActivate();
-    if (!selected.includes(entry.path)) {
+    if (!selectedSet.has(entry.path)) {
       setSelected([entry.path]);
       setLastClickedPath(entry.path);
     }
@@ -203,6 +186,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
 
   const cm = contextMenu;
   const selCount = selected.length;
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
   const visibleEntries = showHidden ? entries : entries.filter((e) => !e.name.startsWith("."));
 
   return (
@@ -235,66 +219,17 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
 
       {/* Delete confirmation */}
       {confirmingDelete && (
-        <div className="px-4 py-2 bg-red-950/30 border-b border-red-900/40 flex items-center gap-3 text-xs shrink-0">
-          <span className="text-red-300 flex-1">
-            Delete <span className="font-semibold">{selCount} item{selCount > 1 ? "s" : ""}</span>? This cannot be undone.
-          </span>
-          <button onClick={() => { void commitDelete(); }} className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white rounded transition-colors font-semibold">
-            Delete
-          </button>
-          <button onClick={() => setConfirmingDelete(false)} className="text-faint hover:text-white transition-colors">
-            Cancel
-          </button>
-        </div>
+        <DeleteConfirmBanner count={selCount} onConfirm={() => { void commitDelete(); }} onCancel={() => setConfirmingDelete(false)} />
       )}
 
       {/* Error banner */}
-      {error && (
-        <div className="px-4 py-2 bg-red-950/40 border-b border-red-900/50 text-xs text-red-400 flex items-center justify-between shrink-0">
-          {error}
-          <button onClick={() => setError(null)} className="text-red-600 hover:text-red-400 ml-4">×</button>
-        </div>
-      )}
+      {error && <ErrorBanner error={error} onDismiss={() => setError(null)} />}
 
       {/* New folder input */}
-      {creatingFolder && (
-        <div className="px-4 py-2 bg-surface-1 border-b border-stroke-subtle flex items-center gap-2 shrink-0">
-          <span className="text-xs text-muted">New folder:</span>
-          <input
-            autoFocus
-            value={folderName}
-            onChange={(e) => setFolderName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void commitNewFolder();
-              if (e.key === "Escape") setCreatingFolder(false);
-            }}
-            placeholder="folder-name"
-            className="flex-1 bg-surface-3 border border-[#333] rounded px-2 py-1 text-sm text-white outline-none focus:border-accent font-mono placeholder-[#444]"
-          />
-          <button onClick={() => { void commitNewFolder(); }} className="text-xs text-accent-fg px-2">Create</button>
-          <button onClick={() => setCreatingFolder(false)} className="text-xs text-faint px-2">Cancel</button>
-        </div>
-      )}
+      {creatingFolder && <InlineCreateInput label="New folder:" placeholder="folder-name" onCommit={(v) => { void commitNewFolder(v); }} onCancel={() => setCreatingFolder(false)} />}
 
       {/* New file input */}
-      {creatingFile && (
-        <div className="px-4 py-2 bg-surface-1 border-b border-stroke-subtle flex items-center gap-2 shrink-0">
-          <span className="text-xs text-muted">New file:</span>
-          <input
-            autoFocus
-            value={fileName}
-            onChange={(e) => setFileName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void commitNewFile();
-              if (e.key === "Escape") setCreatingFile(false);
-            }}
-            placeholder="filename.txt"
-            className="flex-1 bg-surface-3 border border-[#333] rounded px-2 py-1 text-sm text-white outline-none focus:border-accent font-mono placeholder-[#444]"
-          />
-          <button onClick={() => { void commitNewFile(); }} className="text-xs text-accent-fg px-2">Create</button>
-          <button onClick={() => setCreatingFile(false)} className="text-xs text-faint px-2">Cancel</button>
-        </div>
-      )}
+      {creatingFile && <InlineCreateInput label="New file:" placeholder="filename.txt" onCommit={(v) => { void commitNewFile(v); }} onCancel={() => setCreatingFile(false)} />}
 
       {/* File list */}
       <div className="flex-1 overflow-y-auto scroll-smooth relative">
@@ -314,7 +249,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
             </thead>
             <tbody>
               {visibleEntries.map((entry) => {
-                const isSelected = selected.includes(entry.path);
+                const isSelected = selectedSet.has(entry.path);
                 const isRenaming = renaming === entry.path;
                 return (
                   <tr
