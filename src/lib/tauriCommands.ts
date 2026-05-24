@@ -9,6 +9,7 @@ import type {
   ImportPreview,
 } from "../types/server";
 import type { DirListing } from "../types/sftp";
+import type { LocalFileEntry } from "../types/local";
 
 export interface ReachabilityResult {
   reachable: boolean;
@@ -128,6 +129,14 @@ export const vaultCommands = {
 
   deleteCredential: (vaultCredentialId: string) =>
     invoke<void>("delete_credential", { vaultCredentialId }),
+};
+
+export const localCommands = {
+  getLocalHomeDir: () =>
+    invoke<string>("get_local_home_dir"),
+
+  listLocalDir: (path: string) =>
+    invoke<LocalFileEntry[]>("list_local_dir", { path }),
 };
 
 export const sftpCommands = {
