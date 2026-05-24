@@ -1,4 +1,6 @@
 import { useRef, useState, useEffect, useMemo } from "react";
+import { List, type RowComponentProps } from "react-window";
+import { AutoSizer } from "react-virtualized-auto-sizer";
 import type { FileEntry } from "../../types/sftp";
 import { formatSize, formatDate } from "../../lib/format";
 
@@ -29,6 +31,27 @@ interface Props {
 }
 
 interface ContextMenu { x: number; y: number; entry: FileEntry }
+
+interface RowData {
+  entries: FileEntry[];
+  selectedSet: Set<string>;
+  renaming: string | null;
+  renameValue: string;
+  onSelect: (path: string, meta: boolean, shift: boolean) => void;
+  onNavigate: (entry: FileEntry) => void;
+  onRenameStart: (path: string) => void;
+  onRenameChange: (v: string) => void;
+  onRenameCommit: () => void;
+  onRenameCancel: () => void;
+  onCut: () => void;
+  onCopy: () => void;
+  onPaste: () => void;
+  onDelete: () => void;
+  onEdit?: (path: string) => void;
+  onChmod?: (path: string, mode: number) => void;
+  hasClipboard: boolean;
+  onContextMenu: (entry: FileEntry, e: React.MouseEvent) => void;
+}
 
 /** Format a Unix permission integer as a 9-character string, e.g. `rwxr-xr-x`. */
 function formatPermissions(perm: number): string {
@@ -65,7 +88,7 @@ function ColHeader({ label, colKey, sortKey, sortDir, align = "left", className 
 }) {
   const active = sortKey === colKey;
   return (
-    <th className={`${className} py-2 font-medium text-xs uppercase tracking-wider text-${align}`}>
+    <div className={`${className} py-2 font-medium text-xs uppercase tracking-wider text-${align}`}>
       <button
         onClick={() => onSort(colKey)}
         className={`flex items-center gap-0.5 transition-colors ${align === "right" ? "ml-auto" : ""} ${active ? "text-white" : "text-faint hover:text-muted"}`}
@@ -73,7 +96,7 @@ function ColHeader({ label, colKey, sortKey, sortDir, align = "left", className 
         {label}
         <SortIndicator active={active} dir={sortDir} />
       </button>
-    </th>
+    </div>
   );
 }
 
@@ -125,6 +148,87 @@ export function ContextMenuPopup({ x, y, onClose, children }: {
   );
 }
 
+const GRID_COLS = "1fr 5rem 7rem 6rem";
+
+// NOTE: defined outside SftpFileList so it doesn't get recreated on every render.
+const Row = ({ index, style, entries, selectedSet, renaming, renameValue, onSelect, onNavigate, onRenameStart, onRenameChange, onRenameCommit, onRenameCancel, onChmod, onContextMenu }: RowComponentProps<RowData>) => {
+  const entry = entries[index];
+  const isSelected = selectedSet.has(entry.path);
+  const isRenaming = renaming === entry.path;
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (e.detail === 2) {
+      if (entry.isDir) onNavigate(entry);
+      else onRenameStart(entry.path);
+    } else {
+      onSelect(entry.path, e.metaKey || e.ctrlKey, e.shiftKey);
+    }
+  };
+
+  return (
+    <div
+      style={{ ...style, gridTemplateColumns: GRID_COLS }}
+      onClick={handleClick}
+      onContextMenu={(e) => onContextMenu(entry, e)}
+      className={`grid cursor-pointer border-b border-stroke-subtle transition-colors select-none ${
+        isSelected ? "bg-accent/10 text-accent-fg" : "text-secondary hover:bg-surface-2 hover:text-white"
+      }`}
+    >
+      {/* Name cell */}
+      <div className="px-2 flex items-center gap-2 min-w-0">
+        <FileIcon isDir={entry.isDir} />
+        {isRenaming ? (
+          <input
+            autoFocus
+            value={renameValue}
+            onChange={(e) => onRenameChange(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === "Enter") onRenameCommit();
+              if (e.key === "Escape") onRenameCancel();
+            }}
+            onBlur={onRenameCommit}
+            className="flex-1 h-6 bg-surface-3 border border-accent rounded px-1.5 text-xs text-white outline-none font-mono min-w-0"
+          />
+        ) : (
+          <span className="truncate font-mono text-xs" title={entry.name}>{entry.name}</span>
+        )}
+        {entry.isSymlink && (
+          <span className="text-xs text-accent-fg opacity-70 shrink-0 font-mono" title="Symbolic link">@</span>
+        )}
+      </div>
+
+      {/* Size cell */}
+      <div className="px-2 flex items-center justify-end text-faint font-mono text-xs tabular-nums">
+        {formatSize(entry.size, entry.isDir)}
+      </div>
+
+      {/* Modified cell */}
+      <div className="px-2 flex items-center justify-end text-faint text-xs">
+        {formatDate(entry.modified)}
+      </div>
+
+      {/* Permissions cell */}
+      <div className="pl-2 pr-4 flex items-center justify-end">
+        {entry.permissions != null ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); onChmod?.(entry.path, entry.permissions ?? 0o644); }}
+            className="font-mono text-xs text-faint hover:text-accent-fg transition-colors disabled:pointer-events-none"
+            title="Click to change permissions"
+            disabled={!onChmod}
+          >
+            {formatPermissions(entry.permissions)}
+          </button>
+        ) : (
+          <span className="font-mono text-xs text-dim">—</span>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default function SftpFileList({
   entries, selected, renaming, renameValue, sortKey, sortDir, hasClipboard,
   onSort, onSelect, onNavigate,
@@ -135,31 +239,41 @@ export default function SftpFileList({
   const closeMenu = () => setContextMenu(null);
   const selectedSet = useMemo(() => new Set(selected), [selected]);
 
-  if (entries.length === 0) {
-    return <div className="flex-1 flex items-center justify-center text-dim text-sm">Empty directory</div>;
-  }
-
-  const handleRowClick = (entry: FileEntry, e: React.MouseEvent) => {
-    if (e.detail === 2) {
-      if (entry.isDir) onNavigate(entry);
-      else onRenameStart(entry.path);
-    } else {
-      onSelect(entry.path, e.metaKey || e.ctrlKey, e.shiftKey);
-    }
-  };
-
   const handleContextMenu = (entry: FileEntry, e: React.MouseEvent) => {
     e.preventDefault();
-    // Select the right-clicked item if not already selected
     if (!selectedSet.has(entry.path)) onSelect(entry.path, false, false);
-
-    // Keep menu within viewport
     const x = Math.min(e.clientX, window.innerWidth - 180);
     const y = Math.min(e.clientY, window.innerHeight - 220);
     setContextMenu({ x, y, entry });
   };
 
-  // Determine context based on what's in selection at render time
+  const rowData = useMemo<RowData>(() => ({
+    entries,
+    selectedSet,
+    renaming,
+    renameValue,
+    onSelect,
+    onNavigate,
+    onRenameStart,
+    onRenameChange,
+    onRenameCommit,
+    onRenameCancel,
+    onCut,
+    onCopy,
+    onPaste,
+    onDelete,
+    onEdit,
+    onChmod,
+    hasClipboard,
+    onContextMenu: handleContextMenu,
+  // NOTE: handleContextMenu closes over selectedSet and onSelect, both stable within this render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [
+    entries, selectedSet, renaming, renameValue,
+    onSelect, onNavigate, onRenameStart, onRenameChange, onRenameCommit, onRenameCancel,
+    onCut, onCopy, onPaste, onDelete, onEdit, onChmod, hasClipboard,
+  ]);
+
   const cm = contextMenu;
   const selCount = selected.length;
   const canRename = selCount === 1;
@@ -167,84 +281,43 @@ export default function SftpFileList({
   const hasPerms = cm?.entry.permissions != null;
 
   return (
-    <div className="flex-1 overflow-y-auto scroll-smooth relative">
-      <table className="w-full text-sm border-collapse table-fixed">
-        <thead className="sticky top-0 bg-surface-1 z-10 border-b border-stroke-subtle">
-          <tr>
-            <ColHeader label="Name"     colKey="name"     sortKey={sortKey} sortDir={sortDir} className="w-1/4 px-2" onSort={onSort} />
-            <ColHeader label="Size"     colKey="size"     sortKey={sortKey} sortDir={sortDir} align="right" className="w-1/4 px-2" onSort={onSort} />
-            <ColHeader label="Modified" colKey="modified" sortKey={sortKey} sortDir={sortDir} align="right" className="w-1/4 px-2" onSort={onSort} />
-            <th className="w-1/4 pl-2 pr-4 py-2 font-medium text-xs tracking-wider text-right">
-              <span className="text-faint">Permissions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((entry) => {
-            const isSelected = selectedSet.has(entry.path);
-            const isRenaming = renaming === entry.path;
-            return (
-              <tr
-                key={entry.path}
-                onClick={(e) => handleRowClick(entry, e)}
-                onContextMenu={(e) => handleContextMenu(entry, e)}
-                className={`cursor-pointer border-b border-stroke-subtle transition-colors select-none ${
-                  isSelected ? "bg-accent/10 text-accent-fg" : "text-secondary hover:bg-surface-2 hover:text-white"
-                }`}
-              >
-                <td className="px-2 py-2">
-                  <div className="flex items-center gap-2">
-                    <FileIcon isDir={entry.isDir} />
-                    {isRenaming ? (
-                      <input
-                        autoFocus
-                        value={renameValue}
-                        onChange={(e) => onRenameChange(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                        onDoubleClick={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => {
-                          e.stopPropagation();
-                          if (e.key === "Enter") onRenameCommit();
-                          if (e.key === "Escape") onRenameCancel();
-                        }}
-                        onBlur={onRenameCommit}
-                        className="flex-1 h-6 bg-surface-3 border border-accent rounded px-1.5 text-xs text-white outline-none font-mono min-w-0"
-                      />
-                    ) : (
-                      <span className="truncate font-mono text-xs" title={entry.name}>{entry.name}</span>
-                    )}
-                    {entry.isSymlink && (
-                      <span className="text-xs text-accent-fg opacity-70 shrink-0 font-mono" title="Symbolic link">@</span>
-                    )}
-                  </div>
-                </td>
-                <td className="px-2 py-2 text-right text-faint font-mono text-xs tabular-nums">
-                  {formatSize(entry.size, entry.isDir)}
-                </td>
-                <td className="px-2 py-2 text-right text-faint text-xs">
-                  {formatDate(entry.modified)}
-                </td>
-                <td className="pl-2 pr-4 py-2 text-right">
-                  {entry.permissions != null ? (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onChmod?.(entry.path, entry.permissions ?? 0o644); }}
-                      className="font-mono text-xs text-faint hover:text-accent-fg transition-colors disabled:pointer-events-none"
-                      title="Click to change permissions"
-                      disabled={!onChmod}
-                    >
-                      {formatPermissions(entry.permissions)}
-                    </button>
-                  ) : (
-                    <span className="font-mono text-xs text-dim">—</span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* Column header — always visible, outside the virtual list */}
+      {entries.length > 0 && (
+        <div
+          className="grid sticky top-0 z-10 bg-surface-1 border-b border-stroke-subtle shrink-0"
+          style={{ gridTemplateColumns: GRID_COLS }}
+        >
+          <ColHeader label="Name"     colKey="name"     sortKey={sortKey} sortDir={sortDir} className="px-2" onSort={onSort} />
+          <ColHeader label="Size"     colKey="size"     sortKey={sortKey} sortDir={sortDir} align="right" className="px-2" onSort={onSort} />
+          <ColHeader label="Modified" colKey="modified" sortKey={sortKey} sortDir={sortDir} align="right" className="px-2" onSort={onSort} />
+          <div className="pl-2 pr-4 py-2 font-medium text-xs tracking-wider text-right">
+            <span className="text-faint">Permissions</span>
+          </div>
+        </div>
+      )}
 
-      {/* Context menu */}
+      <div className="flex-1 min-h-0 relative">
+        {entries.length === 0 && (
+          <div className="flex items-center justify-center h-full text-dim text-sm">Empty directory</div>
+        )}
+
+        {entries.length > 0 && (
+          <AutoSizer
+            ChildComponent={({ height, width }) => (
+              <List
+                style={{ height: height ?? 0, width: width ?? 0 }}
+                rowCount={entries.length}
+                rowHeight={36}
+                rowComponent={Row}
+                rowProps={rowData}
+              />
+            )}
+          />
+        )}
+      </div>
+
+      {/* Context menu — fixed-position, safe outside the virtual list */}
       {cm && (
         <ContextMenuPopup x={cm.x} y={cm.y} onClose={closeMenu}>
           <MenuItem onClick={() => { onCopy(); closeMenu(); }} disabled={selCount === 0}>

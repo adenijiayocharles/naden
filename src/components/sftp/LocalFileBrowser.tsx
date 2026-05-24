@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { List, type RowComponentProps } from "react-window";
+import { AutoSizer } from "react-virtualized-auto-sizer";
 import type { LocalFileEntry } from "../../types/local";
 import { localCommands } from "../../lib/tauriCommands";
 import { formatSize, formatDate } from "../../lib/format";
@@ -20,6 +22,71 @@ interface Props {
 }
 
 interface ContextMenu { x: number; y: number; entry: LocalFileEntry }
+
+interface LocalRowData {
+  entries: LocalFileEntry[];
+  selectedSet: Set<string>;
+  renaming: string | null;
+  renameValue: string;
+  onRowClick: (entry: LocalFileEntry, e: React.MouseEvent) => void;
+  onContextMenu: (entry: LocalFileEntry, e: React.MouseEvent) => void;
+  onRenameChange: (v: string) => void;
+  onRenameCommit: () => void;
+  onRenameCancel: () => void;
+}
+
+const GRID_COLS = "1fr 5rem 7rem";
+
+// NOTE: defined outside LocalFileBrowser so it doesn't get recreated on every render.
+const Row = ({ index, style, entries, selectedSet, renaming, renameValue, onRowClick, onContextMenu, onRenameChange, onRenameCommit, onRenameCancel }: RowComponentProps<LocalRowData>) => {
+  const entry = entries[index];
+  const isSelected = selectedSet.has(entry.path);
+  const isRenaming = renaming === entry.path;
+
+  return (
+    <div
+      style={{ ...style, gridTemplateColumns: GRID_COLS }}
+      onClick={(e) => onRowClick(entry, e)}
+      onContextMenu={(e) => onContextMenu(entry, e)}
+      className={`grid cursor-pointer border-b border-stroke-subtle transition-colors select-none ${
+        isSelected ? "bg-accent/10 text-accent-fg" : "text-secondary hover:bg-surface-2 hover:text-white"
+      }`}
+    >
+      {/* Name cell */}
+      <div className="px-2 flex items-center gap-2 min-w-0">
+        <FileIcon isDir={entry.isDir} />
+        {isRenaming ? (
+          <input
+            autoFocus
+            value={renameValue}
+            onChange={(e) => onRenameChange(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === "Enter") onRenameCommit();
+              if (e.key === "Escape") onRenameCancel();
+            }}
+            onBlur={onRenameCommit}
+            className="flex-1 h-6 bg-surface-3 border border-accent rounded px-1.5 text-xs text-white outline-none font-mono min-w-0"
+          />
+        ) : (
+          <span className="truncate font-mono text-xs" title={entry.name}>{entry.name}</span>
+        )}
+      </div>
+
+      {/* Size cell */}
+      <div className="px-2 flex items-center justify-end text-faint font-mono text-xs tabular-nums">
+        {formatSize(entry.size, entry.isDir)}
+      </div>
+
+      {/* Modified cell */}
+      <div className="px-2 flex items-center justify-end text-faint text-xs">
+        {formatDate(entry.modified)}
+      </div>
+    </div>
+  );
+};
 
 export default function LocalFileBrowser({ onSelectedChange, onPathChange, onActivate, showHidden = true, newFolderTrigger = 0, newFileTrigger = 0 }: Props) {
   const [currentPath, setCurrentPath] = useState("");
@@ -103,7 +170,43 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
     void navigateTo(parentPath(currentPath));
   };
 
-  const handleRowClick = (entry: LocalFileEntry, e: React.MouseEvent) => {
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
+  const visibleEntries = showHidden ? entries : entries.filter((e) => !e.name.startsWith("."));
+
+  const commitRename = useCallback(async () => {
+    if (!renaming || !renameValue.trim()) { setRenaming(null); return; }
+    const dir = renaming.split("/").slice(0, -1).join("/");
+    const newPath = `${dir}/${renameValue.trim()}`;
+    if (newPath === renaming) { setRenaming(null); return; }
+    setError(null);
+    try {
+      await localCommands.renameLocal(renaming, newPath);
+      setRenaming(null);
+      setSelected([]);
+      await navigateTo(currentPath);
+    } catch (e) {
+      setError(formatError(e));
+      setRenaming(null);
+    }
+  }, [renaming, renameValue, currentPath, navigateTo]);
+
+  const commitDelete = async () => {
+    setConfirmingDelete(false);
+    setError(null);
+    let failed = 0;
+    for (const path of selected) {
+      try {
+        await localCommands.deleteLocal(path);
+      } catch {
+        failed++;
+      }
+    }
+    if (failed > 0) setError(`${failed} item(s) could not be deleted.`);
+    setSelected([]);
+    await navigateTo(currentPath);
+  };
+
+  const handleRowClick = useCallback((entry: LocalFileEntry, e: React.MouseEvent) => {
     onActivate();
     if (e.detail === 2) {
       if (entry.isDir) {
@@ -116,7 +219,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
       return;
     }
 
-    const allPaths = entries.map((en) => en.path);
+    const allPaths = visibleEntries.map((en) => en.path);
     if (e.shiftKey && lastClickedPath) {
       const from = allPaths.indexOf(lastClickedPath);
       const to = allPaths.indexOf(entry.path);
@@ -135,9 +238,9 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
       setSelected([entry.path]);
     }
     setLastClickedPath(entry.path);
-  };
+  }, [onActivate, navigateTo, visibleEntries, lastClickedPath, selectedSet]);
 
-  const handleContextMenu = (entry: LocalFileEntry, e: React.MouseEvent) => {
+  const handleContextMenu = useCallback((entry: LocalFileEntry, e: React.MouseEvent) => {
     e.preventDefault();
     onActivate();
     if (!selectedSet.has(entry.path)) {
@@ -147,47 +250,24 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
     const x = Math.min(e.clientX, window.innerWidth - 180);
     const y = Math.min(e.clientY, window.innerHeight - 200);
     setContextMenu({ x, y, entry });
-  };
+  }, [onActivate, selectedSet]);
 
   const closeMenu = () => setContextMenu(null);
 
-  const commitRename = async () => {
-    if (!renaming || !renameValue.trim()) { setRenaming(null); return; }
-    const dir = renaming.split("/").slice(0, -1).join("/");
-    const newPath = `${dir}/${renameValue.trim()}`;
-    if (newPath === renaming) { setRenaming(null); return; }
-    setError(null);
-    try {
-      await localCommands.renameLocal(renaming, newPath);
-      setRenaming(null);
-      setSelected([]);
-      await navigateTo(currentPath);
-    } catch (e) {
-      setError(formatError(e));
-      setRenaming(null);
-    }
-  };
-
-  const commitDelete = async () => {
-    setConfirmingDelete(false);
-    setError(null);
-    let failed = 0;
-    for (const path of selected) {
-      try {
-        await localCommands.deleteLocal(path);
-      } catch {
-        failed++;
-      }
-    }
-    if (failed > 0) setError(`${failed} item(s) could not be deleted.`);
-    setSelected([]);
-    await navigateTo(currentPath);
-  };
+  const rowData = useMemo<LocalRowData>(() => ({
+    entries: visibleEntries,
+    selectedSet,
+    renaming,
+    renameValue,
+    onRowClick: handleRowClick,
+    onContextMenu: handleContextMenu,
+    onRenameChange: setRenameValue,
+    onRenameCommit: () => { void commitRename(); },
+    onRenameCancel: () => setRenaming(null),
+  }), [visibleEntries, selectedSet, renaming, renameValue, handleRowClick, handleContextMenu, commitRename]);
 
   const cm = contextMenu;
   const selCount = selected.length;
-  const selectedSet = useMemo(() => new Set(selected), [selected]);
-  const visibleEntries = showHidden ? entries : entries.filter((e) => !e.name.startsWith("."));
 
   return (
     <div className="flex flex-col h-full min-w-0">
@@ -232,71 +312,42 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
       {creatingFile && <InlineCreateInput label="New file:" placeholder="filename.txt" onCommit={(v) => { void commitNewFile(v); }} onCancel={() => setCreatingFile(false)} />}
 
       {/* File list */}
-      <div className="flex-1 overflow-y-auto scroll-smooth relative">
-        {!error && visibleEntries.length === 0 && !loading && (
-          <div className="flex-1 flex items-center justify-center text-dim text-sm p-8">
-            Empty directory
+      <div className="flex flex-col flex-1 min-h-0">
+        {/* Column header — always visible, outside the virtual list */}
+        {visibleEntries.length > 0 && (
+          <div
+            className="grid sticky top-0 z-10 bg-surface-1 border-b border-stroke-subtle shrink-0"
+            style={{ gridTemplateColumns: GRID_COLS }}
+          >
+            <div className="px-2 py-2 font-medium text-xs uppercase tracking-wider text-left text-faint">Name</div>
+            <div className="px-2 py-2 font-medium text-xs uppercase tracking-wider text-right text-faint">Size</div>
+            <div className="px-2 py-2 font-medium text-xs uppercase tracking-wider text-right text-faint">Modified</div>
           </div>
         )}
-        {visibleEntries.length > 0 && (
-          <table className="w-full text-sm border-collapse table-fixed">
-            <thead className="sticky top-0 bg-surface-1 z-10 border-b border-stroke-subtle">
-              <tr>
-                <th className="w-1/2 px-2 py-2 font-medium text-xs uppercase tracking-wider text-left text-faint">Name</th>
-                <th className="w-1/4 px-2 py-2 font-medium text-xs uppercase tracking-wider text-right text-faint">Size</th>
-                <th className="w-1/4 px-2 py-2 font-medium text-xs uppercase tracking-wider text-right text-faint">Modified</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleEntries.map((entry) => {
-                const isSelected = selectedSet.has(entry.path);
-                const isRenaming = renaming === entry.path;
-                return (
-                  <tr
-                    key={entry.path}
-                    onClick={(e) => handleRowClick(entry, e)}
-                    onContextMenu={(e) => handleContextMenu(entry, e)}
-                    className={`cursor-pointer border-b border-stroke-subtle transition-colors select-none ${
-                      isSelected ? "bg-accent/10 text-accent-fg" : "text-secondary hover:bg-surface-2 hover:text-white"
-                    }`}
-                  >
-                    <td className="px-2 py-2">
-                      <div className="flex items-center gap-2">
-                        <FileIcon isDir={entry.isDir} />
-                        {isRenaming ? (
-                          <input
-                            autoFocus
-                            value={renameValue}
-                            onChange={(e) => setRenameValue(e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
-                            onDoubleClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => {
-                              e.stopPropagation();
-                              if (e.key === "Enter") void commitRename();
-                              if (e.key === "Escape") setRenaming(null);
-                            }}
-                            onBlur={() => { void commitRename(); }}
-                            className="flex-1 h-6 bg-surface-3 border border-accent rounded px-1.5 text-xs text-white outline-none font-mono min-w-0"
-                          />
-                        ) : (
-                          <span className="truncate font-mono text-xs" title={entry.name}>{entry.name}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-2 py-2 text-right text-faint font-mono text-xs tabular-nums">
-                      {formatSize(entry.size, entry.isDir)}
-                    </td>
-                    <td className="px-2 py-2 text-right text-faint text-xs">
-                      {formatDate(entry.modified)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
 
-        {/* Context menu */}
+        <div className="flex-1 min-h-0 relative">
+          {!error && visibleEntries.length === 0 && !loading && (
+            <div className="flex items-center justify-center h-full text-dim text-sm">
+              Empty directory
+            </div>
+          )}
+
+          {visibleEntries.length > 0 && (
+            <AutoSizer
+              ChildComponent={({ height, width }) => (
+                <List
+                  style={{ height: height ?? 0, width: width ?? 0 }}
+                  rowCount={visibleEntries.length}
+                  rowHeight={36}
+                  rowComponent={Row}
+                  rowProps={rowData}
+                />
+              )}
+            />
+          )}
+        </div>
+
+        {/* Context menu — fixed-position, safe outside the virtual list */}
         {cm && (
           <ContextMenuPopup x={cm.x} y={cm.y} onClose={closeMenu}>
             <MenuItem
