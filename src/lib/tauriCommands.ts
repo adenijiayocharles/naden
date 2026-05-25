@@ -194,9 +194,6 @@ export const sftpCommands = {
   closeSftpEdit: (sessionId: string, remotePath: string) =>
     invoke<void>("close_sftp_edit", { sessionId, remotePath }),
 
-  syncSftpFolder: (sessionId: string, localPath: string, remotePath: string) =>
-    invoke<number>("sync_sftp_folder", { sessionId, localPath, remotePath }),
-
   copySftpFile: (sessionId: string, src: string, dest: string) =>
     invoke<void>("copy_sftp_file", { sessionId, src, dest }),
 };

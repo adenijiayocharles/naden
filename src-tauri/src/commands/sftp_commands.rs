@@ -215,20 +215,6 @@ pub async fn close_sftp_edit(
 }
 
 #[tauri::command]
-pub async fn sync_sftp_folder(
-    session_id: String,
-    local_path: String,
-    remote_path: String,
-    state: tauri::State<'_, AppState>,
-) -> Result<u32, AppError> {
-    sftp_call!(state, session_id, |reply| SftpMessage::SyncFolder {
-        local_path,
-        remote_path,
-        reply,
-    })
-}
-
-#[tauri::command]
 pub async fn copy_sftp_file(
     session_id: String,
     src: String,

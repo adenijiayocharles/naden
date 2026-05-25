@@ -80,7 +80,6 @@ pub fn run() {
             commands::sftp_commands::chmod_sftp,
             commands::sftp_commands::open_sftp_edit,
             commands::sftp_commands::close_sftp_edit,
-            commands::sftp_commands::sync_sftp_folder,
             commands::sftp_commands::copy_sftp_file,
             // Local filesystem
             commands::local_commands::get_local_home_dir,

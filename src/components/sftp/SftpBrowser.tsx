@@ -57,8 +57,6 @@ export default function SftpBrowser({ sessionId }: Props) {
     chmodMode,
     editingFiles,
     fileSyncedFlash,
-    syncing,
-    syncProgress,
     handleSelect,
     handleNavigateEntry,
     handleUp,
@@ -82,7 +80,6 @@ export default function SftpBrowser({ sessionId }: Props) {
     cancelChmod,
     handleOpenEdit,
     handleCloseEdit,
-    handleSyncFolder,
     handleUploadFromLocal,
     handleDownloadToLocal,
     commitNewFolder,
@@ -146,7 +143,7 @@ export default function SftpBrowser({ sessionId }: Props) {
           if (showLocalPane && activePane === "local") setShowHiddenLocal((v) => !v);
           else setShowHidden((v) => !v);
         }}
-        busy={isBusy || syncing}
+        busy={isBusy}
         onNavigateTo={(path) => { navigate(path); }}
         onNavigateUp={handleUp}
         onRefresh={handleRefresh}
@@ -155,8 +152,6 @@ export default function SftpBrowser({ sessionId }: Props) {
         onNewFolder={handleNewFolder}
         onNewFile={handleNewFile}
         editingCount={editingFiles.length}
-        onSync={handleSyncFolder}
-        syncProgress={syncProgress}
         showLocalPane={showLocalPane}
         onToggleLocalPane={() => setShowLocalPane((v) => !v)}
         activePane={activePane}
@@ -208,12 +203,10 @@ export default function SftpBrowser({ sessionId }: Props) {
         <div className="flex items-center px-3 py-2 border-b border-stroke-subtle bg-surface-1 shrink-0 gap-3">
           <PathBar
             path={session.currentPath}
-            busy={isBusy || syncing}
+            busy={isBusy}
             onNavigateTo={(p) => { navigate(p); }}
           />
-          {syncProgress ? (
-            <span className="text-xs text-accent-fg shrink-0">{syncProgress}</span>
-          ) : clipboard ? (
+          {clipboard ? (
             <span className="text-xs text-accent-fg shrink-0">
               ● {clipboard.mode === "copy" ? "copied" : "cut"} — paste to move here
             </span>

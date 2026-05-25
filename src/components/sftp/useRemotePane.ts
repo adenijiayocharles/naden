@@ -45,8 +45,6 @@ interface RemotePaneOutput {
   chmodMode: number;
   editingFiles: string[];
   fileSyncedFlash: string | null;
-  syncing: boolean;
-  syncProgress: string | null;
   handleSelect: (path: string, meta: boolean, shift: boolean) => void;
   handleNavigateEntry: (entry: { isDir: boolean; path: string }) => void;
   handleUp: () => void;
@@ -70,7 +68,6 @@ interface RemotePaneOutput {
   cancelChmod: () => void;
   handleOpenEdit: (path: string) => void;
   handleCloseEdit: (path: string) => void;
-  handleSyncFolder: () => void;
   handleUploadFromLocal: () => void;
   handleDownloadToLocal: () => void;
   commitNewFolder: (name: string) => void;
@@ -115,10 +112,6 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
   const [editingFiles, setEditingFiles] = useState<string[]>([]);
   const [fileSyncedFlash, setFileSyncedFlash] = useState<string | null>(null);
 
-  // Sync folder state
-  const [syncing, setSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState<string | null>(null);
-
   // Listen for live-edit sync events
   useEffect(() => {
     const unlisten = listen<string>(`sftp:file_synced:${sessionId}`, ({ payload }) => {
@@ -126,18 +119,6 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
       setFileSyncedFlash(`Synced: ${name}`);
       setTimeout(() => setFileSyncedFlash(null), 3000);
     });
-    return () => { void unlisten.then((fn) => fn()); };
-  }, [sessionId]);
-
-  // Listen for folder sync progress events
-  useEffect(() => {
-    const unlisten = listen<{ file: string; count: number }>(
-      `sftp:sync_progress:${sessionId}`,
-      ({ payload }) => {
-        const name = payload.file.split("/").pop() ?? payload.file;
-        setSyncProgress(`Syncing… ${payload.count} file${payload.count > 1 ? "s" : ""} (${name})`);
-      },
-    );
     return () => { void unlisten.then((fn) => fn()); };
   }, [sessionId]);
 
@@ -492,28 +473,6 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
     setEditingFiles((prev) => prev.filter((p) => p !== remotePath));
   };
 
-  // ── Sync folder ────────────────────────────────────────────────────────────
-
-  const handleSyncFolder = async () => {
-    if (!session) return;
-    const localFolder = await open({ directory: true, title: "Choose local folder to sync" });
-    if (typeof localFolder !== "string") return;
-    setSyncing(true);
-    setSyncProgress("Starting sync…");
-    setError(null);
-    try {
-      const count = await sftpCommands.syncSftpFolder(sessionId, localFolder, session.currentPath);
-      setSyncProgress(`Sync complete — ${count} file${count !== 1 ? "s" : ""} uploaded`);
-      await navigate(session.currentPath);
-      setTimeout(() => setSyncProgress(null), 4000);
-    } catch (e) {
-      setError(formatError(e));
-      setSyncProgress(null);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   // ── Keyboard handler ───────────────────────────────────────────────────────
 
   // Ref keeps the handler current without re-registering the listener on every render.
@@ -579,8 +538,6 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
     chmodMode,
     editingFiles,
     fileSyncedFlash,
-    syncing,
-    syncProgress,
     handleSelect,
     handleNavigateEntry,
     handleUp,
@@ -604,7 +561,6 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
     cancelChmod,
     handleOpenEdit: (path: string) => { void handleOpenEdit(path); },
     handleCloseEdit: (path: string) => { void handleCloseEdit(path); },
-    handleSyncFolder: () => { void handleSyncFolder(); },
     handleUploadFromLocal: () => { void handleUploadFromLocal(); },
     handleDownloadToLocal: () => { void handleDownloadToLocal(); },
     commitNewFolder: (name: string) => { void commitNewFolder(name); },

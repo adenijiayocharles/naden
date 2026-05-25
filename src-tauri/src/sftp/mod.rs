@@ -113,11 +113,6 @@ pub(crate) enum SftpMessage {
         remote_path: String,
         reply: tokio::sync::oneshot::Sender<Result<(), AppError>>,
     },
-    SyncFolder {
-        local_path: String,
-        remote_path: String,
-        reply: tokio::sync::oneshot::Sender<Result<u32, AppError>>,
-    },
     CopyFile {
         src: String,
         dest: String,
@@ -407,14 +402,6 @@ fn handle_message(
             };
             let _ = reply.send(result);
         }
-        SftpMessage::SyncFolder {
-            local_path,
-            remote_path,
-            reply,
-        } => {
-            let result = sync_folder(sftp, &local_path, &remote_path, session_id, app_handle);
-            let _ = reply.send(result);
-        }
         SftpMessage::CopyFile { src, dest, reply } => {
             // SFTP has no native copy — download to a temp file then re-upload.
             // UUID prefix prevents collisions when two files share the same base name.
@@ -614,100 +601,6 @@ fn open_edit(
     );
 
     Ok(temp_path_str)
-}
-
-/// Recursively sync a local directory to a remote path.
-/// Returns the total number of files uploaded.
-fn sync_folder(
-    sftp: &ssh2::Sftp,
-    local_path: &str,
-    remote_path: &str,
-    session_id: &str,
-    app_handle: &tauri::AppHandle,
-) -> Result<u32, AppError> {
-    sync_folder_recursive(sftp, local_path, remote_path, session_id, app_handle)
-}
-
-fn sync_folder_recursive(
-    sftp: &ssh2::Sftp,
-    local_path: &str,
-    remote_path: &str,
-    session_id: &str,
-    app_handle: &tauri::AppHandle,
-) -> Result<u32, AppError> {
-    // Ensure the remote directory exists.
-    if sftp.stat(Path::new(remote_path)).is_err() {
-        sftp.mkdir(Path::new(remote_path), 0o755)
-            .map_err(|e| sftp_err("create remote directory", e))?;
-    }
-
-    let read_dir = std::fs::read_dir(local_path)
-        .map_err(|e| AppError::Io(format!("cannot read local directory: {e}")))?;
-
-    let mut count: u32 = 0;
-
-    for entry in read_dir.flatten() {
-        let local_entry_path = entry.path();
-        let local_entry_str = local_entry_path.to_string_lossy().into_owned();
-        let file_name = entry.file_name().to_string_lossy().into_owned();
-
-        // Reject names that could escape the sync root via path traversal.
-        // A well-behaved local filesystem won't produce these, but be explicit.
-        if file_name == "." || file_name == ".." || file_name.contains('/') {
-            eprintln!("[sftp sync] skipping unsafe filename: {file_name:?}");
-            continue;
-        }
-
-        let remote_entry_path = format!("{}/{}", remote_path.trim_end_matches('/'), file_name);
-
-        let file_type = entry
-            .file_type()
-            .map_err(|e| AppError::Io(format!("stat error: {e}")))?;
-
-        if file_type.is_dir() {
-            count += sync_folder_recursive(
-                sftp,
-                &local_entry_str,
-                &remote_entry_path,
-                session_id,
-                app_handle,
-            )?;
-        } else if file_type.is_file() {
-            // Compare local mtime vs remote mtime.
-            let should_upload = match (
-                std::fs::metadata(&local_entry_path).and_then(|m| m.modified()),
-                sftp.stat(Path::new(&remote_entry_path)).ok(),
-            ) {
-                (Ok(local_mtime), Some(remote_stat)) => {
-                    let local_secs = local_mtime
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .map(|d| d.as_secs())
-                        .unwrap_or(0);
-                    let remote_secs = remote_stat.mtime.unwrap_or(0);
-                    local_secs > remote_secs
-                }
-                (Ok(_), None) => true, // Remote doesn't exist — upload.
-                _ => true,             // Cannot stat — upload to be safe.
-            };
-
-            if should_upload {
-                upload_file(
-                    sftp,
-                    &local_entry_str,
-                    &remote_entry_path,
-                    session_id,
-                    app_handle,
-                )?;
-                count += 1;
-                let _ = app_handle.emit(
-                    &format!("sftp:sync_progress:{session_id}"),
-                    serde_json::json!({ "file": remote_entry_path, "count": count }),
-                );
-            }
-        }
-    }
-
-    Ok(count)
 }
 
 fn download_file(

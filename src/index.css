@@ -122,9 +122,14 @@
 
 /* .xterm-viewport is position:absolute;inset:0 inside .xterm (covering
    the padding area) and defaults to background:#000. Making it
-   transparent lets .xterm's background show through uniformly. */
+   transparent lets .xterm's background show through uniformly.
+   overscroll-behavior:contain prevents macOS WKWebView from consuming
+   wheel events when the terminal reaches its scroll boundary — without
+   it, rubber-band momentum on the WebView's native scroll view can eat
+   events that should go to xterm's viewport. */
 .xterm-viewport {
   background-color: transparent !important;
+  overscroll-behavior: contain;
 }
 
 /* Scrollbar track is rendered by the OS/WebView and doesn't inherit any

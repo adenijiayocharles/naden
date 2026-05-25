@@ -76,8 +76,6 @@ interface Props {
   onNewFolder: () => void;
   onNewFile: () => void;
   editingCount?: number;
-  onSync?: () => void;
-  syncProgress?: string | null;
   showLocalPane: boolean;
   onToggleLocalPane: () => void;
   activePane?: "local" | "remote";
@@ -125,8 +123,6 @@ export default function SftpToolbar({
   onNewFolder,
   onNewFile,
   editingCount = 0,
-  onSync,
-  syncProgress,
   showLocalPane,
   onToggleLocalPane,
   activePane = "remote",
@@ -253,15 +249,6 @@ export default function SftpToolbar({
             New File
           </ToolbarBtn>
 
-          {onSync && (
-            <ToolbarBtn onClick={onSync} disabled={busy} title="Sync local folder → current remote path">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2 8a6 6 0 0110.5-3.9M14 8a6 6 0 01-10.5 3.9" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4l2.5 0.1L14 7M4 12L1.5 11.9 2 9" />
-              </svg>
-              Sync Folder
-            </ToolbarBtn>
-          )}
         </div>
       </div>
 
@@ -269,9 +256,7 @@ export default function SftpToolbar({
       {!showLocalPane && (
         <div className="flex items-center px-3 py-2 border-t border-stroke-subtle gap-3 min-w-0">
           <PathBar path={currentPath} busy={busy} onNavigateTo={onNavigateTo} />
-          {syncProgress ? (
-            <span className="text-xs text-accent-fg shrink-0">{syncProgress}</span>
-          ) : hasClipboard ? (
+          {hasClipboard ? (
             <span className="text-xs text-accent-fg shrink-0">
               ● {clipboardMode === "copy" ? "copied" : "cut"} — paste to move here
             </span>

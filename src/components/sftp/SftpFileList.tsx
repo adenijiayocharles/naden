@@ -297,11 +297,11 @@ export default function SftpFileList({
           className="grid sticky top-0 z-10 bg-surface-1 border-b border-stroke-subtle shrink-0"
           style={{ gridTemplateColumns: GRID_COLS }}
         >
-          <ColHeader label="Name"     colKey="name"     sortKey={sortKey} sortDir={sortDir} className="px-2" onSort={onSort} />
-          <ColHeader label="Size"     colKey="size"     sortKey={sortKey} sortDir={sortDir} align="right" className="px-2" onSort={onSort} />
-          <ColHeader label="Modified" colKey="modified" sortKey={sortKey} sortDir={sortDir} align="right" className="px-2" onSort={onSort} />
+          <ColHeader label="NAME"     colKey="name"     sortKey={sortKey} sortDir={sortDir} className="px-2" onSort={onSort} />
+          <ColHeader label="SIZE"     colKey="size"     sortKey={sortKey} sortDir={sortDir} align="right" className="px-2" onSort={onSort} />
+          <ColHeader label="MODIFIED" colKey="modified" sortKey={sortKey} sortDir={sortDir} align="right" className="px-2" onSort={onSort} />
           <div className="pl-2 pr-4 py-2 font-medium text-xs tracking-wider text-right">
-            <span className="text-faint">Permissions</span>
+            <span className="text-faint">PERMISSIONS</span>
           </div>
         </div>
       )}

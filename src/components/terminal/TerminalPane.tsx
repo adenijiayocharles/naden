@@ -97,6 +97,18 @@ export default function TerminalPane({ sessionId }: Props) {
     fitAddon.fit();
     term.focus();
 
+    // xterm converts wheel events to ^[[A/^[[B cursor-key sequences when in the
+    // alternate screen buffer (no scrollback). That's useful for TUI apps that
+    // enable mouse tracking, but when mouse tracking is inactive the sequences go
+    // to the PTY unhandled and the shell echoes them as literal text. Suppress the
+    // conversion in that case — apps that need wheel input enable mouse tracking.
+    term.attachCustomWheelEventHandler((_e) => {
+      if (term.buffer.active.type === "alternate" && !term.element?.classList.contains("enable-mouse-events")) {
+        return false;
+      }
+      return true;
+    });
+
     // Copy selected text automatically when copyOnSelect is enabled (xterm v6 removed built-in option)
     const selectionDisposer = copyOnSelect
       ? term.onSelectionChange(() => {
@@ -185,7 +197,7 @@ export default function TerminalPane({ sessionId }: Props) {
 
   return (
     <div className="relative h-full w-full bg-surface-1">
-      <div ref={containerRef} className="absolute inset-4" />
+      <div ref={containerRef} className="absolute inset-4 overflow-hidden" />
 
       {/* Search bar — floats over terminal at top-right */}
       {searchVisible && (
