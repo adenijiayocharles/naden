@@ -32,11 +32,14 @@ interface Props {
 
 interface ContextMenu { x: number; y: number; entry: FileEntry }
 
+interface DblClickState { path: string; t: number }
+
 interface RowData {
   entries: FileEntry[];
   selectedSet: Set<string>;
   renaming: string | null;
   renameValue: string;
+  dblClickRef: React.MutableRefObject<DblClickState>;
   onSelect: (path: string, meta: boolean, shift: boolean) => void;
   onNavigate: (entry: FileEntry) => void;
   onRenameStart: (path: string) => void;
@@ -151,16 +154,20 @@ export function ContextMenuPopup({ x, y, onClose, children }: {
 const GRID_COLS = "1fr 5rem 7rem 6rem";
 
 // NOTE: defined outside SftpFileList so it doesn't get recreated on every render.
-const Row = ({ index, style, entries, selectedSet, renaming, renameValue, onSelect, onNavigate, onRenameStart, onRenameChange, onRenameCommit, onRenameCancel, onChmod, onContextMenu }: RowComponentProps<RowData>) => {
+const Row = ({ index, style, entries, selectedSet, renaming, renameValue, dblClickRef, onSelect, onNavigate, onRenameStart, onRenameChange, onRenameCommit, onRenameCancel, onChmod, onContextMenu }: RowComponentProps<RowData>) => {
   const entry = entries[index];
   const isSelected = selectedSet.has(entry.path);
   const isRenaming = renaming === entry.path;
 
   const handleClick = (e: React.MouseEvent) => {
-    if (e.detail === 2) {
+    const now = Date.now();
+    const last = dblClickRef.current;
+    if (!e.shiftKey && !e.metaKey && !e.ctrlKey && last.path === entry.path && now - last.t < 400) {
+      dblClickRef.current = { path: "", t: 0 };
       if (entry.isDir) onNavigate(entry);
       else onRenameStart(entry.path);
     } else {
+      dblClickRef.current = { path: entry.path, t: now };
       onSelect(entry.path, e.metaKey || e.ctrlKey, e.shiftKey);
     }
   };
@@ -238,6 +245,7 @@ export default function SftpFileList({
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const closeMenu = () => setContextMenu(null);
   const selectedSet = useMemo(() => new Set(selected), [selected]);
+  const dblClickRef = useRef<DblClickState>({ path: "", t: 0 });
 
   const handleContextMenu = (entry: FileEntry, e: React.MouseEvent) => {
     e.preventDefault();
@@ -252,6 +260,7 @@ export default function SftpFileList({
     selectedSet,
     renaming,
     renameValue,
+    dblClickRef,
     onSelect,
     onNavigate,
     onRenameStart,
@@ -304,7 +313,7 @@ export default function SftpFileList({
 
         {entries.length > 0 && (
           <AutoSizer
-            ChildComponent={({ height, width }) => (
+            renderProp={({ height, width }) => (
               <List
                 style={{ height: height ?? 0, width: width ?? 0 }}
                 rowCount={entries.length}

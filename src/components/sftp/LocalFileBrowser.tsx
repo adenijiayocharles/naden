@@ -172,6 +172,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const visibleEntries = showHidden ? entries : entries.filter((e) => !e.name.startsWith("."));
+  const dblClickRef = useRef<{ path: string; t: number }>({ path: "", t: 0 });
 
   const commitRename = useCallback(async () => {
     if (!renaming || !renameValue.trim()) { setRenaming(null); return; }
@@ -208,7 +209,10 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
 
   const handleRowClick = useCallback((entry: LocalFileEntry, e: React.MouseEvent) => {
     onActivate();
-    if (e.detail === 2) {
+    const now = Date.now();
+    const last = dblClickRef.current;
+    if (!e.shiftKey && !e.metaKey && !e.ctrlKey && last.path === entry.path && now - last.t < 400) {
+      dblClickRef.current = { path: "", t: 0 };
       if (entry.isDir) {
         void navigateTo(entry.path);
       } else {
@@ -218,7 +222,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
       }
       return;
     }
-
+    dblClickRef.current = { path: entry.path, t: now };
     const allPaths = visibleEntries.map((en) => en.path);
     if (e.shiftKey && lastClickedPath) {
       const from = allPaths.indexOf(lastClickedPath);
@@ -334,7 +338,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
 
           {visibleEntries.length > 0 && (
             <AutoSizer
-              ChildComponent={({ height, width }) => (
+              renderProp={({ height, width }) => (
                 <List
                   style={{ height: height ?? 0, width: width ?? 0 }}
                   rowCount={visibleEntries.length}

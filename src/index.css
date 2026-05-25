@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "@fontsource-variable/manrope";
 
 @theme {
   /* Accent */
@@ -27,7 +28,7 @@
   --color-faint: #666666;
   --color-dim: #444444;
 
-  --font-sans: -apple-system, "SF Pro Display", "SF Pro Text", BlinkMacSystemFont, system-ui, sans-serif;
+  --font-sans: "Manrope Variable", -apple-system, "SF Pro Display", "SF Pro Text", BlinkMacSystemFont, system-ui, sans-serif;
 }
 
 @layer base {
@@ -37,8 +38,8 @@
   }
 
   html {
-    font-size: 15px;
-    font-family: -apple-system, "SF Pro Display", "SF Pro Text", BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 14px;
+    font-family: var(--font-sans);
   }
 
   /* Uniform 32 px height for all single-line form controls */
