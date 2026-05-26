@@ -118,6 +118,7 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
       const name = payload.split("/").pop() ?? payload;
       setFileSyncedFlash(`Synced: ${name}`);
       setTimeout(() => setFileSyncedFlash(null), 3000);
+      setEditingFiles((prev) => prev.filter((p) => p !== payload));
     });
     return () => { void unlisten.then((fn) => fn()); };
   }, [sessionId]);
