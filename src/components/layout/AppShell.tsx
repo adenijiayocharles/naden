@@ -100,6 +100,7 @@ export default function AppShell() {
   const sftpSetActive = useSftpStore((s) => s.setActive);
   const sftpClose = useSftpStore((s) => s.closeSession);
   const sftpReorder = useSftpStore((s) => s.reorderSessions);
+  const sftpOpenSession = useSftpStore((s) => s.openSession);
 
   const [activePanelType, setActivePanelType] = useState<PanelType>("terminal");
 const searchRef = useRef<HTMLInputElement>(null);
@@ -324,64 +325,92 @@ const searchRef = useRef<HTMLInputElement>(null);
           {hasPanel && activeView !== "logs" && (
             <div className="flex flex-col flex-1 min-w-0">
               {/* Unified tab bar */}
-              <div
-                className="h-10 bg-surface-1 border-b border-stroke-subtle flex items-center gap-1 px-2 overflow-x-auto shrink-0"
-                onDragLeave={(e) => {
-                  if (!e.currentTarget.contains(e.relatedTarget as Node)) resetDrag();
-                }}
-                onDragEnd={resetDrag}
-              >
-                {terminalSessions.map((session) => (
-                  <TabItem
-                    key={session.id}
-                    serverName={session.serverName}
-                    statusColor={TERMINAL_STATUS_COLORS[session.status]}
-                    isActive={activePanelType === "terminal" && session.id === terminalActiveId}
-                    isDragging={drag?.id === session.id}
-                    isDragOver={dragOverId === session.id && drag?.id !== session.id}
-                    title={
-                      session.status === "error" && session.errorMessage
-                        ? `${session.serverName} — ${session.errorMessage}`
-                        : session.serverName
-                    }
-                    closeLabel={`Close ${session.serverName}`}
-                    onActivate={() => {
-                      terminalSetActive(session.id);
-                      setActivePanelType("terminal");
-                    }}
-                    onClose={() => void terminalClose(session.id)}
-                    onDragStart={(e) => handleDragStart(session.id, "terminal", e)}
-                    onDragOver={(e) => handleDragOver(session.id, "terminal", e)}
-                    onDrop={(e) => handleDrop(session.id, "terminal", e)}
-                  />
-                ))}
+              <div className="h-10 bg-surface-1 border-b border-stroke-subtle flex items-center shrink-0">
+                <div
+                  className="flex items-center gap-1 px-2 overflow-x-auto flex-1 min-w-0"
+                  onDragLeave={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) resetDrag();
+                  }}
+                  onDragEnd={resetDrag}
+                >
+                  {terminalSessions.map((session) => (
+                    <TabItem
+                      key={session.id}
+                      serverName={session.serverName}
+                      statusColor={TERMINAL_STATUS_COLORS[session.status]}
+                      isActive={activePanelType === "terminal" && session.id === terminalActiveId}
+                      isDragging={drag?.id === session.id}
+                      isDragOver={dragOverId === session.id && drag?.id !== session.id}
+                      title={
+                        session.status === "error" && session.errorMessage
+                          ? `${session.serverName} — ${session.errorMessage}`
+                          : session.serverName
+                      }
+                      closeLabel={`Close ${session.serverName}`}
+                      onActivate={() => {
+                        terminalSetActive(session.id);
+                        setActivePanelType("terminal");
+                      }}
+                      onClose={() => void terminalClose(session.id)}
+                      onDragStart={(e) => handleDragStart(session.id, "terminal", e)}
+                      onDragOver={(e) => handleDragOver(session.id, "terminal", e)}
+                      onDrop={(e) => handleDrop(session.id, "terminal", e)}
+                    />
+                  ))}
 
-                {/* Separator between terminal and SFTP tab groups */}
-                {hasTerminal && hasSftp && (
-                  <div className="w-px h-5 bg-stroke mx-1 shrink-0" />
+                  {/* Separator between terminal and SFTP tab groups */}
+                  {hasTerminal && hasSftp && (
+                    <div className="w-px h-5 bg-stroke mx-1 shrink-0" />
+                  )}
+
+                  {sftpSessions.map((session) => (
+                    <TabItem
+                      key={session.id}
+                      serverName={session.serverName}
+                      statusColor={SFTP_STATUS_COLORS[session.status]}
+                      isActive={activePanelType === "sftp" && session.id === sftpActiveId}
+                      isDragging={drag?.id === session.id}
+                      isDragOver={dragOverId === session.id && drag?.id !== session.id}
+                      title={session.serverName}
+                      icon={SFTP_FOLDER_ICON}
+                      closeLabel={`Close ${session.serverName} browser`}
+                      onActivate={() => {
+                        sftpSetActive(session.id);
+                        setActivePanelType("sftp");
+                      }}
+                      onClose={() => void sftpClose(session.id)}
+                      onDragStart={(e) => handleDragStart(session.id, "sftp", e)}
+                      onDragOver={(e) => handleDragOver(session.id, "sftp", e)}
+                      onDrop={(e) => handleDrop(session.id, "sftp", e)}
+                    />
+                  ))}
+                </div>
+
+                {/* Open SFTP browser for the active terminal session */}
+                {activePanelType === "terminal" && terminalActiveId && (
+                  <div className="px-1.5 shrink-0 border-l border-stroke-subtle">
+                    <button
+                      onClick={() => {
+                        const s = terminalSessions.find((t) => t.id === terminalActiveId);
+                        if (!s) return;
+                        const existing = sftpSessions.find((x) => x.serverId === s.serverId);
+                        if (existing) {
+                          sftpSetActive(existing.id);
+                          setActivePanelType("sftp");
+                        } else {
+                          void sftpOpenSession(s.serverId, s.serverName);
+                        }
+                      }}
+                      title="Open SFTP browser"
+                      aria-label="Open SFTP browser for this session"
+                      className="w-7 h-7 flex items-center justify-center rounded text-faint hover:text-accent hover:bg-surface-3 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                      </svg>
+                    </button>
+                  </div>
                 )}
-
-                {sftpSessions.map((session) => (
-                  <TabItem
-                    key={session.id}
-                    serverName={session.serverName}
-                    statusColor={SFTP_STATUS_COLORS[session.status]}
-                    isActive={activePanelType === "sftp" && session.id === sftpActiveId}
-                    isDragging={drag?.id === session.id}
-                    isDragOver={dragOverId === session.id && drag?.id !== session.id}
-                    title={session.serverName}
-                    icon={SFTP_FOLDER_ICON}
-                    closeLabel={`Close ${session.serverName} browser`}
-                    onActivate={() => {
-                      sftpSetActive(session.id);
-                      setActivePanelType("sftp");
-                    }}
-                    onClose={() => void sftpClose(session.id)}
-                    onDragStart={(e) => handleDragStart(session.id, "sftp", e)}
-                    onDragOver={(e) => handleDragOver(session.id, "sftp", e)}
-                    onDrop={(e) => handleDrop(session.id, "sftp", e)}
-                  />
-                ))}
               </div>
 
               {/* Panel content */}
