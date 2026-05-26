@@ -1,8 +1,9 @@
-import { useEffect, useCallback, useState, useRef } from "react";
+import { useEffect, useCallback, useState, useRef, useMemo } from "react";
 import { useUiStore, type ViewMode, type SortMode } from "../../store/uiStore";
 import { useVaultStore } from "../../store/vaultStore";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
+import { useServerStore } from "../../store/serverStore";
 import { useAppInit } from "../../hooks/useAppInit";
 import { useWakeReconnect } from "../../hooks/useWakeReconnect";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
@@ -102,7 +103,14 @@ export default function AppShell() {
   const sftpReorder = useSftpStore((s) => s.reorderSessions);
   const sftpOpenSession = useSftpStore((s) => s.openSession);
 
+  const servers = useServerStore((s) => s.servers);
+  const terminalOpenSession = useTerminalStore((s) => s.openSession);
+
   const [activePanelType, setActivePanelType] = useState<PanelType>("terminal");
+  const [showNewTabPicker, setShowNewTabPicker] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState("");
+  const newTabButtonRef = useRef<HTMLButtonElement>(null);
+  const newTabPickerRef = useRef<HTMLDivElement>(null);
 const searchRef = useRef<HTMLInputElement>(null);
 
   // Consolidated drag state — three separate atoms caused triple renders per drag-start.
@@ -150,6 +158,18 @@ const searchRef = useRef<HTMLInputElement>(null);
   const hasSftp = sftpSessions.length > 0;
   const hasPanel = hasTerminal || hasSftp;
 
+  const pickerServers = useMemo(
+    () =>
+      !pickerQuery
+        ? servers
+        : servers.filter(
+            (s) =>
+              s.displayName.toLowerCase().includes(pickerQuery.toLowerCase()) ||
+              s.hostname.toLowerCase().includes(pickerQuery.toLowerCase()),
+          ),
+    [servers, pickerQuery],
+  );
+
   // Bring a panel type to the foreground only when a NEW session is added
   // (length increases), not when one closes.
   const prevTerminalCount = useRef(terminalSessions.length);
@@ -179,6 +199,21 @@ const searchRef = useRef<HTMLInputElement>(null);
       setActivePanelType("terminal");
     }
   }, [activePanelType, hasTerminal, hasSftp]);
+
+  useEffect(() => {
+    if (!showNewTabPicker) return;
+    const close = (e: MouseEvent) => {
+      if (
+        !newTabPickerRef.current?.contains(e.target as Node) &&
+        !newTabButtonRef.current?.contains(e.target as Node)
+      ) {
+        setShowNewTabPicker(false);
+        setPickerQuery("");
+      }
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [showNewTabPicker]);
 
   if (isChecking) {
     return (
@@ -325,14 +360,14 @@ const searchRef = useRef<HTMLInputElement>(null);
           {hasPanel && activeView !== "logs" && (
             <div className="flex flex-col flex-1 min-w-0">
               {/* Unified tab bar */}
-              <div className="h-10 bg-surface-1 border-b border-stroke-subtle flex items-center shrink-0">
-                <div
-                  className="flex items-center gap-1 px-2 overflow-x-auto flex-1 min-w-0"
-                  onDragLeave={(e) => {
-                    if (!e.currentTarget.contains(e.relatedTarget as Node)) resetDrag();
-                  }}
-                  onDragEnd={resetDrag}
-                >
+              <div
+                className="h-10 bg-surface-1 border-b border-stroke-subtle flex items-center shrink-0"
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) resetDrag();
+                }}
+                onDragEnd={resetDrag}
+              >
+                <div className="flex items-center gap-1 px-2 overflow-x-auto flex-1 min-w-0">
                   {terminalSessions.map((session) => (
                     <TabItem
                       key={session.id}
@@ -384,6 +419,65 @@ const searchRef = useRef<HTMLInputElement>(null);
                       onDrop={(e) => handleDrop(session.id, "sftp", e)}
                     />
                   ))}
+                </div>
+
+                {/* New terminal session */}
+                <div className="px-1.5 shrink-0 relative border-l border-stroke-subtle">
+                  <button
+                    ref={newTabButtonRef}
+                    onClick={() => {
+                      setShowNewTabPicker((v) => !v);
+                      setPickerQuery("");
+                    }}
+                    title="New terminal session"
+                    aria-label="New terminal session"
+                    className="w-7 h-7 flex items-center justify-center rounded text-faint hover:text-white hover:bg-surface-3 transition-colors text-lg leading-none"
+                  >
+                    +
+                  </button>
+                  {showNewTabPicker && (
+                    <div
+                      ref={newTabPickerRef}
+                      className="absolute top-full right-0 mt-1 w-60 bg-surface-2 border border-stroke rounded-lg shadow-2xl z-50 overflow-hidden"
+                    >
+                      <div className="p-2 border-b border-stroke-subtle">
+                        <input
+                          autoFocus
+                          type="text"
+                          value={pickerQuery}
+                          onChange={(e) => setPickerQuery(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") {
+                              setShowNewTabPicker(false);
+                              setPickerQuery("");
+                            }
+                          }}
+                          placeholder="Search servers…"
+                          className="w-full bg-surface-3 border border-stroke rounded px-2.5 py-1.5 text-sm text-white placeholder-faint outline-none focus:border-accent transition-colors"
+                        />
+                      </div>
+                      <div className="max-h-60 overflow-y-auto">
+                        {pickerServers.length > 0 ? (
+                          pickerServers.map((server) => (
+                            <button
+                              key={server.id}
+                              onClick={() => {
+                                void terminalOpenSession(server.id, server.displayName);
+                                setShowNewTabPicker(false);
+                                setPickerQuery("");
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-secondary hover:bg-surface-3 hover:text-white transition-colors text-left"
+                            >
+                              <span className="flex-1 truncate">{server.displayName}</span>
+                              <span className="text-xs text-dim truncate max-w-[90px]">{server.hostname}</span>
+                            </button>
+                          ))
+                        ) : (
+                          <p className="px-3 py-4 text-center text-sm text-dim">No servers</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Open SFTP browser for the active terminal session */}
