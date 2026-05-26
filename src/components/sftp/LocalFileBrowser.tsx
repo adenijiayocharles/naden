@@ -11,6 +11,7 @@ import DeleteConfirmBanner from "./DeleteConfirmBanner";
 import ErrorBanner from "./ErrorBanner";
 import InlineCreateInput from "./InlineCreateInput";
 import { joinPath, parentPath } from "../../lib/path";
+import { setDragImage } from "../../lib/dragImage";
 
 interface Props {
   onSelectedChange: (paths: string[]) => void;
@@ -19,6 +20,7 @@ interface Props {
   showHidden?: boolean;
   newFolderTrigger?: number;
   newFileTrigger?: number;
+  onDropRemotePaths?: (remotePaths: string[]) => void;
 }
 
 interface ContextMenu { x: number; y: number; entry: LocalFileEntry }
@@ -33,12 +35,13 @@ interface LocalRowData {
   onRenameChange: (v: string) => void;
   onRenameCommit: () => void;
   onRenameCancel: () => void;
+  onDragStart: (entry: LocalFileEntry, e: React.DragEvent) => void;
 }
 
 const GRID_COLS = "1fr 5rem 7rem";
 
 // NOTE: defined outside LocalFileBrowser so it doesn't get recreated on every render.
-const Row = ({ index, style, entries, selectedSet, renaming, renameValue, onRowClick, onContextMenu, onRenameChange, onRenameCommit, onRenameCancel }: RowComponentProps<LocalRowData>) => {
+const Row = ({ index, style, entries, selectedSet, renaming, renameValue, onRowClick, onContextMenu, onRenameChange, onRenameCommit, onRenameCancel, onDragStart }: RowComponentProps<LocalRowData>) => {
   const entry = entries[index];
   const isSelected = selectedSet.has(entry.path);
   const isRenaming = renaming === entry.path;
@@ -46,7 +49,9 @@ const Row = ({ index, style, entries, selectedSet, renaming, renameValue, onRowC
   return (
     <div
       style={{ ...style, gridTemplateColumns: GRID_COLS }}
+      draggable={!isRenaming}
       onClick={(e) => onRowClick(entry, e)}
+      onDragStart={(e) => onDragStart(entry, e)}
       onContextMenu={(e) => onContextMenu(entry, e)}
       className={`grid cursor-pointer border-b border-stroke-subtle transition-colors select-none ${
         isSelected ? "bg-accent/10 text-accent-fg" : "text-secondary hover:bg-surface-2 hover:text-white"
@@ -88,7 +93,7 @@ const Row = ({ index, style, entries, selectedSet, renaming, renameValue, onRowC
   );
 };
 
-export default function LocalFileBrowser({ onSelectedChange, onPathChange, onActivate, showHidden = true, newFolderTrigger = 0, newFileTrigger = 0 }: Props) {
+export default function LocalFileBrowser({ onSelectedChange, onPathChange, onActivate, showHidden = true, newFolderTrigger = 0, newFileTrigger = 0, onDropRemotePaths }: Props) {
   const [currentPath, setCurrentPath] = useState("");
   const [entries, setEntries] = useState<LocalFileEntry[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
@@ -101,6 +106,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [creatingFile, setCreatingFile] = useState(false);
+  const [dropCount, setDropCount] = useState(0);
   const initialised = useRef(false);
 
   const navigateTo = useCallback(async (path: string) => {
@@ -172,6 +178,15 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const visibleEntries = showHidden ? entries : entries.filter((e) => !e.name.startsWith("."));
+  const isDragOver = dropCount > 0;
+
+  const handleDragStart = useCallback((entry: LocalFileEntry, e: React.DragEvent) => {
+    if (renaming === entry.path) { e.preventDefault(); return; }
+    const paths = selectedSet.has(entry.path) ? [...selectedSet] : [entry.path];
+    e.dataTransfer.setData("application/x-local-paths", JSON.stringify(paths));
+    e.dataTransfer.effectAllowed = "copy";
+    setDragImage(e, entry.name, paths.length);
+  }, [renaming, selectedSet]);
   const dblClickRef = useRef<{ path: string; t: number }>({ path: "", t: 0 });
 
   const commitRename = useCallback(async () => {
@@ -268,13 +283,27 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
     onRenameChange: setRenameValue,
     onRenameCommit: () => { void commitRename(); },
     onRenameCancel: () => setRenaming(null),
-  }), [visibleEntries, selectedSet, renaming, renameValue, handleRowClick, handleContextMenu, commitRename]);
+    onDragStart: handleDragStart,
+  }), [visibleEntries, selectedSet, renaming, renameValue, handleRowClick, handleContextMenu, commitRename, handleDragStart]);
 
   const cm = contextMenu;
   const selCount = selected.length;
 
   return (
-    <div className="flex flex-col h-full min-w-0">
+    <div
+      className={`flex flex-col h-full min-w-0 transition-colors ${isDragOver && onDropRemotePaths ? "ring-2 ring-inset ring-accent/60 bg-accent/5" : ""}`}
+      onDragEnter={() => { if (onDropRemotePaths) setDropCount((c) => c + 1); }}
+      onDragLeave={() => { if (onDropRemotePaths) setDropCount((c) => Math.max(0, c - 1)); }}
+      onDragOver={(e) => { if (onDropRemotePaths) e.preventDefault(); }}
+      onDrop={(e) => {
+        setDropCount(0);
+        const data = e.dataTransfer.getData("application/x-remote-paths");
+        if (data && onDropRemotePaths) {
+          e.preventDefault();
+          onDropRemotePaths(JSON.parse(data) as string[]);
+        }
+      }}
+    >
       {/* Pane header */}
       <div className="flex items-center gap-1 px-2 py-1.5 border-b border-stroke-subtle bg-surface-1 shrink-0">
         <button

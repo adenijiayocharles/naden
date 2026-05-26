@@ -70,6 +70,8 @@ interface RemotePaneOutput {
   handleCloseEdit: (path: string) => void;
   handleUploadFromLocal: () => void;
   handleDownloadToLocal: () => void;
+  handleUploadPaths: (localPaths: string[]) => void;
+  handleDownloadPaths: (remotePaths: string[]) => void;
   commitNewFolder: (name: string) => void;
   commitNewFile: (name: string) => void;
   setConfirmingDelete: (v: boolean) => void;
@@ -210,6 +212,49 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
       }
     } catch (e) {
       setError(formatError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleUploadPaths = async (localPaths: string[]) => {
+    if (!session || localPaths.length === 0) return;
+    setBusy(true);
+    setError(null);
+    try {
+      for (let i = 0; i < localPaths.length; i++) {
+        const localPath = localPaths[i];
+        const name = localPath.split("/").pop() ?? localPath;
+        setTransferProgress(localPaths.length > 1 ? `Uploading ${name} (${i + 1}/${localPaths.length})…` : `Uploading ${name}…`);
+        await sftpCommands.uploadSftpFile(sessionId, localPath, joinPath(session.currentPath, name));
+      }
+      setTransferProgress(null);
+      await navigate(session.currentPath);
+    } catch (e) {
+      setError(formatError(e));
+      setTransferProgress(null);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDownloadPaths = async (remotePaths: string[]) => {
+    if (!session || remotePaths.length === 0 || !localCurrentPath) return;
+    const files = session.entries.filter((e) => remotePaths.includes(e.path) && !e.isDir);
+    if (files.length === 0) return;
+    setBusy(true);
+    setError(null);
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const entry = files[i];
+        const name = entry.path.split("/").pop() ?? entry.path;
+        setTransferProgress(files.length > 1 ? `Downloading ${name} (${i + 1}/${files.length})…` : `Downloading ${name}…`);
+        await sftpCommands.downloadSftpFile(sessionId, entry.path, joinPath(localCurrentPath, name));
+      }
+      setTransferProgress(null);
+    } catch (e) {
+      setError(formatError(e));
+      setTransferProgress(null);
     } finally {
       setBusy(false);
     }
@@ -564,6 +609,8 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
     handleCloseEdit: (path: string) => { void handleCloseEdit(path); },
     handleUploadFromLocal: () => { void handleUploadFromLocal(); },
     handleDownloadToLocal: () => { void handleDownloadToLocal(); },
+    handleUploadPaths: (localPaths: string[]) => { void handleUploadPaths(localPaths); },
+    handleDownloadPaths: (remotePaths: string[]) => { void handleDownloadPaths(remotePaths); },
     commitNewFolder: (name: string) => { void commitNewFolder(name); },
     commitNewFile: (name: string) => { void commitNewFile(name); },
     setConfirmingDelete,

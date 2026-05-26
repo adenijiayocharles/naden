@@ -22,7 +22,8 @@
         "theme": "Dark",
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "backgroundColor": "#0d0d0d"
+        "backgroundColor": "#0d0d0d",
+        "dragDropEnabled": false
       }
     ],
     "security": {

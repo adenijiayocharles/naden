@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, useMemo } from "react";
+import { setDragImage } from "../../lib/dragImage";
 import { List, type RowComponentProps } from "react-window";
 import { AutoSizer } from "react-virtualized-auto-sizer";
 import type { FileEntry } from "../../types/sftp";
@@ -28,6 +29,7 @@ interface Props {
   onDelete: () => void;
   onEdit?: (path: string) => void;
   onChmod?: (path: string, currentMode: number) => void;
+  onDragStart?: (paths: string[]) => void;
 }
 
 interface ContextMenu { x: number; y: number; entry: FileEntry }
@@ -54,6 +56,7 @@ interface RowData {
   onChmod?: (path: string, mode: number) => void;
   hasClipboard: boolean;
   onContextMenu: (entry: FileEntry, e: React.MouseEvent) => void;
+  onDragStart?: (paths: string[]) => void;
 }
 
 /** Format a Unix permission integer as a 9-character string, e.g. `rwxr-xr-x`. */
@@ -154,7 +157,7 @@ export function ContextMenuPopup({ x, y, onClose, children }: {
 const GRID_COLS = "1fr 5rem 7rem 6rem";
 
 // NOTE: defined outside SftpFileList so it doesn't get recreated on every render.
-const Row = ({ index, style, entries, selectedSet, renaming, renameValue, dblClickRef, onSelect, onNavigate, onRenameStart, onRenameChange, onRenameCommit, onRenameCancel, onChmod, onContextMenu }: RowComponentProps<RowData>) => {
+const Row = ({ index, style, entries, selectedSet, renaming, renameValue, dblClickRef, onSelect, onNavigate, onRenameStart, onRenameChange, onRenameCommit, onRenameCancel, onChmod, onContextMenu, onDragStart }: RowComponentProps<RowData>) => {
   const entry = entries[index];
   const isSelected = selectedSet.has(entry.path);
   const isRenaming = renaming === entry.path;
@@ -172,10 +175,21 @@ const Row = ({ index, style, entries, selectedSet, renaming, renameValue, dblCli
     }
   };
 
+  const handleDragStart = (e: React.DragEvent) => {
+    if (isRenaming) { e.preventDefault(); return; }
+    const paths = selectedSet.has(entry.path) ? [...selectedSet] : [entry.path];
+    e.dataTransfer.setData("application/x-remote-paths", JSON.stringify(paths));
+    e.dataTransfer.effectAllowed = "copy";
+    setDragImage(e, entry.name, paths.length);
+    onDragStart?.(paths);
+  };
+
   return (
     <div
       style={{ ...style, gridTemplateColumns: GRID_COLS }}
+      draggable={!isRenaming}
       onClick={handleClick}
+      onDragStart={handleDragStart}
       onContextMenu={(e) => onContextMenu(entry, e)}
       className={`grid cursor-pointer border-b border-stroke-subtle transition-colors select-none ${
         isSelected ? "bg-accent/10 text-accent-fg" : "text-secondary hover:bg-surface-2 hover:text-white"
@@ -240,7 +254,7 @@ export default function SftpFileList({
   entries, selected, renaming, renameValue, sortKey, sortDir, hasClipboard,
   onSort, onSelect, onNavigate,
   onRenameChange, onRenameCommit, onRenameCancel, onRenameStart,
-  onCut, onCopy, onPaste, onDelete, onEdit, onChmod,
+  onCut, onCopy, onPaste, onDelete, onEdit, onChmod, onDragStart,
 }: Props) {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const closeMenu = () => setContextMenu(null);
@@ -275,12 +289,13 @@ export default function SftpFileList({
     onChmod,
     hasClipboard,
     onContextMenu: handleContextMenu,
+    onDragStart,
   // NOTE: handleContextMenu closes over selectedSet and onSelect, both stable within this render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [
     entries, selectedSet, renaming, renameValue,
     onSelect, onNavigate, onRenameStart, onRenameChange, onRenameCommit, onRenameCancel,
-    onCut, onCopy, onPaste, onDelete, onEdit, onChmod, hasClipboard,
+    onCut, onCopy, onPaste, onDelete, onEdit, onChmod, hasClipboard, onDragStart,
   ]);
 
   const cm = contextMenu;

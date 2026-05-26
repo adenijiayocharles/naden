@@ -32,6 +32,7 @@ export default function SftpBrowser({ sessionId }: Props) {
   const [localSelected, setLocalSelected] = useState<string[]>([]);
   const [localCurrentPath, setLocalCurrentPath] = useState("");
   const [activePane, setActivePane] = useState<"local" | "remote">("remote");
+  const [remoteDragCount, setRemoteDragCount] = useState(0);
 
   const handleSort = (key: SortKey) => {
     if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -82,6 +83,8 @@ export default function SftpBrowser({ sessionId }: Props) {
     handleCloseEdit,
     handleUploadFromLocal,
     handleDownloadToLocal,
+    handleUploadPaths,
+    handleDownloadPaths,
     commitNewFolder,
     commitNewFile,
     setConfirmingDelete,
@@ -170,6 +173,7 @@ export default function SftpBrowser({ sessionId }: Props) {
                 showHidden={showHiddenLocal}
                 newFolderTrigger={localNewFolderTrigger}
                 newFileTrigger={localNewFileTrigger}
+                onDropRemotePaths={handleDownloadPaths}
               />
             </div>
 
@@ -196,7 +200,20 @@ export default function SftpBrowser({ sessionId }: Props) {
         )}
 
         {/* Remote pane */}
-        <div className="flex-1 min-w-0 flex flex-col">
+        <div
+          className={`flex-1 min-w-0 flex flex-col transition-colors ${showLocalPane && remoteDragCount > 0 ? "ring-2 ring-inset ring-accent/60 bg-accent/5" : ""}`}
+          onDragEnter={() => { if (showLocalPane) setRemoteDragCount((c) => c + 1); }}
+          onDragLeave={() => { if (showLocalPane) setRemoteDragCount((c) => Math.max(0, c - 1)); }}
+          onDragOver={(e) => { if (showLocalPane) e.preventDefault(); }}
+          onDrop={(e) => {
+            setRemoteDragCount(0);
+            const data = e.dataTransfer.getData("application/x-local-paths");
+            if (data && showLocalPane) {
+              e.preventDefault();
+              handleUploadPaths(JSON.parse(data) as string[]);
+            }
+          }}
+        >
 
       {/* Per-pane remote path bar — only in split mode */}
       {showLocalPane && (
