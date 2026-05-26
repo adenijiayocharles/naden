@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
@@ -172,7 +172,7 @@ function Nav() {
 
       {/* Links */}
       <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
-        {["Features", "Security", "Changelog"].map((item) => (
+        {["Features", "Security", "Docs", "Changelog"].map((item) => (
           <a key={item} href={`#${item.toLowerCase()}`} style={{
             fontSize: 14,
             color: "var(--text-muted)",
@@ -633,6 +633,444 @@ function VaultSection() {
   );
 }
 
+// ── Docs ──────────────────────────────────────────────────────────────────────
+
+function Kbd({ children }: { children: ReactNode }) {
+  return (
+    <kbd style={{
+      fontFamily: "var(--font-mono)",
+      fontSize: 11,
+      background: "var(--bg-3)",
+      border: "1px solid var(--stroke)",
+      borderBottom: "2px solid var(--stroke)",
+      borderRadius: 4,
+      padding: "2px 7px",
+      color: "var(--text-secondary)",
+      whiteSpace: "nowrap",
+    }}>{children}</kbd>
+  );
+}
+
+function InlineCode({ children }: { children: ReactNode }) {
+  return (
+    <code style={{
+      fontFamily: "var(--font-mono)",
+      fontSize: 13,
+      background: "var(--bg-3)",
+      border: "1px solid var(--stroke-subtle)",
+      borderRadius: 4,
+      padding: "1px 6px",
+      color: "var(--accent-green)",
+    }}>{children}</code>
+  );
+}
+
+function DocH3({ children }: { children: ReactNode }) {
+  return (
+    <h3 style={{
+      fontSize: 15,
+      fontWeight: 600,
+      color: "var(--text-primary)",
+      letterSpacing: -0.2,
+      marginTop: 28,
+      marginBottom: 8,
+    }}>{children}</h3>
+  );
+}
+
+function DocP({ children }: { children: ReactNode }) {
+  return (
+    <p style={{
+      fontSize: 14,
+      color: "var(--text-secondary)",
+      lineHeight: 1.75,
+      marginBottom: 12,
+    }}>{children}</p>
+  );
+}
+
+function DocStep({ n, accent = "var(--accent-green)", children }: { n: string; accent?: string; children: ReactNode }) {
+  return (
+    <div style={{ display: "flex", gap: 12, marginBottom: 10 }}>
+      <div style={{
+        width: 22,
+        height: 22,
+        borderRadius: "50%",
+        background: `color-mix(in srgb, ${accent} 12%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${accent} 28%, transparent)`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 11,
+        fontWeight: 700,
+        color: accent,
+        flexShrink: 0,
+        marginTop: 2,
+      }}>{n}</div>
+      <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.75, margin: 0 }}>{children}</p>
+    </div>
+  );
+}
+
+function DocsSection() {
+  const [activeId, setActiveId] = useState("quickstart");
+
+  const navItems = [
+    { id: "quickstart", icon: <IconZap size={14} />,     label: "Quick Start" },
+    { id: "shortcuts",  icon: <IconKey size={14} />,      label: "Shortcuts" },
+    { id: "terminal",   icon: <IconTerminal size={14} />, label: "Terminal" },
+    { id: "sftp",       icon: <IconFolder size={14} />,   label: "SFTP Browser" },
+    { id: "vault",      icon: <IconShield size={14} />,   label: "Credential Vault" },
+    { id: "jumphost",   icon: <IconLayers size={14} />,   label: "Jump Hosts" },
+    { id: "sshconfig",  icon: <IconGlobe size={14} />,    label: "SSH Config Import" },
+    { id: "auditlog",   icon: <IconClock size={14} />,    label: "Audit Log" },
+  ];
+
+  function renderContent() {
+    switch (activeId) {
+      case "quickstart": return (
+        <div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.5, marginBottom: 6 }}>Getting started</h2>
+          <DocP>Get an active SSH session in under a minute — no config files to edit by hand.</DocP>
+          {[
+            {
+              n: "1",
+              title: "Add a server",
+              body: <>Click <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>+ New Server</strong> in the sidebar, enter a hostname, port (default 22), and username. Or use <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>File → Import SSH Config</strong> to pull all hosts from <InlineCode>~/.ssh/config</InlineCode> at once.</>,
+            },
+            {
+              n: "2",
+              title: "Set up the vault",
+              body: <>On first launch, SSH Manager asks you to create a master password. This derives the AES-256 vault key and is never stored on disk. Add a password or key passphrase in the server's <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Credentials</strong> tab.</>,
+            },
+            {
+              n: "3",
+              title: "Connect",
+              body: <>Click any server in the sidebar to open a terminal session. Additional connections open as new tabs. Use <Kbd>⌘K</Kbd> to search across all servers at any time.</>,
+            },
+          ].map(({ n, title, body }) => (
+            <div key={n} style={{
+              display: "flex",
+              gap: 16,
+              padding: "16px 20px",
+              background: "var(--bg-3)",
+              borderRadius: 10,
+              border: "1px solid var(--stroke-subtle)",
+              marginBottom: 10,
+            }}>
+              <div style={{
+                width: 26,
+                height: 26,
+                borderRadius: "50%",
+                background: "color-mix(in srgb, var(--accent-green) 15%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--accent-green) 30%, transparent)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 12,
+                fontWeight: 700,
+                color: "var(--accent-green)",
+                flexShrink: 0,
+                marginTop: 1,
+              }}>{n}</div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", marginBottom: 5 }}>{title}</div>
+                <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.7 }}>{body}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+
+      case "shortcuts": return (
+        <div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.5, marginBottom: 6 }}>Keyboard shortcuts</h2>
+          <DocP>⌘ refers to the Command key on macOS.</DocP>
+          {[
+            {
+              group: "Global",
+              rows: [
+                { keys: "⌘K", action: "Open fuzzy search" },
+                { keys: "⌘N", action: "Add new server" },
+                { keys: "⌘,", action: "Open settings" },
+              ],
+            },
+            {
+              group: "Terminal",
+              rows: [
+                { keys: "⌘F", action: "Find in terminal" },
+                { keys: "⌘C", action: "Copy selection" },
+                { keys: "⌘V", action: "Paste" },
+              ],
+            },
+          ].map(({ group, rows }) => (
+            <div key={group} style={{ marginBottom: 24 }}>
+              <div style={{
+                fontSize: 10,
+                fontWeight: 600,
+                color: "var(--text-muted)",
+                letterSpacing: 1,
+                textTransform: "uppercase",
+                marginBottom: 8,
+              }}>{group}</div>
+              <div style={{ borderRadius: 8, border: "1px solid var(--stroke-subtle)", overflow: "hidden" }}>
+                {rows.map(({ keys, action }, i) => (
+                  <div key={keys} style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 16px",
+                    background: i % 2 === 0 ? "var(--bg-2)" : "var(--bg-3)",
+                  }}>
+                    <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{action}</span>
+                    <Kbd>{keys}</Kbd>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+
+      case "terminal": return (
+        <div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.5, marginBottom: 6 }}>Terminal</h2>
+          <DocP>SSH Manager embeds a full <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>xterm.js</strong> terminal — every session runs natively in-app with no external emulator required.</DocP>
+
+          <DocH3>Multi-tab sessions</DocH3>
+          <DocP>Open up to 20 simultaneous SSH sessions as tabs. Drag tabs to reorder. Click <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>+</strong> in the tab bar to start a new session to any server.</DocP>
+
+          <DocH3>Find in terminal</DocH3>
+          <DocP>Press <Kbd>⌘F</Kbd> to open the search overlay. Matches highlight as you type. Use <Kbd>↩</Kbd> and <Kbd>⇧↩</Kbd> to step forward and backward through results.</DocP>
+
+          <DocH3>Copy on select</DocH3>
+          <DocP>Selecting text copies it to the clipboard automatically. Right-click or press <Kbd>⌘V</Kbd> to paste.</DocP>
+
+          <DocH3>Font settings</DocH3>
+          <DocP>Go to <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Settings → Terminal</strong> to set a custom font family and size. Defaults to JetBrains Mono 13 px. Changes apply immediately to all open sessions.</DocP>
+        </div>
+      );
+
+      case "sftp": return (
+        <div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.5, marginBottom: 6 }}>SFTP browser</h2>
+          <DocP>A dual-pane file manager built into SSH Manager — local filesystem on the left, remote server on the right. No separate FTP client needed.</DocP>
+
+          <DocH3>Opening the browser</DocH3>
+          <DocP>While connected to a server, click the <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>folder icon</strong> in the top toolbar to open the SFTP pane for that session.</DocP>
+
+          <DocH3>Uploading and downloading</DocH3>
+          <DocP>Drag files from the local pane to the remote pane to upload, or the other direction to download. Right-click any file for explicit <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Upload</strong> or <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Download</strong> options.</DocP>
+
+          <DocH3>In-place editing</DocH3>
+          <DocP>Double-click any remote file to open it in your default local app. SSH Manager watches the local temp copy and automatically re-uploads it the moment you save — no manual transfer required.</DocP>
+
+          <DocH3>Permissions (chmod)</DocH3>
+          <DocP>Click any permission string (e.g. <InlineCode>rwxr-xr-x</InlineCode>) to open the chmod dialog. Enter an octal code like <InlineCode>755</InlineCode>, or toggle individual bits using the checkbox grid.</DocP>
+        </div>
+      );
+
+      case "vault": return (
+        <div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.5, marginBottom: 6 }}>Credential vault</h2>
+          <DocP>Every credential is encrypted with <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>AES-256-GCM</strong> before touching disk. The vault key is derived from your master password via PBKDF2 — it is never stored anywhere.</DocP>
+
+          <DocH3>First-time setup</DocH3>
+          <DocP>SSH Manager prompts you to create a master password on first launch. Choose something strong — this is the sole key to your stored credentials.</DocP>
+
+          <DocH3>Touch ID</DocH3>
+          <DocP>Go to <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Settings → Vault → Enable Touch ID</strong>. Once enabled, SSH Manager uses biometrics to unlock instead of typing your master password. Requires a Mac with Touch ID hardware.</DocP>
+
+          <DocH3>Auto-lock</DocH3>
+          <DocP>Configure the idle timeout in <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Settings → Vault</strong>. SSH Manager locks automatically when you step away.</DocP>
+
+          <DocH3>Changing your password</DocH3>
+          <DocP>Go to <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Settings → Vault → Change Master Password</strong>. All credentials are transparently re-encrypted with the new key.</DocP>
+        </div>
+      );
+
+      case "jumphost": return (
+        <div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.5, marginBottom: 6 }}>Jump hosts</h2>
+          <DocP>SSH Manager supports multi-hop tunneling through bastion servers. Each hop in the chain uses its own vault credentials independently.</DocP>
+
+          <DocH3>Setup</DocH3>
+          <DocStep n="1" accent="#a78bfa">Add the bastion server as a normal server entry in SSH Manager.</DocStep>
+          <DocStep n="2" accent="#a78bfa">Open the bastion's settings and enable <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>"Use as jump host"</strong>.</DocStep>
+          <DocStep n="3" accent="#a78bfa">Edit your target server and select the bastion from the <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Jump host</strong> dropdown in the Connection section.</DocStep>
+          <DocStep n="4" accent="#a78bfa">Connect to the target normally — SSH Manager resolves the proxy chain automatically.</DocStep>
+
+          <DocH3>Multi-hop chains</DocH3>
+          <DocP>Chain up to three hops (A → B → C) by assigning a jump host that itself has a jump host. Each server's credentials are resolved from the vault independently.</DocP>
+        </div>
+      );
+
+      case "sshconfig": return (
+        <div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.5, marginBottom: 6 }}>SSH Config Import</h2>
+          <DocP>If you already manage servers in <InlineCode>~/.ssh/config</InlineCode>, import them all into SSH Manager with a single click.</DocP>
+
+          <DocH3>How to import</DocH3>
+          <DocStep n="1" accent="#38bdf8">Go to <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>File → Import SSH Config</strong>. SSH Manager reads <InlineCode>~/.ssh/config</InlineCode> automatically.</DocStep>
+          <DocStep n="2" accent="#38bdf8">Review the preview of all detected hosts. Uncheck any you don't want to import.</DocStep>
+          <DocStep n="3" accent="#38bdf8">Click <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Import</strong>. New servers appear in the sidebar under "Ungrouped".</DocStep>
+
+          <DocH3>What's preserved</DocH3>
+          <div style={{ borderRadius: 8, border: "1px solid var(--stroke-subtle)", overflow: "hidden", marginBottom: 16 }}>
+            {[
+              { field: "ProxyJump",  desc: "Converted to jump host assignments" },
+              { field: "IdentityFile", desc: "Path retained in server settings" },
+              { field: "Port / User",  desc: "Imported as-is" },
+            ].map(({ field, desc }, i) => (
+              <div key={field} style={{
+                display: "grid",
+                gridTemplateColumns: "120px 1fr",
+                gap: 12,
+                padding: "10px 14px",
+                background: i % 2 === 0 ? "var(--bg-2)" : "var(--bg-3)",
+                alignItems: "center",
+              }}>
+                <InlineCode>{field}</InlineCode>
+                <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{desc}</span>
+              </div>
+            ))}
+          </div>
+
+          <DocH3>Deduplication</DocH3>
+          <DocP>Existing servers with the same hostname and username are not duplicated on re-import.</DocP>
+        </div>
+      );
+
+      case "auditlog": return (
+        <div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.5, marginBottom: 6 }}>Audit log</h2>
+          <DocP>Every connection attempt is recorded locally. No data leaves your machine.</DocP>
+
+          <DocH3>What's logged</DocH3>
+          <div style={{ borderRadius: 8, border: "1px solid var(--stroke-subtle)", overflow: "hidden", marginBottom: 16 }}>
+            {[
+              { field: "Timestamp",  desc: "Date and time of the connection attempt" },
+              { field: "Server",     desc: "Display name as configured in SSH Manager" },
+              { field: "Hostname",   desc: "Host and port used for the connection" },
+              { field: "Username",   desc: "SSH username for the session" },
+              { field: "Duration",   desc: "Total session time for successful connections" },
+              { field: "Outcome",    desc: "connected, failed, or disconnected" },
+            ].map(({ field, desc }, i) => (
+              <div key={field} style={{
+                display: "grid",
+                gridTemplateColumns: "100px 1fr",
+                gap: 12,
+                padding: "10px 14px",
+                background: i % 2 === 0 ? "var(--bg-2)" : "var(--bg-3)",
+                alignItems: "center",
+              }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{field}</span>
+                <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{desc}</span>
+              </div>
+            ))}
+          </div>
+
+          <DocH3>Viewing the log</DocH3>
+          <DocP>Click the <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>clock icon</strong> in the sidebar to open the Audit Log. Use the search bar to filter by server name or hostname. Click any column header to sort.</DocP>
+
+          <DocH3>Exporting to CSV</DocH3>
+          <DocP>Click <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Export CSV</strong> in the toolbar to download the full history as a comma-separated file — useful for compliance records or spreadsheet analysis.</DocP>
+        </div>
+      );
+
+      default: return null;
+    }
+  }
+
+  return (
+    <section id="docs" style={{
+      padding: "80px max(24px, calc(50vw - 620px)) 100px",
+      borderTop: "1px solid var(--stroke-subtle)",
+    }}>
+      <div style={{ textAlign: "center", marginBottom: 56 }}>
+        <div style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          marginBottom: 16,
+          padding: "4px 12px",
+          borderRadius: 100,
+          background: "var(--bg-3)",
+          border: "1px solid var(--stroke)",
+        }}>
+          <IconSearch size={13} />
+          <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>DOCUMENTATION</span>
+        </div>
+        <h2 style={{
+          fontSize: "clamp(28px, 4vw, 44px)",
+          fontWeight: 700,
+          letterSpacing: -1.2,
+          color: "var(--text-primary)",
+          marginBottom: 14,
+        }}>
+          Everything you need to know.
+        </h2>
+        <p style={{ fontSize: 17, color: "var(--text-secondary)", maxWidth: 440, margin: "0 auto", lineHeight: 1.65 }}>
+          Guides and references for every feature in SSH Manager.
+        </p>
+      </div>
+
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "200px 1fr",
+        background: "var(--bg-1)",
+        borderRadius: 14,
+        border: "1px solid var(--stroke-subtle)",
+        overflow: "hidden",
+        minHeight: 500,
+      }}>
+        {/* Sidebar nav */}
+        <nav style={{
+          borderRight: "1px solid var(--stroke-subtle)",
+          padding: "8px 0",
+        }}>
+          {navItems.map(({ id, icon, label }) => {
+            const active = activeId === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setActiveId(id)}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 9,
+                  padding: "9px 16px",
+                  background: active ? "var(--bg-3)" : "transparent",
+                  border: "none",
+                  borderLeft: `2px solid ${active ? "var(--accent-green)" : "transparent"}`,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  color: active ? "var(--text-primary)" : "var(--text-muted)",
+                  fontSize: 13,
+                  fontWeight: active ? 600 : 400,
+                  transition: "color 0.12s, background 0.12s",
+                  fontFamily: "var(--font-sans)",
+                }}
+                onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)"; }}
+                onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}
+              >
+                <span style={{ opacity: active ? 1 : 0.6, flexShrink: 0 }}>{icon}</span>
+                {label}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Content pane */}
+        <div style={{ padding: "32px 40px", overflowY: "auto" }}>
+          {renderContent()}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── CTA ───────────────────────────────────────────────────────────────────────
 
 function CTA() {
@@ -789,6 +1227,7 @@ export default function App() {
         <SftpSection />
         <FeaturesGrid />
         <VaultSection />
+        <DocsSection />
         <CTA />
       </main>
       <Footer />
