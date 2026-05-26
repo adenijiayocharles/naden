@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
-import { terminalCommands } from "../../lib/tauriCommands";
+import { terminalCommands, clipboardCommands } from "../../lib/tauriCommands";
 import { sessionBuffer } from "../../lib/sessionBuffer";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useTerminalSettings, fontCss } from "../../lib/terminalSettings";
@@ -113,7 +113,7 @@ export default function TerminalPane({ sessionId }: Props) {
     const selectionDisposer = copyOnSelect
       ? term.onSelectionChange(() => {
           const sel = term.getSelection();
-          if (sel) navigator.clipboard.writeText(sel).catch(() => {});
+          if (sel) clipboardCommands.writeText(sel).catch(() => {});
         })
       : null;
 

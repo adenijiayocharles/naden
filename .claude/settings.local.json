@@ -42,7 +42,32 @@
       "Bash(cp /Users/adenijiayocharles/Projects/SSHManager/.claude/worktrees/agent-a35baffb52929e9b0/src/store/sftpStore.ts /Users/adenijiayocharles/Projects/SSHManager/src/store/sftpStore.ts)",
       "Bash(cp /Users/adenijiayocharles/Projects/SSHManager/.claude/worktrees/agent-a35baffb52929e9b0/src/components/layout/AppShell.tsx /Users/adenijiayocharles/Projects/SSHManager/src/components/layout/AppShell.tsx)",
       "Bash(xargs ls -la)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "mcp__claude_ai_Figma__get_design_context",
+      "Bash(open *)",
+      "Bash(screencapture -x /tmp/ssh_manager_launch.png)",
+      "Bash(screencapture -x -t png /tmp/ssh_screen.png)",
+      "Read(//tmp/**)",
+      "Bash(osascript)",
+      "Bash(osascript -e 'tell application \"System Events\" to set frontmost of \\(first process whose name = \"ssh-manager\"\\) to true')",
+      "Bash(screencapture -R 1120,195,1200,750 /tmp/ssh_window.png)",
+      "Bash(cliclick c:1470,345)",
+      "Bash(screencapture -R 1120,195,1200,750 /tmp/ssh_terminal.png)",
+      "Bash(osascript -l JavaScript)",
+      "Bash(screencapture -R 1120,195,1200,750 /tmp/ssh_after_click.png)",
+      "Bash(cp /tmp/ssh_connected.png /Users/adenijiayocharles/Projects/SSHManager/landing/public/screenshot-terminal.png)",
+      "Bash(cp /tmp/ssh_sftp.png /Users/adenijiayocharles/Projects/SSHManager/landing/public/screenshot-sftp.png)",
+      "Bash(cp /tmp/ssh_settings.png /Users/adenijiayocharles/Projects/SSHManager/landing/public/screenshot-vault.png)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(screencapture -R 0,0,1440,900 /tmp/landing_preview.png)",
+      "Bash(osascript -e 'tell application \"Google Chrome\" to activate')",
+      "Bash(screencapture /tmp/landing_preview2.png)",
+      "Bash(npx vite *)",
+      "Bash(screencapture /tmp/landing_final.png)",
+      "Bash(screencapture /tmp/chrome_landing.png)",
+      "Bash(kill 89084)",
+      "Bash(pkill -f \"vite --config landing\")",
+      "Bash(pkill -f \"ssh-manager\")"
     ]
   }
 }

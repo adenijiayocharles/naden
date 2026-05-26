@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { writeText as clipboardWriteText } from "@tauri-apps/plugin-clipboard-manager";
 import type { LogEntry } from "../types/log";
 import type {
   Server,
@@ -196,6 +197,10 @@ export const sftpCommands = {
 
   copySftpFile: (sessionId: string, src: string, dest: string) =>
     invoke<void>("copy_sftp_file", { sessionId, src, dest }),
+};
+
+export const clipboardCommands = {
+  writeText: (text: string) => clipboardWriteText(text),
 };
 
 export const logCommands = {
