@@ -26,6 +26,10 @@ export default function TerminalPane({ sessionId }: Props) {
 
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  // Tracks the last found match position so navigation survives selection being
+  // cleared by incoming SSH output between the typing call and Enter/button press.
+  // getSelectionPosition() returns 1-based coords; terminal.select() takes 0-based.
+  const lastFoundRef = useRef<{ col: number; row: number } | null>(null);
 
   const isConnecting = session?.status === "connecting";
   const isError = session?.status === "error";
@@ -37,14 +41,32 @@ export default function TerminalPane({ sessionId }: Props) {
   const closeSearch = useCallback(() => {
     setSearchVisible(false);
     setSearchQuery("");
+    lastFoundRef.current = null;
   }, []);
 
   const findNext = useCallback(() => {
-    if (searchQuery) searchAddonRef.current?.findNext(searchQuery, { incremental: false });
+    const term = termRef.current;
+    const addon = searchAddonRef.current;
+    if (!searchQuery || !addon) return;
+    // Restore selection if SSH output cleared it so the addon knows where to advance from
+    if (term && !term.hasSelection() && lastFoundRef.current) {
+      term.select(lastFoundRef.current.col, lastFoundRef.current.row, searchQuery.length);
+    }
+    addon.findNext(searchQuery, { incremental: false });
+    const pos = term?.getSelectionPosition();
+    if (pos) lastFoundRef.current = { col: pos.start.x - 1, row: pos.start.y - 1 };
   }, [searchQuery]);
 
   const findPrevious = useCallback(() => {
-    if (searchQuery) searchAddonRef.current?.findPrevious(searchQuery);
+    const term = termRef.current;
+    const addon = searchAddonRef.current;
+    if (!searchQuery || !addon) return;
+    if (term && !term.hasSelection() && lastFoundRef.current) {
+      term.select(lastFoundRef.current.col, lastFoundRef.current.row, searchQuery.length);
+    }
+    addon.findPrevious(searchQuery);
+    const pos = term?.getSelectionPosition();
+    if (pos) lastFoundRef.current = { col: pos.start.x - 1, row: pos.start.y - 1 };
   }, [searchQuery]);
 
   useEffect(() => {
@@ -209,10 +231,16 @@ export default function TerminalPane({ sessionId }: Props) {
             onChange={(e) => {
               const q = e.target.value;
               setSearchQuery(q);
-              if (q) searchAddonRef.current?.findNext(q, { incremental: true });
+              lastFoundRef.current = null;
+              if (q) {
+                searchAddonRef.current?.findNext(q, { incremental: true });
+                const pos = termRef.current?.getSelectionPosition();
+                if (pos) lastFoundRef.current = { col: pos.start.x - 1, row: pos.start.y - 1 };
+              }
             }}
             onKeyDown={(e) => {
-              if (e.key === "Enter") { e.shiftKey ? findPrevious() : findNext(); }
+              if (e.key === "Enter" || e.key === "ArrowDown") { e.preventDefault(); e.shiftKey ? findPrevious() : findNext(); }
+              else if (e.key === "ArrowUp") { e.preventDefault(); findPrevious(); }
               else if (e.key === "Escape") { closeSearch(); }
             }}
             placeholder="Find in terminal…"
