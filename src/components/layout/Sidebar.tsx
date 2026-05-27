@@ -275,6 +275,83 @@ function NavRow({
   );
 }
 
+// ── Group row with right-click context menu ────────────────────────────────────
+function GroupRow({
+  group,
+  active,
+  count,
+  onClick,
+  onEdit,
+  onDelete,
+}: {
+  group: Group;
+  active: boolean;
+  count: number;
+  onClick: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menu) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenu(null);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menu]);
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  return (
+    <>
+      <div
+        onContextMenu={handleContextMenu}
+        className={`flex items-center rounded transition-colors ${active ? "bg-accent" : "hover:bg-surface-3"}`}
+      >
+        <button
+          onClick={onClick}
+          className={`flex-1 min-w-0 text-left px-3 py-2 text-sm flex items-center justify-between transition-colors ${
+            active ? "text-black font-medium" : "text-secondary hover:text-white"
+          }`}
+        >
+          <span className="flex items-center gap-2 min-w-0 truncate">
+            {group.color && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: group.color }} />}
+            <span className="truncate">{group.name}</span>
+          </span>
+          <span className={`text-xs ml-2 shrink-0 ${active ? "text-black/60" : "text-muted"}`}>{count}</span>
+        </button>
+      </div>
+
+      {menu && (
+        <div
+          ref={menuRef}
+          className="fixed bg-surface-2 border border-stroke rounded-lg shadow-2xl z-50 py-1 min-w-[130px]"
+          style={{ left: menu.x, top: menu.y }}
+        >
+          <button
+            onClick={() => { onEdit(); setMenu(null); }}
+            className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-surface-4 transition-colors"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => { onDelete(); setMenu(null); }}
+            className="w-full text-left px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-surface-4 transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
 // ── Sidebar ────────────────────────────────────────────────────────────────────
 export default function Sidebar() {
   const servers = useServerStore((s) => s.servers);
@@ -354,7 +431,7 @@ export default function Sidebar() {
 
         {/* Groups */}
         <div className="pt-3">
-          <div className="flex items-center justify-between px-3 pb-1">
+          <div className="flex items-center justify-between px-3 pb-2">
             <p className="text-xs font-semibold text-faint uppercase tracking-wider">Groups</p>
             <button
               onClick={() => setCreatingGroup(true)}
@@ -368,21 +445,14 @@ export default function Sidebar() {
             </button>
           </div>
           {groups.map((g) => (
-            <NavRow
+            <GroupRow
               key={g.id}
+              group={g}
               active={filterGroupId === g.id && activeView !== "logs"}
-              onClick={selectFilter(() => setFilterGroup(g.id))}
-              label={
-                <span className="flex items-center gap-2 min-w-0 truncate">
-                  {g.color && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: g.color }} />}
-                  <span className="truncate">{g.name}</span>
-                </span>
-              }
               count={countByGroup[g.id] ?? 0}
-              menuActions={[
-                { label: "Edit", onClick: () => setEditingGroup({ group: g, initialDelete: false }) },
-                { label: "Delete", danger: true, onClick: () => setEditingGroup({ group: g, initialDelete: true }) },
-              ]}
+              onClick={selectFilter(() => setFilterGroup(g.id))}
+              onEdit={() => setEditingGroup({ group: g, initialDelete: false })}
+              onDelete={() => setEditingGroup({ group: g, initialDelete: true })}
             />
           ))}
         </div>
