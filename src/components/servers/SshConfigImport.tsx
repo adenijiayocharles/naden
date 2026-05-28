@@ -108,7 +108,7 @@ export default function SshConfigImport({ onClose }: Props) {
               <input
                 value={configPath}
                 onChange={(e) => setConfigPath(e.target.value)}
-                className="flex-1 h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white focus:outline-none focus:border-accent"
+                className="flex-1 h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white focus:outline-none focus:border-accent"
               />
               <button
                 type="button"

@@ -286,7 +286,7 @@ export default function AppShell() {
                     value={logSearchQuery}
                     onChange={(e) => setLogSearch(e.target.value)}
                     placeholder="Search logs…"
-                    className="w-full h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
+                    className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
                   />
                 </div>
                 <LogView />

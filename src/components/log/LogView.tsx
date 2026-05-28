@@ -265,7 +265,7 @@ export default function LogView() {
           <select
             value={filterServer}
             onChange={(e) => setFilterServer(e.target.value)}
-            className="h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white focus:outline-none focus:border-accent"
+            className="h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white focus:outline-none focus:border-accent"
           >
             <option value="">All servers</option>
             {servers.map((s) => (
@@ -277,14 +277,14 @@ export default function LogView() {
             type="date"
             value={filterStart}
             onChange={(e) => setFilterStart(e.target.value)}
-            className="h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white focus:outline-none focus:border-accent"
+            className="h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white focus:outline-none focus:border-accent"
           />
           <span className="text-faint text-sm">→</span>
           <input
             type="date"
             value={filterEnd}
             onChange={(e) => setFilterEnd(e.target.value)}
-            className="h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white focus:outline-none focus:border-accent"
+            className="h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white focus:outline-none focus:border-accent"
           />
 
           {hasFilters && (
@@ -296,7 +296,7 @@ export default function LogView() {
           <button
             onClick={() => { void handleExport(); }}
             disabled={exporting}
-            className="ml-auto h-8 bg-surface-3 hover:bg-surface-4 border border-stroke text-secondary text-sm px-3 rounded transition-colors disabled:opacity-40"
+            className="ml-auto h-10 bg-surface-3 hover:bg-surface-4 border border-stroke text-secondary text-sm px-3 rounded transition-colors disabled:opacity-40"
           >
             {exporting ? "Exporting…" : "Export CSV"}
           </button>

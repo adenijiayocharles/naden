@@ -44,10 +44,10 @@ html, body, #root { background: #0d0d0d; }
     font-family: var(--font-sans);
   }
 
-  /* Uniform 32 px height for all single-line form controls */
+  /* Uniform 40 px height for all single-line form controls */
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
   select {
-    height: 2rem;
+    height: 2.5rem;
   }
 
   /* ── OLED ─────────────────────────────────────────────────── */

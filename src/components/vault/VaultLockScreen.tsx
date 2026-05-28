@@ -55,7 +55,7 @@ export default function VaultLockScreen() {
             value={password}
             onChange={(e) => { setPassword(e.target.value); setError(null); }}
             placeholder="Master password"
-            className="w-full h-8 bg-surface-1 border border-stroke rounded px-4 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
+            className="w-full h-10 bg-surface-1 border border-stroke rounded px-4 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
           />
 
           {error && <p className="text-sm text-red-400 text-center">{error}</p>}

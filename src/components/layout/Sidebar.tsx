@@ -58,7 +58,7 @@ function GroupCreateModal({ onClose }: { onClose: () => void }) {
           <input autoFocus value={name} onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) void handleCreate(); }}
             placeholder="Group name"
-            className="w-full h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent" />
+            className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent" />
           <div>
             <p className="text-xs text-faint mb-2">Color</p>
             <ColorPicker value={color} onChange={setColor} />
@@ -120,7 +120,7 @@ function GroupEditModal({ group, onClose, initialDelete = false }: { group: Grou
         <div className="space-y-3">
           <input autoFocus value={name} onChange={(e) => setName(e.target.value)}
             placeholder="Group name"
-            className="w-full h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent" />
+            className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent" />
           <div>
             <p className="text-xs text-faint mb-2">Color</p>
             <ColorPicker value={color} onChange={setColor} />
@@ -178,7 +178,7 @@ function TagRenameModal({ tag, onClose }: { tag: Tag; onClose: () => void }) {
         <input autoFocus value={name} onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") void handleSave(); if (e.key === "Escape") onClose(); }}
           placeholder="Tag name"
-          className="w-full h-8 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent" />
+          className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent" />
         {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
         <div className="flex items-center justify-end gap-2 mt-5">
           <button onClick={onClose} className="px-3 py-1.5 text-xs text-faint hover:text-white bg-surface-3 rounded transition-colors">Cancel</button>
