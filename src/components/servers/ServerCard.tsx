@@ -156,7 +156,6 @@ export default function ServerCard({ server, groupColor, lastConnected }: Server
         </div>
       )}
 
-      {server.notes && <p className="text-xs text-faint truncate" title={server.notes}>{server.notes}</p>}
       {actions.error && <p className="text-xs text-red-400">{actions.error}</p>}
     </div>
 

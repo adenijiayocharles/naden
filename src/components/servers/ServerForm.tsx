@@ -538,17 +538,6 @@ export default function ServerForm() {
             </Field>
           )}
 
-          {/* Notes */}
-          <Field label="Notes">
-            <textarea
-              id="notes"
-              value={form.notes}
-              onChange={set("notes")}
-              rows={2}
-              placeholder="Optional notes about this server…"
-              className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors resize-none"
-            />
-          </Field>
 
           {errors.submit && (
             <p className="text-sm text-red-400 bg-red-950 border border-red-800 rounded-md px-3 py-2">
