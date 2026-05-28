@@ -31,7 +31,6 @@ struct BackupServer {
     auth_method: String,
     identity_file_path: Option<String>,
     group_id: Option<String>,
-    notes: Option<String>,
     is_jump_host: bool,
     jump_host_id: Option<String>,
     created_at: String,
@@ -157,7 +156,7 @@ pub async fn export_backup(
     // Explicitly list columns — vault_credential_id is intentionally excluded
     let servers: Vec<BackupServer> = sqlx::query_as(
         "SELECT id, display_name, hostname, port, username, auth_method,
-                identity_file_path, group_id, notes, is_jump_host, jump_host_id,
+                identity_file_path, group_id, is_jump_host, jump_host_id,
                 created_at, updated_at
          FROM servers ORDER BY display_name",
     )
@@ -244,9 +243,9 @@ pub async fn import_backup(
         let n = sqlx::query(
             "INSERT OR IGNORE INTO servers
              (id, display_name, hostname, port, username, auth_method,
-              identity_file_path, group_id, notes, is_jump_host, jump_host_id,
+              identity_file_path, group_id, is_jump_host, jump_host_id,
               created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(&s.id)
         .bind(&s.display_name)
@@ -256,7 +255,6 @@ pub async fn import_backup(
         .bind(&s.auth_method)
         .bind(&s.identity_file_path)
         .bind(&s.group_id)
-        .bind(&s.notes)
         .bind(s.is_jump_host)
         .bind(&s.jump_host_id)
         .bind(&s.created_at)

@@ -137,9 +137,9 @@ pub async fn create_server_db(
     sqlx::query(
         "INSERT INTO servers
          (id, display_name, hostname, port, username, auth_method,
-          identity_file_path, vault_credential_id, group_id, notes,
+          identity_file_path, vault_credential_id, group_id,
           is_jump_host, jump_host_id, is_favourite, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(&payload.display_name)
@@ -150,7 +150,6 @@ pub async fn create_server_db(
     .bind(&payload.identity_file_path)
     .bind(&payload.vault_credential_id)
     .bind(&payload.group_id)
-    .bind(&payload.notes)
     .bind(payload.is_jump_host.unwrap_or(false))
     .bind(&payload.jump_host_id)
     .bind(false) // is_favourite defaults to false on creation
@@ -227,7 +226,7 @@ pub async fn update_server_db(
     sqlx::query(
         "UPDATE servers SET
          display_name = ?, hostname = ?, port = ?, username = ?, auth_method = ?,
-         identity_file_path = ?, vault_credential_id = ?, group_id = ?, notes = ?,
+         identity_file_path = ?, vault_credential_id = ?, group_id = ?,
          is_jump_host = ?, jump_host_id = ?, is_favourite = ?, updated_at = ?
          WHERE id = ?",
     )
@@ -239,7 +238,6 @@ pub async fn update_server_db(
     .bind(identity_file_path)
     .bind(vault_credential_id)
     .bind(group_id)
-    .bind(payload.notes.as_deref())
     .bind(payload.is_jump_host.unwrap_or(s.is_jump_host))
     .bind(payload.jump_host_id.as_deref())
     .bind(payload.is_favourite.unwrap_or(s.is_favourite))
@@ -473,7 +471,6 @@ mod tests {
             identity_file_path: None,
             vault_credential_id: None,
             group_id: None,
-            notes: None,
             is_jump_host: None,
             jump_host_id: None,
             tag_ids: None,

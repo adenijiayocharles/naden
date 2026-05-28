@@ -131,7 +131,6 @@ pub async fn duplicate_server(
         identity_file_path: s.identity_file_path.clone(),
         vault_credential_id: new_vault_credential_id,
         group_id: s.group_id.clone(),
-        notes: s.notes.clone(),
         is_jump_host: Some(s.is_jump_host),
         jump_host_id: s.jump_host_id.clone(),
         tag_ids: Some(original.tags.iter().map(|t| t.id.clone()).collect()),

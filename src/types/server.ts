@@ -10,7 +10,6 @@ export interface Server {
   identityFilePath?: string;
   vaultCredentialId?: string;
   groupId?: string;
-  notes?: string;
   isJumpHost: boolean;
   jumpHostId?: string;
   isFavourite: boolean;
@@ -41,7 +40,6 @@ export interface CreateServerPayload {
   identityFilePath?: string;
   vaultCredentialId?: string;
   groupId?: string;
-  notes?: string;
   isJumpHost?: boolean;
   jumpHostId?: string;
   isFavourite?: boolean;

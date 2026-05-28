@@ -223,7 +223,6 @@ pub async fn confirm_ssh_config_import(
             identity_file_path: preview.identity_file_path.clone(),
             vault_credential_id: None,
             group_id: None,
-            notes: None,
             is_jump_host: None,
             jump_host_id: None,
             tag_ids: None,

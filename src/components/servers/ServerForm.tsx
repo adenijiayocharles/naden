@@ -18,7 +18,6 @@ interface FormData {
   authMethod: AuthMethod;
   identityFilePath: string;
   groupId: string;
-  notes: string;
   isJumpHost: boolean;
   jumpHostId: string;
 }
@@ -31,7 +30,6 @@ const DEFAULT_FORM: FormData = {
   authMethod: "key",
   identityFilePath: "",
   groupId: "",
-  notes: "",
   isJumpHost: false,
   jumpHostId: "",
 };
@@ -81,7 +79,6 @@ export default function ServerForm() {
         authMethod: existingServer.authMethod as AuthMethod,
         identityFilePath: existingServer.identityFilePath ?? "",
         groupId: existingServer.groupId ?? "",
-        notes: existingServer.notes ?? "",
         isJumpHost: existingServer.isJumpHost,
         jumpHostId: existingServer.jumpHostId ?? "",
       });
@@ -229,7 +226,6 @@ export default function ServerForm() {
         identityFilePath: form.identityFilePath.trim() || undefined,
         vaultCredentialId,
         groupId: form.groupId || undefined,
-        notes: form.notes.trim() || undefined,
         isJumpHost: form.isJumpHost,
         jumpHostId: form.jumpHostId || undefined,
         tagIds: tags.map((t) => t.id),
