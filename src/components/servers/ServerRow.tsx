@@ -1,7 +1,6 @@
 import type { Server } from "../../types/server";
 import { useServerActions, formatHost } from "./useServerActions";
 import { useUiStore } from "../../store/uiStore";
-import { useTerminalStore } from "../../store/terminalStore";
 import ServerKebabMenu from "./ServerKebabMenu";
 import DeleteServerModal from "./DeleteServerModal";
 import ConnectionErrorModal from "./ConnectionErrorModal";
@@ -19,9 +18,6 @@ export default function ServerRow({ server, groupColor, lastConnected }: ServerR
   const bulkMode = useUiStore((s) => s.bulkMode);
   const isSelected = useUiStore((s) => s.bulkSelected.includes(server.id));
   const toggleSelected = useUiStore((s) => s.toggleSelected);
-  const isConnected = useTerminalStore((s) =>
-    s.sessions.some((t) => t.serverId === server.id && t.status === "connected"),
-  );
 
   const handleClick = () => {
     if (bulkMode) { toggleSelected(server.id); return; }
@@ -35,7 +31,6 @@ export default function ServerRow({ server, groupColor, lastConnected }: ServerR
       title={server.notes ?? undefined}
       className={`group flex items-center gap-3 px-3 py-2.5 border-b border-stroke-subtle last:border-b-0 first:rounded-t-lg last:rounded-b-lg select-none transition-colors
         ${isSelected ? "bg-accent/5" : ""}
-        ${isConnected && !isSelected ? "border-l-2 border-l-accent/50 pl-[10px]" : ""}
         ${actions.connecting ? "opacity-60 cursor-wait bg-surface-0" : "cursor-pointer hover:bg-surface-0"}`}
     >
       {bulkMode ? (
@@ -90,9 +85,6 @@ export default function ServerRow({ server, groupColor, lastConnected }: ServerR
           >
             {timeAgo(lastConnected)}
           </span>
-        )}
-        {isConnected && (
-          <span className="text-xs bg-accent/15 text-accent-fg px-1.5 py-0.5 rounded font-medium">Connected</span>
         )}
         {server.isJumpHost && (
           <span className="text-xs bg-accent/10 text-accent-fg px-1.5 py-0.5 rounded">Jump</span>
