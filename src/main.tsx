@@ -10,6 +10,9 @@ import "@fontsource-variable/source-code-pro";
 import "@fontsource/ibm-plex-mono";
 import "@fontsource-variable/inconsolata";
 import "@fontsource/ubuntu-mono";
+// Kick off ArrayBuffer-based font loading before any terminal renders.
+// See src/lib/canvasFonts.ts for why URL-based FontFace is insufficient in WKWebView.
+import "./lib/canvasFonts";
 
 document.addEventListener("contextmenu", (e) => e.preventDefault());
 
