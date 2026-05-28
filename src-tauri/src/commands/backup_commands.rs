@@ -13,7 +13,7 @@ use crate::error::AppError;
 use crate::AppState;
 
 const PBKDF2_ITERATIONS: u32 = 600_000;
-const SALT_LEN: usize = 16;
+const SALT_LEN: usize = 32;
 const NONCE_LEN: usize = 12;
 
 // ── Backup data model ─────────────────────────────────────────────────────────
@@ -281,8 +281,9 @@ pub async fn import_backup(
     }
 
     // Refresh the in-memory server cache
-    let fresh = queries::list_servers_db(db).await.unwrap_or_default();
-    *state.server_cache.write().await = fresh;
+    if let Ok(fresh) = queries::list_servers_db(db).await {
+        *state.server_cache.write().await = fresh;
+    }
 
     Ok(ImportSummary {
         servers_imported,

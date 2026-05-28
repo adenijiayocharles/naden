@@ -286,10 +286,16 @@ pub async fn toggle_favourite_db(
     db: &SqlitePool,
     server_id: &str,
 ) -> Result<ServerWithTags, AppError> {
-    let server = get_server_db(db, server_id).await?;
+    let current: Option<bool> =
+        sqlx::query_scalar("SELECT is_favourite FROM servers WHERE id = ?")
+            .bind(server_id)
+            .fetch_optional(db)
+            .await?;
+    let current = current
+        .ok_or_else(|| AppError::NotFound(format!("server '{server_id}' not found")))?;
     let now = Utc::now().to_rfc3339();
     sqlx::query("UPDATE servers SET is_favourite = ?, updated_at = ? WHERE id = ?")
-        .bind(!server.server.is_favourite)
+        .bind(!current)
         .bind(&now)
         .bind(server_id)
         .execute(db)

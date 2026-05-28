@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import { useTerminalStore } from "../../store/terminalStore";
@@ -393,15 +393,20 @@ export default function Sidebar() {
     fn();
   };
 
-  const favouriteCount = servers.filter((s) => s.isFavourite).length;
-  const countByGroup = groups.reduce<Record<string, number>>((acc, g) => {
-    acc[g.id] = servers.filter((s) => s.groupId === g.id).length;
-    return acc;
-  }, {});
-  const countByTag = tags.reduce<Record<string, number>>((acc, t) => {
-    acc[t.id] = servers.filter((s) => s.tags.some((st) => st.id === t.id)).length;
-    return acc;
-  }, {});
+  const favouriteCount = useMemo(
+    () => servers.filter((s) => s.isFavourite).length,
+    [servers],
+  );
+  const countByGroup = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const s of servers) { if (s.groupId) counts[s.groupId] = (counts[s.groupId] ?? 0) + 1; }
+    return counts;
+  }, [servers]);
+  const countByTag = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const s of servers) { for (const t of s.tags) counts[t.id] = (counts[t.id] ?? 0) + 1; }
+    return counts;
+  }, [servers]);
 
   return (
     <aside className="w-60 shrink-0 bg-surface-0 border-r border-stroke-subtle flex flex-col overflow-y-auto">

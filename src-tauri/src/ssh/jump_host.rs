@@ -4,7 +4,7 @@ use std::os::unix::io::{FromRawFd, IntoRawFd};
 use std::os::unix::net::UnixStream;
 
 use crate::error::AppError;
-use crate::ssh::connection::{authenticate_session, AuthInfo};
+use crate::ssh::connection::{authenticate_session, verify_host_key, AuthInfo};
 
 pub struct JumpInfo {
     pub host: String,
@@ -70,6 +70,7 @@ fn one_hop(
     session
         .handshake()
         .map_err(|e| AppError::Ssh(format!("handshake with {} failed: {e}", jump.host)))?;
+    verify_host_key(&session, &jump.host, jump.port)?;
     authenticate_session(&mut session, &jump.username, &jump.auth)
         .map_err(|e| AppError::Ssh(format!("auth to {} failed: {e}", jump.host)))?;
 

@@ -9,6 +9,7 @@ use crate::ssh::{
     launcher,
 };
 use crate::{vault, AppState};
+use zeroize::Zeroizing;
 
 /// Expand a leading `~` to the user's home directory using Tauri's path resolver.
 fn expand_path(path: &str, app: &tauri::AppHandle) -> std::path::PathBuf {
@@ -53,6 +54,27 @@ pub(crate) async fn resolve_jump_chain(
     Ok(chain)
 }
 
+/// Resolve the jump chain for `server` and build `JumpInfo` (with credentials) for each hop.
+pub(crate) async fn build_jump_chain(
+    db: &sqlx::SqlitePool,
+    server: &ServerWithTags,
+    state: &AppState,
+    app: &tauri::AppHandle,
+) -> Result<Vec<JumpInfo>, AppError> {
+    let hop_servers = resolve_jump_chain(db, server).await?;
+    let mut chain = Vec::with_capacity(hop_servers.len());
+    for hop in &hop_servers {
+        let hop_auth = auth_for_server(hop, state, app).await?;
+        chain.push(JumpInfo {
+            host: hop.server.hostname.clone(),
+            port: u16::try_from(hop.server.port).unwrap_or(22),
+            username: hop.server.username.clone(),
+            auth: hop_auth,
+        });
+    }
+    Ok(chain)
+}
+
 /// Build `AuthInfo` for `server`, reading credentials from the vault when needed.
 pub(crate) async fn auth_for_server(
     server: &ServerWithTags,
@@ -74,7 +96,7 @@ pub(crate) async fn auth_for_server(
             }
             let password = vault::retrieve_credential(vault_id).await?;
             drop(guard);
-            Ok(AuthInfo::Password(password))
+            Ok(AuthInfo::Password(Zeroizing::new(password)))
         }
         "key" => {
             let key_path_raw = s.identity_file_path.as_deref().ok_or_else(|| {
@@ -117,8 +139,8 @@ pub(crate) async fn auth_for_server(
                 None
             };
             Ok(AuthInfo::PubKey {
-                key_data,
-                passphrase,
+                key_data: Zeroizing::new(key_data),
+                passphrase: passphrase.map(Zeroizing::new),
             })
         }
         _ => Err(AppError::Ssh(format!(
@@ -229,18 +251,7 @@ pub async fn open_terminal_session(
     let server = queries::get_server_db(&state.db, &server_id).await?;
     let auth = auth_for_server(&server, &state, &app_handle).await?;
 
-    // Resolve jump chain and build JumpInfo (with credentials) for each hop
-    let hop_servers = resolve_jump_chain(&state.db, &server).await?;
-    let mut jump_chain: Vec<JumpInfo> = Vec::with_capacity(hop_servers.len());
-    for hop in &hop_servers {
-        let hop_auth = auth_for_server(hop, &state, &app_handle).await?;
-        jump_chain.push(JumpInfo {
-            host: hop.server.hostname.clone(),
-            port: u16::try_from(hop.server.port).unwrap_or(22),
-            username: hop.server.username.clone(),
-            auth: hop_auth,
-        });
-    }
+    let jump_chain = build_jump_chain(&state.db, &server, &state, &app_handle).await?;
 
     let s = &server.server;
 

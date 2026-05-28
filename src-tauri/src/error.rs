@@ -19,7 +19,8 @@ pub enum AppError {
 
 impl From<sqlx::Error> for AppError {
     fn from(e: sqlx::Error) -> Self {
-        AppError::Database(e.to_string())
+        log::error!("database error: {e}");
+        AppError::Database("a database error occurred".into())
     }
 }
 

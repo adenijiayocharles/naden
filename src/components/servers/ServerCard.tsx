@@ -49,9 +49,8 @@ export function ReachabilityDot({ serverId }: { serverId: string }) {
 export default function ServerCard({ server, groupColor, lastConnected }: ServerCardProps) {
   const actions = useServerActions(server);
   const bulkMode = useUiStore((s) => s.bulkMode);
-  const bulkSelected = useUiStore((s) => s.bulkSelected);
+  const isSelected = useUiStore((s) => s.bulkSelected.includes(server.id));
   const toggleSelected = useUiStore((s) => s.toggleSelected);
-  const isSelected = bulkSelected.includes(server.id);
 
   const handleClick = () => {
     if (bulkMode) { toggleSelected(server.id); return; }
@@ -126,7 +125,6 @@ export default function ServerCard({ server, groupColor, lastConnected }: Server
             menuOpen={actions.menuOpen}
             setMenuOpen={actions.setMenuOpen}
             canCopyPassword={actions.canCopyPassword}
-            groups={actions.groups}
             currentGroupId={server.groupId}
             deleting={actions.deleting}
             openingTerminal={actions.openingTerminal}

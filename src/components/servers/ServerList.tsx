@@ -158,9 +158,19 @@ export default function ServerList() {
   }
 
   // ── Default view ────────────────────────────────────────────────────────────
-  const ungrouped = sortedFiltered.filter((s) => !s.groupId);
+  const byGroup = new Map<string, typeof sortedFiltered>();
+  const ungrouped: typeof sortedFiltered = [];
+  for (const s of sortedFiltered) {
+    if (s.groupId) {
+      const arr = byGroup.get(s.groupId) ?? [];
+      arr.push(s);
+      byGroup.set(s.groupId, arr);
+    } else {
+      ungrouped.push(s);
+    }
+  }
   const sections = groups
-    .map((g) => ({ group: g, items: sortedFiltered.filter((s) => s.groupId === g.id) }))
+    .map((g) => ({ group: g, items: byGroup.get(g.id) ?? [] }))
     .filter(({ items }) => items.length > 0);
 
   return (

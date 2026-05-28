@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import type { Server } from "../../types/server";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
+
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
 import { useVaultStore } from "../../store/vaultStore";
@@ -11,7 +12,6 @@ import { copyWithAutoClear } from "../../lib/clipboardClear";
 export { formatHost } from "../../lib/format";
 
 export function useServerActions(server: Server) {
-  const groups = useServerStore((s) => s.groups);
   const isVaultUnlocked = useVaultStore((s) => s.isUnlocked);
 
   const deleteServer = useServerStore((s) => s.deleteServer);
@@ -156,7 +156,6 @@ export function useServerActions(server: Server) {
   const editServer = () => { openEdit(server.id); setMenuOpen(false); };
 
   return {
-    groups,
     canCopyPassword: isVaultUnlocked && server.authMethod === "password" && !!server.vaultCredentialId,
     menuRef,
     menuOpen, setMenuOpen,

@@ -127,10 +127,12 @@ async fn launch_windows(argv: Vec<String>) -> Result<(), AppError> {
     let script_path =
         std::env::temp_dir().join(format!("ssh-manager-{}.bat", uuid::Uuid::new_v4()));
 
-    // Batch double-quote each argument; double any internal double-quotes.
+    // Batch double-quote each argument; double any internal double-quotes and
+    // escape % as %% so cmd.exe does not expand environment variables inside
+    // user-supplied paths (e.g. identity_file_path containing %APPDATA%).
     let bat_args = argv
         .iter()
-        .map(|a| format!("\"{}\"", a.replace('"', "\"\"")))
+        .map(|a| format!("\"{}\"", a.replace('%', "%%").replace('"', "\"\"")))
         .collect::<Vec<_>>()
         .join(" ");
 

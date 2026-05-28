@@ -2,14 +2,14 @@ use std::os::unix::fs::PermissionsExt;
 
 use crate::error::AppError;
 
-fn home_boundary() -> std::path::PathBuf {
+pub(crate) fn home_boundary() -> std::path::PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
     std::fs::canonicalize(&home).unwrap_or_else(|_| std::path::PathBuf::from(home))
 }
 
 /// Canonicalizes `path` and verifies it is under the home directory.
 /// Use for paths that must already exist.
-fn check_home_boundary(path: &str) -> Result<std::path::PathBuf, AppError> {
+pub(crate) fn check_home_boundary(path: &str) -> Result<std::path::PathBuf, AppError> {
     let canonical = std::fs::canonicalize(path).map_err(|e| AppError::Io(e.to_string()))?;
     if !canonical.starts_with(home_boundary()) {
         return Err(AppError::Io(format!(
@@ -21,7 +21,7 @@ fn check_home_boundary(path: &str) -> Result<std::path::PathBuf, AppError> {
 
 /// Canonicalizes the parent of `path` and verifies it is under the home directory.
 /// Use for paths that do not exist yet (create/rename target).
-fn check_parent_home_boundary(path: &str) -> Result<(), AppError> {
+pub(crate) fn check_parent_home_boundary(path: &str) -> Result<(), AppError> {
     let p = std::path::Path::new(path);
     let parent = p
         .parent()

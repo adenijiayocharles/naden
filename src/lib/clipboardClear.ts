@@ -13,13 +13,15 @@ function notify() {
   listeners.forEach((fn) => fn());
 }
 
+import { clipboardCommands } from "./tauriCommands";
+
 export function copyWithAutoClear(text: string): void {
-  navigator.clipboard.writeText(text).catch(() => {});
+  void clipboardCommands.writeText(text);
 
   if (clearTimer !== null) clearTimeout(clearTimer);
 
   const clear = () => {
-    navigator.clipboard.writeText("").catch(() => {});
+    void clipboardCommands.writeText("");
     activeClear = null;
     clearTimer = null;
     notify();

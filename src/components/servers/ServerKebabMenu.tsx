@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import type { Group } from "../../types/server";
+import { useServerStore } from "../../store/serverStore";
 
 interface Props {
   menuRef: React.RefObject<HTMLDivElement>;
@@ -11,7 +11,6 @@ interface Props {
   duplicating: boolean;
   checkingReachability: boolean;
   canCopyPassword: boolean;
-  groups: Group[];
   currentGroupId?: string;
   onEdit: () => void;
   onCopyPassword: () => void;
@@ -26,12 +25,13 @@ interface Props {
 
 export default function ServerKebabMenu({
   menuRef, menuOpen, setMenuOpen,
-  canCopyPassword, groups, currentGroupId,
+  canCopyPassword, currentGroupId,
   deleting, openingTerminal, openingBrowser, duplicating, checkingReachability,
   onEdit, onCopyPassword, onSystemTerminal, onBrowseFiles, onMoveToGroup,
   onDuplicate, onCheckReachability, onDelete,
   buttonClassName = "text-faint hover:text-white p-1 rounded hover:bg-surface-3 transition-colors text-lg leading-none",
 }: Props) {
+  const groups = useServerStore((s) => s.groups);
   const [showGroupPicker, setShowGroupPicker] = useState(false);
   const menuRef2 = useRef<HTMLDivElement>(null);
   const hasGroups = groups.length > 0;

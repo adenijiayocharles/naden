@@ -1,8 +1,8 @@
-use crate::commands::ssh_commands::{auth_for_server, resolve_jump_chain};
+use crate::commands::local_commands::{check_home_boundary, check_parent_home_boundary};
+use crate::commands::ssh_commands::{auth_for_server, build_jump_chain};
 use crate::db::queries;
 use crate::error::AppError;
 use crate::sftp::{DirListing, SftpMessage};
-use crate::ssh::jump_host::JumpInfo;
 use crate::AppState;
 
 /// Creates a oneshot channel, sends an SftpMessage built by `$msg(reply_tx)`,
@@ -40,17 +40,7 @@ pub async fn open_sftp_session(
     let server = queries::get_server_db(&state.db, &server_id).await?;
     let auth = auth_for_server(&server, &state, &app_handle).await?;
 
-    let hop_servers = resolve_jump_chain(&state.db, &server).await?;
-    let mut jump_chain: Vec<JumpInfo> = Vec::with_capacity(hop_servers.len());
-    for hop in &hop_servers {
-        let hop_auth = auth_for_server(hop, &state, &app_handle).await?;
-        jump_chain.push(JumpInfo {
-            host: hop.server.hostname.clone(),
-            port: hop.server.port as u16,
-            username: hop.server.username.clone(),
-            auth: hop_auth,
-        });
-    }
+    let jump_chain = build_jump_chain(&state.db, &server, &state, &app_handle).await?;
 
     let s = &server.server;
     state.sftp_manager.open_session(
@@ -130,16 +120,7 @@ pub async fn upload_sftp_file(
     remote_path: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    // The local file must exist for an upload — canonicalize and verify home boundary.
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
-    let canonical_home =
-        std::fs::canonicalize(&home).unwrap_or_else(|_| std::path::PathBuf::from(&home));
-    let canonical = std::fs::canonicalize(&local_path).map_err(|e| AppError::Io(e.to_string()))?;
-    if !canonical.starts_with(&canonical_home) {
-        return Err(AppError::Io(format!(
-            "Upload source is outside home directory: {local_path}"
-        )));
-    }
+    check_home_boundary(&local_path)?;
     sftp_call!(state, session_id, |reply| SftpMessage::UploadFile {
         local_path,
         remote_path,
@@ -154,21 +135,7 @@ pub async fn download_sftp_file(
     local_path: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    // The destination may not exist yet — canonicalize the parent and check home boundary.
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
-    let canonical_home =
-        std::fs::canonicalize(&home).unwrap_or_else(|_| std::path::PathBuf::from(&home));
-    let dest = std::path::Path::new(&local_path);
-    let parent = dest
-        .parent()
-        .ok_or_else(|| AppError::Io(format!("Invalid download path: {local_path}")))?;
-    let canonical_parent =
-        std::fs::canonicalize(parent).map_err(|e| AppError::Io(e.to_string()))?;
-    if !canonical_parent.starts_with(&canonical_home) {
-        return Err(AppError::Io(format!(
-            "Download destination is outside home directory: {local_path}"
-        )));
-    }
+    check_parent_home_boundary(&local_path)?;
     sftp_call!(state, session_id, |reply| SftpMessage::DownloadFile {
         remote_path,
         local_path,

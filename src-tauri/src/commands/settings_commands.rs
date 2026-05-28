@@ -6,6 +6,10 @@ const ALLOWED_SETTINGS: &[&str] = &[
     "theme",
     "accent",
     "onboarding_complete",
+    "terminal_font_size",
+    "terminal_scrollback",
+    "terminal_copy_on_select",
+    "terminal_font_family",
 ];
 
 #[tauri::command]
@@ -13,6 +17,9 @@ pub async fn get_setting(
     key: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<Option<String>, AppError> {
+    if !ALLOWED_SETTINGS.contains(&key.as_str()) {
+        return Err(AppError::Validation(format!("unknown setting key: {key}")));
+    }
     let val: Option<String> = sqlx::query_scalar("SELECT value FROM settings WHERE key = ?")
         .bind(&key)
         .fetch_optional(&state.db)

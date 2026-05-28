@@ -4,6 +4,7 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
 use tauri::Emitter;
+use zeroize::Zeroizing;
 
 use crate::error::AppError;
 use crate::ssh::jump_host::{self, JumpInfo};
@@ -42,11 +43,69 @@ pub(crate) fn tcp_connect(host: &str, port: u16) -> Result<TcpStream, AppError> 
 pub type OnCloseCallback = Box<dyn FnOnce(String, Option<String>) + Send>;
 
 pub enum AuthInfo {
-    Password(String),
+    Password(Zeroizing<String>),
     PubKey {
-        key_data: String,
-        passphrase: Option<String>,
+        key_data: Zeroizing<String>,
+        passphrase: Option<Zeroizing<String>>,
     },
+}
+
+fn known_hosts_path() -> std::path::PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
+    std::path::Path::new(&home).join(".ssh").join("known_hosts")
+}
+
+/// Check the server's host key against ~/.ssh/known_hosts.
+/// On first contact (NotFound) the key is added (TOFU). Mismatches are rejected.
+pub(crate) fn verify_host_key(
+    session: &ssh2::Session,
+    host: &str,
+    port: u16,
+) -> Result<(), AppError> {
+    let mut known_hosts = session
+        .known_hosts()
+        .map_err(|e| AppError::Ssh(format!("known_hosts init failed: {e}")))?;
+
+    let path = known_hosts_path();
+    if path.exists() {
+        let _ = known_hosts.read_file(&path, ssh2::KnownHostFileKind::OpenSSH);
+    }
+
+    let (key, key_type) = session
+        .host_key()
+        .ok_or_else(|| AppError::Ssh(format!("server {host}:{port} sent no host key")))?;
+
+    match known_hosts.check_port(host, port, key) {
+        ssh2::CheckResult::Match => {}
+        ssh2::CheckResult::NotFound => {
+            // Trust On First Use: record the key for future connections.
+            let entry = if port == 22 {
+                host.to_string()
+            } else {
+                format!("[{host}]:{port}")
+            };
+            known_hosts
+                .add(&entry, key, "", ssh2::KnownHostKeyFormat::from(key_type))
+                .map_err(|e| AppError::Ssh(format!("known_hosts add failed: {e}")))?;
+            if let Some(parent) = path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            let _ = known_hosts.write_file(&path, ssh2::KnownHostFileKind::OpenSSH);
+        }
+        ssh2::CheckResult::Mismatch => {
+            return Err(AppError::Ssh(format!(
+                "Host key mismatch for {host}:{port}. \
+                 The server's key has changed — this may indicate a MITM attack. \
+                 If the server was reinstalled, remove its old entry from ~/.ssh/known_hosts."
+            )));
+        }
+        ssh2::CheckResult::Failure => {
+            return Err(AppError::Ssh(format!(
+                "Host key check failed for {host}:{port}"
+            )));
+        }
+    }
+    Ok(())
 }
 
 enum SessionMessage {
@@ -195,7 +254,8 @@ pub fn authenticate_session(
                 ));
             }
 
-            match session.userauth_pubkey_memory(username, None, key_data, passphrase.as_deref()) {
+            let pass_str = passphrase.as_ref().map(|p| p.as_str());
+            match session.userauth_pubkey_memory(username, None, key_data, pass_str) {
                 Ok(()) => {}
                 Err(ref e) if matches!(e.code(), ssh2::ErrorCode::Session(-16)) => {
                     return Err(AppError::Ssh(
@@ -288,7 +348,10 @@ fn run_session(
             .handshake()
             .map_err(|e| AppError::Ssh(format!("SSH handshake failed: {e}")))?;
 
+        verify_host_key(&session, &host, port)?;
         authenticate_session(&mut session, &username, &auth)?;
+        // Zeroize key material immediately — it is not needed after auth.
+        drop(auth);
 
         if !session.authenticated() {
             return Err(AppError::Ssh("Authentication failed".into()));
@@ -308,24 +371,35 @@ fn run_session(
 
         session.set_blocking(false);
 
-        let mut buf = vec![0u8; 4096];
+        let mut buf = vec![0u8; 32768];
         let mut active;
 
         'io: loop {
             active = false;
 
-            // Drain SSH channel output.
+            // Drain SSH channel output, coalescing all available chunks into one emit.
+            let mut coalesced: Vec<u8> = Vec::new();
             loop {
                 match channel.read(&mut buf) {
-                    Ok(0) => break 'io, // graceful EOF (e.g. user typed `exit`)
+                    Ok(0) => {
+                        if !coalesced.is_empty() {
+                            let encoded =
+                                base64::engine::general_purpose::STANDARD.encode(&coalesced);
+                            let _ = app_handle.emit(&output_event, encoded);
+                        }
+                        break 'io;
+                    }
                     Ok(n) => {
                         active = true;
-                        let encoded = base64::engine::general_purpose::STANDARD.encode(&buf[..n]);
-                        let _ = app_handle.emit(&output_event, encoded);
+                        coalesced.extend_from_slice(&buf[..n]);
                     }
                     Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => break,
                     Err(e) => return Err(AppError::Ssh(format!("Connection lost: {e}"))),
                 }
+            }
+            if !coalesced.is_empty() {
+                let encoded = base64::engine::general_purpose::STANDARD.encode(&coalesced);
+                let _ = app_handle.emit(&output_event, encoded);
             }
 
             // Drain user input from the message channel.
