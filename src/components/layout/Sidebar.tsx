@@ -135,7 +135,7 @@ function GroupEditModal({ group, onClose, initialDelete = false }: { group: Grou
             </>
           ) : (
             <>
-              <button onClick={() => setConfirmDelete(true)} disabled={busy} className="text-xs text-red-500 hover:text-red-400 transition-colors mr-auto disabled:opacity-40">Delete</button>
+              <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(true)} disabled={busy} className="text-red-500 hover:text-red-400 mr-auto px-0">Delete</Button>
               <Button size="sm" onClick={onClose}>Cancel</Button>
               <Button size="sm" variant="primary" onClick={() => { void handleSave(); }} disabled={busy || !name.trim()}>
                 {busy ? "Saving…" : "Save"}
@@ -569,12 +569,13 @@ export default function Sidebar() {
           )}
         </span>
         <div ref={addMenuRef} className="relative shrink-0">
-          <button
+          <Button
+            size="sm"
             onClick={() => setAddMenuOpen((v) => !v)}
-            className="text-xs font-medium text-secondary hover:text-white border border-stroke hover:border-stroke-subtle bg-surface-2 hover:bg-surface-3 px-4 py-1.5 rounded transition-colors"
+            className="border border-stroke hover:border-stroke-subtle bg-surface-2 hover:bg-surface-3 text-secondary"
           >
             + Add
-          </button>
+          </Button>
           {addMenuOpen && (
             <div className="absolute bottom-full right-0 mb-1.5 bg-surface-2 border border-stroke rounded-lg shadow-2xl py-1 min-w-[160px] z-50">
               <button
