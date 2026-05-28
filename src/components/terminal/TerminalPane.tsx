@@ -309,7 +309,7 @@ export default function TerminalPane({ sessionId }: Props) {
 
   return (
     <div className="relative h-full w-full bg-surface-1">
-      <div ref={containerRef} className="absolute inset-4 overflow-hidden" />
+      <div ref={containerRef} className="absolute inset-4 right-0 overflow-hidden" />
 
       {/* Search bar — floats over terminal at top-right */}
       {searchVisible && (
