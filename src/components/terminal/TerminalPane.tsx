@@ -155,7 +155,7 @@ export default function TerminalPane({ sessionId }: Props) {
       // Frame 2 — re-fit after correct char metrics are applied.
       requestAnimationFrame(() => {
         if (cancelled) return;
-        term.options = { ...term.options, fontFamily: css };
+        term.options.fontFamily = css;
         term.options.theme = getTermTheme();
         requestAnimationFrame(() => {
           if (cancelled) return;
@@ -282,12 +282,10 @@ export default function TerminalPane({ sessionId }: Props) {
 
     const css = fontCss(fontFamily);
 
-    // Lazy-load the font if not yet in document.fonts, then apply atomically.
-    // Using term.options spread avoids the blank→reset anti-pattern that breaks
-    // Canvas measurement consistency in xterm internals.
     void ensureFont(fontFamily).then(() => {
       if (!termRef.current || !fitAddonRef.current) return;
-      term.options = { ...term.options, fontSize, fontFamily: css };
+      term.options.fontSize = fontSize;
+      term.options.fontFamily = css;
       requestAnimationFrame(() => {
         fitAddonRef.current?.fit();
         term.refresh(0, term.rows - 1);
