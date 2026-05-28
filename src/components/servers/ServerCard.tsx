@@ -2,6 +2,7 @@ import type { Server } from "../../types/server";
 import { useServerActions, formatHost } from "./useServerActions";
 import { useUiStore } from "../../store/uiStore";
 import { useServerStore } from "../../store/serverStore";
+import { useTerminalStore } from "../../store/terminalStore";
 import ServerKebabMenu from "./ServerKebabMenu";
 import DeleteServerModal from "./DeleteServerModal";
 import ConnectionErrorModal from "./ConnectionErrorModal";
@@ -51,6 +52,9 @@ export default function ServerCard({ server, groupColor, lastConnected }: Server
   const bulkMode = useUiStore((s) => s.bulkMode);
   const isSelected = useUiStore((s) => s.bulkSelected.includes(server.id));
   const toggleSelected = useUiStore((s) => s.toggleSelected);
+  const isConnected = useTerminalStore((s) =>
+    s.sessions.some((t) => t.serverId === server.id && t.status === "connected"),
+  );
 
   const handleClick = () => {
     if (bulkMode) { toggleSelected(server.id); return; }
@@ -62,8 +66,8 @@ export default function ServerCard({ server, groupColor, lastConnected }: Server
     <div
       onClick={handleClick}
       className={`bg-surface-1 border rounded-lg p-4 flex flex-col gap-3 transition-colors select-none
-        ${isSelected ? "border-accent/50 bg-accent/5" : "border-stroke-subtle"}
-        ${actions.connecting ? "opacity-60 cursor-wait" : "hover:border-stroke cursor-pointer hover:bg-surface-1"}`}
+        ${isSelected ? "border-accent/50 bg-accent/5" : isConnected ? "border-accent/30" : "border-stroke-subtle"}
+        ${actions.connecting ? "opacity-60 cursor-wait" : "hover:border-stroke cursor-pointer hover:bg-surface-2"}`}
     >
       <div className="flex items-start gap-2">
         {bulkMode ? (
@@ -86,6 +90,9 @@ export default function ServerCard({ server, groupColor, lastConnected }: Server
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
             <span className="font-medium text-white truncate" title={server.displayName}>{server.displayName}</span>
+            {isConnected && (
+              <span className="text-xs bg-accent/15 text-accent-fg px-1.5 py-0.5 rounded font-medium">Connected</span>
+            )}
             {server.isJumpHost && (
               <span className="text-xs bg-accent/10 text-accent-fg px-1.5 py-0.5 rounded font-medium">Jump</span>
             )}

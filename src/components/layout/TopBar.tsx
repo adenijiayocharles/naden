@@ -47,11 +47,12 @@ export default function TopBar() {
 
           <button
             onClick={() => activeView === "logs" ? closeForm() : openLogs()}
-            aria-label="Logs"
+            aria-label="Audit log"
             className={`p-1.5 rounded transition-colors ${activeView === "logs" ? "text-white" : "text-dim hover:text-white hover:bg-surface-3"}`}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h18M3 6h18M3 18h18" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6M9 8h6M9 16h4" />
+              <rect x="3" y="3" width="18" height="18" rx="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
 

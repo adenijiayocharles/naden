@@ -34,7 +34,14 @@ export default function ClipboardClearBanner() {
     return () => clearInterval(id);
   }, [clearNow]);
 
-  if (secondsLeft === null) return null;
+  const [dismissed, setDismissed] = useState(false);
+
+  // Un-dismiss whenever a new clipboard operation starts
+  useEffect(() => {
+    if (clearNow) setDismissed(false);
+  }, [clearNow]);
+
+  if (secondsLeft === null || dismissed) return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-surface-3 border border-stroke rounded-lg shadow-2xl px-4 py-2.5 text-xs text-muted">
@@ -54,7 +61,7 @@ export default function ClipboardClearBanner() {
         Clear now
       </button>
       <button
-        onClick={() => clearNow?.()}
+        onClick={() => setDismissed(true)}
         className="text-dim hover:text-white transition-colors text-base leading-none"
         aria-label="Dismiss"
       >

@@ -71,7 +71,7 @@ export default function BulkActionBar() {
   return (
     <div className="shrink-0 border-t border-stroke-subtle bg-surface-1 px-4 py-2.5 flex items-center gap-3">
       <span className="text-xs text-muted">
-        {count === 0 ? "None selected" : `${count} selected`}
+        {count > 0 ? `${count} selected` : "Click servers to select"}
       </span>
 
       <button

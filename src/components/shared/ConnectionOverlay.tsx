@@ -66,7 +66,7 @@ export function ConnectingOverlay({ serverName, onCancel }: ConnectingProps) {
       <p className="text-dim text-xs">Establishing SSH connection…</p>
       <button
         onClick={onCancel}
-        className="bg-accent hover:bg-accent-hover text-black text-sm font-semibold px-4 py-1.5 rounded transition-colors"
+        className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
       >
         Cancel
       </button>

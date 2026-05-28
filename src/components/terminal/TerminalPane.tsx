@@ -27,6 +27,7 @@ export default function TerminalPane({ sessionId }: Props) {
 
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<{ index: number | undefined; count: number } | null>(null);
   // Tracks the last found match position so navigation survives selection being
   // cleared by incoming SSH output between the typing call and Enter/button press.
   // getSelectionPosition() returns 1-based coords; terminal.select() takes 0-based.
@@ -42,6 +43,7 @@ export default function TerminalPane({ sessionId }: Props) {
   const closeSearch = useCallback(() => {
     setSearchVisible(false);
     setSearchQuery("");
+    setSearchResults(null);
     lastFoundRef.current = null;
   }, []);
 
@@ -136,6 +138,9 @@ export default function TerminalPane({ sessionId }: Props) {
       const searchAddon = new SearchAddon();
       term.loadAddon(fitAddon);
       term.loadAddon(searchAddon);
+      searchAddon.onDidChangeResults((r) => {
+        setSearchResults(r.resultCount > 0 ? { index: r.resultIndex, count: r.resultCount } : null);
+      });
 
       term.open(containerRef.current);
       fitAddon.fit();
@@ -322,6 +327,11 @@ export default function TerminalPane({ sessionId }: Props) {
             placeholder="Find in terminal…"
             className="bg-transparent text-sm text-white placeholder-[#555] outline-none w-44"
           />
+          {searchResults && (
+            <span className="text-xs text-dim tabular-nums shrink-0">
+              {searchResults.index !== undefined ? `${searchResults.index + 1}/` : ""}{searchResults.count}
+            </span>
+          )}
           <button onClick={findPrevious} title="Previous (Shift+Enter)"
             className="text-muted hover:text-white px-1 text-sm leading-none">↑</button>
           <button onClick={findNext} title="Next (Enter)"

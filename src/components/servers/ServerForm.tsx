@@ -57,12 +57,17 @@ export default function ServerForm() {
   const [password, setPassword] = useState("");
   const [tags, setTags] = useState<Tag[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [showNewGroup, setShowNewGroup] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [, setTouched] = useState<Set<keyof FormData>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const tagInputRef = useRef<HTMLInputElement>(null);
+  const tagDropdownRef = useRef<HTMLDivElement>(null);
+  const allTags = useServerStore((s) => s.tags);
 
   useEffect(() => {
     if (existingServer) {
@@ -84,7 +89,10 @@ export default function ServerForm() {
       setTags([]);
     }
     setErrors({});
+    setTouched(new Set());
+    setDirty(false);
     setTagInput("");
+    setTagDropdownOpen(false);
     setShowNewGroup(false);
     setNewGroupName("");
   }, [existingServer, activeView]);
@@ -97,8 +105,30 @@ export default function ServerForm() {
           ? Number(e.target.value)
           : e.target.value;
       setForm((f) => ({ ...f, [field]: value }));
+      setDirty(true);
       setErrors((errs) => { const next = { ...errs }; delete next[field]; return next; });
     };
+
+  const validateField = (field: keyof FormData, value: unknown) => {
+    setTouched((t) => new Set(t).add(field));
+    const errs: Record<string, string> = {};
+    if (field === "displayName" && !String(value).trim()) errs.displayName = "Required";
+    if (field === "hostname" && !String(value).trim()) errs.hostname = "Required";
+    if (field === "port") {
+      const n = Number(value);
+      if (n < 1 || n > 65535) errs.port = "Must be 1–65535";
+    }
+    setErrors((prev) => ({ ...prev, ...errs }));
+  };
+
+  const handleClose = () => {
+    if (dirty && !window.confirm("Discard unsaved changes?")) return;
+    closeForm();
+  };
+
+  const tagSuggestions = allTags.filter(
+    (t) => !tags.some((x) => x.id === t.id) && t.name.toLowerCase().includes(tagInput.toLowerCase()),
+  );
 
   const pickIdentityFile = async () => {
     try {
@@ -224,7 +254,7 @@ export default function ServerForm() {
   return (
     <div
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) closeForm(); }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) handleClose(); }}
     >
       <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
         {/* Header */}
@@ -233,7 +263,7 @@ export default function ServerForm() {
             {isEdit ? "Edit Server" : "Add Server"}
           </h2>
           <button
-            onClick={closeForm}
+            onClick={handleClose}
             className="text-muted hover:text-white p-1 rounded"
             aria-label="Close"
           >
@@ -249,6 +279,7 @@ export default function ServerForm() {
               id="displayName"
               value={form.displayName}
               onChange={set("displayName")}
+              onBlur={(e) => validateField("displayName", e.target.value)}
               placeholder="Production Web Server"
               className={input(!!errors.displayName)}
             />
@@ -260,6 +291,7 @@ export default function ServerForm() {
               id="hostname"
               value={form.hostname}
               onChange={set("hostname")}
+              onBlur={(e) => validateField("hostname", e.target.value)}
               placeholder="web.example.com"
               className={input(!!errors.hostname)}
             />
@@ -275,6 +307,7 @@ export default function ServerForm() {
                 max={65535}
                 value={form.port}
                 onChange={set("port")}
+                onBlur={(e) => validateField("port", e.target.value)}
                 className={input(!!errors.port)}
               />
             </Field>
@@ -291,17 +324,22 @@ export default function ServerForm() {
 
           {/* Auth Method */}
           <Field label="Auth Method">
-            <SelectWrapper>
-              <select
-                id="authMethod"
-                value={form.authMethod}
-                onChange={set("authMethod")}
-                className={select()}
-              >
-                <option value="key">SSH Key</option>
-                <option value="password">Password</option>
-              </select>
-            </SelectWrapper>
+            <div className="flex rounded border border-stroke overflow-hidden">
+              {(["key", "password"] as const).map((method) => (
+                <button
+                  key={method}
+                  type="button"
+                  onClick={() => { setForm((f) => ({ ...f, authMethod: method })); setDirty(true); }}
+                  className={`flex-1 py-1.5 text-sm transition-colors ${
+                    form.authMethod === method
+                      ? "bg-surface-4 text-white font-medium"
+                      : "bg-surface-3 text-muted hover:text-white hover:bg-surface-4"
+                  }`}
+                >
+                  {method === "key" ? "SSH Key" : "Password"}
+                </button>
+              ))}
+            </div>
           </Field>
 
           {/* Password */}
@@ -408,14 +446,32 @@ export default function ServerForm() {
                 ))}
               </div>
             )}
-            <input
-              ref={tagInputRef}
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={handleTagKeyDown}
-              placeholder="Type a tag and press Enter"
-              className={input(false)}
-            />
+            <div className="relative" ref={tagDropdownRef}>
+              <input
+                ref={tagInputRef}
+                value={tagInput}
+                onChange={(e) => { setTagInput(e.target.value); setTagDropdownOpen(true); }}
+                onFocus={() => setTagDropdownOpen(true)}
+                onBlur={() => setTimeout(() => setTagDropdownOpen(false), 150)}
+                onKeyDown={handleTagKeyDown}
+                placeholder="Type a tag and press Enter"
+                className={input(false)}
+              />
+              {tagDropdownOpen && tagSuggestions.length > 0 && (
+                <div className="absolute z-20 top-full mt-1 w-full bg-surface-2 border border-stroke rounded-lg shadow-xl max-h-40 overflow-y-auto">
+                  {tagSuggestions.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onMouseDown={(e) => { e.preventDefault(); setTags((ts) => [...ts, t]); setTagInput(""); setTagDropdownOpen(false); }}
+                      className="w-full text-left px-3 py-2 text-sm text-secondary hover:bg-surface-4 hover:text-white transition-colors"
+                    >
+                      #{t.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </Field>
 
           {/* Jump Host */}
@@ -505,7 +561,7 @@ export default function ServerForm() {
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-stroke-subtle shrink-0">
           <button
             type="button"
-            onClick={closeForm}
+            onClick={handleClose}
             className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
           >
             Cancel

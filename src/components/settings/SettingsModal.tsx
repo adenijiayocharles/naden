@@ -55,6 +55,27 @@ export default function SettingsModal({ onClose }: Props) {
     savedTimer.current = setTimeout(() => setSavedFlash(false), 2000);
   }, []);
 
+  const scrollBodyRef = useRef<HTMLDivElement>(null);
+  const [activeSection, setActiveSection] = useState("appearance");
+  useEffect(() => {
+    const el = scrollBodyRef.current;
+    if (!el) return;
+    const sections = el.querySelectorAll<HTMLElement>("[data-section]");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting);
+        if (visible.length > 0) {
+          // Pick the topmost visible section
+          const top = visible.reduce((a, b) => a.boundingClientRect.top < b.boundingClientRect.top ? a : b);
+          setActiveSection((top.target as HTMLElement).dataset.section ?? "appearance");
+        }
+      },
+      { root: el, threshold: 0.2 },
+    );
+    sections.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, []);
+
   // Theme
   type Theme = "dark" | "oled" | "dim" | "light";
   const [theme, setTheme] = useState<Theme>("dark");
@@ -298,20 +319,23 @@ export default function SettingsModal({ onClose }: Props) {
 
         {/* Section jump nav */}
         <div className="flex items-center gap-4 px-6 py-2 border-b border-stroke-subtle shrink-0">
-          {(["Appearance", "Security", "Data", "Terminal"] as const).map((s) => (
-            <a
-              key={s}
-              href={`#settings-${s.toLowerCase()}`}
-              className="text-xs text-faint hover:text-secondary transition-colors"
-            >
-              {s}
-            </a>
-          ))}
+          {(["Appearance", "Security", "Data", "Terminal"] as const).map((s) => {
+            const key = s.toLowerCase();
+            return (
+              <button
+                key={s}
+                onClick={() => scrollBodyRef.current?.querySelector<HTMLElement>(`[data-section="${key}"]`)?.scrollIntoView({ behavior: "smooth" })}
+                className={`text-xs transition-colors ${activeSection === key ? "text-white font-medium" : "text-faint hover:text-secondary"}`}
+              >
+                {s}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="px-6 py-5 space-y-6 overflow-y-auto">
+        <div ref={scrollBodyRef} className="px-6 py-5 space-y-6 overflow-y-auto">
           {/* Appearance section */}
-          <div id="settings-appearance">
+          <div id="settings-appearance" data-section="appearance">
             <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Appearance</p>
             <div className="flex gap-2">
               {([
@@ -327,11 +351,13 @@ export default function SettingsModal({ onClose }: Props) {
                     theme === id ? "border-accent bg-accent/5" : "border-stroke hover:border-stroke"
                   }`}
                 >
-                  {/* Mini surface preview */}
-                  <div className="flex gap-1 mb-2.5">
-                    {surfaces.map((c, i) => (
-                      <div key={i} className="flex-1 h-5 rounded" style={{ backgroundColor: c }} />
-                    ))}
+                  {/* Mini layout preview */}
+                  <div className="flex gap-1 mb-2.5 rounded overflow-hidden" style={{ height: 36 }}>
+                    <div className="w-1/4 shrink-0 rounded-l" style={{ backgroundColor: surfaces[0] }} />
+                    <div className="flex-1 flex flex-col gap-1 p-1 rounded-r" style={{ backgroundColor: surfaces[1] }}>
+                      <div className="rounded-sm h-1.5" style={{ backgroundColor: surfaces[2], width: "70%" }} />
+                      <div className="rounded-sm h-1.5" style={{ backgroundColor: surfaces[2], width: "50%" }} />
+                    </div>
                   </div>
                   <p className={`text-xs font-medium ${theme === id ? "text-accent-fg" : "text-secondary"}`}>{label}</p>
                 </button>
@@ -356,7 +382,7 @@ export default function SettingsModal({ onClose }: Props) {
           </div>
 
           {/* Security section */}
-          <div id="settings-security">
+          <div id="settings-security" data-section="security">
             <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Security</p>
 
             {/* Vault password toggle */}
@@ -552,7 +578,7 @@ export default function SettingsModal({ onClose }: Props) {
           </div>
 
           {/* Backup section */}
-          <div id="settings-data">
+          <div id="settings-data" data-section="data">
             <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Data</p>
             <p className="text-xs text-faint mb-3">
               Backups contain server metadata only — credentials are never included.
@@ -621,7 +647,7 @@ export default function SettingsModal({ onClose }: Props) {
           </div>
 
           {/* Terminal section */}
-          <div id="settings-terminal">
+          <div id="settings-terminal" data-section="terminal">
             <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Terminal</p>
             <p className="text-xs text-faint mb-3">Changes apply to new sessions.</p>
 

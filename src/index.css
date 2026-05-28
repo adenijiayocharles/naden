@@ -101,7 +101,8 @@ html, body, #root { background: #0d0d0d; }
     --color-secondary: #27272a;
     --color-muted: #52525b;
     --color-faint: #71717a;
-    --color-dim: #888888;
+    /* #6b6b6b on #f8f8fa = 4.6:1, passes WCAG AA for all text sizes */
+    --color-dim: #6b6b6b;
 
     /* Accent foreground text — mix accent with black so neon colours stay
        readable on light surfaces regardless of which accent the user picked. */
