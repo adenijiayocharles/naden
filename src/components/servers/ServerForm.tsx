@@ -324,13 +324,13 @@ export default function ServerForm() {
 
           {/* Auth Method */}
           <Field label="Auth Method">
-            <div className="flex rounded border border-stroke overflow-hidden">
+            <div className="flex h-8 rounded border border-stroke overflow-hidden">
               {(["key", "password"] as const).map((method) => (
                 <button
                   key={method}
                   type="button"
                   onClick={() => { setForm((f) => ({ ...f, authMethod: method })); setDirty(true); }}
-                  className={`flex-1 py-1.5 text-sm transition-colors ${
+                  className={`flex-1 h-full text-sm transition-colors ${
                     form.authMethod === method
                       ? "bg-accent text-black font-semibold"
                       : "bg-surface-3 text-muted hover:text-white hover:bg-surface-4"
@@ -374,7 +374,7 @@ export default function ServerForm() {
                 <button
                   type="button"
                   onClick={() => { void pickIdentityFile(); }}
-                  className="px-3 py-2 bg-surface-3 hover:bg-surface-4 text-secondary text-sm rounded border border-stroke transition-colors shrink-0"
+                  className="h-8 px-3 bg-surface-3 hover:bg-surface-4 text-secondary text-sm rounded border border-stroke transition-colors shrink-0"
                 >
                   Browse
                 </button>
@@ -412,14 +412,14 @@ export default function ServerForm() {
                 <button
                   type="button"
                   onClick={() => { void handleCreateGroup(); }}
-                  className="px-3 py-2 bg-accent hover:bg-accent-hover text-black text-sm rounded font-semibold transition-colors shrink-0"
+                  className="h-8 px-3 bg-accent hover:bg-accent-hover text-black text-sm rounded font-semibold transition-colors shrink-0"
                 >
                   Add
                 </button>
                 <button
                   type="button"
                   onClick={() => { setShowNewGroup(false); setNewGroupName(""); }}
-                  className="px-3 py-2 bg-surface-3 hover:bg-surface-4 text-secondary text-sm rounded transition-colors shrink-0"
+                  className="h-8 px-3 bg-surface-3 hover:bg-surface-4 text-secondary text-sm rounded transition-colors shrink-0"
                 >
                   Cancel
                 </button>
@@ -562,7 +562,7 @@ export default function ServerForm() {
           <button
             type="button"
             onClick={handleClose}
-            className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
+            className="h-8 px-4 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
           >
             Cancel
           </button>
@@ -570,7 +570,7 @@ export default function ServerForm() {
             type="submit"
             form="server-form"
             disabled={submitting}
-            className="px-4 py-2 text-sm text-black bg-accent hover:bg-accent-hover rounded font-semibold transition-colors disabled:opacity-50"
+            className="h-8 px-4 text-sm text-black bg-accent hover:bg-accent-hover rounded font-semibold transition-colors disabled:opacity-50"
           >
             {saved ? "Saved ✓" : submitting ? "Saving…" : isEdit ? "Save Changes" : "Add Server"}
           </button>
