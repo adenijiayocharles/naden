@@ -332,7 +332,7 @@ export default function ServerForm() {
                   onClick={() => { setForm((f) => ({ ...f, authMethod: method })); setDirty(true); }}
                   className={`flex-1 py-1.5 text-sm transition-colors ${
                     form.authMethod === method
-                      ? "bg-surface-4 text-white font-medium"
+                      ? "bg-accent text-black font-semibold"
                       : "bg-surface-3 text-muted hover:text-white hover:bg-surface-4"
                   }`}
                 >
