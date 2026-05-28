@@ -111,7 +111,9 @@ export default function AppShell() {
   const [pickerQuery, setPickerQuery] = useState("");
   const newTabButtonRef = useRef<HTMLButtonElement>(null);
   const newTabPickerRef = useRef<HTMLDivElement>(null);
-const searchRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const tabBarRef = useRef<HTMLDivElement>(null);
+  const [tabFade, setTabFade] = useState({ left: false, right: false });
 
   // Consolidated drag state — three separate atoms caused triple renders per drag-start.
   const [drag, setDrag] = useState<{ id: string; type: PanelType } | null>(null);
@@ -214,6 +216,36 @@ const searchRef = useRef<HTMLInputElement>(null);
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [showNewTabPicker]);
+
+  const updateTabFade = useCallback(() => {
+    const el = tabBarRef.current;
+    if (!el) return;
+    setTabFade({
+      left: el.scrollLeft > 0,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
+    });
+  }, []);
+
+  useEffect(() => {
+    const el = tabBarRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", updateTabFade, { passive: true });
+    updateTabFade();
+    return () => el.removeEventListener("scroll", updateTabFade);
+  }, [updateTabFade]);
+
+  useEffect(() => {
+    requestAnimationFrame(updateTabFade);
+  }, [terminalSessions.length, sftpSessions.length, updateTabFade]);
+
+  useEffect(() => {
+    const el = tabBarRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.querySelector<HTMLElement>("[data-active='true']")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+      updateTabFade();
+    });
+  }, [terminalActiveId, sftpActiveId, activePanelType, updateTabFade]);
 
   if (isChecking) {
     return (
@@ -367,7 +399,26 @@ const searchRef = useRef<HTMLInputElement>(null);
                 }}
                 onDragEnd={resetDrag}
               >
-                <div className="flex items-center gap-1 px-2 overflow-x-auto flex-1 min-w-0">
+                <div className="relative flex-1 min-w-0">
+                  {tabFade.left && (
+                    <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-surface-1 to-transparent flex items-center justify-start pl-0.5">
+                      <button
+                        onClick={() => tabBarRef.current?.scrollBy({ left: -120, behavior: "smooth" })}
+                        className="pointer-events-auto text-muted hover:text-white transition-colors leading-none"
+                        aria-label="Scroll tabs left"
+                      >‹</button>
+                    </div>
+                  )}
+                  {tabFade.right && (
+                    <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-surface-1 to-transparent flex items-center justify-end pr-0.5">
+                      <button
+                        onClick={() => tabBarRef.current?.scrollBy({ left: 120, behavior: "smooth" })}
+                        className="pointer-events-auto text-muted hover:text-white transition-colors leading-none"
+                        aria-label="Scroll tabs right"
+                      >›</button>
+                    </div>
+                  )}
+                  <div ref={tabBarRef} className="flex items-center gap-1 px-2 overflow-x-auto [&::-webkit-scrollbar]:hidden">
                   {terminalSessions.map((session) => (
                     <TabItem
                       key={session.id}
@@ -419,6 +470,7 @@ const searchRef = useRef<HTMLInputElement>(null);
                       onDrop={(e) => handleDrop(session.id, "sftp", e)}
                     />
                   ))}
+                  </div>
                 </div>
 
                 {/* New terminal session */}

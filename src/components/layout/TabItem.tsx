@@ -31,6 +31,7 @@ export default function TabItem({
 }: TabItemProps) {
   return (
     <div
+      data-active={isActive ? "true" : undefined}
       draggable
       onDragStart={onDragStart}
       onDragOver={onDragOver}
