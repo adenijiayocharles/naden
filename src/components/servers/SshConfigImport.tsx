@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import Input from "../shared/Input";
 import { homeDir, join } from "@tauri-apps/api/path";
 import type { ImportPreview } from "../../types/server";
 import { sshCommands } from "../../lib/tauriCommands";
@@ -105,10 +106,10 @@ export default function SshConfigImport({ onClose }: Props) {
           <div>
             <label className="block text-sm font-medium text-secondary mb-1">Config file path</label>
             <div className="flex gap-2">
-              <input
+              <Input
                 value={configPath}
                 onChange={(e) => setConfigPath(e.target.value)}
-                className="flex-1 h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white focus:outline-none focus:border-accent"
+                className="flex-1"
               />
               <button
                 type="button"

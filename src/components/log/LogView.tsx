@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
+import Input from "../shared/Input";
+import Button from "../shared/Button";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import type { LogEntry, LogOutcome } from "../../types/log";
 import { logCommands } from "../../lib/tauriCommands";
@@ -273,33 +275,17 @@ export default function LogView() {
             ))}
           </select>
 
-          <input
-            type="date"
-            value={filterStart}
-            onChange={(e) => setFilterStart(e.target.value)}
-            className="h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white focus:outline-none focus:border-accent"
-          />
+          <Input type="date" value={filterStart} onChange={(e) => setFilterStart(e.target.value)} className="w-auto" />
           <span className="text-faint text-sm">→</span>
-          <input
-            type="date"
-            value={filterEnd}
-            onChange={(e) => setFilterEnd(e.target.value)}
-            className="h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white focus:outline-none focus:border-accent"
-          />
+          <Input type="date" value={filterEnd} onChange={(e) => setFilterEnd(e.target.value)} className="w-auto" />
 
           {hasFilters && (
-            <button onClick={clearFilters} className="text-faint hover:text-white text-sm transition-colors">
-              Clear
-            </button>
+            <Button variant="ghost" onClick={clearFilters}>Clear</Button>
           )}
 
-          <button
-            onClick={() => { void handleExport(); }}
-            disabled={exporting}
-            className="ml-auto h-10 bg-surface-3 hover:bg-surface-4 border border-stroke text-secondary text-sm px-3 rounded transition-colors disabled:opacity-40"
-          >
+          <Button onClick={() => { void handleExport(); }} disabled={exporting} className="ml-auto px-3 border border-stroke">
             {exporting ? "Exporting…" : "Export CSV"}
-          </button>
+          </Button>
         </div>
 
         {/* Row 2: outcome chips */}

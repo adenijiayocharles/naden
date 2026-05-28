@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { save, open as openDialog } from "@tauri-apps/plugin-dialog";
+import Input from "../shared/Input";
+import Button from "../shared/Button";
 import { useVaultStore } from "../../store/vaultStore";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
@@ -26,13 +28,12 @@ function PasswordInput({
   autoFocus?: boolean;
 }) {
   return (
-    <input
+    <Input
       autoFocus={autoFocus}
       type="password"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
     />
   );
 }
@@ -422,19 +423,10 @@ export default function SettingsModal({ onClose }: Props) {
                 />
                 {error && <p className="text-xs text-red-400">{error}</p>}
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => openForm("none")}
-                    className="flex-1 py-2 text-xs text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => { void submitDisable(); }}
-                    disabled={loading || !disablePwd}
-                    className="flex-1 py-2 text-xs text-black bg-red-500 hover:bg-red-400 disabled:opacity-40 rounded transition-colors font-semibold"
-                  >
+                  <Button size="sm" onClick={() => openForm("none")} className="flex-1">Cancel</Button>
+                  <Button size="sm" onClick={() => { void submitDisable(); }} disabled={loading || !disablePwd} className="flex-1 bg-red-500 hover:bg-red-400 text-black font-semibold disabled:opacity-40">
                     {loading ? "Verifying…" : "Disable password"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -466,19 +458,10 @@ export default function SettingsModal({ onClose }: Props) {
                 />
                 {error && <p className="text-xs text-red-400">{error}</p>}
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => openForm("none")}
-                    className="flex-1 py-2 text-xs text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => { void submitEnable(); }}
-                    disabled={loading || enablePwd.length < 8 || enablePwd !== enableConfirm}
-                    className="flex-1 py-2 text-xs text-black bg-accent hover:bg-accent-hover disabled:opacity-40 rounded transition-colors font-semibold"
-                  >
+                  <Button size="sm" onClick={() => openForm("none")} className="flex-1">Cancel</Button>
+                  <Button size="sm" variant="primary" onClick={() => { void submitEnable(); }} disabled={loading || enablePwd.length < 8 || enablePwd !== enableConfirm} className="flex-1">
                     {loading ? "Setting up…" : "Enable password"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -526,19 +509,10 @@ export default function SettingsModal({ onClose }: Props) {
                     />
                     {error && <p className="text-xs text-red-400">{error}</p>}
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => openForm("none")}
-                        className="flex-1 py-2 text-xs text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={() => { void submitChange(); }}
-                        disabled={loading || !changeCurrent || changeNew.length < 8 || changeNew !== changeConfirm}
-                        className="flex-1 py-2 text-xs text-black bg-accent hover:bg-accent-hover disabled:opacity-40 rounded transition-colors font-semibold"
-                      >
+                      <Button size="sm" onClick={() => openForm("none")} className="flex-1">Cancel</Button>
+                      <Button size="sm" variant="primary" onClick={() => { void submitChange(); }} disabled={loading || !changeCurrent || changeNew.length < 8 || changeNew !== changeConfirm} className="flex-1">
                         {loading ? "Updating…" : "Change password"}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -626,21 +600,12 @@ export default function SettingsModal({ onClose }: Props) {
                   </p>
                 )}
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => { setBackupMode("none"); setBackupPwd(""); setBackupMsg(null); }}
-                    className="flex-1 py-2 text-xs text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => { void (backupMode === "export" ? handleExport() : handleImport()); }}
-                    disabled={backupLoading || !backupPwd}
-                    className="flex-1 py-2 text-xs text-black bg-accent hover:bg-accent-hover disabled:opacity-40 rounded transition-colors font-semibold"
-                  >
+                  <Button size="sm" onClick={() => { setBackupMode("none"); setBackupPwd(""); setBackupMsg(null); }} className="flex-1">Cancel</Button>
+                  <Button size="sm" variant="primary" onClick={() => { void (backupMode === "export" ? handleExport() : handleImport()); }} disabled={backupLoading || !backupPwd} className="flex-1">
                     {backupLoading
                       ? (backupMode === "export" ? "Exporting…" : "Importing…")
                       : (backupMode === "export" ? "Choose file & export" : "Choose file & import")}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -733,12 +698,7 @@ export default function SettingsModal({ onClose }: Props) {
         </div>
 
         <div className="px-6 py-4 border-t border-stroke-subtle flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
-          >
-            Done
-          </button>
+          <Button onClick={onClose}>Done</Button>
         </div>
       </div>
     </div>

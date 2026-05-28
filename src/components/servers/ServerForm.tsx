@@ -7,6 +7,8 @@ import { useUiStore } from "../../store/uiStore";
 import { serverCommands, vaultCommands } from "../../lib/tauriCommands";
 import { useVaultStore } from "../../store/vaultStore";
 import { formatError } from "../../lib/errors";
+import Input from "../shared/Input";
+import Button from "../shared/Button";
 
 interface FormData {
   displayName: string;
@@ -275,32 +277,32 @@ export default function ServerForm() {
         <form id="server-form" onSubmit={(e) => { void handleSubmit(e); }} className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
           {/* Display Name */}
           <Field label="Display Name" error={errors.displayName} required>
-            <input
+            <Input
               id="displayName"
               value={form.displayName}
               onChange={set("displayName")}
               onBlur={(e) => validateField("displayName", e.target.value)}
               placeholder="Production Web Server"
-              className={input(!!errors.displayName)}
+              error={!!errors.displayName}
             />
           </Field>
 
           {/* Hostname */}
           <Field label="Hostname / IP" error={errors.hostname} required>
-            <input
+            <Input
               id="hostname"
               value={form.hostname}
               onChange={set("hostname")}
               onBlur={(e) => validateField("hostname", e.target.value)}
               placeholder="web.example.com"
-              className={input(!!errors.hostname)}
+              error={!!errors.hostname}
             />
           </Field>
 
           {/* Port + Username */}
           <div className="grid grid-cols-2 gap-3">
             <Field label="Port" error={errors.port} required>
-              <input
+              <Input
                 id="port"
                 type="number"
                 min={1}
@@ -308,16 +310,15 @@ export default function ServerForm() {
                 value={form.port}
                 onChange={set("port")}
                 onBlur={(e) => validateField("port", e.target.value)}
-                className={input(!!errors.port)}
+                error={!!errors.port}
               />
             </Field>
             <Field label="Username">
-              <input
+              <Input
                 id="username"
                 value={form.username}
                 onChange={set("username")}
                 placeholder="ubuntu"
-                className={input(false)}
               />
             </Field>
           </div>
@@ -348,12 +349,11 @@ export default function ServerForm() {
               {!vaultAvailable ? (
                 <p className="text-xs text-yellow-500">Unlock the vault to store a password.</p>
               ) : (
-                <input
+                <Input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={isEdit && existingServer?.vaultCredentialId ? "Enter new password to change…" : "SSH password"}
-                  className={input(false)}
                   autoComplete="new-password"
                 />
               )}
@@ -364,20 +364,20 @@ export default function ServerForm() {
           {form.authMethod === "key" && (
             <Field label="Identity File">
               <div className="flex gap-2">
-                <input
+                <Input
                   id="identityFilePath"
                   value={form.identityFilePath}
                   onChange={set("identityFilePath")}
                   placeholder="~/.ssh/id_ed25519"
-                  className={`${input(false)} flex-1`}
+                  className="flex-1"
                 />
-                <button
+                <Button
                   type="button"
                   onClick={() => { void pickIdentityFile(); }}
-                  className="h-10 px-3 bg-surface-3 hover:bg-surface-4 text-secondary text-sm rounded border border-stroke transition-colors shrink-0"
+                  className="px-3 border border-stroke shrink-0"
                 >
                   Browse
-                </button>
+                </Button>
               </div>
             </Field>
           )}
@@ -401,28 +401,29 @@ export default function ServerForm() {
               </SelectWrapper>
             ) : (
               <div className="flex gap-2">
-                <input
+                <Input
                   autoFocus
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void handleCreateGroup(); } }}
                   placeholder="Group name"
-                  className={`${input(false)} flex-1`}
+                  className="flex-1"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="primary"
                   onClick={() => { void handleCreateGroup(); }}
-                  className="h-10 px-3 bg-accent hover:bg-accent-hover text-black text-sm rounded font-semibold transition-colors shrink-0"
+                  className="px-3 shrink-0"
                 >
                   Add
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={() => { setShowNewGroup(false); setNewGroupName(""); }}
-                  className="h-10 px-3 bg-surface-3 hover:bg-surface-4 text-secondary text-sm rounded transition-colors shrink-0"
+                  className="px-3 shrink-0"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             )}
           </Field>
@@ -447,7 +448,7 @@ export default function ServerForm() {
               </div>
             )}
             <div className="relative" ref={tagDropdownRef}>
-              <input
+              <Input
                 ref={tagInputRef}
                 value={tagInput}
                 onChange={(e) => { setTagInput(e.target.value); setTagDropdownOpen(true); }}
@@ -455,7 +456,6 @@ export default function ServerForm() {
                 onBlur={() => setTimeout(() => setTagDropdownOpen(false), 150)}
                 onKeyDown={handleTagKeyDown}
                 placeholder="Type a tag and press Enter"
-                className={input(false)}
               />
               {tagDropdownOpen && tagSuggestions.length > 0 && (
                 <div className="absolute z-20 top-full mt-1 w-full bg-surface-2 border border-stroke rounded-lg shadow-xl max-h-40 overflow-y-auto">
@@ -546,7 +546,7 @@ export default function ServerForm() {
               onChange={set("notes")}
               rows={2}
               placeholder="Optional notes about this server…"
-              className={`${input(false)} resize-none`}
+              className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors resize-none"
             />
           </Field>
 
@@ -559,21 +559,12 @@ export default function ServerForm() {
 
         {/* Footer */}
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-stroke-subtle shrink-0">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="h-10 px-4 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
-          >
+          <Button type="button" onClick={handleClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            form="server-form"
-            disabled={submitting}
-            className="h-10 px-4 text-sm text-black bg-accent hover:bg-accent-hover rounded font-semibold transition-colors disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" form="server-form" variant="primary" disabled={submitting}>
             {saved ? "Saved ✓" : submitting ? "Saving…" : isEdit ? "Save Changes" : "Add Server"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -619,9 +610,6 @@ function SelectWrapper({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-const input = (hasError: boolean) =>
-  `w-full h-10 bg-surface-3 border ${hasError ? "border-red-500" : "border-stroke"} rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors`;
 
 const select = () =>
   "w-full h-10 appearance-none bg-surface-3 border border-stroke rounded px-3 pr-10 text-sm text-white focus:outline-none focus:border-accent transition-colors";

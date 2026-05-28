@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useVaultStore } from "../../store/vaultStore";
 import { formatError } from "../../lib/errors";
+import Input from "../shared/Input";
 
 export default function VaultLockScreen() {
   const unlock = useVaultStore((s) => s.unlock);
@@ -49,13 +50,13 @@ export default function VaultLockScreen() {
         </div>
 
         <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-3">
-          <input
+          <Input
             autoFocus
             type="password"
             value={password}
             onChange={(e) => { setPassword(e.target.value); setError(null); }}
             placeholder="Master password"
-            className="w-full h-10 bg-surface-1 border border-stroke rounded px-4 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
+            className="bg-surface-1 px-4"
           />
 
           {error && <p className="text-sm text-red-400 text-center">{error}</p>}

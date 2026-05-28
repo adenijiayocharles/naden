@@ -4,6 +4,7 @@ import { useUiStore } from "../../store/uiStore";
 import { settingsCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import SshConfigImport from "../servers/SshConfigImport";
+import Input from "../shared/Input";
 
 interface Props {
   onComplete: () => void;
@@ -117,13 +118,12 @@ export default function OnboardingWizard({ onComplete }: Props) {
               {!skipVault && !isSetup ? (
                 <div className="space-y-3">
                   <div>
-                    <input
+                    <Input
                       autoFocus
                       type="password"
                       value={password}
                       onChange={(e) => { setPassword(e.target.value); setVaultError(null); }}
                       placeholder="Master password"
-                      className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent"
                     />
                     {password.length > 0 && (
                       <div className="mt-1.5 flex items-center gap-2">
@@ -134,12 +134,11 @@ export default function OnboardingWizard({ onComplete }: Props) {
                       </div>
                     )}
                   </div>
-                  <input
+                  <Input
                     type="password"
                     value={confirm}
                     onChange={(e) => { setConfirm(e.target.value); setVaultError(null); }}
                     placeholder="Confirm password"
-                    className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent"
                   />
                   {vaultError && <p className="text-xs text-red-400">{vaultError}</p>}
                 </div>

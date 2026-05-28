@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useState, useRef, useMemo } from "react";
 import { useUiStore, type ViewMode, type SortMode } from "../../store/uiStore";
+import Input from "../shared/Input";
 import { useVaultStore } from "../../store/vaultStore";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
@@ -282,11 +283,10 @@ export default function AppShell() {
             {activeView === "logs" ? (
               <>
                 <div className="px-4 py-2 border-b border-stroke-subtle shrink-0">
-                  <input
+                  <Input
                     value={logSearchQuery}
                     onChange={(e) => setLogSearch(e.target.value)}
                     placeholder="Search logs…"
-                    className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
                   />
                 </div>
                 <LogView />

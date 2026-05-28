@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
+import Input from "../shared/Input";
+import Button from "../shared/Button";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
 import VaultCountdown from "./VaultCountdown";
@@ -55,10 +57,9 @@ function GroupCreateModal({ onClose }: { onClose: () => void }) {
       <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-2xl w-full max-w-sm p-5">
         <h3 className="text-sm font-semibold text-white mb-4">New Group</h3>
         <div className="space-y-3">
-          <input autoFocus value={name} onChange={(e) => setName(e.target.value)}
+          <Input autoFocus value={name} onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) void handleCreate(); }}
-            placeholder="Group name"
-            className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent" />
+            placeholder="Group name" />
           <div>
             <p className="text-xs text-faint mb-2">Color</p>
             <ColorPicker value={color} onChange={setColor} />
@@ -66,11 +67,10 @@ function GroupCreateModal({ onClose }: { onClose: () => void }) {
           {error && <p className="text-xs text-red-400">{error}</p>}
         </div>
         <div className="flex items-center justify-end gap-2 mt-5">
-          <button onClick={onClose} className="px-3 py-1.5 text-xs text-faint hover:text-white bg-surface-3 rounded transition-colors">Cancel</button>
-          <button onClick={() => { void handleCreate(); }} disabled={busy || !name.trim()}
-            className="px-3 py-1.5 text-xs text-black bg-accent hover:bg-accent-hover rounded font-semibold transition-colors disabled:opacity-40">
+          <Button size="sm" onClick={onClose}>Cancel</Button>
+          <Button size="sm" variant="primary" onClick={() => { void handleCreate(); }} disabled={busy || !name.trim()}>
             {busy ? "Creating…" : "Create"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -118,9 +118,8 @@ function GroupEditModal({ group, onClose, initialDelete = false }: { group: Grou
       <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-2xl w-full max-w-sm p-5">
         <h3 className="text-sm font-semibold text-white mb-4">Edit Group</h3>
         <div className="space-y-3">
-          <input autoFocus value={name} onChange={(e) => setName(e.target.value)}
-            placeholder="Group name"
-            className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent" />
+          <Input autoFocus value={name} onChange={(e) => setName(e.target.value)}
+            placeholder="Group name" />
           <div>
             <p className="text-xs text-faint mb-2">Color</p>
             <ColorPicker value={color} onChange={setColor} />
@@ -131,17 +130,16 @@ function GroupEditModal({ group, onClose, initialDelete = false }: { group: Grou
           {confirmDelete ? (
             <>
               <span className="text-xs text-red-400 flex-1">Delete group and ungroup servers?</span>
-              <button onClick={() => { void handleDelete(); }} disabled={busy} className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-500 text-white rounded transition-colors disabled:opacity-40">Confirm</button>
-              <button onClick={() => setConfirmDelete(false)} className="px-3 py-1.5 text-xs text-faint hover:text-white transition-colors">Cancel</button>
+              <Button size="sm" variant="danger" onClick={() => { void handleDelete(); }} disabled={busy} className="bg-red-600 hover:bg-red-500 text-white border-0">Confirm</Button>
+              <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(false)}>Cancel</Button>
             </>
           ) : (
             <>
               <button onClick={() => setConfirmDelete(true)} disabled={busy} className="text-xs text-red-500 hover:text-red-400 transition-colors mr-auto disabled:opacity-40">Delete</button>
-              <button onClick={onClose} className="px-3 py-1.5 text-xs text-faint hover:text-white bg-surface-3 rounded transition-colors">Cancel</button>
-              <button onClick={() => { void handleSave(); }} disabled={busy || !name.trim()}
-                className="px-3 py-1.5 text-xs text-black bg-accent hover:bg-accent-hover rounded font-semibold transition-colors disabled:opacity-40">
+              <Button size="sm" onClick={onClose}>Cancel</Button>
+              <Button size="sm" variant="primary" onClick={() => { void handleSave(); }} disabled={busy || !name.trim()}>
                 {busy ? "Saving…" : "Save"}
-              </button>
+              </Button>
             </>
           )}
         </div>
@@ -175,17 +173,15 @@ function TagRenameModal({ tag, onClose }: { tag: Tag; onClose: () => void }) {
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-2xl w-full max-w-sm p-5">
         <h3 className="text-sm font-semibold text-white mb-4">Rename Tag</h3>
-        <input autoFocus value={name} onChange={(e) => setName(e.target.value)}
+        <Input autoFocus value={name} onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") void handleSave(); if (e.key === "Escape") onClose(); }}
-          placeholder="Tag name"
-          className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent" />
+          placeholder="Tag name" />
         {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
         <div className="flex items-center justify-end gap-2 mt-5">
-          <button onClick={onClose} className="px-3 py-1.5 text-xs text-faint hover:text-white bg-surface-3 rounded transition-colors">Cancel</button>
-          <button onClick={() => { void handleSave(); }} disabled={busy || !name.trim()}
-            className="px-3 py-1.5 text-xs text-black bg-accent hover:bg-accent-hover rounded font-semibold transition-colors disabled:opacity-40">
+          <Button size="sm" onClick={onClose}>Cancel</Button>
+          <Button size="sm" variant="primary" onClick={() => { void handleSave(); }} disabled={busy || !name.trim()}>
             {busy ? "Saving…" : "Save"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
