@@ -62,21 +62,23 @@ async function loadFont({ family, url, weight }: FontDef): Promise<void> {
   }
 }
 
-const loadedFontIds = new Set<string>(["menlo", "consolas", "system"]);
-let defaultFontsPromise: Promise<void> | null = null;
+const resolved = Promise.resolve();
+const fontPromises = new Map<string, Promise<void>>([
+  ["menlo", resolved],
+  ["consolas", resolved],
+  ["system", resolved],
+]);
 
 export function ensureCanvasFonts(): Promise<void> {
-  if (defaultFontsPromise) return defaultFontsPromise;
-  defaultFontsPromise = (async () => {
-    await Promise.all(FONT_DEFS["jetbrains-mono"].map(loadFont));
-    loadedFontIds.add("jetbrains-mono");
-  })();
-  return defaultFontsPromise;
+  return ensureFont("jetbrains-mono");
 }
 
-export async function ensureFont(id: string): Promise<void> {
-  if (loadedFontIds.has(id)) return;
-  loadedFontIds.add(id);
+export function ensureFont(id: string): Promise<void> {
+  const cached = fontPromises.get(id);
+  if (cached) return cached;
   const defs = FONT_DEFS[id];
-  if (defs) await Promise.all(defs.map(loadFont));
+  if (!defs) return resolved;
+  const p = Promise.all(defs.map(loadFont)).then(() => {});
+  fontPromises.set(id, p);
+  return p;
 }
