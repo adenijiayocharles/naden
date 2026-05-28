@@ -28,6 +28,12 @@ export default function TerminalPane({ sessionId }: Props) {
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<{ index: number | undefined; count: number } | null>(null);
+  // Ref mirror of searchQuery so findNext/findPrevious always read the latest
+  // value without needing searchQuery in their dependency arrays. If they closed
+  // over state, a stale value would mismatch xterm's cachedSearchTerm and cause
+  // findNextWithSelection to restart from the start of the current match instead
+  // of advancing past it.
+  const searchQueryRef = useRef("");
   // Tracks the last found match position so navigation survives selection being
   // cleared by incoming SSH output between the typing call and Enter/button press.
   // getSelectionPosition() returns 1-based coords; terminal.select() takes 0-based.
@@ -43,6 +49,7 @@ export default function TerminalPane({ sessionId }: Props) {
   const closeSearch = useCallback(() => {
     setSearchVisible(false);
     setSearchQuery("");
+    searchQueryRef.current = "";
     setSearchResults(null);
     lastFoundRef.current = null;
   }, []);
@@ -50,27 +57,29 @@ export default function TerminalPane({ sessionId }: Props) {
   const findNext = useCallback(() => {
     const term = termRef.current;
     const addon = searchAddonRef.current;
-    if (!searchQuery || !addon) return;
+    const q = searchQueryRef.current;
+    if (!q || !addon) return;
     // Restore selection if SSH output cleared it so the addon knows where to advance from
     if (term && !term.hasSelection() && lastFoundRef.current) {
-      term.select(lastFoundRef.current.col, lastFoundRef.current.row, searchQuery.length);
+      term.select(lastFoundRef.current.col, lastFoundRef.current.row, q.length);
     }
-    addon.findNext(searchQuery, { incremental: false });
+    addon.findNext(q, { incremental: false });
     const pos = term?.getSelectionPosition();
     if (pos) lastFoundRef.current = { col: pos.start.x - 1, row: pos.start.y - 1 };
-  }, [searchQuery]);
+  }, []);
 
   const findPrevious = useCallback(() => {
     const term = termRef.current;
     const addon = searchAddonRef.current;
-    if (!searchQuery || !addon) return;
+    const q = searchQueryRef.current;
+    if (!q || !addon) return;
     if (term && !term.hasSelection() && lastFoundRef.current) {
-      term.select(lastFoundRef.current.col, lastFoundRef.current.row, searchQuery.length);
+      term.select(lastFoundRef.current.col, lastFoundRef.current.row, q.length);
     }
-    addon.findPrevious(searchQuery);
+    addon.findPrevious(q);
     const pos = term?.getSelectionPosition();
     if (pos) lastFoundRef.current = { col: pos.start.x - 1, row: pos.start.y - 1 };
-  }, [searchQuery]);
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -312,6 +321,7 @@ export default function TerminalPane({ sessionId }: Props) {
             onChange={(e) => {
               const q = e.target.value;
               setSearchQuery(q);
+              searchQueryRef.current = q;
               lastFoundRef.current = null;
               if (q) {
                 searchAddonRef.current?.findNext(q, { incremental: true });
