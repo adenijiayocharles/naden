@@ -352,6 +352,71 @@ function GroupRow({
   );
 }
 
+// ── Tag row with right-click context menu ─────────────────────────────────────
+function TagRow({
+  tag,
+  active,
+  count,
+  onClick,
+  onRename,
+  onDelete,
+}: {
+  tag: Tag;
+  active: boolean;
+  count: number;
+  onClick: () => void;
+  onRename: () => void;
+  onDelete: () => void;
+}) {
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menu) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenu(null);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menu]);
+
+  return (
+    <>
+      <button
+        onClick={onClick}
+        onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }); }}
+        className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between rounded transition-colors ${
+          active ? "bg-accent text-black font-medium" : "text-secondary hover:bg-surface-3 hover:text-white"
+        }`}
+      >
+        <span className="truncate">#{tag.name}</span>
+        <span className={`text-xs ml-2 shrink-0 ${active ? "text-black/60" : "text-muted"}`}>{count}</span>
+      </button>
+
+      {menu && (
+        <div
+          ref={menuRef}
+          className="fixed bg-surface-2 border border-stroke rounded-lg shadow-2xl z-50 py-1 min-w-[130px]"
+          style={{ left: menu.x, top: menu.y }}
+        >
+          <button
+            onClick={() => { onRename(); setMenu(null); }}
+            className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-surface-4 transition-colors"
+          >
+            Rename
+          </button>
+          <button
+            onClick={() => { onDelete(); setMenu(null); }}
+            className="w-full text-left px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-surface-4 transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
 // ── Sidebar ────────────────────────────────────────────────────────────────────
 export default function Sidebar() {
   const servers = useServerStore((s) => s.servers);
@@ -374,6 +439,7 @@ export default function Sidebar() {
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [renamingTag, setRenamingTag] = useState<Tag | null>(null);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [tagsCollapsed, setTagsCollapsed] = useState(false);
   const addMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -465,23 +531,31 @@ export default function Sidebar() {
         {/* Tags */}
         {tags.length > 0 && (
           <div className="pt-3">
-            <p className="px-3 pb-1 text-xs font-semibold text-faint uppercase tracking-wider">Tags</p>
-            {tags.map((t) => (
-              <NavRow
+            <button
+              onClick={() => setTagsCollapsed((v) => !v)}
+              className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-1 w-full text-left px-3 select-none text-faint hover:text-muted transition-colors"
+            >
+              <svg
+                className={`w-2.5 h-2.5 shrink-0 transition-transform ${tagsCollapsed ? "" : "rotate-90"}`}
+                fill="none" viewBox="0 0 6 10" stroke="currentColor" strokeWidth={2}
+                strokeLinecap="round" strokeLinejoin="round"
+              >
+                <polyline points="1,1 5,5 1,9" />
+              </svg>
+              Tags
+            </button>
+            {!tagsCollapsed && tags.map((t) => (
+              <TagRow
                 key={t.id}
+                tag={t}
                 active={filterTagId === t.id && activeView !== "logs"}
-                onClick={selectFilter(() => setFilterTag(t.id))}
-                label={`#${t.name}`}
                 count={countByTag[t.id] ?? 0}
-                menuActions={[
-                  { label: "Rename", onClick: () => setRenamingTag(t) },
-                  {
-                    label: "Delete", danger: true, onClick: () => {
-                      void deleteTag(t.id);
-                      if (filterTagId === t.id) setFilterTag(null);
-                    },
-                  },
-                ]}
+                onClick={selectFilter(() => setFilterTag(t.id))}
+                onRename={() => setRenamingTag(t)}
+                onDelete={() => {
+                  void deleteTag(t.id);
+                  if (filterTagId === t.id) setFilterTag(null);
+                }}
               />
             ))}
           </div>
