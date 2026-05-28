@@ -91,7 +91,6 @@ export default function BulkActionBar() {
             size="sm"
             onClick={() => setShowGroupPicker((v) => !v)}
             disabled={busy || count === 0}
-            className="border border-stroke"
           >
             Move to group…
           </Button>
@@ -139,7 +138,7 @@ export default function BulkActionBar() {
         ) : (
           <Button
             size="sm"
-            variant="danger"
+            variant="delete"
             onClick={() => setConfirmDelete(true)}
             disabled={busy || count === 0}
           >
