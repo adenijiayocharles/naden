@@ -101,7 +101,17 @@
       "WebFetch(domain:chatgpt.com)",
       "Bash(npm view *)",
       "Bash(perl *)",
-      "Bash(npx skills *)"
+      "Bash(npx skills *)",
+      "Bash(screencapture -x /tmp/sidebar_shot.png)",
+      "Bash(kill %1)",
+      "Bash(screencapture -x -R 0,0,400,800 /tmp/sidebar_shot.png)",
+      "Bash(screencapture -x /tmp/app_shot.png)",
+      "Bash(screencapture -x -R 0,0,500,900 /tmp/app_sidebar.png)",
+      "Bash(screencapture -x /tmp/chrome_app.png)",
+      "Bash(osascript *)",
+      "Bash(screencapture -x /tmp/ssh_manager.png)",
+      "Bash(screencapture -x /tmp/ssh_full.png)",
+      "Bash(screencapture *)"
     ]
   }
 }

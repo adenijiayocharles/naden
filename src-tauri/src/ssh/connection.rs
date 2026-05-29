@@ -149,6 +149,7 @@ impl SessionManager {
         jump_chain: Vec<JumpInfo>,
         on_close: Option<OnCloseCallback>,
         app_handle: tauri::AppHandle,
+        keepalive_interval: u32,
     ) -> Result<(), AppError> {
         let (tx, rx) = std::sync::mpsc::sync_channel(256);
 
@@ -170,6 +171,7 @@ impl SessionManager {
                     rx,
                     app_handle.clone(),
                     Arc::clone(&sessions),
+                    keepalive_interval,
                 );
             }));
             if result.is_err() {
@@ -328,6 +330,7 @@ fn run_session(
     rx: std::sync::mpsc::Receiver<SessionMessage>,
     app_handle: tauri::AppHandle,
     sessions: Arc<Mutex<HashMap<String, ActiveSession>>>,
+    keepalive_interval: u32,
 ) {
     let output_event = format!("terminal:output:{session_id}");
     let closed_event = format!("terminal:closed:{session_id}");
@@ -369,10 +372,15 @@ fn run_session(
 
         let _ = app_handle.emit(&format!("terminal:status:{session_id}"), "connected");
 
+        if keepalive_interval > 0 {
+            session.set_keepalive(true, keepalive_interval);
+        }
+
         session.set_blocking(false);
 
         let mut buf = vec![0u8; 32768];
         let mut active;
+        let mut last_keepalive = std::time::Instant::now();
 
         'io: loop {
             active = false;
@@ -436,6 +444,15 @@ fn run_session(
             if active {
                 std::thread::yield_now();
             } else {
+                if keepalive_interval > 0
+                    && last_keepalive.elapsed().as_secs() >= u64::from(keepalive_interval)
+                {
+                    session.set_blocking(true);
+                    session.set_timeout(2000);
+                    let _ = session.keepalive_send();
+                    session.set_blocking(false);
+                    last_keepalive = std::time::Instant::now();
+                }
                 std::thread::sleep(std::time::Duration::from_millis(20));
             }
         }

@@ -54,25 +54,6 @@ export default function SettingsModal({ onClose }: Props) {
   }, []);
 
   const scrollBodyRef = useRef<HTMLDivElement>(null);
-  const [activeSection, setActiveSection] = useState("appearance");
-  useEffect(() => {
-    const el = scrollBodyRef.current;
-    if (!el) return;
-    const sections = el.querySelectorAll<HTMLElement>("[data-section]");
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting);
-        if (visible.length > 0) {
-          // Pick the topmost visible section
-          const top = visible.reduce((a, b) => a.boundingClientRect.top < b.boundingClientRect.top ? a : b);
-          setActiveSection((top.target as HTMLElement).dataset.section ?? "appearance");
-        }
-      },
-      { root: el, threshold: 0.2 },
-    );
-    sections.forEach((s) => observer.observe(s));
-    return () => observer.disconnect();
-  }, []);
 
   // Theme
   type Theme = "dark" | "oled" | "dim" | "light";
@@ -141,6 +122,19 @@ export default function SettingsModal({ onClose }: Props) {
     setTimeoutMins(v);
     setVaultTimeoutMins(Number(v));
     settingsCommands.setSetting("vault_timeout_minutes", v).catch(() => {});
+    flashSaved();
+  };
+
+  // SSH keepalive
+  const [keepaliveInterval, setKeepaliveInterval] = useState("0");
+  useEffect(() => {
+    settingsCommands.getSetting("ssh_keepalive_interval")
+      .then((v) => { if (v !== null) setKeepaliveInterval(v); })
+      .catch(() => {});
+  }, []);
+  const saveKeepalive = (v: string) => {
+    setKeepaliveInterval(v);
+    settingsCommands.setSetting("ssh_keepalive_interval", v).catch(() => {});
     flashSaved();
   };
 
@@ -548,6 +542,24 @@ export default function SettingsModal({ onClose }: Props) {
                   }`}
                 />
               </button>
+            </div>
+
+            <div className="flex items-center justify-between py-3 border-t border-stroke-subtle">
+              <div className="min-w-0 mr-4">
+                <p className="text-sm text-white font-medium">SSH keepalive</p>
+                <p className="text-xs text-muted mt-0.5">Send periodic packets to prevent idle session drops</p>
+              </div>
+              <select
+                value={keepaliveInterval}
+                onChange={(e) => saveKeepalive(e.target.value)}
+                className="bg-surface-3 border border-stroke rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-accent transition-colors shrink-0"
+              >
+                <option value="0">Disabled</option>
+                <option value="30">30 s</option>
+                <option value="60">60 s</option>
+                <option value="120">2 min</option>
+                <option value="300">5 min</option>
+              </select>
             </div>
           </div>
 

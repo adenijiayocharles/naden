@@ -147,7 +147,7 @@ function SnippetCard({
   };
 
   return (
-    <div className="group bg-surface-1 border border-stroke-subtle rounded-lg p-2.5 flex flex-col gap-1.5 hover:border-stroke transition-colors">
+    <div className="group bg-surface-1 border border-stroke-subtle rounded-lg p-2.5 flex flex-col gap-1.5 hover:border-stroke hover:bg-surface-2 transition-colors">
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium text-white leading-snug break-words min-w-0">{snippet.title}</p>
         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">

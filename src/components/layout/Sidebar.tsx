@@ -531,10 +531,10 @@ export default function Sidebar() {
         {/* Groups */}
         <div className="pt-3">
           <div className="flex items-center justify-between px-3 pb-2">
-            <p className="text-xs font-semibold text-faint uppercase tracking-wider">Groups</p>
+            <span className="text-xs font-semibold text-faint uppercase tracking-wider">Groups</span>
             <button
               onClick={() => setCreatingGroup(true)}
-              className="text-dim hover:text-muted transition-colors"
+              className="flex items-center p-0 text-dim hover:text-muted transition-colors"
               title="New group" aria-label="New group"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 14 14" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">

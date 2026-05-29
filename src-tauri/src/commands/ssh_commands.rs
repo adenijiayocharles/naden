@@ -279,6 +279,16 @@ pub async fn open_terminal_session(
         });
     });
 
+    let keepalive_interval: u32 = sqlx::query_scalar::<_, String>(
+        "SELECT value FROM settings WHERE key = 'ssh_keepalive_interval'",
+    )
+    .fetch_optional(&state.db)
+    .await
+    .ok()
+    .flatten()
+    .and_then(|v| v.parse().ok())
+    .unwrap_or(0);
+
     state.session_manager.open_session(
         session_id,
         s.hostname.clone(),
@@ -288,6 +298,7 @@ pub async fn open_terminal_session(
         jump_chain,
         Some(on_close),
         app_handle,
+        keepalive_interval,
     )
 }
 
