@@ -571,8 +571,9 @@ export default function Sidebar() {
         <div ref={addMenuRef} className="relative shrink-0">
           <Button
             size="sm"
+            variant="primary"
             onClick={() => setAddMenuOpen((v) => !v)}
-            className="border border-stroke hover:border-stroke-subtle bg-surface-2 hover:bg-surface-3 text-secondary"
+
           >
             + Add
           </Button>

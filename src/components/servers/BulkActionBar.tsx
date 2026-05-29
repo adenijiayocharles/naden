@@ -93,7 +93,7 @@ export default function BulkActionBar() {
             onClick={() => setShowGroupPicker((v) => !v)}
             disabled={busy || count === 0}
           >
-            Move to group…
+            Add to Group
           </Button>
 
           {showGroupPicker && (

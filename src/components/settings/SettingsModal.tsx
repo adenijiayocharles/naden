@@ -698,7 +698,10 @@ export default function SettingsModal({ onClose }: Props) {
         </div>
 
         <div className="px-6 py-4 border-t border-stroke-subtle flex justify-end">
-          <Button onClick={onClose}>Done</Button>
+          <Button
+          size="sm"
+          variant="primary"
+          onClick={onClose}>Done</Button>
         </div>
       </div>
     </div>
