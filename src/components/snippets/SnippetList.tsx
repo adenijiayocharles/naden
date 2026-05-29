@@ -1,7 +1,5 @@
 import { useState, useMemo } from "react";
 import { useSnippetStore } from "../../store/snippetStore";
-import { useTerminalStore } from "../../store/terminalStore";
-import { terminalCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import Button from "../shared/Button";
 import Input from "../shared/Input";
@@ -136,27 +134,14 @@ function DeleteConfirmModal({
 // ── Snippet card ───────────────────────────────────────────────────────────────
 function SnippetCard({
   snippet,
-  activeSessionId,
   onEdit,
   onDelete,
 }: {
   snippet: Snippet;
-  activeSessionId: string | null;
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  const handleSend = async () => {
-    if (!activeSessionId) return;
-    setSending(true);
-    try {
-      await terminalCommands.sendTerminalInput(activeSessionId, snippet.body + "\n");
-    } finally {
-      setSending(false);
-    }
-  };
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(snippet.body);
@@ -196,18 +181,6 @@ function SnippetCard({
 
       <div className="flex items-center gap-2 pt-1">
         <button
-          onClick={() => void handleSend()}
-          disabled={!activeSessionId || sending}
-          title={activeSessionId ? "Send to active terminal" : "No active terminal session"}
-          className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-accent/10 text-accent-fg hover:bg-accent/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 14 14" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-            <line x1="2" y1="7" x2="12" y2="7" />
-            <polyline points="8,3 12,7 8,11" />
-          </svg>
-          {sending ? "Sending…" : "Send"}
-        </button>
-        <button
           onClick={() => void handleCopy()}
           className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium text-dim hover:text-muted hover:bg-surface-3 transition-colors"
         >
@@ -237,12 +210,6 @@ function SnippetCard({
 export default function SnippetList() {
   const snippets = useSnippetStore((s) => s.snippets);
   const isLoading = useSnippetStore((s) => s.isLoading);
-  const sessions = useTerminalStore((s) => s.sessions);
-  const activeSessionId = useTerminalStore((s) => s.activeSessionId);
-
-  const activeConnectedSession = sessions.find(
-    (s) => s.id === activeSessionId && s.status === "connected",
-  );
 
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
@@ -275,16 +242,6 @@ export default function SnippetList() {
         </Button>
       </div>
 
-      {/* Active session badge */}
-      {activeConnectedSession && (
-        <div className="px-4 py-1.5 border-b border-stroke-subtle shrink-0 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
-          <span className="text-xs text-muted truncate">
-            Send targets: <span className="text-accent-fg">{activeConnectedSession.serverName}</span>
-          </span>
-        </div>
-      )}
-
       {/* List */}
       <div className="flex-1 overflow-y-auto p-4">
         {isLoading ? (
@@ -308,7 +265,6 @@ export default function SnippetList() {
               <SnippetCard
                 key={sn.id}
                 snippet={sn}
-                activeSessionId={activeConnectedSession?.id ?? null}
                 onEdit={() => setEditing(sn)}
                 onDelete={() => setDeleting(sn)}
               />

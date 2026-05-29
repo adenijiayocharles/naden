@@ -375,20 +375,20 @@ export default function TerminalPane({ sessionId }: Props) {
                 className="w-full bg-surface-3 border border-stroke rounded px-2.5 py-1.5 text-sm text-white placeholder-faint outline-none focus:border-accent transition-colors"
               />
             </div>
-            <div className="overflow-y-auto max-h-56">
+            <div className="overflow-y-auto max-h-64 p-2 flex flex-col gap-1.5">
               {filteredSnippets.length > 0 ? (
                 filteredSnippets.map((sn) => (
                   <button
                     key={sn.id}
                     onClick={() => runSnippet(sn.body)}
-                    className="w-full text-left px-3 py-2 hover:bg-surface-3 transition-colors group"
+                    className="w-full text-left bg-surface-1 border border-stroke-subtle rounded-lg px-3 py-2.5 hover:border-stroke hover:bg-surface-2 transition-colors group"
                   >
-                    <p className="text-sm text-white truncate">{sn.title}</p>
-                    <p className="text-xs text-dim font-mono truncate mt-0.5 group-hover:text-muted">{sn.body}</p>
+                    <p className="text-sm font-medium text-white truncate">{sn.title}</p>
+                    <p className="text-xs text-dim font-mono truncate mt-1 group-hover:text-muted">{sn.body}</p>
                   </button>
                 ))
               ) : (
-                <p className="px-3 py-4 text-center text-sm text-dim">
+                <p className="py-4 text-center text-sm text-dim">
                   {snippets.length === 0 ? "No snippets saved" : "No matches"}
                 </p>
               )}
