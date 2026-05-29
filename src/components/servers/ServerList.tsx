@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore, type SortMode } from "../../store/uiStore";
+import { useTerminalStore } from "../../store/terminalStore";
+import { useSftpStore } from "../../store/sftpStore";
 import ServerCard from "./ServerCard";
 import ServerRow from "./ServerRow";
 import type { Server, Group } from "../../types/server";
@@ -42,20 +44,31 @@ export default function ServerList() {
   const filterFavourites = useUiStore((s) => s.filterFavourites);
   const searchQuery = useUiStore((s) => s.searchQuery);
   const searchResults = useUiStore((s) => s.searchResults);
+  const hasTerminal = useTerminalStore((s) => s.sessions.length > 0);
+  const hasSftp = useSftpStore((s) => s.sessions.length > 0);
+  const hasPanel = hasTerminal || hasSftp;
 
-  const Item = viewMode === "row" ? ServerRow : ServerCard;
   const listClass = viewMode === "row"
     ? "border border-stroke-subtle rounded-lg"
     : "grid gap-3 grid-cols-[repeat(auto-fill,minmax(min(240px,100%),1fr))]";
 
-  const renderItem = (s: Server) => (
-    <Item
-      key={s.id}
-      server={s}
-      groupColor={groupColorFor(groups, s.groupId)}
-      lastConnected={lastConnectedMap[s.id]}
-    />
-  );
+  const renderItem = (s: Server) =>
+    viewMode === "row" ? (
+      <ServerRow
+        key={s.id}
+        server={s}
+        groupColor={groupColorFor(groups, s.groupId)}
+        lastConnected={lastConnectedMap[s.id]}
+        narrow={hasPanel}
+      />
+    ) : (
+      <ServerCard
+        key={s.id}
+        server={s}
+        groupColor={groupColorFor(groups, s.groupId)}
+        lastConnected={lastConnectedMap[s.id]}
+      />
+    );
 
   // All hooks must be called before any early return.
   const sortedSearch = useMemo(

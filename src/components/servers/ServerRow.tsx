@@ -11,9 +11,10 @@ interface ServerRowProps {
   server: Server;
   groupColor?: string;
   lastConnected?: string;
+  narrow?: boolean;
 }
 
-export default function ServerRow({ server, groupColor, lastConnected }: ServerRowProps) {
+export default function ServerRow({ server, groupColor, lastConnected, narrow }: ServerRowProps) {
   const actions = useServerActions(server);
   const bulkMode = useUiStore((s) => s.bulkMode);
   const isSelected = useUiStore((s) => s.bulkSelected.includes(server.id));
@@ -49,57 +50,68 @@ export default function ServerRow({ server, groupColor, lastConnected }: ServerR
         />
       )}
 
-      <span className="w-40 shrink-0 truncate text-sm font-medium text-white" title={server.displayName}>
-        {server.displayName}
-      </span>
-
-      <span className="flex-1 min-w-0 truncate text-sm text-faint font-mono">
-        {formatHost(server)}
-      </span>
-
-      {server.authMethod === "password" ? (
-        <svg className="w-3.5 h-3.5 text-muted shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Password auth</title>
-          <rect x="3" y="7" width="10" height="8" rx="1.5" />
-          <path strokeLinecap="round" d="M5 7V5a3 3 0 016 0v2" />
-        </svg>
+      {narrow ? (
+        <span className="flex-1 min-w-0 truncate text-sm font-medium text-white" title={server.displayName}>
+          {server.displayName !== server.hostname ? server.displayName : server.hostname}
+        </span>
       ) : (
-        <svg className="w-3.5 h-3.5 text-muted shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Key auth</title>
-          <circle cx="6" cy="8" r="3.5" />
-          <path strokeLinecap="round" d="M9 8h5M12 6v4" />
-        </svg>
+        <>
+          <span className="w-40 shrink-0 truncate text-sm font-medium text-white" title={server.displayName}>
+            {server.displayName}
+          </span>
+          <span className="flex-1 min-w-0 truncate text-sm text-faint font-mono">
+            {formatHost(server)}
+          </span>
+        </>
       )}
 
-      <div className="hidden md:flex items-center gap-1.5 shrink-0">
-        {!bulkMode && (
-          <FavouriteButton
-            isFavourite={server.isFavourite}
-            onToggle={() => { void actions.handleToggleFavourite(); }}
-          />
-        )}
-        <ReachabilityDot serverId={server.id} />
-        {lastConnected && (
-          <span
-            className="text-xs text-dim font-mono hidden lg:block"
-            title={new Date(lastConnected).toLocaleString()}
-          >
-            {timeAgo(lastConnected)}
-          </span>
-        )}
-        {server.isJumpHost && (
-          <span className="text-xs bg-accent/10 text-accent-fg px-1.5 py-0.5 rounded">Jump</span>
-        )}
-        {server.tags.slice(0, 3).map((tag) => (
-          <span
-            key={tag.id}
-            className="text-xs bg-surface-3 border border-stroke text-faint px-1.5 py-0.5 rounded"
-          >
-            #{tag.name}
-          </span>
-        ))}
-        {server.tags.length > 3 && (
-          <span className="text-xs text-dim">+{server.tags.length - 3}</span>
-        )}
-      </div>
+      {!narrow && (
+        <>
+          {server.authMethod === "password" ? (
+            <svg className="w-3.5 h-3.5 text-muted shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Password auth</title>
+              <rect x="3" y="7" width="10" height="8" rx="1.5" />
+              <path strokeLinecap="round" d="M5 7V5a3 3 0 016 0v2" />
+            </svg>
+          ) : (
+            <svg className="w-3.5 h-3.5 text-muted shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Key auth</title>
+              <circle cx="6" cy="8" r="3.5" />
+              <path strokeLinecap="round" d="M9 8h5M12 6v4" />
+            </svg>
+          )}
+
+          <div className="hidden md:flex items-center gap-1.5 shrink-0">
+            {!bulkMode && (
+              <FavouriteButton
+                isFavourite={server.isFavourite}
+                onToggle={() => { void actions.handleToggleFavourite(); }}
+              />
+            )}
+            <ReachabilityDot serverId={server.id} />
+            {lastConnected && (
+              <span
+                className="text-xs text-dim font-mono hidden lg:block"
+                title={new Date(lastConnected).toLocaleString()}
+              >
+                {timeAgo(lastConnected)}
+              </span>
+            )}
+            {server.isJumpHost && (
+              <span className="text-xs bg-accent/10 text-accent-fg px-1.5 py-0.5 rounded">Jump</span>
+            )}
+            {server.tags.slice(0, 3).map((tag) => (
+              <span
+                key={tag.id}
+                className="text-xs bg-surface-3 border border-stroke text-faint px-1.5 py-0.5 rounded"
+              >
+                #{tag.name}
+              </span>
+            ))}
+            {server.tags.length > 3 && (
+              <span className="text-xs text-dim">+{server.tags.length - 3}</span>
+            )}
+          </div>
+        </>
+      )}
 
       {actions.error && <span className="text-xs text-red-400 shrink-0 max-w-[160px] truncate">{actions.error}</span>}
 
