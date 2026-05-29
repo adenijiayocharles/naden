@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
@@ -8,6 +8,7 @@ import { useTerminalStore } from "../../store/terminalStore";
 import { useTerminalSettings, fontCss } from "../../lib/terminalSettings";
 import { ensureCanvasFonts, ensureFont } from "../../lib/canvasFonts";
 import { ConnectingOverlay, ErrorOverlay, ReconnectingOverlay } from "../shared/ConnectionOverlay";
+import { useSnippetStore } from "../../store/snippetStore";
 
 interface Props {
   sessionId: string;
@@ -28,6 +29,13 @@ export default function TerminalPane({ sessionId }: Props) {
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<{ index: number | undefined; count: number } | null>(null);
+  const [snippetPickerOpen, setSnippetPickerOpen] = useState(false);
+  const [snippetQuery, setSnippetQuery] = useState("");
+  const snippetPickerRef = useRef<HTMLDivElement>(null);
+  const snippetButtonRef = useRef<HTMLButtonElement>(null);
+
+  const snippets = useSnippetStore((s) => s.snippets);
+  const fetchSnippets = useSnippetStore((s) => s.fetchAll);
   // Ref mirror of searchQuery so findNext/findPrevious always read the latest
   // value without needing searchQuery in their dependency arrays. If they closed
   // over state, a stale value would mismatch xterm's cachedSearchTerm and cause
@@ -307,9 +315,105 @@ export default function TerminalPane({ sessionId }: Props) {
     });
   }, [fontSize, fontFamily]);
 
+  const filteredSnippets = useMemo(() => {
+    if (!snippetQuery.trim()) return snippets;
+    const q = snippetQuery.toLowerCase();
+    return snippets.filter(
+      (sn) => sn.title.toLowerCase().includes(q) || sn.body.toLowerCase().includes(q),
+    );
+  }, [snippets, snippetQuery]);
+
+  const openSnippetPicker = useCallback(() => {
+    if (snippets.length === 0) void fetchSnippets();
+    setSnippetPickerOpen(true);
+    setSnippetQuery("");
+  }, [snippets.length, fetchSnippets]);
+
+  const runSnippet = useCallback((body: string) => {
+    terminalCommands.sendTerminalInput(sessionId, body + "\n").catch(() => {});
+    setSnippetPickerOpen(false);
+    setSnippetQuery("");
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!snippetPickerOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        !snippetPickerRef.current?.contains(e.target as Node) &&
+        !snippetButtonRef.current?.contains(e.target as Node)
+      ) {
+        setSnippetPickerOpen(false);
+        setSnippetQuery("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [snippetPickerOpen]);
+
   return (
     <div className="relative h-full w-full bg-surface-1">
       <div ref={containerRef} className="absolute inset-4 overflow-hidden" />
+
+      {/* Snippet picker — floats over terminal at bottom-right */}
+      <div className="absolute bottom-3 right-4 z-30 flex flex-col items-end gap-1">
+        {snippetPickerOpen && (
+          <div
+            ref={snippetPickerRef}
+            className="mb-1 w-64 bg-surface-2 border border-stroke rounded-lg shadow-2xl overflow-hidden flex flex-col"
+          >
+            <div className="p-2 border-b border-stroke-subtle shrink-0">
+              <input
+                autoFocus
+                type="text"
+                value={snippetQuery}
+                onChange={(e) => setSnippetQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") { setSnippetPickerOpen(false); setSnippetQuery(""); }
+                  if (e.key === "Enter" && filteredSnippets.length === 1) runSnippet(filteredSnippets[0].body);
+                }}
+                placeholder="Search snippets…"
+                className="w-full bg-surface-3 border border-stroke rounded px-2.5 py-1.5 text-sm text-white placeholder-faint outline-none focus:border-accent transition-colors"
+              />
+            </div>
+            <div className="overflow-y-auto max-h-56">
+              {filteredSnippets.length > 0 ? (
+                filteredSnippets.map((sn) => (
+                  <button
+                    key={sn.id}
+                    onClick={() => runSnippet(sn.body)}
+                    className="w-full text-left px-3 py-2 hover:bg-surface-3 transition-colors group"
+                  >
+                    <p className="text-sm text-white truncate">{sn.title}</p>
+                    <p className="text-xs text-dim font-mono truncate mt-0.5 group-hover:text-muted">{sn.body}</p>
+                  </button>
+                ))
+              ) : (
+                <p className="px-3 py-4 text-center text-sm text-dim">
+                  {snippets.length === 0 ? "No snippets saved" : "No matches"}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+        <button
+          ref={snippetButtonRef}
+          onClick={openSnippetPicker}
+          title="Run a snippet"
+          aria-label="Open snippet picker"
+          className={`w-7 h-7 flex items-center justify-center rounded transition-colors ${
+            snippetPickerOpen
+              ? "bg-accent/20 text-accent-fg"
+              : "bg-surface-3/70 text-dim hover:text-muted hover:bg-surface-3"
+          }`}
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="2" width="12" height="12" rx="2" />
+            <line x1="5" y1="5.5" x2="11" y2="5.5" />
+            <line x1="5" y1="8" x2="11" y2="8" />
+            <line x1="5" y1="10.5" x2="8" y2="10.5" />
+          </svg>
+        </button>
+      </div>
 
       {/* Search bar — floats over terminal at top-right */}
       {searchVisible && (
