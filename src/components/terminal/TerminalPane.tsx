@@ -324,10 +324,15 @@ export default function TerminalPane({ sessionId }: Props) {
   }, [snippets, snippetQuery]);
 
   const openSnippetPicker = useCallback(() => {
+    if (snippetPickerOpen) {
+      setSnippetPickerOpen(false);
+      setSnippetQuery("");
+      return;
+    }
     if (snippets.length === 0) void fetchSnippets();
     setSnippetPickerOpen(true);
     setSnippetQuery("");
-  }, [snippets.length, fetchSnippets]);
+  }, [snippetPickerOpen, snippets.length, fetchSnippets]);
 
   const runSnippet = useCallback((body: string) => {
     terminalCommands.sendTerminalInput(sessionId, body + "\n").catch(() => {});
