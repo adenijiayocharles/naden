@@ -3,6 +3,7 @@ import { useSnippetStore } from "../../store/snippetStore";
 import { formatError } from "../../lib/errors";
 import Button from "../shared/Button";
 import Input from "../shared/Input";
+import CodeEditor from "../shared/CodeEditor";
 import type { Snippet } from "../../types/snippet";
 
 // ── Form modal ─────────────────────────────────────────────────────────────────
@@ -53,15 +54,11 @@ function SnippetFormModal({
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Title"
         />
-        <textarea
+        <CodeEditor
           value={body}
-          onChange={(e) => setBody(e.target.value)}
+          onChange={setBody}
           placeholder="Command or text…"
-          rows={6}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void handleSave();
-          }}
-          className="w-full bg-surface-3 border border-stroke rounded px-3 py-2 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors resize-none font-mono"
+          minHeight="140px"
         />
         {error && <p className="text-xs text-red-400">{error}</p>}
         <div className="flex items-center justify-end gap-2">
