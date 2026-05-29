@@ -375,7 +375,7 @@ export default function TerminalPane({ sessionId }: Props) {
                 className="w-full bg-surface-3 border border-stroke rounded px-2.5 py-1.5 text-sm text-white placeholder-faint outline-none focus:border-accent transition-colors"
               />
             </div>
-            <div className="overflow-y-auto max-h-64 p-2 flex flex-col gap-1.5">
+            <div className="overflow-y-auto h-[134px] p-2 flex flex-col gap-1.5">
               {filteredSnippets.length > 0 ? (
                 filteredSnippets.map((sn) => (
                   <button
