@@ -480,7 +480,18 @@ export default function Sidebar() {
         <NavRow
           active={!filterGroupId && !filterTagId && !filterFavourites && activeView !== "logs" && activeView !== "snippets"}
           onClick={selectFilter(() => { setFilterGroup(null); setFilterTag(null); setFilterFavourites(false); })}
-          label="All Servers"
+          label={
+            <span className="flex items-center gap-2">
+              <svg className="w-3.5 h-3.5 shrink-0 text-muted" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="3" width="14" height="9" rx="1.5" />
+                <line x1="5" y1="12" x2="5" y2="14" />
+                <line x1="11" y1="12" x2="11" y2="14" />
+                <line x1="3" y1="14" x2="13" y2="14" />
+                <circle cx="8" cy="7.5" r="1" fill="currentColor" stroke="none" />
+              </svg>
+              All Servers
+            </span>
+          }
           count={servers.length}
         />
 
