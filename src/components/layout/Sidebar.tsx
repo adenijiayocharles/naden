@@ -422,7 +422,7 @@ export default function Sidebar() {
   const {
     filterGroupId, filterTagId, filterFavourites,
     setFilterGroup, setFilterTag, setFilterFavourites,
-    activeView, openAdd, closeForm, expandServerList, openImportSshConfig,
+    activeView, openAdd, closeForm, expandServerList, openImportSshConfig, openSnippets,
   } = useUiStore();
 
   const terminalSessions = useTerminalStore((s) => s.sessions);
@@ -450,7 +450,7 @@ export default function Sidebar() {
   }, [addMenuOpen]);
 
   const selectFilter = (fn: () => void) => () => {
-    if (activeView === "logs") closeForm();
+    if (activeView === "logs" || activeView === "snippets") closeForm();
     expandServerList();
     fn();
   };
@@ -475,15 +475,32 @@ export default function Sidebar() {
       <nav className="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
         {/* All Servers */}
         <NavRow
-          active={!filterGroupId && !filterTagId && !filterFavourites && activeView !== "logs"}
+          active={!filterGroupId && !filterTagId && !filterFavourites && activeView !== "logs" && activeView !== "snippets"}
           onClick={selectFilter(() => { setFilterGroup(null); setFilterTag(null); setFilterFavourites(false); })}
           label="All Servers"
           count={servers.length}
         />
 
+        {/* Snippets */}
+        <NavRow
+          active={activeView === "snippets"}
+          onClick={() => openSnippets()}
+          label={
+            <span className="flex items-center gap-2">
+              <svg className="w-3.5 h-3.5 shrink-0 text-muted" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="2" width="12" height="12" rx="2" />
+                <line x1="5" y1="5.5" x2="11" y2="5.5" />
+                <line x1="5" y1="8" x2="11" y2="8" />
+                <line x1="5" y1="10.5" x2="8" y2="10.5" />
+              </svg>
+              Snippets
+            </span>
+          }
+        />
+
         {/* Favourites */}
         <NavRow
-          active={filterFavourites && activeView !== "logs"}
+          active={filterFavourites && activeView !== "logs" && activeView !== "snippets"}
           onClick={selectFilter(() => setFilterFavourites(!filterFavourites))}
           label={
             <span className="flex items-center gap-2">
@@ -515,7 +532,7 @@ export default function Sidebar() {
             <GroupRow
               key={g.id}
               group={g}
-              active={filterGroupId === g.id && activeView !== "logs"}
+              active={filterGroupId === g.id && activeView !== "logs" && activeView !== "snippets"}
               count={countByGroup[g.id] ?? 0}
               onClick={selectFilter(() => setFilterGroup(g.id))}
               onEdit={() => setEditingGroup({ group: g, initialDelete: false })}
@@ -544,7 +561,7 @@ export default function Sidebar() {
               <TagRow
                 key={t.id}
                 tag={t}
-                active={filterTagId === t.id && activeView !== "logs"}
+                active={filterTagId === t.id && activeView !== "logs" && activeView !== "snippets"}
                 count={countByTag[t.id] ?? 0}
                 onClick={selectFilter(() => setFilterTag(t.id))}
                 onRename={() => setRenamingTag(t)}

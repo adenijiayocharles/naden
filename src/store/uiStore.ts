@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { Server } from "../types/server";
 
-type ActiveView = "list" | "add" | "edit" | "logs";
+type ActiveView = "list" | "add" | "edit" | "logs" | "snippets";
 export type ViewMode = "card" | "row";
 export type SortMode = "default" | "name_asc" | "name_desc" | "host" | "last_connected";
 interface UiStore {
@@ -30,6 +30,7 @@ interface UiStore {
   openAdd: () => void;
   openEdit: (serverId: string) => void;
   openLogs: () => void;
+  openSnippets: () => void;
   closeForm: () => void;
   openSettings: () => void;
   closeSettings: () => void;
@@ -83,6 +84,7 @@ export const useUiStore = create<UiStore>((set) => ({
   openAdd: () => set({ activeView: "add", editingServerId: null }),
   openEdit: (serverId) => set({ activeView: "edit", editingServerId: serverId }),
   openLogs: () => set({ activeView: "logs", editingServerId: null }),
+  openSnippets: () => set({ activeView: "snippets", editingServerId: null }),
   closeForm: () => set({ activeView: "list", editingServerId: null }),
   openSettings: () => set({ settingsOpen: true }),
   closeSettings: () => set({ settingsOpen: false }),

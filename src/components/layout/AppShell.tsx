@@ -23,7 +23,9 @@ import LogView from "../log/LogView";
 import OnboardingWizard from "../onboarding/OnboardingWizard";
 import SftpBrowser from "../sftp/SftpBrowser";
 import BulkActionBar from "../servers/BulkActionBar";
+import SnippetList from "../snippets/SnippetList";
 import ClipboardClearBanner from "./ClipboardClearBanner";
+import { useSnippetStore } from "../../store/snippetStore";
 import type { SessionStatus } from "../../store/terminalStore";
 import type { SftpStatus } from "../../store/sftpStore";
 
@@ -106,6 +108,7 @@ export default function AppShell() {
 
   const servers = useServerStore((s) => s.servers);
   const terminalOpenSession = useTerminalStore((s) => s.openSession);
+  const fetchSnippets = useSnippetStore((s) => s.fetchAll);
 
   const [activePanelType, setActivePanelType] = useState<PanelType>("terminal");
   const [showNewTabPicker, setShowNewTabPicker] = useState(false);
@@ -204,6 +207,10 @@ export default function AppShell() {
   }, [activePanelType, hasTerminal, hasSftp]);
 
   useEffect(() => {
+    if (activeView === "snippets") void fetchSnippets();
+  }, [activeView, fetchSnippets]);
+
+  useEffect(() => {
     if (!showNewTabPicker) return;
     const close = (e: MouseEvent) => {
       if (
@@ -271,7 +278,7 @@ export default function AppShell() {
           {/* Server list / logs */}
           <main
             className={`shrink-0 transition-[width,padding] duration-200 ${
-              activeView === "logs"
+              activeView === "logs" || activeView === "snippets"
                 ? "flex-1 overflow-hidden flex flex-col"
                 : hasPanel
                   ? serverListCollapsed
@@ -280,7 +287,9 @@ export default function AppShell() {
                   : "flex-1 overflow-hidden flex flex-col"
             }`}
           >
-            {activeView === "logs" ? (
+            {activeView === "snippets" ? (
+              <SnippetList />
+            ) : activeView === "logs" ? (
               <>
                 <div className="px-4 py-2 border-b border-stroke-subtle shrink-0">
                   <Input
@@ -364,7 +373,7 @@ export default function AppShell() {
           </main>
 
           {/* Collapse / expand handle */}
-          {hasPanel && activeView !== "logs" && (
+          {hasPanel && activeView !== "logs" && activeView !== "snippets" && (
             <button
               onClick={toggleServerList}
               aria-label={serverListCollapsed ? "Expand server list" : "Collapse server list"}
@@ -389,7 +398,7 @@ export default function AppShell() {
           )}
 
           {/* Unified panel: terminals + SFTP browsers */}
-          {hasPanel && activeView !== "logs" && (
+          {hasPanel && activeView !== "logs" && activeView !== "snippets" && (
             <div className="flex flex-col flex-1 min-w-0">
               {/* Unified tab bar */}
               <div

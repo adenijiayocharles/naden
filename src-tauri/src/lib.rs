@@ -55,6 +55,11 @@ pub fn run() {
             commands::server_commands::create_tag,
             commands::server_commands::update_tag,
             commands::server_commands::delete_tag,
+            // Snippets
+            commands::snippet_commands::list_snippets,
+            commands::snippet_commands::create_snippet,
+            commands::snippet_commands::update_snippet,
+            commands::snippet_commands::delete_snippet,
             // Search
             commands::search_commands::fuzzy_search,
             // Logs

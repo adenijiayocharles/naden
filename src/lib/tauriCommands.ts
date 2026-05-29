@@ -9,6 +9,7 @@ import type {
   UpdateServerPayload,
   ImportPreview,
 } from "../types/server";
+import type { Snippet, CreateSnippetPayload, UpdateSnippetPayload } from "../types/snippet";
 import type { DirListing } from "../types/sftp";
 import type { LocalFileEntry } from "../types/local";
 
@@ -201,6 +202,20 @@ export const sftpCommands = {
 
 export const clipboardCommands = {
   writeText: (text: string) => clipboardWriteText(text),
+};
+
+export const snippetCommands = {
+  listSnippets: () =>
+    invoke<Snippet[]>("list_snippets"),
+
+  createSnippet: (payload: CreateSnippetPayload) =>
+    invoke<Snippet>("create_snippet", { payload }),
+
+  updateSnippet: (id: string, payload: UpdateSnippetPayload) =>
+    invoke<Snippet>("update_snippet", { id, payload }),
+
+  deleteSnippet: (id: string) =>
+    invoke<void>("delete_snippet", { id }),
 };
 
 export const logCommands = {
