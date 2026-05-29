@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useServerStore } from "../../store/serverStore";
+import { useSnippetStore } from "../../store/snippetStore";
 import { useUiStore } from "../../store/uiStore";
 import Input from "../shared/Input";
 import Button from "../shared/Button";
@@ -425,6 +426,8 @@ export default function Sidebar() {
     activeView, openAdd, closeForm, expandServerList, openImportSshConfig, openSnippets,
   } = useUiStore();
 
+  const snippetCount = useSnippetStore((s) => s.snippets.length);
+
   const terminalSessions = useTerminalStore((s) => s.sessions);
   const sftpSessions = useSftpStore((s) => s.sessions);
   const activeSessions = [...terminalSessions, ...sftpSessions].filter(
@@ -485,6 +488,7 @@ export default function Sidebar() {
         <NavRow
           active={activeView === "snippets"}
           onClick={() => openSnippets()}
+          count={snippetCount}
           label={
             <span className="flex items-center gap-2">
               <svg className="w-3.5 h-3.5 shrink-0 text-muted" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
