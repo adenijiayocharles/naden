@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { save, open as openDialog } from "@tauri-apps/plugin-dialog";
 import Input from "../shared/Input";
 import Button from "../shared/Button";
 import { useVaultStore } from "../../store/vaultStore";
-import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import { useTerminalSettings, TERMINAL_FONTS, fontCss } from "../../lib/terminalSettings";
-import { backupCommands, settingsCommands } from "../../lib/tauriCommands";
+import { settingsCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import { passwordStrength } from "../../lib/passwordStrength";
 
@@ -40,7 +38,6 @@ function PasswordInput({
 
 export default function SettingsModal({ onClose }: Props) {
   const { isPasswordRequired, disablePassword, enablePassword, changePassword } = useVaultStore();
-  const fetchAll = useServerStore((s) => s.fetchAll);
   const setVaultTimeoutMins = useUiStore((s) => s.setVaultTimeoutMins);
   const { fontSize, scrollback, copyOnSelect, fontFamily, setFontSize, setScrollback, setCopyOnSelect, setFontFamily } =
     useTerminalSettings();
@@ -147,12 +144,6 @@ export default function SettingsModal({ onClose }: Props) {
     flashSaved();
   };
 
-  // Backup state
-  const [backupMode, setBackupMode] = useState<"none" | "export" | "import">("none");
-  const [backupPwd, setBackupPwd] = useState("");
-  const [backupLoading, setBackupLoading] = useState(false);
-  const [backupMsg, setBackupMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
-
   // Disable form state
   const [disablePwd, setDisablePwd] = useState("");
 
@@ -164,59 +155,6 @@ export default function SettingsModal({ onClose }: Props) {
   const [changeCurrent, setChangeCurrent] = useState("");
   const [changeNew, setChangeNew] = useState("");
   const [changeConfirm, setChangeConfirm] = useState("");
-
-  const openBackupForm = (mode: "export" | "import") => {
-    setBackupMode((prev) => (prev === mode ? "none" : mode));
-    setBackupPwd("");
-    setBackupMsg(null);
-  };
-
-  const handleExport = async () => {
-    if (!backupPwd) return;
-    setBackupLoading(true);
-    setBackupMsg(null);
-    try {
-      const path = await save({
-        defaultPath: `ssh-manager-backup-${new Date().toISOString().slice(0, 10)}.sshbak`,
-        filters: [{ name: "SSH Manager Backup", extensions: ["sshbak"] }],
-      });
-      if (!path) { setBackupLoading(false); return; }
-      await backupCommands.exportBackup(backupPwd, path);
-      setBackupMsg({ type: "ok", text: "Backup exported successfully." });
-      setBackupPwd("");
-      setBackupMode("none");
-    } catch (e) {
-      setBackupMsg({ type: "err", text: formatError(e) });
-    } finally {
-      setBackupLoading(false);
-    }
-  };
-
-  const handleImport = async () => {
-    if (!backupPwd) return;
-    setBackupLoading(true);
-    setBackupMsg(null);
-    try {
-      const selected = await openDialog({
-        multiple: false,
-        filters: [{ name: "SSH Manager Backup", extensions: ["sshbak"] }],
-      });
-      if (!selected) { setBackupLoading(false); return; }
-      const path = typeof selected === "string" ? selected : selected[0];
-      const summary = await backupCommands.importBackup(path, backupPwd);
-      await fetchAll();
-      setBackupMsg({
-        type: "ok",
-        text: `Imported ${summary.serversImported} server(s), ${summary.groupsImported} group(s), ${summary.tagsImported} tag(s).${summary.serversSkipped > 0 ? ` ${summary.serversSkipped} already existed and were skipped.` : ""}`,
-      });
-      setBackupPwd("");
-      setBackupMode("none");
-    } catch (e) {
-      setBackupMsg({ type: "err", text: formatError(e) });
-    } finally {
-      setBackupLoading(false);
-    }
-  };
 
   const reset = () => {
     setError(null);
@@ -316,22 +254,6 @@ export default function SettingsModal({ onClose }: Props) {
             </span>
             <button onClick={onClose} className="text-muted hover:text-white p-1 rounded" aria-label="Close">✕</button>
           </div>
-        </div>
-
-        {/* Section jump nav */}
-        <div className="flex items-center gap-4 px-6 py-2 border-b border-stroke-subtle shrink-0">
-          {(["Appearance", "Security", "Data", "Terminal"] as const).map((s) => {
-            const key = s.toLowerCase();
-            return (
-              <button
-                key={s}
-                onClick={() => scrollBodyRef.current?.querySelector<HTMLElement>(`[data-section="${key}"]`)?.scrollIntoView({ behavior: "smooth" })}
-                className={`text-xs transition-colors ${activeSection === key ? "text-white font-medium" : "text-faint hover:text-secondary"}`}
-              >
-                {s}
-              </button>
-            );
-          })}
         </div>
 
         <div ref={scrollBodyRef} className="px-6 py-5 space-y-6 overflow-y-auto">
@@ -547,66 +469,6 @@ export default function SettingsModal({ onClose }: Props) {
                 >
                   Set password →
                 </button>
-              </div>
-            )}
-          </div>
-
-          {/* Backup section */}
-          <div id="settings-data" data-section="data">
-            <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Data</p>
-            <p className="text-xs text-faint mb-3">
-              Backups contain server metadata only — credentials are never included.
-            </p>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => openBackupForm("export")}
-                className={`flex-1 py-2 text-sm rounded transition-colors border ${
-                  backupMode === "export"
-                    ? "border-accent text-white bg-surface-1"
-                    : "border-stroke text-secondary bg-surface-3 hover:bg-surface-4"
-                }`}
-              >
-                Export Backup
-              </button>
-              <button
-                onClick={() => openBackupForm("import")}
-                className={`flex-1 py-2 text-sm rounded transition-colors border ${
-                  backupMode === "import"
-                    ? "border-accent text-white bg-surface-1"
-                    : "border-stroke text-secondary bg-surface-3 hover:bg-surface-4"
-                }`}
-              >
-                Import Backup
-              </button>
-            </div>
-
-            {(backupMode === "export" || backupMode === "import") && (
-              <div className="mt-3 space-y-3 p-3 bg-surface-0 rounded-lg border border-stroke-subtle">
-                <p className="text-xs text-secondary">
-                  {backupMode === "export"
-                    ? "Encrypt the backup with a password. You will need this password to restore."
-                    : "Enter the password used when the backup was created."}
-                </p>
-                <PasswordInput
-                  autoFocus
-                  value={backupPwd}
-                  onChange={setBackupPwd}
-                  placeholder={backupMode === "export" ? "Backup password" : "Backup password"}
-                />
-                {backupMsg && (
-                  <p className={`text-xs ${backupMsg.type === "ok" ? "text-green-400" : "text-red-400"}`}>
-                    {backupMsg.text}
-                  </p>
-                )}
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => { setBackupMode("none"); setBackupPwd(""); setBackupMsg(null); }} className="flex-1">Cancel</Button>
-                  <Button size="sm" variant="primary" onClick={() => { void (backupMode === "export" ? handleExport() : handleImport()); }} disabled={backupLoading || !backupPwd} className="flex-1">
-                    {backupLoading
-                      ? (backupMode === "export" ? "Exporting…" : "Importing…")
-                      : (backupMode === "export" ? "Choose file & export" : "Choose file & import")}
-                  </Button>
-                </div>
               </div>
             )}
           </div>

@@ -1,4 +1,3 @@
-pub mod backup_commands;
 pub mod local_commands;
 pub mod log_commands;
 pub mod search_commands;

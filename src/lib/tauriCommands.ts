@@ -107,21 +107,6 @@ export const settingsCommands = {
     invoke<void>("vault_heartbeat"),
 };
 
-export interface ImportSummary {
-  serversImported: number;
-  groupsImported: number;
-  tagsImported: number;
-  serversSkipped: number;
-}
-
-export const backupCommands = {
-  exportBackup: (password: string, path: string) =>
-    invoke<void>("export_backup", { password, path }),
-
-  importBackup: (path: string, password: string) =>
-    invoke<ImportSummary>("import_backup", { path, password }),
-};
-
 export const vaultCommands = {
   storeCredential: (secret: string) =>
     invoke<string>("store_credential", { secret }),

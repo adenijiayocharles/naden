@@ -100,7 +100,8 @@
       "Bash(screencapture -x -R 200,100,1200,750 /tmp/ssh_click_test.png)",
       "WebFetch(domain:chatgpt.com)",
       "Bash(npm view *)",
-      "Bash(perl *)"
+      "Bash(perl *)",
+      "Bash(npx skills *)"
     ]
   }
 }

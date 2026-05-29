@@ -66,9 +66,6 @@ pub fn run() {
             commands::log_commands::list_logs,
             commands::log_commands::export_logs_csv,
             commands::log_commands::get_last_connected_map,
-            // Backup
-            commands::backup_commands::export_backup,
-            commands::backup_commands::import_backup,
             // Settings
             commands::settings_commands::get_setting,
             commands::settings_commands::set_setting,
