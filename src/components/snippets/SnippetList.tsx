@@ -152,6 +152,22 @@ function SnippetCard({
         <p className="text-sm font-medium text-white leading-snug break-words min-w-0">{snippet.title}</p>
         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
+            onClick={() => void handleCopy()}
+            className={`p-1 rounded transition-colors ${copied ? "text-green-400" : "text-dim hover:text-muted hover:bg-surface-3"}`}
+            title="Copy"
+          >
+            {copied ? (
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 14 14" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="2,7 5,11 12,3" />
+              </svg>
+            ) : (
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 14 14" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="5" y="5" width="7" height="8" rx="1" />
+                <path d="M9 5V3a1 1 0 00-1-1H3a1 1 0 00-1 1v8a1 1 0 001 1h2" />
+              </svg>
+            )}
+          </button>
+          <button
             onClick={onEdit}
             className="p-1 rounded text-dim hover:text-muted hover:bg-surface-3 transition-colors"
             title="Edit"
@@ -175,30 +191,6 @@ function SnippetCard({
       <pre className="text-xs text-muted font-mono whitespace-pre-wrap break-all line-clamp-2 leading-normal">
         {snippet.body}
       </pre>
-
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => void handleCopy()}
-          className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium text-dim hover:text-muted hover:bg-surface-3 transition-colors"
-        >
-          {copied ? (
-            <>
-              <svg className="w-3 h-3 text-green-400" fill="none" viewBox="0 0 14 14" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="2,7 5,11 12,3" />
-              </svg>
-              <span className="text-green-400">Copied</span>
-            </>
-          ) : (
-            <>
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 14 14" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                <rect x="5" y="5" width="7" height="8" rx="1" />
-                <path d="M9 5V3a1 1 0 00-1-1H3a1 1 0 00-1 1v8a1 1 0 001 1h2" />
-              </svg>
-              Copy
-            </>
-          )}
-        </button>
-      </div>
     </div>
   );
 }
