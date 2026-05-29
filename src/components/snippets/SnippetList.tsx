@@ -147,7 +147,7 @@ function SnippetCard({
   };
 
   return (
-    <div className="group bg-surface-1 border border-stroke-subtle rounded-lg p-3 flex flex-col gap-2 hover:border-stroke transition-colors">
+    <div className="group bg-surface-1 border border-stroke-subtle rounded-lg p-2.5 flex flex-col gap-1.5 hover:border-stroke transition-colors">
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium text-white leading-snug break-words min-w-0">{snippet.title}</p>
         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -172,11 +172,11 @@ function SnippetCard({
         </div>
       </div>
 
-      <pre className="text-xs text-muted font-mono whitespace-pre-wrap break-all line-clamp-3 leading-relaxed">
+      <pre className="text-xs text-muted font-mono whitespace-pre-wrap break-all line-clamp-2 leading-normal">
         {snippet.body}
       </pre>
 
-      <div className="flex items-center gap-2 pt-1">
+      <div className="flex items-center gap-2">
         <button
           onClick={() => void handleCopy()}
           className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium text-dim hover:text-muted hover:bg-surface-3 transition-colors"
