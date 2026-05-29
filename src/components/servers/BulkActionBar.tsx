@@ -89,6 +89,7 @@ export default function BulkActionBar() {
         <div className="relative">
           <Button
             size="sm"
+            variant="primary"
             onClick={() => setShowGroupPicker((v) => !v)}
             disabled={busy || count === 0}
           >
