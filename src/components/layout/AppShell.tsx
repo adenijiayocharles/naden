@@ -302,7 +302,7 @@ export default function AppShell() {
                       value={searchQuery}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="Search…"
-                      className="w-full h-7 bg-surface-3 border border-stroke rounded px-3 pr-10 text-xs text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
+                      className="w-full h-8 bg-surface-3 border border-stroke rounded px-3 pr-10 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
                     />
                     {!searchQuery && (
                       <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-dim pointer-events-none select-none">⌘K</kbd>
@@ -313,7 +313,7 @@ export default function AppShell() {
                       <select
                         value={sortMode}
                         onChange={(e) => setSortMode(e.target.value as SortMode)}
-                        className="h-7 bg-surface-3 border border-stroke rounded px-2 text-xs text-secondary focus:outline-none focus:border-accent shrink-0 cursor-pointer"
+                        className="h-8 bg-surface-3 border border-stroke rounded px-2 text-sm text-secondary focus:outline-none focus:border-accent shrink-0 cursor-pointer"
                       >
                         <option value="default">Default</option>
                         <option value="name_asc">A → Z</option>
@@ -321,13 +321,13 @@ export default function AppShell() {
                         <option value="host">Host</option>
                         <option value="last_connected">Recent</option>
                       </select>
-                      <div className="flex items-center bg-surface-3 border border-stroke rounded overflow-hidden shrink-0">
+                      <div className="flex items-center h-8 bg-surface-3 border border-stroke rounded overflow-hidden shrink-0">
                         {(["card", "row"] as ViewMode[]).map((mode) => (
                           <button
                             key={mode}
                             onClick={() => setViewMode(mode)}
                             aria-label={mode === "card" ? "Card view" : "List view"}
-                            className={`p-1 transition-colors ${viewMode === mode ? "bg-surface-4 text-white" : "text-faint hover:text-muted"}`}
+                            className={`px-1.5 h-full transition-colors ${viewMode === mode ? "bg-surface-4 text-white" : "text-faint hover:text-muted"}`}
                           >
                             {mode === "card" ? (
                               <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
@@ -348,7 +348,7 @@ export default function AppShell() {
                       </div>
                       <button
                         onClick={toggleBulkMode}
-                        className={`h-7 px-2 rounded border text-xs transition-colors shrink-0 ${bulkMode ? "bg-accent/10 border-accent/30 text-accent-fg" : "bg-surface-3 border-stroke text-faint hover:text-muted"}`}
+                        className={`h-8 px-2 rounded border text-sm transition-colors shrink-0 ${bulkMode ? "bg-accent/10 border-accent/30 text-accent-fg" : "bg-surface-3 border-stroke text-faint hover:text-muted"}`}
                       >
                         {bulkMode ? `Cancel${bulkSelected.length > 0 ? ` (${bulkSelected.length})` : ""}` : "Select"}
                       </button>
