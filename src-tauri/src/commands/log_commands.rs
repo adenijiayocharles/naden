@@ -164,6 +164,16 @@ pub async fn export_logs_csv(
 }
 
 #[tauri::command]
+pub async fn clear_logs(
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    sqlx::query("DELETE FROM audit_log")
+        .execute(&state.db)
+        .await?;
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn get_last_connected_map(
     state: tauri::State<'_, AppState>,
 ) -> Result<std::collections::HashMap<String, String>, AppError> {

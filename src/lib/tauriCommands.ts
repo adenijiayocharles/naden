@@ -226,6 +226,8 @@ export const logCommands = {
       endDate: endDate ?? null,
     }),
 
+  clearLogs: () => invoke<void>("clear_logs"),
+
   getLastConnectedMap: () =>
     invoke<Record<string, string>>("get_last_connected_map"),
 };

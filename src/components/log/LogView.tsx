@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import Input from "../shared/Input";
 import Button from "../shared/Button";
+import EmptyState from "../shared/EmptyState";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import type { LogEntry, LogOutcome } from "../../types/log";
 import { logCommands } from "../../lib/tauriCommands";
@@ -101,6 +102,8 @@ export default function LogView() {
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const [filterServer, setFilterServer] = useState("");
   const [filterStart, setFilterStart] = useState("");
@@ -193,6 +196,21 @@ export default function LogView() {
     return () => observer.disconnect();
   }, [hasMore, loading, filterOutcome, logSearchQuery]);
 
+  // ── Clear ──────────────────────────────────────────────────────────────────
+  const handleClear = async () => {
+    setClearing(true);
+    try {
+      await logCommands.clearLogs();
+      setEntries([]);
+      setHasMore(false);
+    } catch (e) {
+      setError(formatError(e));
+    } finally {
+      setClearing(false);
+      setShowClearConfirm(false);
+    }
+  };
+
   // ── Export ─────────────────────────────────────────────────────────────────
   const handleExport = async () => {
     setExporting(true);
@@ -261,8 +279,7 @@ export default function LogView() {
   return (
     <div className="flex flex-col h-full">
       {/* Filter bar */}
-      <div className="px-5 py-3 border-b border-stroke-subtle shrink-0 space-y-2">
-        {/* Row 1: server, date range, clear, export */}
+      <div className="px-5 py-3 border-b border-stroke-subtle shrink-0">
         <div className="flex items-center gap-3 flex-wrap">
           <select
             value={filterServer}
@@ -275,6 +292,16 @@ export default function LogView() {
             ))}
           </select>
 
+          <select
+            value={filterOutcome}
+            onChange={(e) => setFilterOutcome(e.target.value)}
+            className="h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white focus:outline-none focus:border-accent"
+          >
+            {OUTCOME_CHIPS.map(({ value, label }) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+
           <Input type="date" value={filterStart} onChange={(e) => setFilterStart(e.target.value)} className="w-auto" />
           <span className="text-faint text-sm">→</span>
           <Input type="date" value={filterEnd} onChange={(e) => setFilterEnd(e.target.value)} className="w-auto" />
@@ -283,26 +310,14 @@ export default function LogView() {
             <Button variant="ghost" onClick={clearFilters}>Clear</Button>
           )}
 
-          <Button onClick={() => { void handleExport(); }} disabled={exporting} className="ml-auto px-3 border border-stroke">
-            {exporting ? "Exporting…" : "Export CSV"}
-          </Button>
-        </div>
-
-        {/* Row 2: outcome chips */}
-        <div className="flex items-center gap-1.5">
-          {OUTCOME_CHIPS.map(({ value, label }) => (
-            <button
-              key={value}
-              onClick={() => setFilterOutcome(value)}
-              className={`px-2.5 py-0.5 rounded-full text-xs border transition-colors ${
-                filterOutcome === value
-                  ? "bg-accent/15 text-accent-fg border-accent/30"
-                  : "bg-surface-3 border-stroke text-faint hover:text-muted"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+          <div className="ml-auto flex items-center gap-2">
+            <Button onClick={() => { void handleExport(); }} disabled={exporting} className="px-3 border border-stroke">
+              {exporting ? "Exporting…" : "Export CSV"}
+            </Button>
+            <Button variant="danger" onClick={() => setShowClearConfirm(true)} disabled={clearing}>
+              Clear Logs
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -317,71 +332,118 @@ export default function LogView() {
         </div>
       )}
 
+      {/* Empty states — outside the table so h-full centering works */}
+      {!loading && entries.length === 0 && (
+        <EmptyState
+          className="flex-1"
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          }
+          heading="No connections recorded yet"
+          subline="Connection history will appear here once you connect to a server."
+        />
+      )}
+
+      {!loading && entries.length > 0 && displayed.length === 0 && (
+        <EmptyState
+          className="flex-1"
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+            </svg>
+          }
+          heading="No entries match"
+          subline="Try adjusting the filters or date range."
+        />
+      )}
+
       {/* Table */}
-      <div className="flex-1 overflow-y-auto">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-surface-0 border-b border-stroke-subtle">
-            <tr className="text-xs text-faint uppercase tracking-wider">
-              {sortableTh("time", "Time", "px-5")}
-              <th className={thBase}>Server</th>
-              <th className={thBase}>Host</th>
-              <th className={thBase}>User</th>
-              {sortableTh("outcome", "Outcome")}
-              {sortableTh("duration", "Duration")}
-            </tr>
-          </thead>
-          <tbody>
-            {displayed.map((e) => (
-              <tr
-                key={e.id}
-                className="border-b border-stroke-subtle hover:bg-surface-0 transition-colors"
-                title={e.errorMessage ?? undefined}
+      {(loading || displayed.length > 0) && (
+        <div className="flex-1 overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-surface-0 border-b border-stroke-subtle">
+              <tr className="text-xs text-faint uppercase tracking-wider">
+                {sortableTh("time", "Time", "px-5")}
+                <th className={thBase}>Server</th>
+                <th className={thBase}>Host</th>
+                <th className={thBase}>User</th>
+                {sortableTh("outcome", "Outcome")}
+                {sortableTh("duration", "Duration")}
+              </tr>
+            </thead>
+            <tbody>
+              {displayed.map((e) => (
+                <tr
+                  key={e.id}
+                  className="border-b border-stroke-subtle hover:bg-surface-0 transition-colors"
+                  title={e.errorMessage ?? undefined}
+                >
+                  <td className="px-5 py-2.5 text-muted whitespace-nowrap font-mono text-xs">
+                    {fmt(e.sessionStart)}
+                  </td>
+                  <td className="px-3 py-2.5 text-white max-w-[160px] truncate" title={e.serverDisplayName}>
+                    {e.serverDisplayName}
+                  </td>
+                  <td className="px-3 py-2.5 text-faint font-mono text-xs whitespace-nowrap">
+                    {e.hostname}:{e.port}
+                  </td>
+                  <td className="px-3 py-2.5 text-muted">{e.username || "—"}</td>
+                  <td className={`px-3 py-2.5 font-medium ${OUTCOME_STYLES[e.outcome as LogOutcome] ?? "text-muted"}`}>
+                    {OUTCOME_LABEL[e.outcome as LogOutcome] ?? e.outcome}
+                  </td>
+                  <td className="px-3 py-2.5 text-faint font-mono text-xs">
+                    {duration(e.sessionStart, e.sessionEnd)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div ref={sentinelRef} className="h-1" />
+
+          {loading && (
+            <div className="flex justify-center py-6">
+              <span className="text-faint text-sm">Loading…</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showClearConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          onClick={() => setShowClearConfirm(false)}
+        >
+          <div
+            className="bg-surface-2 border border-stroke rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6 flex flex-col gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col gap-1">
+              <h2 className="text-white font-semibold text-base">Clear all logs?</h2>
+              <p className="text-muted text-sm">All connection history will be permanently deleted. This cannot be undone.</p>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                disabled={clearing}
+                className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors disabled:opacity-40"
               >
-                <td className="px-5 py-2.5 text-muted whitespace-nowrap font-mono text-xs">
-                  {fmt(e.sessionStart)}
-                </td>
-                <td className="px-3 py-2.5 text-white max-w-[160px] truncate" title={e.serverDisplayName}>
-                  {e.serverDisplayName}
-                </td>
-                <td className="px-3 py-2.5 text-faint font-mono text-xs whitespace-nowrap">
-                  {e.hostname}:{e.port}
-                </td>
-                <td className="px-3 py-2.5 text-muted">{e.username || "—"}</td>
-                <td className={`px-3 py-2.5 font-medium ${OUTCOME_STYLES[e.outcome as LogOutcome] ?? "text-muted"}`}>
-                  {OUTCOME_LABEL[e.outcome as LogOutcome] ?? e.outcome}
-                </td>
-                <td className="px-3 py-2.5 text-faint font-mono text-xs">
-                  {duration(e.sessionStart, e.sessionEnd)}
-                </td>
-              </tr>
-            ))}
-
-            {!loading && entries.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-5 py-16 text-center text-faint">
-                  No connections recorded yet
-                </td>
-              </tr>
-            )}
-
-            {!loading && entries.length > 0 && displayed.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-5 py-16 text-center text-faint">
-                  No entries match the current filters
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-
-        <div ref={sentinelRef} className="h-1" />
-
-        {loading && (
-          <div className="flex justify-center py-6">
-            <span className="text-faint text-sm">Loading…</span>
+                Cancel
+              </button>
+              <button
+                onClick={() => { void handleClear(); }}
+                disabled={clearing}
+                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-500 rounded transition-colors disabled:opacity-40"
+              >
+                {clearing ? "Clearing…" : "Clear Logs"}
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
