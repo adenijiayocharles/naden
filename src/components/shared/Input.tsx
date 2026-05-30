@@ -11,8 +11,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       ref={ref}
       className={twMerge(
         "w-full h-10 bg-surface-3 border rounded px-3 text-sm text-white placeholder-faint",
-        "focus:outline-none focus:border-accent transition-colors",
-        error ? "border-red-500" : "border-stroke",
+        "focus:outline-none focus:border-accent/30 transition-colors",
+        error ? "border-red-500" : "border-white/5",
         className,
       )}
       {...props}

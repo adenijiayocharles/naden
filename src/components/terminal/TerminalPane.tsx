@@ -422,7 +422,7 @@ export default function TerminalPane({ sessionId }: Props) {
 
       {/* Search bar — floats over terminal at top-right */}
       {searchVisible && (
-        <div className="absolute top-3 right-4 z-30 flex items-center gap-1.5 bg-surface-3 border border-stroke rounded-lg shadow-2xl px-2.5 py-1.5">
+        <div className="absolute top-3 right-4 z-30 flex items-center gap-1.5 bg-surface-3 rounded-lg px-2.5 py-1.5">
           <input
             autoFocus
             type="text"
@@ -444,7 +444,7 @@ export default function TerminalPane({ sessionId }: Props) {
               else if (e.key === "Escape") { closeSearch(); }
             }}
             placeholder="Find in terminal…"
-            className="bg-transparent text-sm text-white placeholder-[#555] outline-none w-44"
+            className="bg-transparent text-sm text-white placeholder-[#555] outline-none w-44 pl-2"
           />
           {searchResults && (
             <span className="text-xs text-dim tabular-nums shrink-0">
