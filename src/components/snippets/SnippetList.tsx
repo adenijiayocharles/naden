@@ -4,6 +4,7 @@ import { formatError } from "../../lib/errors";
 import Button from "../shared/Button";
 import Input from "../shared/Input";
 import CodeEditor from "../shared/CodeEditor";
+import EmptyState from "../shared/EmptyState";
 import type { Snippet } from "../../types/snippet";
 
 // ── Form modal ─────────────────────────────────────────────────────────────────
@@ -217,16 +218,16 @@ export default function SnippetList() {
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
-      <div className="px-4 h-10 border-b border-stroke-subtle shrink-0 flex items-center gap-2">
+      <div className="px-4 h-14 border-b border-stroke-subtle shrink-0 flex items-center gap-2">
         <div className="flex-1 min-w-0">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search snippets…"
-            className="w-full h-7 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
+            className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
           />
         </div>
-        <Button size="sm" variant="primary" onClick={() => setCreating(true)}>
+        <Button variant="primary" onClick={() => setCreating(true)}>
           + New
         </Button>
       </div>
@@ -236,18 +237,30 @@ export default function SnippetList() {
         {isLoading ? (
           <p className="text-sm text-dim text-center pt-12">Loading…</p>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center pt-16 gap-3">
-            {query ? (
-              <p className="text-sm text-dim">No snippets match "{query}"</p>
-            ) : (
-              <>
-                <p className="text-sm text-dim">No snippets yet</p>
-                <Button size="sm" variant="primary" onClick={() => setCreating(true)}>
-                  Create your first snippet
-                </Button>
-              </>
-            )}
-          </div>
+          query ? (
+            <EmptyState
+              icon={
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35M8.5 8.5l5 5M13.5 8.5l-5 5" />
+                </svg>
+              }
+              heading="No matches"
+              subline={`No snippets match "${query}"`}
+            />
+          ) : (
+            <EmptyState
+              icon={
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 18 22 12 16 6" />
+                  <polyline points="8 6 2 12 8 18" />
+                </svg>
+              }
+              heading="No snippets yet"
+              subline="Save commands you run often and paste them into any terminal."
+              action={{ label: "+ New Snippet", onClick: () => setCreating(true) }}
+            />
+          )
         ) : (
           <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
             {filtered.map((sn) => (
