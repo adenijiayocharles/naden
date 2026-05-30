@@ -1,6 +1,6 @@
 interface Props {
   serverName: string;
-  message: string;
+  message?: string;
   onRetry: () => void;
   onClose: () => void;
 }
@@ -25,9 +25,11 @@ export default function ConnectionErrorModal({ serverName, message, onRetry, onC
           </div>
         </div>
 
-        <p className="text-sm text-secondary bg-surface-0 border border-stroke-subtle rounded-lg px-3 py-2.5 font-mono break-words mb-5">
-          {message}
-        </p>
+        {message && (
+          <p className="text-sm text-secondary bg-surface-0 border border-stroke-subtle rounded-lg px-3 py-2.5 font-mono break-words mb-5">
+            {message}
+          </p>
+        )}
 
         <div className="flex gap-2">
           <button

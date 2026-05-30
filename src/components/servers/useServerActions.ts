@@ -54,8 +54,8 @@ export function useServerActions(server: Server) {
     try {
       const result = await openSession(server.id, server.displayName);
       if (result === null) setConnectionError("Maximum terminal sessions (20) reached");
-    } catch (e) {
-      setConnectionError(formatError(e));
+    } catch {
+      setConnectionError("");
     } finally {
       setConnecting(false);
     }

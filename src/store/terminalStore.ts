@@ -166,10 +166,11 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     try {
       await terminalCommands.openTerminalSession(serverId, sessionId);
     } catch (e) {
-      // Synchronous Rust error (e.g. server not found, vault locked) — clean up.
+      // Synchronous Rust error (e.g. server not found, vault locked) — clean up
+      // then re-throw so the caller gets the real error, not a null.
       teardownResources(sessionId);
       set((state) => dropFromState(state, sessionId));
-      return null;
+      throw e;
     }
 
     return sessionId;

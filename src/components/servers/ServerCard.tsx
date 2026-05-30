@@ -167,10 +167,10 @@ export default function ServerCard({ server, groupColor, lastConnected }: Server
         onCancel={() => actions.setDeleteModalOpen(false)}
       />
     )}
-    {actions.connectionError && (
+    {actions.connectionError !== null && (
       <ConnectionErrorModal
         serverName={server.displayName}
-        message={actions.connectionError}
+        message={actions.connectionError || undefined}
         onRetry={() => { actions.setConnectionError(null); void actions.handleConnect(); }}
         onClose={() => actions.setConnectionError(null)}
       />
