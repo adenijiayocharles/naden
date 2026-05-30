@@ -113,6 +113,7 @@ export default function AppShell() {
   const [activePanelType, setActivePanelType] = useState<PanelType>("terminal");
   const [showNewTabPicker, setShowNewTabPicker] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
+  const [pickerError, setPickerError] = useState<string | null>(null);
   const newTabButtonRef = useRef<HTMLButtonElement>(null);
   const newTabPickerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -303,7 +304,7 @@ export default function AppShell() {
             ) : (
               <>
                 {/* Server list toolbar */}
-                <div className="px-3 h-10 border-b border-stroke-subtle shrink-0 flex items-center gap-2">
+                <div className="px-3 h-14 border-b border-stroke-subtle shrink-0 flex items-center gap-2">
                   <div className="relative flex-1 min-w-0">
                     <input
                       ref={searchRef}
@@ -311,7 +312,7 @@ export default function AppShell() {
                       value={searchQuery}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="Search…"
-                      className="w-full h-8 bg-surface-3 border border-stroke rounded px-3 pr-10 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
+                      className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 pr-10 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
                     />
                     {!searchQuery && (
                       <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-dim pointer-events-none select-none">⌘K</kbd>
@@ -322,7 +323,7 @@ export default function AppShell() {
                       <select
                         value={sortMode}
                         onChange={(e) => setSortMode(e.target.value as SortMode)}
-                        className="h-8 bg-surface-3 border border-stroke rounded px-2 text-sm text-secondary focus:outline-none focus:border-accent shrink-0 cursor-pointer"
+                        className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-secondary focus:outline-none focus:border-accent shrink-0 cursor-pointer"
                       >
                         <option value="default">Default</option>
                         <option value="name_asc">A → Z</option>
@@ -330,7 +331,7 @@ export default function AppShell() {
                         <option value="host">Host</option>
                         <option value="last_connected">Recent</option>
                       </select>
-                      <div className="flex items-center h-8 bg-surface-3 border border-stroke rounded overflow-hidden shrink-0">
+                      <div className="flex items-center h-10 bg-surface-3 border border-stroke rounded overflow-hidden shrink-0">
                         {(["card", "row"] as ViewMode[]).map((mode) => (
                           <button
                             key={mode}
@@ -357,7 +358,7 @@ export default function AppShell() {
                       </div>
                       <button
                         onClick={toggleBulkMode}
-                        className={`h-8 px-2 rounded border text-sm transition-colors shrink-0 ${bulkMode ? "bg-accent/10 border-accent/30 text-accent-fg" : "bg-surface-3 border-stroke text-faint hover:text-muted"}`}
+                        className={`h-10 px-2 rounded border text-sm transition-colors shrink-0 ${bulkMode ? "bg-accent/10 border-accent/30 text-accent-fg" : "bg-surface-3 border-stroke text-faint hover:text-muted"}`}
                       >
                         {bulkMode ? `Cancel${bulkSelected.length > 0 ? ` (${bulkSelected.length})` : ""}` : "Select"}
                       </button>
@@ -402,7 +403,7 @@ export default function AppShell() {
             <div className="flex flex-col flex-1 min-w-0">
               {/* Unified tab bar */}
               <div
-                className="h-10 bg-surface-1 border-b border-stroke-subtle flex items-center shrink-0"
+                className="h-12 bg-surface-1 border-b border-stroke-subtle flex items-center shrink-0"
                 onDragLeave={(e) => {
                   if (!e.currentTarget.contains(e.relatedTarget as Node)) resetDrag();
                 }}
@@ -489,6 +490,7 @@ export default function AppShell() {
                     onClick={() => {
                       setShowNewTabPicker((v) => !v);
                       setPickerQuery("");
+                      setPickerError(null);
                     }}
                     title="New terminal session"
                     aria-label="New terminal session"
@@ -511,21 +513,32 @@ export default function AppShell() {
                             if (e.key === "Escape") {
                               setShowNewTabPicker(false);
                               setPickerQuery("");
+                              setPickerError(null);
                             }
                           }}
                           placeholder="Search servers…"
                           className="w-full bg-surface-3 border border-stroke rounded px-2.5 py-1.5 text-sm text-white placeholder-faint outline-none focus:border-accent transition-colors"
                         />
                       </div>
+                      {pickerError && (
+                        <p className="px-3 py-2 text-xs text-red-400 border-b border-stroke-subtle bg-red-950/30">
+                          {pickerError}
+                        </p>
+                      )}
                       <div className="max-h-60 overflow-y-auto">
                         {pickerServers.length > 0 ? (
                           pickerServers.map((server) => (
                             <button
                               key={server.id}
-                              onClick={() => {
-                                void terminalOpenSession(server.id, server.displayName);
-                                setShowNewTabPicker(false);
-                                setPickerQuery("");
+                              onClick={async () => {
+                                const id = await terminalOpenSession(server.id, server.displayName);
+                                if (id === null) {
+                                  setPickerError("Maximum terminal sessions (20) reached");
+                                } else {
+                                  setShowNewTabPicker(false);
+                                  setPickerQuery("");
+                                  setPickerError(null);
+                                }
                               }}
                               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-secondary hover:bg-surface-3 hover:text-white transition-colors text-left"
                             >
