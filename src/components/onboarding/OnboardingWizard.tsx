@@ -1,4 +1,5 @@
 import { useState } from "react";
+import serverIcon from "../../assets/server.png";
 import { useVaultStore } from "../../store/vaultStore";
 import { useUiStore } from "../../store/uiStore";
 import { settingsCommands } from "../../lib/tauriCommands";
@@ -87,10 +88,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
           {step === "welcome" && (
             <div className="text-center space-y-4">
               <div className="flex justify-center mb-2">
-                <svg className="w-12 h-12 text-accent-fg" fill="none" viewBox="0 0 48 48" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="18" cy="28" r="9" />
-                  <path d="M27 28h14M35 24v8" />
-                </svg>
+                <img src={serverIcon} alt="SSH Manager" className="w-12 h-12" />
               </div>
               <h1 className="text-2xl font-bold text-white">Welcome to SSH Manager</h1>
               <p className="text-muted text-sm leading-relaxed">
@@ -206,10 +204,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
           {step === "done" && (
             <div className="text-center space-y-4">
               <div className="flex justify-center mb-2">
-                <svg className="w-12 h-12 text-accent-fg" fill="none" viewBox="0 0 48 48" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="24" cy="24" r="20" />
-                  <path d="M14 24l8 8 12-14" />
-                </svg>
+                <img src={serverIcon} alt="SSH Manager" className="w-12 h-12" />
               </div>
               <h2 className="text-xl font-bold text-white">You're all set!</h2>
               <p className="text-sm text-muted">
