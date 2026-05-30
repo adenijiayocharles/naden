@@ -153,20 +153,7 @@ function Nav() {
     }}>
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-        <div style={{
-          width: 28,
-          height: 28,
-          borderRadius: 7,
-          background: "var(--app-accent)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}>
-          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="#000" strokeWidth={2} strokeLinecap="round">
-            <polyline points="4 14 8 10 4 6"/>
-            <line x1="10" y1="15" x2="16" y2="15"/>
-          </svg>
-        </div>
+        <img src="/server.png" alt="SSH Manager" style={{ width: 28, height: 28 }} />
         <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.3 }}>SSH Manager</span>
       </div>
 
@@ -1177,20 +1164,7 @@ function Footer() {
       gap: 16,
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{
-          width: 22,
-          height: 22,
-          borderRadius: 5,
-          background: "var(--app-accent)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}>
-          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="#000" strokeWidth={2} strokeLinecap="round">
-            <polyline points="4 14 8 10 4 6"/>
-            <line x1="10" y1="15" x2="16" y2="15"/>
-          </svg>
-        </div>
+        <img src="/server.png" alt="SSH Manager" style={{ width: 22, height: 22 }} />
         <span style={{ fontSize: 13, color: "var(--text-muted)" }}>SSH Manager · Built with Tauri + React + Rust</span>
       </div>
       <div style={{ display: "flex", gap: 22 }}>
