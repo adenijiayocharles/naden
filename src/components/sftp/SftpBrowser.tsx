@@ -345,13 +345,9 @@ export default function SftpBrowser({ sessionId }: Props) {
                   className="text-xs bg-surface-2 border border-stroke-subtle rounded px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-accent/50 shrink-0"
                 >
                   <option value="local">Local files</option>
-                  {otherServers.length > 0 && (
-                    <optgroup label="Remote servers">
-                      {otherServers.map((s) => (
-                        <option key={s.id} value={s.id}>{s.displayName}</option>
-                      ))}
-                    </optgroup>
-                  )}
+                  {otherServers.map((s) => (
+                    <option key={s.id} value={s.id}>{s.displayName}</option>
+                  ))}
                 </select>
 
                 {/* Peer navigation — only shown when a remote session is selected */}
