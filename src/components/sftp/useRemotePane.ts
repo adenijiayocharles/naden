@@ -123,7 +123,9 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
         const name = payload.split("/").pop() ?? payload;
         setFileSyncedFlash(`Synced: ${name}`);
         setTimeout(() => setFileSyncedFlash(null), 3000);
-        setEditingFiles((prev) => prev.filter((p) => p !== payload));
+        // Do NOT remove from editingFiles here — this event fires on every save
+        // pulse. Removal happens only in handleCloseEdit so the user retains
+        // control over which files are being watched.
       }),
       listen<{ written: number; total: number }>(`sftp:upload_progress:${sessionId}`, ({ payload }) => {
         setTransferByteProgress({ bytes: payload.written, total: payload.total });
@@ -582,8 +584,12 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
   );
 
   const isBusy = busy || (session?.loadingEntries ?? false);
-  const selectedEntries = (session?.entries ?? []).filter((e) => selected.includes(e.path));
-  const selectedHasDir = selectedEntries.some((e) => e.isDir);
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
+  const selectedEntries = useMemo(
+    () => (session?.entries ?? []).filter((e) => selectedSet.has(e.path)),
+    [session?.entries, selectedSet],
+  );
+  const selectedHasDir = useMemo(() => selectedEntries.some((e) => e.isDir), [selectedEntries]);
 
   return {
     session,

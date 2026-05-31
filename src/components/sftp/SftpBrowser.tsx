@@ -83,8 +83,13 @@ export default function SftpBrowser({ sessionId }: Props) {
   // primary session when no peer is open, which doubles subscription traffic.
   const effectivePeerId = peerSessionId ?? "__none__";
 
+  // Generation counter guards against rapid dropdown changes: if the user
+  // switches servers before openHiddenSession resolves, the stale result is
+  // discarded and its session is immediately closed.
+  const leftPaneChangeGenRef = useRef(0);
+
   const handleLeftPaneChange = async (value: string) => {
-    // Close any existing peer session before opening a new one
+    const gen = ++leftPaneChangeGenRef.current;
     const prevId = peerSessionId;
     setPeerSessionId(null);
     setLeftPaneSelection(value);
@@ -98,9 +103,16 @@ export default function SftpBrowser({ sessionId }: Props) {
     if (!server) return;
     try {
       const newId = await openHiddenSession(value, server.displayName);
-      setPeerSessionId(newId);
+      if (gen === leftPaneChangeGenRef.current) {
+        setPeerSessionId(newId);
+      } else {
+        // A newer selection arrived while this one was connecting — discard.
+        void closeSession(newId);
+      }
     } catch {
-      setLeftPaneSelection("local");
+      if (gen === leftPaneChangeGenRef.current) {
+        setLeftPaneSelection("local");
+      }
     }
   };
 
@@ -213,7 +225,9 @@ export default function SftpBrowser({ sessionId }: Props) {
   // ── Cross-session transfer handlers ───────────────────────────────────────
 
   const handleCopyPeerToRemote = async () => {
-    if (!session || !peerPane.session) return;
+    // Guard on peerSessionId directly — effectivePeerId may be "__none__" if
+    // called via a stale closure after the peer is cleared.
+    if (!session || !peerPane.session || !peerSessionId) return;
     const files = peerPane.selectedEntries.filter((e) => !e.isDir);
     if (files.length === 0) return;
     setCrossTransferBusy(true);
@@ -224,7 +238,7 @@ export default function SftpBrowser({ sessionId }: Props) {
         setCrossTransferProgress(
           files.length > 1 ? `Copying ${file.name} (${i + 1}/${files.length})…` : `Copying ${file.name}…`,
         );
-        await sftpCommands.crossCopySftpFiles(effectivePeerId, [file.path], sessionId, session.currentPath);
+        await sftpCommands.crossCopySftpFiles(peerSessionId, [file.path], sessionId, session.currentPath);
       }
       setCrossTransferProgress(null);
       handleRefresh();
@@ -237,7 +251,7 @@ export default function SftpBrowser({ sessionId }: Props) {
   };
 
   const handleCopyRemoteToPeer = async () => {
-    if (!session || !peerPane.session) return;
+    if (!session || !peerPane.session || !peerSessionId) return;
     const files = selectedEntries.filter((e) => !e.isDir);
     if (files.length === 0) return;
     setCrossTransferBusy(true);
@@ -248,7 +262,7 @@ export default function SftpBrowser({ sessionId }: Props) {
         setCrossTransferProgress(
           files.length > 1 ? `Copying ${file.name} (${i + 1}/${files.length})…` : `Copying ${file.name}…`,
         );
-        await sftpCommands.crossCopySftpFiles(sessionId, [file.path], effectivePeerId, peerPane.session.currentPath);
+        await sftpCommands.crossCopySftpFiles(sessionId, [file.path], peerSessionId, peerPane.session.currentPath);
       }
       setCrossTransferProgress(null);
       peerPane.handleRefresh();
