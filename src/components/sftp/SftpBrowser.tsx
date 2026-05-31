@@ -22,12 +22,6 @@ export default function SftpBrowser({ sessionId }: Props) {
   const closeSession = useSftpStore((s) => s.closeSession);
   const reconnectSession = useSftpStore((s) => s.reconnectSession);
   const openHiddenSession = useSftpStore((s) => s.openHiddenSession);
-  // Targeted boolean — only changes when the peer session is added or removed,
-  // not on every entries/status update. Using allSessions (array) as a dep
-  // fires the effect on every store update and causes an update depth loop.
-  const peerSessionExists = useSftpStore((s) =>
-    peerSessionId !== null && s.sessions.some((sess) => sess.id === peerSessionId),
-  );
   const allServers = useServerStore((s) => s.servers);
 
   // Viewing options — separate state per pane
@@ -47,6 +41,13 @@ export default function SftpBrowser({ sessionId }: Props) {
   const [leftPaneSelection, setLeftPaneSelection] = useState<string>("local");
   // Resolved sessionId for the peer once a session is open for the selected server
   const [peerSessionId, setPeerSessionId] = useState<string | null>(null);
+
+  // Targeted boolean — only changes when the peer session is added or removed,
+  // not on every entries/status update. Declared after peerSessionId so the
+  // closure captures the already-initialised state variable.
+  const peerSessionExists = useSftpStore((s) =>
+    peerSessionId !== null && s.sessions.some((sess) => sess.id === peerSessionId),
+  );
   const [localSelected, setLocalSelected] = useState<string[]>([]);
   const [localCurrentPath, setLocalCurrentPath] = useState("");
   const [activePane, setActivePane] = useState<"local" | "remote">("remote");
