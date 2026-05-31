@@ -41,6 +41,7 @@ interface RemotePaneOutput {
   error: string | null;
   confirmingDelete: boolean;
   transferProgress: string | null;
+  transferByteProgress: { bytes: number; total: number } | null;
   chmodTarget: { path: string; mode: number } | null;
   chmodMode: number;
   editingFiles: string[];
@@ -105,6 +106,7 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [transferProgress, setTransferProgress] = useState<string | null>(null);
+  const [transferByteProgress, setTransferByteProgress] = useState<{ bytes: number; total: number } | null>(null);
 
   // Chmod dialog state
   const [chmodTarget, setChmodTarget] = useState<{ path: string; mode: number } | null>(null);
@@ -114,16 +116,29 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
   const [editingFiles, setEditingFiles] = useState<string[]>([]);
   const [fileSyncedFlash, setFileSyncedFlash] = useState<string | null>(null);
 
-  // Listen for live-edit sync events
+  // Listen for live-edit sync events and byte-level transfer progress
   useEffect(() => {
-    const unlisten = listen<string>(`sftp:file_synced:${sessionId}`, ({ payload }) => {
-      const name = payload.split("/").pop() ?? payload;
-      setFileSyncedFlash(`Synced: ${name}`);
-      setTimeout(() => setFileSyncedFlash(null), 3000);
-      setEditingFiles((prev) => prev.filter((p) => p !== payload));
-    });
-    return () => { void unlisten.then((fn) => fn()); };
+    const unlisteners = Promise.all([
+      listen<string>(`sftp:file_synced:${sessionId}`, ({ payload }) => {
+        const name = payload.split("/").pop() ?? payload;
+        setFileSyncedFlash(`Synced: ${name}`);
+        setTimeout(() => setFileSyncedFlash(null), 3000);
+        setEditingFiles((prev) => prev.filter((p) => p !== payload));
+      }),
+      listen<{ written: number; total: number }>(`sftp:upload_progress:${sessionId}`, ({ payload }) => {
+        setTransferByteProgress({ bytes: payload.written, total: payload.total });
+      }),
+      listen<{ read: number; total: number }>(`sftp:download_progress:${sessionId}`, ({ payload }) => {
+        setTransferByteProgress({ bytes: payload.read, total: payload.total });
+      }),
+    ]);
+    return () => { void unlisteners.then(([u1, u2, u3]) => { u1(); u2(); u3(); }); };
   }, [sessionId]);
+
+  // Clear byte progress when no transfer is running
+  useEffect(() => {
+    if (!busy) setTransferByteProgress(null);
+  }, [busy]);
 
   const navigate = useCallback(async (path: string) => {
     setSelected([]);
@@ -580,6 +595,7 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
     error,
     confirmingDelete,
     transferProgress,
+    transferByteProgress,
     chmodTarget,
     chmodMode,
     editingFiles,

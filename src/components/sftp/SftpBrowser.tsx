@@ -129,6 +129,7 @@ export default function SftpBrowser({ sessionId }: Props) {
     error,
     confirmingDelete,
     transferProgress,
+    transferByteProgress,
     chmodTarget,
     chmodMode,
     editingFiles,
@@ -306,6 +307,12 @@ export default function SftpBrowser({ sessionId }: Props) {
   const isConnecting = session.status === "connecting";
   const isError = session.status === "error";
 
+  const activeLabel = transferProgress ?? crossTransferProgress;
+  const activeBytes = transferByteProgress;
+  const pct = activeBytes && activeBytes.total > 0
+    ? Math.round((activeBytes.bytes / activeBytes.total) * 100)
+    : null;
+
   return (
     <div className="relative h-full w-full flex flex-col bg-surface-1">
       <SftpToolbar
@@ -334,6 +341,26 @@ export default function SftpBrowser({ sessionId }: Props) {
         onLeftPaneChange={(v) => { void handleLeftPaneChange(v); }}
         leftPaneServers={otherServers}
       />
+
+      {/* Transfer progress bar — spans full width, only visible during transfers */}
+      {activeLabel && (
+        <div className="shrink-0 px-4 py-2 bg-surface-2 border-b border-stroke-subtle flex items-center gap-3">
+          <span className="text-xs text-muted truncate flex-1 min-w-0">{activeLabel}</span>
+          {pct !== null && (
+            <span className="text-xs text-muted tabular-nums shrink-0">{pct}%</span>
+          )}
+          <div className="w-40 shrink-0 h-1.5 bg-surface-4 rounded-full overflow-hidden">
+            {pct !== null ? (
+              <div
+                className="h-full bg-accent-fg rounded-full transition-[width] duration-100"
+                style={{ width: `${pct}%` }}
+              />
+            ) : (
+              <div className="h-full w-full bg-accent-fg/40 animate-pulse rounded-full" />
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-1 min-h-0">
         {/* Left pane */}
@@ -576,17 +603,6 @@ export default function SftpBrowser({ sessionId }: Props) {
 
       {/* Error banner */}
       {error && <ErrorBanner error={error} onDismiss={() => setError(null)} />}
-
-      {/* Transfer progress */}
-      {(transferProgress ?? crossTransferProgress) && (
-        <div className="px-4 py-2 bg-accent/5 border-b border-stroke-subtle flex items-center gap-3 text-xs text-muted">
-          <svg className="w-3 h-3 animate-spin text-accent-fg shrink-0" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-          </svg>
-          {transferProgress ?? crossTransferProgress}
-        </div>
-      )}
 
       {/* File synced flash */}
       {fileSyncedFlash && (
