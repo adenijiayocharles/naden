@@ -53,7 +53,7 @@ function GroupCreateModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-2xl w-full max-w-sm p-5">
         <h3 className="text-sm font-semibold text-white mb-4">New Group</h3>
@@ -114,7 +114,7 @@ function GroupEditModal({ group, onClose, initialDelete = false }: { group: Grou
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-2xl w-full max-w-sm p-5">
         <h3 className="text-sm font-semibold text-white mb-4">Edit Group</h3>
@@ -170,7 +170,7 @@ function TagRenameModal({ tag, onClose }: { tag: Tag; onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-2xl w-full max-w-sm p-5">
         <h3 className="text-sm font-semibold text-white mb-4">Rename Tag</h3>

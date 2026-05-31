@@ -121,32 +121,55 @@ export default function BulkActionBar() {
         </div>
 
         {/* Delete */}
-        {confirmDelete ? (
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm text-red-400">Delete {count} server{count !== 1 ? "s" : ""}?</span>
-            <Button
-              size="sm"
-              onClick={() => { void handleDeleteAll(); }}
-              disabled={busy}
-              className="bg-red-600 hover:bg-red-500 text-white"
-            >
-              {busy ? "Deleting…" : "Confirm"}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(false)} disabled={busy}>
-              Cancel
-            </Button>
-          </div>
-        ) : (
-          <Button
-            size="sm"
-            variant="delete"
-            onClick={() => setConfirmDelete(true)}
-            disabled={busy || count === 0}
-          >
-            Delete {count > 0 ? count : ""}
-          </Button>
-        )}
+        <Button
+          size="sm"
+          variant="delete"
+          onClick={() => setConfirmDelete(true)}
+          disabled={busy || count === 0}
+        >
+          Delete {count > 0 ? count : ""}
+        </Button>
       </div>
+
+      {confirmDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85"
+          onClick={() => setConfirmDelete(false)}
+        >
+          <div
+            className="bg-surface-2 border border-stroke rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6 flex flex-col gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col gap-1">
+              <h2 className="text-white font-semibold text-base">
+                Delete {count} server{count !== 1 ? "s" : ""}?
+              </h2>
+              <p className="text-muted text-sm">
+                {count === 1
+                  ? "This server will be permanently removed."
+                  : `All ${count} selected servers will be permanently removed.`}{" "}
+                This cannot be undone.
+              </p>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setConfirmDelete(false)}
+                disabled={busy}
+                className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors disabled:opacity-40"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { void handleDeleteAll(); }}
+                disabled={busy}
+                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-500 rounded transition-colors disabled:opacity-40"
+              >
+                {busy ? "Deleting…" : `Delete ${count}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

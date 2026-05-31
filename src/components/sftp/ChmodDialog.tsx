@@ -13,7 +13,7 @@ export default function ChmodDialog({ target, mode, disabled, onModeChange, onAp
   if (!target) return null;
 
   return (
-    <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/50">
+    <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/85">
       <div className="bg-surface-1 border border-stroke-subtle rounded-lg shadow-xl w-80 p-5 flex flex-col gap-4">
         <div>
           <h3 className="text-sm font-semibold text-white">Change Permissions</h3>

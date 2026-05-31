@@ -8,7 +8,7 @@ interface Props {
 export default function ConnectionErrorModal({ serverName, message, onRetry, onClose }: Props) {
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="bg-surface-1 border border-stroke rounded-xl shadow-2xl w-full max-w-sm p-6">
