@@ -199,14 +199,17 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
     setBusy(true);
     setError(null);
     try {
-      for (const localPath of localSelected) {
+      for (let i = 0; i < localSelected.length; i++) {
+        const localPath = localSelected[i];
         const name = localPath.split("/").pop() ?? localPath;
-        const remotePath = joinPath(session.currentPath, name);
-        await sftpCommands.uploadSftpFile(sessionId, localPath, remotePath);
+        setTransferProgress(localSelected.length > 1 ? `Uploading ${name} (${i + 1}/${localSelected.length})…` : `Uploading ${name}…`);
+        await sftpCommands.uploadSftpFile(sessionId, localPath, joinPath(session.currentPath, name));
       }
+      setTransferProgress(null);
       await navigate(session.currentPath);
     } catch (e) {
       setError(formatError(e));
+      setTransferProgress(null);
     } finally {
       setBusy(false);
     }
@@ -220,13 +223,16 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
     setBusy(true);
     setError(null);
     try {
-      for (const entry of files) {
+      for (let i = 0; i < files.length; i++) {
+        const entry = files[i];
         const name = entry.path.split("/").pop() ?? entry.path;
-        const localPath = joinPath(localCurrentPath, name);
-        await sftpCommands.downloadSftpFile(sessionId, entry.path, localPath);
+        setTransferProgress(files.length > 1 ? `Downloading ${name} (${i + 1}/${files.length})…` : `Downloading ${name}…`);
+        await sftpCommands.downloadSftpFile(sessionId, entry.path, joinPath(localCurrentPath, name));
       }
+      setTransferProgress(null);
     } catch (e) {
       setError(formatError(e));
+      setTransferProgress(null);
     } finally {
       setBusy(false);
     }

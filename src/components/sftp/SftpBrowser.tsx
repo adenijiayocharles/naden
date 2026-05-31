@@ -307,7 +307,7 @@ export default function SftpBrowser({ sessionId }: Props) {
   const isConnecting = session.status === "connecting";
   const isError = session.status === "error";
 
-  const activeLabel = transferProgress ?? crossTransferProgress;
+  const activeLabel = transferProgress ?? crossTransferProgress ?? (transferByteProgress ? "Transferring…" : null);
   const activeBytes = transferByteProgress;
   const pct = activeBytes && activeBytes.total > 0
     ? Math.round((activeBytes.bytes / activeBytes.total) * 100)
