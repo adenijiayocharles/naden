@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSftpStore } from "../../store/sftpStore";
+import { useServerStore } from "../../store/serverStore";
 import { sftpCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import type { SortKey, SortDir } from "./SftpFileList";
@@ -20,7 +21,9 @@ interface Props {
 export default function SftpBrowser({ sessionId }: Props) {
   const closeSession = useSftpStore((s) => s.closeSession);
   const reconnectSession = useSftpStore((s) => s.reconnectSession);
+  const openSftpSession = useSftpStore((s) => s.openSession);
   const allSessions = useSftpStore((s) => s.sessions);
+  const allServers = useServerStore((s) => s.servers);
 
   // Viewing options — separate state per pane
   const [showHidden, setShowHidden] = useState(true);
@@ -35,8 +38,10 @@ export default function SftpBrowser({ sessionId }: Props) {
 
   // Pane layout state
   const [showLocalPane, setShowLocalPane] = useState(false);
-  // "local" or a sessionId string — single dropdown controls the left pane content
+  // "local" or a serverId — single dropdown controls the left pane content
   const [leftPaneSelection, setLeftPaneSelection] = useState<string>("local");
+  // Resolved sessionId for the peer once a session is open for the selected server
+  const [peerSessionId, setPeerSessionId] = useState<string | null>(null);
   const [localSelected, setLocalSelected] = useState<string[]>([]);
   const [localCurrentPath, setLocalCurrentPath] = useState("");
   const [activePane, setActivePane] = useState<"local" | "remote">("remote");
@@ -46,16 +51,44 @@ export default function SftpBrowser({ sessionId }: Props) {
   const [crossTransferBusy, setCrossTransferBusy] = useState(false);
   const [crossTransferProgress, setCrossTransferProgress] = useState<string | null>(null);
 
-  // Fall back to local if the selected peer session closes
+  // Fall back to local if the peer session closes externally
   useEffect(() => {
-    if (leftPaneSelection !== "local" && !allSessions.some((s) => s.id === leftPaneSelection)) {
+    if (!peerSessionId) return;
+    if (!allSessions.some((s) => s.id === peerSessionId)) {
       setLeftPaneSelection("local");
+      setPeerSessionId(null);
     }
-  }, [allSessions, leftPaneSelection]);
+  }, [allSessions, peerSessionId]);
 
   const leftPaneIsLocal = leftPaneSelection === "local";
-  // When no peer is selected, fall back to own sessionId so the hook stays valid
-  const effectivePeerId = leftPaneIsLocal ? sessionId : leftPaneSelection;
+  // When no peer session is open yet, fall back to own sessionId so the hook stays valid
+  const effectivePeerId = peerSessionId ?? sessionId;
+
+  const handleLeftPaneChange = async (value: string) => {
+    setLeftPaneSelection(value);
+    setActivePane("local");
+    if (value === "local") {
+      setPeerSessionId(null);
+      return;
+    }
+    const serverId = value;
+    // Reuse an already-open session for this server if one exists
+    const existing = allSessions.find((s) => s.serverId === serverId);
+    if (existing) {
+      setPeerSessionId(existing.id);
+      return;
+    }
+    // Otherwise open a new session
+    const server = allServers.find((s) => s.id === serverId);
+    if (!server) return;
+    try {
+      const newId = await openSftpSession(serverId, server.displayName);
+      setPeerSessionId(newId);
+    } catch {
+      setLeftPaneSelection("local");
+      setPeerSessionId(null);
+    }
+  };
 
   const handleSort = (key: SortKey) => {
     if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -147,8 +180,8 @@ export default function SftpBrowser({ sessionId }: Props) {
 
   if (!session) return null;
 
-  const validPeer = !leftPaneIsLocal && effectivePeerId !== sessionId && !!peerPane.session;
-  const otherSessions = allSessions.filter((s) => s.id !== sessionId);
+  const validPeer = !leftPaneIsLocal && !!peerSessionId && peerSessionId !== sessionId && !!peerPane.session;
+  const otherServers = allServers.filter((s) => s.id !== session.serverId);
 
   // ── Transfer capability flags ──────────────────────────────────────────────
 
@@ -294,18 +327,15 @@ export default function SftpBrowser({ sessionId }: Props) {
               <div className="flex items-center gap-2 px-3 py-2 border-b border-stroke-subtle bg-surface-1 shrink-0">
                 <select
                   value={leftPaneSelection}
-                  onChange={(e) => {
-                    setLeftPaneSelection(e.target.value);
-                    setActivePane("local");
-                  }}
+                  onChange={(e) => { void handleLeftPaneChange(e.target.value); }}
                   onClick={(e) => e.stopPropagation()}
                   className="text-xs bg-surface-2 border border-stroke-subtle rounded px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-accent/50 shrink-0"
                 >
                   <option value="local">Local files</option>
-                  {otherSessions.length > 0 && (
+                  {otherServers.length > 0 && (
                     <optgroup label="Remote servers">
-                      {otherSessions.map((s) => (
-                        <option key={s.id} value={s.id}>{s.serverName}</option>
+                      {otherServers.map((s) => (
+                        <option key={s.id} value={s.id}>{s.displayName}</option>
                       ))}
                     </optgroup>
                   )}
@@ -359,12 +389,12 @@ export default function SftpBrowser({ sessionId }: Props) {
                 <div className="flex flex-col flex-1 min-h-0" onClick={() => setActivePane("local")}>
                   {!validPeer ? (
                     <div className="flex-1 flex items-center justify-center text-muted text-sm px-6 text-center">
-                      {peerPane.session?.status === "connecting"
-                        ? "Connecting…"
-                        : peerPane.session?.status === "error"
-                          ? (peerPane.session.errorMessage ?? "Connection error")
-                          : otherSessions.length === 0
-                            ? "Open another server's SFTP to enable remote-to-remote transfers"
+                      {!peerSessionId
+                        ? "Opening session…"
+                        : peerPane.session?.status === "connecting"
+                          ? "Connecting…"
+                          : peerPane.session?.status === "error"
+                            ? (peerPane.session.errorMessage ?? "Connection error")
                             : "Session unavailable"}
                     </div>
                   ) : (
