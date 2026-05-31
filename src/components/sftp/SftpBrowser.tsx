@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSftpStore } from "../../store/sftpStore";
 import { sftpCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
@@ -35,8 +35,8 @@ export default function SftpBrowser({ sessionId }: Props) {
 
   // Pane layout state
   const [showLocalPane, setShowLocalPane] = useState(false);
-  const [leftPaneMode, setLeftPaneMode] = useState<"local" | "remote">("local");
-  const [peerSessionId, setPeerSessionId] = useState<string | null>(null);
+  // "local" or a sessionId string — single dropdown controls the left pane content
+  const [leftPaneSelection, setLeftPaneSelection] = useState<string>("local");
   const [localSelected, setLocalSelected] = useState<string[]>([]);
   const [localCurrentPath, setLocalCurrentPath] = useState("");
   const [activePane, setActivePane] = useState<"local" | "remote">("remote");
@@ -45,6 +45,17 @@ export default function SftpBrowser({ sessionId }: Props) {
   // Cross-session transfer state
   const [crossTransferBusy, setCrossTransferBusy] = useState(false);
   const [crossTransferProgress, setCrossTransferProgress] = useState<string | null>(null);
+
+  // Fall back to local if the selected peer session closes
+  useEffect(() => {
+    if (leftPaneSelection !== "local" && !allSessions.some((s) => s.id === leftPaneSelection)) {
+      setLeftPaneSelection("local");
+    }
+  }, [allSessions, leftPaneSelection]);
+
+  const leftPaneIsLocal = leftPaneSelection === "local";
+  // When no peer is selected, fall back to own sessionId so the hook stays valid
+  const effectivePeerId = leftPaneIsLocal ? sessionId : leftPaneSelection;
 
   const handleSort = (key: SortKey) => {
     if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -121,9 +132,8 @@ export default function SftpBrowser({ sessionId }: Props) {
   });
 
   // Peer remote pane — always instantiated (hooks can't be conditional).
-  // When peerSessionId is null we fall back to sessionId so the hook is valid,
+  // Falls back to own sessionId when no peer is selected so the hook stays valid,
   // but we never render or interact with peerPane in that state.
-  const effectivePeerId = peerSessionId ?? sessionId;
   const peerPane = useRemotePane({
     sessionId: effectivePeerId,
     showHidden: showHiddenPeer,
@@ -137,25 +147,20 @@ export default function SftpBrowser({ sessionId }: Props) {
 
   if (!session) return null;
 
-  // A peer is valid when it's a different connected session
-  const validPeer = !!peerSessionId && peerSessionId !== sessionId && !!peerPane.session;
+  const validPeer = !leftPaneIsLocal && effectivePeerId !== sessionId && !!peerPane.session;
   const otherSessions = allSessions.filter((s) => s.id !== sessionId);
 
   // ── Transfer capability flags ──────────────────────────────────────────────
 
-  const canUploadFromLocal = activePane === "local" && localSelected.length > 0 && !isBusy;
-  const canDownloadToLocal = activePane === "remote" && selectedEntries.some((e) => !e.isDir) && !!localCurrentPath && !isBusy;
+  const canUploadFromLocal =
+    leftPaneIsLocal && activePane === "local" && localSelected.length > 0 && !isBusy;
+  const canDownloadToLocal =
+    leftPaneIsLocal && activePane === "remote" && selectedEntries.some((e) => !e.isDir) && !!localCurrentPath && !isBusy;
 
   const canCopyPeerToRemote =
-    validPeer &&
-    peerPane.selectedEntries.some((e) => !e.isDir) &&
-    !crossTransferBusy &&
-    !isBusy;
+    validPeer && peerPane.selectedEntries.some((e) => !e.isDir) && !crossTransferBusy && !isBusy;
   const canCopyRemoteToPeer =
-    validPeer &&
-    selectedEntries.some((e) => !e.isDir) &&
-    !crossTransferBusy &&
-    !peerPane.isBusy;
+    validPeer && selectedEntries.some((e) => !e.isDir) && !crossTransferBusy && !peerPane.isBusy;
 
   // ── Cross-session transfer handlers ───────────────────────────────────────
 
@@ -169,16 +174,9 @@ export default function SftpBrowser({ sessionId }: Props) {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setCrossTransferProgress(
-          files.length > 1
-            ? `Copying ${file.name} (${i + 1}/${files.length})…`
-            : `Copying ${file.name}…`,
+          files.length > 1 ? `Copying ${file.name} (${i + 1}/${files.length})…` : `Copying ${file.name}…`,
         );
-        await sftpCommands.crossCopySftpFiles(
-          effectivePeerId,
-          [file.path],
-          sessionId,
-          session.currentPath,
-        );
+        await sftpCommands.crossCopySftpFiles(effectivePeerId, [file.path], sessionId, session.currentPath);
       }
       setCrossTransferProgress(null);
       handleRefresh();
@@ -200,16 +198,9 @@ export default function SftpBrowser({ sessionId }: Props) {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setCrossTransferProgress(
-          files.length > 1
-            ? `Copying ${file.name} (${i + 1}/${files.length})…`
-            : `Copying ${file.name}…`,
+          files.length > 1 ? `Copying ${file.name} (${i + 1}/${files.length})…` : `Copying ${file.name}…`,
         );
-        await sftpCommands.crossCopySftpFiles(
-          sessionId,
-          [file.path],
-          effectivePeerId,
-          peerPane.session.currentPath,
-        );
+        await sftpCommands.crossCopySftpFiles(sessionId, [file.path], effectivePeerId, peerPane.session.currentPath);
       }
       setCrossTransferProgress(null);
       peerPane.handleRefresh();
@@ -225,11 +216,8 @@ export default function SftpBrowser({ sessionId }: Props) {
 
   const handleNewFolder = () => {
     if (showLocalPane && activePane === "local") {
-      if (leftPaneMode === "local") {
-        setLocalNewFolderTrigger((n) => n + 1);
-      } else {
-        peerPane.handleNewFolder();
-      }
+      if (leftPaneIsLocal) setLocalNewFolderTrigger((n) => n + 1);
+      else peerPane.handleNewFolder();
     } else {
       handleRemoteNewFolder();
     }
@@ -237,11 +225,8 @@ export default function SftpBrowser({ sessionId }: Props) {
 
   const handleNewFile = () => {
     if (showLocalPane && activePane === "local") {
-      if (leftPaneMode === "local") {
-        setLocalNewFileTrigger((n) => n + 1);
-      } else {
-        peerPane.handleNewFile();
-      }
+      if (leftPaneIsLocal) setLocalNewFileTrigger((n) => n + 1);
+      else peerPane.handleNewFile();
     } else {
       handleRemoteNewFile();
     }
@@ -259,14 +244,12 @@ export default function SftpBrowser({ sessionId }: Props) {
 
   const currentShowHidden =
     showLocalPane && activePane === "local"
-      ? leftPaneMode === "local"
-        ? showHiddenLocal
-        : showHiddenPeer
+      ? leftPaneIsLocal ? showHiddenLocal : showHiddenPeer
       : showHidden;
 
   const handleToggleHidden = () => {
     if (showLocalPane && activePane === "local") {
-      if (leftPaneMode === "local") setShowHiddenLocal((v) => !v);
+      if (leftPaneIsLocal) setShowHiddenLocal((v) => !v);
       else setShowHiddenPeer((v) => !v);
     } else {
       setShowHidden((v) => !v);
@@ -307,24 +290,62 @@ export default function SftpBrowser({ sessionId }: Props) {
         {showLocalPane && (
           <>
             <div className="flex-1 min-w-0 border-r border-stroke-subtle flex flex-col">
-              {/* Mode toggle pill */}
-              <div className="flex items-center gap-1 px-3 py-1.5 border-b border-stroke-subtle bg-surface-2 shrink-0">
-                <span className="text-xs text-muted mr-1.5">Left pane:</span>
-                <button
-                  onClick={() => setLeftPaneMode("local")}
-                  className={`text-xs px-2.5 py-0.5 rounded-full transition-colors ${leftPaneMode === "local" ? "bg-surface-4 text-white" : "text-muted hover:text-white/80"}`}
+              {/* Unified left-pane header — always visible */}
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-stroke-subtle bg-surface-1 shrink-0">
+                <select
+                  value={leftPaneSelection}
+                  onChange={(e) => {
+                    setLeftPaneSelection(e.target.value);
+                    setActivePane("local");
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-xs bg-surface-2 border border-stroke-subtle rounded px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-accent/50 shrink-0"
                 >
-                  Local
-                </button>
-                <button
-                  onClick={() => setLeftPaneMode("remote")}
-                  className={`text-xs px-2.5 py-0.5 rounded-full transition-colors ${leftPaneMode === "remote" ? "bg-surface-4 text-white" : "text-muted hover:text-white/80"}`}
-                >
-                  Remote
-                </button>
+                  <option value="local">Local files</option>
+                  {otherSessions.length > 0 && (
+                    <optgroup label="Remote servers">
+                      {otherSessions.map((s) => (
+                        <option key={s.id} value={s.id}>{s.serverName}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+
+                {/* Peer navigation — only shown when a remote session is selected */}
+                {!leftPaneIsLocal && validPeer && (
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); peerPane.handleUp(); }}
+                      disabled={peerPane.isBusy || peerPane.session?.currentPath === "/"}
+                      className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Go up (peer)"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 16 16" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12V4M4 8l4-4 4 4" />
+                      </svg>
+                    </button>
+                    <PathBar
+                      path={peerPane.session?.currentPath ?? ""}
+                      busy={peerPane.isBusy}
+                      onNavigateTo={(p) => { peerPane.navigate(p); }}
+                    />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); peerPane.handleRefresh(); }}
+                      disabled={peerPane.isBusy}
+                      className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30"
+                      title="Refresh (peer)"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                  </>
+                )}
               </div>
 
-              {leftPaneMode === "local" ? (
+              {/* Left pane body */}
+              {leftPaneIsLocal ? (
                 <LocalFileBrowser
                   onSelectedChange={setLocalSelected}
                   onPathChange={setLocalCurrentPath}
@@ -336,69 +357,17 @@ export default function SftpBrowser({ sessionId }: Props) {
                 />
               ) : (
                 <div className="flex flex-col flex-1 min-h-0" onClick={() => setActivePane("local")}>
-                  {/* Peer session header */}
-                  <div className="flex items-center gap-2 px-3 py-2 border-b border-stroke-subtle bg-surface-1 shrink-0">
-                    <select
-                      value={peerSessionId ?? ""}
-                      onChange={(e) => { setPeerSessionId(e.target.value || null); }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex-1 min-w-0 text-xs bg-surface-2 border border-stroke-subtle rounded px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-accent/50"
-                    >
-                      <option value="">
-                        {otherSessions.length === 0 ? "Open another server first…" : "Select server…"}
-                      </option>
-                      {otherSessions.map((s) => (
-                        <option key={s.id} value={s.id}>{s.serverName}</option>
-                      ))}
-                    </select>
-                    {validPeer && (
-                      <>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); peerPane.handleUp(); }}
-                          disabled={peerPane.isBusy || peerPane.session?.currentPath === "/"}
-                          className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                          title="Go up (peer)"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 16 16" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12V4M4 8l4-4 4 4" />
-                          </svg>
-                        </button>
-                        <PathBar
-                          path={peerPane.session?.currentPath ?? ""}
-                          busy={peerPane.isBusy}
-                          onNavigateTo={(p) => { peerPane.navigate(p); }}
-                        />
-                        <button
-                          onClick={(e) => { e.stopPropagation(); peerPane.handleRefresh(); }}
-                          disabled={peerPane.isBusy}
-                          className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30"
-                          title="Refresh (peer)"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                          </svg>
-                        </button>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Peer pane body */}
-                  {!peerSessionId ? (
+                  {!validPeer ? (
                     <div className="flex-1 flex items-center justify-center text-muted text-sm px-6 text-center">
-                      {otherSessions.length === 0
-                        ? "Open another server's SFTP to enable remote-to-remote transfers"
-                        : "Select a server above to browse"}
+                      {peerPane.session?.status === "connecting"
+                        ? "Connecting…"
+                        : peerPane.session?.status === "error"
+                          ? (peerPane.session.errorMessage ?? "Connection error")
+                          : otherSessions.length === 0
+                            ? "Open another server's SFTP to enable remote-to-remote transfers"
+                            : "Session unavailable"}
                     </div>
-                  ) : peerPane.session?.status === "connecting" ? (
-                    <div className="flex-1 flex items-center justify-center text-muted text-sm">
-                      Connecting…
-                    </div>
-                  ) : peerPane.session?.status === "error" ? (
-                    <div className="flex-1 flex items-center justify-center text-muted text-sm px-6 text-center">
-                      {peerPane.session.errorMessage ?? "Connection error"}
-                    </div>
-                  ) : validPeer ? (
+                  ) : (
                     <>
                       {peerPane.confirmingDelete && (
                         <DeleteConfirmBanner
@@ -449,14 +418,14 @@ export default function SftpBrowser({ sessionId }: Props) {
                         onChmod={peerPane.handleChmod}
                       />
                     </>
-                  ) : null}
+                  )}
                 </div>
               )}
             </div>
 
             {/* Transfer strip */}
             <div className="w-10 shrink-0 flex flex-col items-center justify-center gap-3 bg-surface-2 border-r border-stroke-subtle">
-              {leftPaneMode === "local" ? (
+              {leftPaneIsLocal ? (
                 <>
                   <button
                     onClick={handleUploadFromLocal}
