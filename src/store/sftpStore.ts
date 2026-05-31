@@ -14,6 +14,8 @@ export interface SftpSession {
   entries: FileEntry[];
   loadingEntries: boolean;
   errorMessage?: string;
+  /** Hidden sessions are not shown as tabs — used for the SFTP split-pane peer. */
+  hidden?: boolean;
 }
 
 const sessionUnlisteners = new Map<string, UnlistenFn[]>();
@@ -24,6 +26,8 @@ interface SftpStore {
   activeSessionId: string | null;
 
   openSession: (serverId: string, serverName: string) => Promise<string>;
+  /** Opens a session that is not added to the tab bar. */
+  openHiddenSession: (serverId: string, serverName: string) => Promise<string>;
   closeSession: (sessionId: string) => Promise<void>;
   reconnectSession: (sessionId: string) => Promise<void>;
   setActive: (sessionId: string) => void;
@@ -104,6 +108,63 @@ export const useSftpStore = create<SftpStore>((set, get) => ({
         },
       ],
       activeSessionId: sessionId,
+    }));
+
+    try {
+      await sftpCommands.openSftpSession(serverId, sessionId);
+    } catch {
+      teardown(sessionId);
+      set((state) => dropFromState(state, sessionId));
+    }
+
+    return sessionId;
+  },
+
+  openHiddenSession: async (serverId, serverName) => {
+    const sessionId = crypto.randomUUID();
+
+    const unlisteners = await Promise.all([
+      listen<string>(`sftp:status:${sessionId}`, ({ payload }) => {
+        if (payload === "connected") {
+          set((state) => ({
+            sessions: state.sessions.map((s) =>
+              s.id === sessionId ? { ...s, status: "connected" } : s,
+            ),
+          }));
+          get().navigateTo(sessionId, "").catch(() => {});
+        }
+      }),
+
+      listen<null>(`sftp:closed:${sessionId}`, () => {
+        get().removeSession(sessionId);
+      }),
+
+      listen<string>(`sftp:error:${sessionId}`, ({ payload }) => {
+        set((state) => ({
+          sessions: state.sessions.map((s) =>
+            s.id === sessionId ? { ...s, status: "error", errorMessage: payload } : s,
+          ),
+        }));
+      }),
+    ]);
+
+    sessionUnlisteners.set(sessionId, unlisteners);
+
+    set((state) => ({
+      sessions: [
+        ...state.sessions,
+        {
+          id: sessionId,
+          serverId,
+          serverName,
+          status: "connecting",
+          currentPath: "~",
+          entries: [],
+          loadingEntries: false,
+          hidden: true,
+        },
+      ],
+      // activeSessionId intentionally not updated — hidden sessions don't steal tab focus
     }));
 
     try {

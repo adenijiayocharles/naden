@@ -99,7 +99,7 @@ export default function AppShell() {
   const terminalClose = useTerminalStore((s) => s.closeSession);
   const terminalReorder = useTerminalStore((s) => s.reorderSessions);
 
-  const sftpSessions = useSftpStore((s) => s.sessions);
+  const sftpSessions = useSftpStore((s) => s.sessions.filter((s) => !s.hidden));
   const sftpActiveId = useSftpStore((s) => s.activeSessionId);
   const sftpSetActive = useSftpStore((s) => s.setActive);
   const sftpClose = useSftpStore((s) => s.closeSession);

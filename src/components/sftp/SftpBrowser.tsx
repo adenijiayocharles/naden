@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSftpStore } from "../../store/sftpStore";
 import { useServerStore } from "../../store/serverStore";
 import { sftpCommands } from "../../lib/tauriCommands";
@@ -21,7 +21,7 @@ interface Props {
 export default function SftpBrowser({ sessionId }: Props) {
   const closeSession = useSftpStore((s) => s.closeSession);
   const reconnectSession = useSftpStore((s) => s.reconnectSession);
-  const openSftpSession = useSftpStore((s) => s.openSession);
+  const openHiddenSession = useSftpStore((s) => s.openHiddenSession);
   const allSessions = useSftpStore((s) => s.sessions);
   const allServers = useServerStore((s) => s.servers);
 
@@ -51,7 +51,7 @@ export default function SftpBrowser({ sessionId }: Props) {
   const [crossTransferBusy, setCrossTransferBusy] = useState(false);
   const [crossTransferProgress, setCrossTransferProgress] = useState<string | null>(null);
 
-  // Fall back to local if the peer session closes externally
+  // Reset to local if the peer session is removed from the store externally
   useEffect(() => {
     if (!peerSessionId) return;
     if (!allSessions.some((s) => s.id === peerSessionId)) {
@@ -60,33 +60,39 @@ export default function SftpBrowser({ sessionId }: Props) {
     }
   }, [allSessions, peerSessionId]);
 
+  // Close the hidden peer session when this SftpBrowser unmounts
+  const peerSessionIdRef = useRef<string | null>(null);
+  peerSessionIdRef.current = peerSessionId;
+  const closeSessionRef = useRef(closeSession);
+  closeSessionRef.current = closeSession;
+  useEffect(() => {
+    return () => {
+      const id = peerSessionIdRef.current;
+      if (id) void closeSessionRef.current(id);
+    };
+  }, []);
+
   const leftPaneIsLocal = leftPaneSelection === "local";
   // When no peer session is open yet, fall back to own sessionId so the hook stays valid
   const effectivePeerId = peerSessionId ?? sessionId;
 
   const handleLeftPaneChange = async (value: string) => {
+    // Close any existing peer session before opening a new one
+    const prevId = peerSessionId;
+    setPeerSessionId(null);
     setLeftPaneSelection(value);
     setActivePane("local");
-    if (value === "local") {
-      setPeerSessionId(null);
-      return;
-    }
-    const serverId = value;
-    // Reuse an already-open session for this server if one exists
-    const existing = allSessions.find((s) => s.serverId === serverId);
-    if (existing) {
-      setPeerSessionId(existing.id);
-      return;
-    }
-    // Otherwise open a new session
-    const server = allServers.find((s) => s.id === serverId);
+    if (prevId) void closeSession(prevId);
+
+    if (value === "local") return;
+
+    const server = allServers.find((s) => s.id === value);
     if (!server) return;
     try {
-      const newId = await openSftpSession(serverId, server.displayName);
+      const newId = await openHiddenSession(value, server.displayName);
       setPeerSessionId(newId);
     } catch {
       setLeftPaneSelection("local");
-      setPeerSessionId(null);
     }
   };
 
