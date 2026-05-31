@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useSftpStore } from "../../store/sftpStore";
+import { sftpCommands } from "../../lib/tauriCommands";
+import { formatError } from "../../lib/errors";
 import type { SortKey, SortDir } from "./SftpFileList";
 import SftpFileList from "./SftpFileList";
 import SftpToolbar, { PathBar } from "./SftpToolbar";
@@ -18,25 +20,40 @@ interface Props {
 export default function SftpBrowser({ sessionId }: Props) {
   const closeSession = useSftpStore((s) => s.closeSession);
   const reconnectSession = useSftpStore((s) => s.reconnectSession);
+  const allSessions = useSftpStore((s) => s.sessions);
 
   // Viewing options — separate state per pane
-  const [showHidden, setShowHidden] = useState(true);       // remote
-  const [showHiddenLocal, setShowHiddenLocal] = useState(true); // local
+  const [showHidden, setShowHidden] = useState(true);
+  const [showHiddenLocal, setShowHiddenLocal] = useState(true);
+  const [showHiddenPeer, setShowHiddenPeer] = useState(true);
   const [localNewFolderTrigger, setLocalNewFolderTrigger] = useState(0);
   const [localNewFileTrigger, setLocalNewFileTrigger] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [sortKeyPeer, setSortKeyPeer] = useState<SortKey>("name");
+  const [sortDirPeer, setSortDirPeer] = useState<SortDir>("asc");
 
-  // Local pane state
+  // Pane layout state
   const [showLocalPane, setShowLocalPane] = useState(false);
+  const [leftPaneMode, setLeftPaneMode] = useState<"local" | "remote">("local");
+  const [peerSessionId, setPeerSessionId] = useState<string | null>(null);
   const [localSelected, setLocalSelected] = useState<string[]>([]);
   const [localCurrentPath, setLocalCurrentPath] = useState("");
   const [activePane, setActivePane] = useState<"local" | "remote">("remote");
   const [remoteDragCount, setRemoteDragCount] = useState(0);
 
+  // Cross-session transfer state
+  const [crossTransferBusy, setCrossTransferBusy] = useState(false);
+  const [crossTransferProgress, setCrossTransferProgress] = useState<string | null>(null);
+
   const handleSort = (key: SortKey) => {
     if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir("asc"); }
+  };
+
+  const handlePeerSort = (key: SortKey) => {
+    if (key === sortKeyPeer) setSortDirPeer((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKeyPeer(key); setSortDirPeer("asc"); }
   };
 
   const {
@@ -103,11 +120,116 @@ export default function SftpBrowser({ sessionId }: Props) {
     showLocalPane,
   });
 
+  // Peer remote pane — always instantiated (hooks can't be conditional).
+  // When peerSessionId is null we fall back to sessionId so the hook is valid,
+  // but we never render or interact with peerPane in that state.
+  const effectivePeerId = peerSessionId ?? sessionId;
+  const peerPane = useRemotePane({
+    sessionId: effectivePeerId,
+    showHidden: showHiddenPeer,
+    sortKey: sortKeyPeer,
+    sortDir: sortDirPeer,
+    localCurrentPath: "",
+    localSelected: [],
+    activePane: "remote",
+    showLocalPane: false,
+  });
+
   if (!session) return null;
+
+  // A peer is valid when it's a different connected session
+  const validPeer = !!peerSessionId && peerSessionId !== sessionId && !!peerPane.session;
+  const otherSessions = allSessions.filter((s) => s.id !== sessionId);
+
+  // ── Transfer capability flags ──────────────────────────────────────────────
+
+  const canUploadFromLocal = activePane === "local" && localSelected.length > 0 && !isBusy;
+  const canDownloadToLocal = activePane === "remote" && selectedEntries.some((e) => !e.isDir) && !!localCurrentPath && !isBusy;
+
+  const canCopyPeerToRemote =
+    validPeer &&
+    peerPane.selectedEntries.some((e) => !e.isDir) &&
+    !crossTransferBusy &&
+    !isBusy;
+  const canCopyRemoteToPeer =
+    validPeer &&
+    selectedEntries.some((e) => !e.isDir) &&
+    !crossTransferBusy &&
+    !peerPane.isBusy;
+
+  // ── Cross-session transfer handlers ───────────────────────────────────────
+
+  const handleCopyPeerToRemote = async () => {
+    if (!session || !peerPane.session) return;
+    const files = peerPane.selectedEntries.filter((e) => !e.isDir);
+    if (files.length === 0) return;
+    setCrossTransferBusy(true);
+    setCrossTransferProgress(null);
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setCrossTransferProgress(
+          files.length > 1
+            ? `Copying ${file.name} (${i + 1}/${files.length})…`
+            : `Copying ${file.name}…`,
+        );
+        await sftpCommands.crossCopySftpFiles(
+          effectivePeerId,
+          [file.path],
+          sessionId,
+          session.currentPath,
+        );
+      }
+      setCrossTransferProgress(null);
+      handleRefresh();
+    } catch (e) {
+      setError(formatError(e));
+      setCrossTransferProgress(null);
+    } finally {
+      setCrossTransferBusy(false);
+    }
+  };
+
+  const handleCopyRemoteToPeer = async () => {
+    if (!session || !peerPane.session) return;
+    const files = selectedEntries.filter((e) => !e.isDir);
+    if (files.length === 0) return;
+    setCrossTransferBusy(true);
+    setCrossTransferProgress(null);
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setCrossTransferProgress(
+          files.length > 1
+            ? `Copying ${file.name} (${i + 1}/${files.length})…`
+            : `Copying ${file.name}…`,
+        );
+        await sftpCommands.crossCopySftpFiles(
+          sessionId,
+          [file.path],
+          effectivePeerId,
+          peerPane.session.currentPath,
+        );
+      }
+      setCrossTransferProgress(null);
+      peerPane.handleRefresh();
+    } catch (e) {
+      setError(formatError(e));
+      setCrossTransferProgress(null);
+    } finally {
+      setCrossTransferBusy(false);
+    }
+  };
+
+  // ── Toolbar handler wrappers ───────────────────────────────────────────────
 
   const handleNewFolder = () => {
     if (showLocalPane && activePane === "local") {
-      setLocalNewFolderTrigger((n) => n + 1);
+      if (leftPaneMode === "local") {
+        setLocalNewFolderTrigger((n) => n + 1);
+      } else {
+        peerPane.handleNewFolder();
+      }
     } else {
       handleRemoteNewFolder();
     }
@@ -115,7 +237,11 @@ export default function SftpBrowser({ sessionId }: Props) {
 
   const handleNewFile = () => {
     if (showLocalPane && activePane === "local") {
-      setLocalNewFileTrigger((n) => n + 1);
+      if (leftPaneMode === "local") {
+        setLocalNewFileTrigger((n) => n + 1);
+      } else {
+        peerPane.handleNewFile();
+      }
     } else {
       handleRemoteNewFile();
     }
@@ -126,11 +252,29 @@ export default function SftpBrowser({ sessionId }: Props) {
     handleSelect(path, meta, shift);
   };
 
+  const handlePeerSelectWithPane = (path: string, meta: boolean, shift: boolean) => {
+    setActivePane("local");
+    peerPane.handleSelect(path, meta, shift);
+  };
+
+  const currentShowHidden =
+    showLocalPane && activePane === "local"
+      ? leftPaneMode === "local"
+        ? showHiddenLocal
+        : showHiddenPeer
+      : showHidden;
+
+  const handleToggleHidden = () => {
+    if (showLocalPane && activePane === "local") {
+      if (leftPaneMode === "local") setShowHiddenLocal((v) => !v);
+      else setShowHiddenPeer((v) => !v);
+    } else {
+      setShowHidden((v) => !v);
+    }
+  };
+
   const isConnecting = session.status === "connecting";
   const isError = session.status === "error";
-
-  const canUploadFromLocal = activePane === "local" && localSelected.length > 0 && !isBusy;
-  const canDownloadToLocal = activePane === "remote" && selectedEntries.some((e) => !e.isDir) && !!localCurrentPath && !isBusy;
 
   return (
     <div className="relative h-full w-full flex flex-col bg-surface-1">
@@ -141,11 +285,8 @@ export default function SftpBrowser({ sessionId }: Props) {
         hasClipboard={clipboard !== null}
         clipboardMode={clipboard?.mode ?? null}
         onPaste={handlePaste}
-        showHidden={showLocalPane && activePane === "local" ? showHiddenLocal : showHidden}
-        onToggleHidden={() => {
-          if (showLocalPane && activePane === "local") setShowHiddenLocal((v) => !v);
-          else setShowHidden((v) => !v);
-        }}
+        showHidden={currentShowHidden}
+        onToggleHidden={handleToggleHidden}
         busy={isBusy}
         onNavigateTo={(path) => { navigate(path); }}
         onNavigateUp={handleUp}
@@ -162,43 +303,206 @@ export default function SftpBrowser({ sessionId }: Props) {
       />
 
       <div className="flex flex-1 min-h-0">
-        {/* Local pane */}
+        {/* Left pane */}
         {showLocalPane && (
           <>
             <div className="flex-1 min-w-0 border-r border-stroke-subtle flex flex-col">
-              <LocalFileBrowser
-                onSelectedChange={setLocalSelected}
-                onPathChange={setLocalCurrentPath}
-                onActivate={() => setActivePane("local")}
-                showHidden={showHiddenLocal}
-                newFolderTrigger={localNewFolderTrigger}
-                newFileTrigger={localNewFileTrigger}
-                onDropRemotePaths={handleDownloadPaths}
-              />
+              {/* Mode toggle pill */}
+              <div className="flex items-center gap-1 px-3 py-1.5 border-b border-stroke-subtle bg-surface-2 shrink-0">
+                <span className="text-xs text-muted mr-1.5">Left pane:</span>
+                <button
+                  onClick={() => setLeftPaneMode("local")}
+                  className={`text-xs px-2.5 py-0.5 rounded-full transition-colors ${leftPaneMode === "local" ? "bg-surface-4 text-white" : "text-muted hover:text-white/80"}`}
+                >
+                  Local
+                </button>
+                <button
+                  onClick={() => setLeftPaneMode("remote")}
+                  className={`text-xs px-2.5 py-0.5 rounded-full transition-colors ${leftPaneMode === "remote" ? "bg-surface-4 text-white" : "text-muted hover:text-white/80"}`}
+                >
+                  Remote
+                </button>
+              </div>
+
+              {leftPaneMode === "local" ? (
+                <LocalFileBrowser
+                  onSelectedChange={setLocalSelected}
+                  onPathChange={setLocalCurrentPath}
+                  onActivate={() => setActivePane("local")}
+                  showHidden={showHiddenLocal}
+                  newFolderTrigger={localNewFolderTrigger}
+                  newFileTrigger={localNewFileTrigger}
+                  onDropRemotePaths={handleDownloadPaths}
+                />
+              ) : (
+                <div className="flex flex-col flex-1 min-h-0" onClick={() => setActivePane("local")}>
+                  {/* Peer session header */}
+                  <div className="flex items-center gap-2 px-3 py-2 border-b border-stroke-subtle bg-surface-1 shrink-0">
+                    <select
+                      value={peerSessionId ?? ""}
+                      onChange={(e) => { setPeerSessionId(e.target.value || null); }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex-1 min-w-0 text-xs bg-surface-2 border border-stroke-subtle rounded px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-accent/50"
+                    >
+                      <option value="">
+                        {otherSessions.length === 0 ? "Open another server first…" : "Select server…"}
+                      </option>
+                      {otherSessions.map((s) => (
+                        <option key={s.id} value={s.id}>{s.serverName}</option>
+                      ))}
+                    </select>
+                    {validPeer && (
+                      <>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); peerPane.handleUp(); }}
+                          disabled={peerPane.isBusy || peerPane.session?.currentPath === "/"}
+                          className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Go up (peer)"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 16 16" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12V4M4 8l4-4 4 4" />
+                          </svg>
+                        </button>
+                        <PathBar
+                          path={peerPane.session?.currentPath ?? ""}
+                          busy={peerPane.isBusy}
+                          onNavigateTo={(p) => { peerPane.navigate(p); }}
+                        />
+                        <button
+                          onClick={(e) => { e.stopPropagation(); peerPane.handleRefresh(); }}
+                          disabled={peerPane.isBusy}
+                          className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30"
+                          title="Refresh (peer)"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Peer pane body */}
+                  {!peerSessionId ? (
+                    <div className="flex-1 flex items-center justify-center text-muted text-sm px-6 text-center">
+                      {otherSessions.length === 0
+                        ? "Open another server's SFTP to enable remote-to-remote transfers"
+                        : "Select a server above to browse"}
+                    </div>
+                  ) : peerPane.session?.status === "connecting" ? (
+                    <div className="flex-1 flex items-center justify-center text-muted text-sm">
+                      Connecting…
+                    </div>
+                  ) : peerPane.session?.status === "error" ? (
+                    <div className="flex-1 flex items-center justify-center text-muted text-sm px-6 text-center">
+                      {peerPane.session.errorMessage ?? "Connection error"}
+                    </div>
+                  ) : validPeer ? (
+                    <>
+                      {peerPane.confirmingDelete && (
+                        <DeleteConfirmBanner
+                          count={peerPane.selected.length}
+                          onConfirm={peerPane.commitDelete}
+                          onCancel={() => { peerPane.setConfirmingDelete(false); }}
+                        />
+                      )}
+                      {peerPane.creatingFolder && (
+                        <InlineCreateInput
+                          label="New folder:"
+                          placeholder="folder-name"
+                          onCommit={peerPane.commitNewFolder}
+                          onCancel={() => { peerPane.setCreatingFolder(false); }}
+                        />
+                      )}
+                      {peerPane.creatingFile && (
+                        <InlineCreateInput
+                          label="New file:"
+                          placeholder="filename.txt"
+                          onCommit={peerPane.commitNewFile}
+                          onCancel={() => { peerPane.setCreatingFile(false); }}
+                        />
+                      )}
+                      {peerPane.error && (
+                        <ErrorBanner error={peerPane.error} onDismiss={() => { peerPane.setError(null); }} />
+                      )}
+                      <SftpFileList
+                        entries={peerPane.visibleEntries}
+                        selected={peerPane.selected}
+                        renaming={peerPane.renaming}
+                        renameValue={peerPane.renameValue}
+                        sortKey={sortKeyPeer}
+                        sortDir={sortDirPeer}
+                        onSort={handlePeerSort}
+                        onSelect={handlePeerSelectWithPane}
+                        onNavigate={peerPane.handleNavigateEntry}
+                        hasClipboard={peerPane.clipboard !== null}
+                        onRenameStart={peerPane.handleRenameStart}
+                        onRenameChange={peerPane.setRenameValue}
+                        onRenameCommit={peerPane.commitRename}
+                        onRenameCancel={() => { peerPane.setRenaming(null); }}
+                        onCut={peerPane.handleCut}
+                        onCopy={peerPane.handleCopy}
+                        onPaste={peerPane.handlePaste}
+                        onDelete={peerPane.handleDelete}
+                        onEdit={peerPane.handleOpenEdit}
+                        onChmod={peerPane.handleChmod}
+                      />
+                    </>
+                  ) : null}
+                </div>
+              )}
             </div>
 
             {/* Transfer strip */}
             <div className="w-10 shrink-0 flex flex-col items-center justify-center gap-3 bg-surface-2 border-r border-stroke-subtle">
-              <button
-                onClick={handleUploadFromLocal}
-                disabled={!canUploadFromLocal}
-                title="Upload selected local files to remote"
-                className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-4 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 8h10M9 4l4 4-4 4" />
-                </svg>
-              </button>
-              <button
-                onClick={handleDownloadToLocal}
-                disabled={!canDownloadToLocal}
-                title="Download selected remote files to local"
-                className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-4 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M13 8H3M7 4L3 8l4 4" />
-                </svg>
-              </button>
+              {leftPaneMode === "local" ? (
+                <>
+                  <button
+                    onClick={handleUploadFromLocal}
+                    disabled={!canUploadFromLocal}
+                    title="Upload selected local files to remote"
+                    className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-4 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 8h10M9 4l4 4-4 4" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={handleDownloadToLocal}
+                    disabled={!canDownloadToLocal}
+                    title="Download selected remote files to local"
+                    className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-4 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M13 8H3M7 4L3 8l4 4" />
+                    </svg>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => { void handleCopyPeerToRemote(); }}
+                    disabled={!canCopyPeerToRemote}
+                    title="Copy selected peer files here"
+                    className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-4 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 8h10M9 4l4 4-4 4" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => { void handleCopyRemoteToPeer(); }}
+                    disabled={!canCopyRemoteToPeer}
+                    title="Copy selected files to peer"
+                    className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-4 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M13 8H3M7 4L3 8l4 4" />
+                    </svg>
+                  </button>
+                </>
+              )}
             </div>
           </>
         )}
@@ -277,13 +581,13 @@ export default function SftpBrowser({ sessionId }: Props) {
       {error && <ErrorBanner error={error} onDismiss={() => setError(null)} />}
 
       {/* Transfer progress */}
-      {transferProgress && (
+      {(transferProgress ?? crossTransferProgress) && (
         <div className="px-4 py-2 bg-accent/5 border-b border-stroke-subtle flex items-center gap-3 text-xs text-muted">
           <svg className="w-3 h-3 animate-spin text-accent-fg shrink-0" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
-          {transferProgress}
+          {transferProgress ?? crossTransferProgress}
         </div>
       )}
 
@@ -341,7 +645,7 @@ export default function SftpBrowser({ sessionId }: Props) {
         </div> {/* end remote pane */}
       </div> {/* end flex row */}
 
-      {/* Chmod dialog */}
+      {/* Primary chmod dialog */}
       <ChmodDialog
         target={chmodTarget}
         mode={chmodMode}
@@ -350,6 +654,18 @@ export default function SftpBrowser({ sessionId }: Props) {
         onApply={commitChmod}
         onCancel={cancelChmod}
       />
+
+      {/* Peer chmod dialog */}
+      {validPeer && (
+        <ChmodDialog
+          target={peerPane.chmodTarget}
+          mode={peerPane.chmodMode}
+          disabled={peerPane.isBusy}
+          onModeChange={peerPane.setChmodMode}
+          onApply={peerPane.commitChmod}
+          onCancel={peerPane.cancelChmod}
+        />
+      )}
 
       {isConnecting && (
         <ConnectingOverlay
