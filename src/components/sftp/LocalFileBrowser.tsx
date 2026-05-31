@@ -177,7 +177,10 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
   };
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
-  const visibleEntries = showHidden ? entries : entries.filter((e) => !e.name.startsWith("."));
+  const visibleEntries = useMemo(
+    () => (showHidden ? entries : entries.filter((e) => !e.name.startsWith("."))),
+    [entries, showHidden],
+  );
   const isDragOver = dropCount > 0;
 
   const handleDragStart = useCallback((entry: LocalFileEntry, e: React.DragEvent) => {
