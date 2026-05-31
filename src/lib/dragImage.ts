@@ -16,7 +16,15 @@ export function setDragImage(e: DragEvent | React.DragEvent, name: string, count
     "white-space:nowrap", "pointer-events:none",
     "box-shadow:0 4px 12px rgba(0,0,0,0.5)",
   ].join(";");
-  el.innerHTML = `${multi ? MULTI_ICON : FILE_ICON}<span>${label}</span>`;
+  const icon = document.createElement("span");
+  icon.setAttribute("aria-hidden", "true");
+  // SVG literals are hardcoded constants — not user-controlled.
+  // eslint-disable-next-line no-unsanitized/property
+  icon.innerHTML = multi ? MULTI_ICON : FILE_ICON;
+  const text = document.createElement("span");
+  text.textContent = label;
+  el.appendChild(icon);
+  el.appendChild(text);
   document.body.appendChild(el);
 
   e.dataTransfer?.setDragImage(el, -12, -12);

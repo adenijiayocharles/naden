@@ -7,11 +7,15 @@ use tauri::Emitter;
 /// Extensions (lowercase, without leading dot) that are safe to open in the
 /// user's default text editor via `open`/`xdg-open`. Files with no extension
 /// are also permitted (treated as plain text).
+///
+/// Shell and interpreter extensions are intentionally excluded: opening a
+/// `.sh`, `.py`, `.rb` etc. file with the system default handler can execute
+/// it directly depending on the user's file associations, which would allow a
+/// malicious SFTP server to run arbitrary code on the local machine.
 const EDIT_ALLOWED_EXTENSIONS: &[&str] = &[
     "txt",
     "md",
     "rs",
-    "py",
     "js",
     "ts",
     "tsx",
@@ -20,9 +24,6 @@ const EDIT_ALLOWED_EXTENSIONS: &[&str] = &[
     "toml",
     "yaml",
     "yml",
-    "sh",
-    "bash",
-    "zsh",
     "conf",
     "cfg",
     "ini",
@@ -34,8 +35,6 @@ const EDIT_ALLOWED_EXTENSIONS: &[&str] = &[
     "log",
     "csv",
     "go",
-    "rb",
-    "php",
     "c",
     "h",
     "cpp",
@@ -46,7 +45,7 @@ const EDIT_ALLOWED_EXTENSIONS: &[&str] = &[
 ];
 
 use crate::error::AppError;
-use crate::ssh::connection::{authenticate_session, AuthInfo};
+use crate::ssh::connection::{authenticate_session, verify_host_key, AuthInfo};
 use crate::ssh::jump_host::{self, JumpInfo};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -125,6 +124,8 @@ pub(crate) enum SftpMessage {
 struct WatchedFile {
     temp_path: String,
     last_mtime: Option<std::time::SystemTime>,
+    /// Instant of the last successful re-upload, used to debounce rapid saves.
+    last_upload_at: Option<std::time::Instant>,
 }
 
 struct SftpSessionHandle {
@@ -208,9 +209,10 @@ struct SessionGuard<'a> {
 
 impl Drop for SessionGuard<'_> {
     fn drop(&mut self) {
-        if let Ok(mut map) = self.sessions.lock() {
-            map.remove(self.id);
-        }
+        self.sessions
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(self.id);
     }
 }
 
@@ -248,6 +250,7 @@ fn run_sftp_session(
             .handshake()
             .map_err(|e| AppError::Ssh(format!("SSH handshake failed: {e}")))?;
 
+        verify_host_key(&session, &host, port)?;
         authenticate_session(&mut session, &username, &auth)?;
 
         if !session.authenticated() {
@@ -269,7 +272,15 @@ fn run_sftp_session(
                     break
                 }
                 Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                    // Skip the stat loop entirely when nothing is being edited.
+                    if watched.is_empty() {
+                        continue;
+                    }
                     // Poll watched files for changes and re-upload if mtime changed.
+                    // Uploads are debounced to at most once per 500 ms per file so
+                    // rapid-save editors (e.g. VS Code auto-save) don't flood the
+                    // SFTP thread with consecutive uploads.
+                    let debounce = std::time::Duration::from_millis(500);
                     for (remote_path, wf) in watched.iter_mut() {
                         let Ok(meta) = std::fs::metadata(&wf.temp_path) else {
                             continue;
@@ -277,19 +288,23 @@ fn run_sftp_session(
                         let Ok(mtime) = meta.modified() else { continue };
                         if wf.last_mtime.map_or(true, |prev| mtime > prev) {
                             wf.last_mtime = Some(mtime);
-                            if upload_file(
-                                &sftp,
-                                &wf.temp_path,
-                                remote_path,
-                                &session_id,
-                                &app_handle,
-                            )
-                            .is_ok()
-                            {
-                                let _ = app_handle.emit(
-                                    &format!("sftp:file_synced:{session_id}"),
-                                    remote_path.clone(),
-                                );
+                            let ready = wf.last_upload_at.map_or(true, |t| t.elapsed() >= debounce);
+                            if ready {
+                                wf.last_upload_at = Some(std::time::Instant::now());
+                                if upload_file(
+                                    &sftp,
+                                    &wf.temp_path,
+                                    remote_path,
+                                    &session_id,
+                                    &app_handle,
+                                )
+                                .is_ok()
+                                {
+                                    let _ = app_handle.emit(
+                                        &format!("sftp:file_synced:{session_id}"),
+                                        remote_path.clone(),
+                                    );
+                                }
                             }
                         }
                     }
@@ -506,6 +521,8 @@ fn upload_file(
 
     let mut buf = vec![0u8; 65536];
     let mut written: u64 = 0;
+    let throttle = std::time::Duration::from_millis(50);
+    let mut last_emit = std::time::Instant::now();
 
     loop {
         let n = local_file
@@ -518,12 +535,21 @@ fn upload_file(
             .write_all(&buf[..n])
             .map_err(|e| AppError::Ssh(format!("Upload failed: {e}")))?;
         written += n as u64;
-        if total > 0 {
+        let now = std::time::Instant::now();
+        if total > 0 && now.duration_since(last_emit) >= throttle {
+            last_emit = now;
             let _ = app_handle.emit(
                 &format!("sftp:upload_progress:{session_id}"),
                 serde_json::json!({ "written": written, "total": total }),
             );
         }
+    }
+    // Always emit a final event so the frontend reaches 100%.
+    if total > 0 {
+        let _ = app_handle.emit(
+            &format!("sftp:upload_progress:{session_id}"),
+            serde_json::json!({ "written": written, "total": total }),
+        );
     }
 
     Ok(())
@@ -597,6 +623,7 @@ fn open_edit(
         WatchedFile {
             temp_path: temp_path_str.clone(),
             last_mtime,
+            last_upload_at: None,
         },
     );
 
@@ -625,6 +652,8 @@ fn download_file(
     let result = (|| {
         let mut buf = vec![0u8; 65536];
         let mut read_bytes: u64 = 0;
+        let throttle = std::time::Duration::from_millis(50);
+        let mut last_emit = std::time::Instant::now();
 
         loop {
             let n = remote_file
@@ -637,12 +666,21 @@ fn download_file(
                 .write_all(&buf[..n])
                 .map_err(|e| AppError::Io(format!("write error: {e}")))?;
             read_bytes += n as u64;
-            if total > 0 {
+            let now = std::time::Instant::now();
+            if total > 0 && now.duration_since(last_emit) >= throttle {
+                last_emit = now;
                 let _ = app_handle.emit(
                     &format!("sftp:download_progress:{session_id}"),
                     serde_json::json!({ "read": read_bytes, "total": total }),
                 );
             }
+        }
+        // Always emit a final event so the frontend reaches 100%.
+        if total > 0 {
+            let _ = app_handle.emit(
+                &format!("sftp:download_progress:{session_id}"),
+                serde_json::json!({ "read": read_bytes, "total": total }),
+            );
         }
         Ok(())
     })();

@@ -190,7 +190,12 @@ pub async fn import_ssh_config(
 ) -> Result<Vec<ImportPreview>, AppError> {
     use tauri::Manager;
     let config_path = match path {
-        Some(p) => std::path::PathBuf::from(p),
+        Some(p) => {
+            // Caller-supplied paths must stay within the home directory to
+            // prevent the frontend from reading arbitrary filesystem paths.
+            crate::commands::local_commands::check_home_boundary(&p)
+                .map_err(|_| AppError::Ssh("SSH config path must be within home directory".into()))?
+        }
         None => app
             .path()
             .home_dir()

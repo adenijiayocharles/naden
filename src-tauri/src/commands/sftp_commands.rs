@@ -218,6 +218,12 @@ pub async fn cross_copy_sftp_file(
         let tmp = std::env::temp_dir().join("ssh-manager-xcopy").join(&unique);
         let _ = std::fs::create_dir_all(tmp.parent().unwrap_or(&std::env::temp_dir()));
         let tmp_str = tmp.to_string_lossy().into_owned();
+        // Reject dst_dir values that could escape via path components.
+        if dst_dir.split('/').any(|c| c == "..") {
+            return Err(AppError::Io(
+                "destination directory must not contain '..' components".into(),
+            ));
+        }
         let dst_path = format!("{}/{}", dst_dir.trim_end_matches('/'), filename);
 
         let (dl_tx, dl_rx) = tokio::sync::oneshot::channel();
