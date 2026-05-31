@@ -183,6 +183,9 @@ export const sftpCommands = {
 
   copySftpFile: (sessionId: string, src: string, dest: string) =>
     invoke<void>("copy_sftp_file", { sessionId, src, dest }),
+
+  crossCopySftpFiles: (srcSessionId: string, srcPaths: string[], dstSessionId: string, dstDir: string) =>
+    invoke<void>("cross_copy_sftp_file", { srcSessionId, srcPaths, dstSessionId, dstDir }),
 };
 
 export const clipboardCommands = {

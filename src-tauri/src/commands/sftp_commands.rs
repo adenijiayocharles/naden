@@ -194,3 +194,65 @@ pub async fn copy_sftp_file(
         reply,
     })
 }
+
+/// Transfer files between two different SFTP sessions.
+/// Downloads each file from the source session to a local temp file, then
+/// uploads to the destination session. Temp files are cleaned up on both
+/// success and failure.
+#[tauri::command]
+pub async fn cross_copy_sftp_file(
+    src_session_id: String,
+    src_paths: Vec<String>,
+    dst_session_id: String,
+    dst_dir: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    for src_path in src_paths {
+        let filename = std::path::Path::new(&src_path)
+            .file_name()
+            .ok_or_else(|| AppError::Io(format!("invalid source path: {src_path}")))?
+            .to_string_lossy()
+            .into_owned();
+
+        let unique = format!("{}-{}", uuid::Uuid::new_v4().simple(), filename);
+        let tmp = std::env::temp_dir().join("ssh-manager-xcopy").join(&unique);
+        let _ = std::fs::create_dir_all(tmp.parent().unwrap_or(&std::env::temp_dir()));
+        let tmp_str = tmp.to_string_lossy().into_owned();
+        let dst_path = format!("{}/{}", dst_dir.trim_end_matches('/'), filename);
+
+        let (dl_tx, dl_rx) = tokio::sync::oneshot::channel();
+        state.sftp_manager.send(
+            &src_session_id,
+            SftpMessage::DownloadFile {
+                remote_path: src_path,
+                local_path: tmp_str.clone(),
+                reply: dl_tx,
+            },
+        )?;
+        let dl_result = dl_rx
+            .await
+            .map_err(|_| AppError::Ssh("SFTP source session closed".into()))?;
+
+        if let Err(e) = dl_result {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(e);
+        }
+
+        let (ul_tx, ul_rx) = tokio::sync::oneshot::channel();
+        state.sftp_manager.send(
+            &dst_session_id,
+            SftpMessage::UploadFile {
+                local_path: tmp_str.clone(),
+                remote_path: dst_path,
+                reply: ul_tx,
+            },
+        )?;
+        let ul_result = ul_rx
+            .await
+            .map_err(|_| AppError::Ssh("SFTP destination session closed".into()))?;
+
+        let _ = std::fs::remove_file(&tmp);
+        ul_result?;
+    }
+    Ok(())
+}

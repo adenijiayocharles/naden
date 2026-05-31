@@ -85,6 +85,7 @@ pub fn run() {
             commands::sftp_commands::open_sftp_edit,
             commands::sftp_commands::close_sftp_edit,
             commands::sftp_commands::copy_sftp_file,
+            commands::sftp_commands::cross_copy_sftp_file,
             // Local filesystem
             commands::local_commands::get_local_home_dir,
             commands::local_commands::list_local_dir,
