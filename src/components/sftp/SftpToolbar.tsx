@@ -163,7 +163,7 @@ export default function SftpToolbar({
           <select
             value={leftPaneSelection}
             onChange={(e) => { onLeftPaneChange(e.target.value); }}
-            className="text-xs bg-surface-3 border border-stroke-subtle rounded px-2 py-0.5 text-white focus:outline-none focus:ring-1 focus:ring-accent/50 leading-none h-7"
+            className="text-xs bg-surface-3 border border-stroke-subtle rounded px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-accent/50 leading-none"
           >
             <option value="local">Local</option>
             {leftPaneServers.map((s) => (
