@@ -22,7 +22,12 @@ export default function SftpBrowser({ sessionId }: Props) {
   const closeSession = useSftpStore((s) => s.closeSession);
   const reconnectSession = useSftpStore((s) => s.reconnectSession);
   const openHiddenSession = useSftpStore((s) => s.openHiddenSession);
-  const allSessions = useSftpStore((s) => s.sessions);
+  // Targeted boolean — only changes when the peer session is added or removed,
+  // not on every entries/status update. Using allSessions (array) as a dep
+  // fires the effect on every store update and causes an update depth loop.
+  const peerSessionExists = useSftpStore((s) =>
+    peerSessionId !== null && s.sessions.some((sess) => sess.id === peerSessionId),
+  );
   const allServers = useServerStore((s) => s.servers);
 
   // Viewing options — separate state per pane
@@ -54,11 +59,11 @@ export default function SftpBrowser({ sessionId }: Props) {
   // Reset to local if the peer session is removed from the store externally
   useEffect(() => {
     if (!peerSessionId) return;
-    if (!allSessions.some((s) => s.id === peerSessionId)) {
+    if (!peerSessionExists) {
       setLeftPaneSelection("local");
       setPeerSessionId(null);
     }
-  }, [allSessions, peerSessionId]);
+  }, [peerSessionId, peerSessionExists]);
 
   // Close the hidden peer session when this SftpBrowser unmounts
   const peerSessionIdRef = useRef<string | null>(null);
@@ -73,8 +78,9 @@ export default function SftpBrowser({ sessionId }: Props) {
   }, []);
 
   const leftPaneIsLocal = leftPaneSelection === "local";
-  // When no peer session is open yet, fall back to own sessionId so the hook stays valid
-  const effectivePeerId = peerSessionId ?? sessionId;
+  // "__none__" sentinel: prevents the peer useRemotePane from subscribing to the
+  // primary session when no peer is open, which doubles subscription traffic.
+  const effectivePeerId = peerSessionId ?? "__none__";
 
   const handleLeftPaneChange = async (value: string) => {
     // Close any existing peer session before opening a new one
