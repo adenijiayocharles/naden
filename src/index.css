@@ -1,8 +1,6 @@
 @import "tailwindcss";
 
 html, body, #root { background: #0d0d0d; }
-@import "@fontsource-variable/manrope";
-
 @theme {
   /* Accent */
   --color-accent: #CDFF00;
@@ -30,7 +28,8 @@ html, body, #root { background: #0d0d0d; }
   --color-faint: #666666;
   --color-dim: #444444;
 
-  --font-sans: "Manrope Variable", -apple-system, "SF Pro Display", "SF Pro Text", BlinkMacSystemFont, system-ui, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, "Cascadia Code", "Fira Code", monospace;
 }
 
 @layer base {
@@ -42,6 +41,10 @@ html, body, #root { background: #0d0d0d; }
   html {
     font-size: 14px;
     font-family: var(--font-sans);
+  }
+
+  code, kbd, pre, .font-mono {
+    font-family: var(--font-mono);
   }
 
   /* Uniform 40 px height for all single-line form controls */

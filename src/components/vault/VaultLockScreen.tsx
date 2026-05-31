@@ -1,4 +1,5 @@
 import { useState } from "react";
+import serverIcon from "../../assets/server.png";
 import { useVaultStore } from "../../store/vaultStore";
 import { formatError } from "../../lib/errors";
 import Input from "../shared/Input";
@@ -42,7 +43,7 @@ export default function VaultLockScreen() {
     <div className="fixed inset-0 bg-black flex flex-col items-center justify-center z-50">
       <div className="w-full max-w-sm px-6">
         <div className="text-center mb-8">
-          <div className="text-5xl mb-4 text-accent">⬡</div>
+          <img src={serverIcon} alt="SSH Manager" className="w-12 h-12 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white mb-1">
             SSH <span className="text-accent">Manager</span>
           </h1>
