@@ -76,11 +76,15 @@ pub async fn is_setup(db: &SqlitePool) -> Result<bool, AppError> {
 /// Initialises the vault with a new master password. Returns the unlocked session key.
 pub async fn setup(db: &SqlitePool, password: &str) -> Result<Zeroizing<[u8; KEY_LEN]>, AppError> {
     let salt = generate_salt();
-    let key = derive_key(password, &salt);
+    let salt_b64 = STANDARD.encode(salt);
+    let password_owned = password.to_owned();
+    let key = tokio::task::spawn_blocking(move || derive_key(&password_owned, &salt))
+        .await
+        .map_err(|e| AppError::Vault(e.to_string()))?;
     let verification = verification_hash(&key);
 
     sqlx::query("INSERT OR REPLACE INTO vault_meta (key, value) VALUES ('pbkdf2_salt', ?)")
-        .bind(STANDARD.encode(salt))
+        .bind(salt_b64)
         .execute(db)
         .await?;
 
@@ -118,25 +122,38 @@ pub async fn verify(
         .decode(&stored_b64)
         .map_err(|e| AppError::Vault(e.to_string()))?;
 
-    // Try current round count first.
-    let key = derive_key(password, &salt);
-    if verification_hash(&key).ct_eq(stored.as_slice()).into() {
-        return Ok(Some(key));
-    }
+    // Run PBKDF2 on the blocking thread pool — 600k rounds would stall the async executor.
+    let password_owned = password.to_owned();
+    let (key, needs_rehash) = tokio::task::spawn_blocking(move || {
+        let key = derive_key_with_rounds(&password_owned, &salt, ROUNDS);
+        if bool::from(verification_hash(&key).ct_eq(stored.as_slice())) {
+            return (Some(key), false);
+        }
+        // Fall back to legacy round count to support vaults created before the upgrade.
+        let legacy_key = derive_key_with_rounds(&password_owned, &salt, LEGACY_ROUNDS);
+        if bool::from(verification_hash(&legacy_key).ct_eq(stored.as_slice())) {
+            // Password correct but legacy rounds; `key` (600k) is already derived, reuse it.
+            (Some(key), true)
+        } else {
+            (None, false)
+        }
+    })
+    .await
+    .map_err(|e| AppError::Vault(e.to_string()))?;
 
-    // Fall back to legacy round count to support vaults created before the upgrade.
-    let legacy_key = derive_key_with_rounds(password, &salt, LEGACY_ROUNDS);
-    if !bool::from(verification_hash(&legacy_key).ct_eq(stored.as_slice())) {
-        return Ok(None); // Wrong password.
-    }
+    let key = match key {
+        None => return Ok(None),
+        Some(k) => k,
+    };
 
-    // Correct password but legacy rounds — transparently re-hash at current strength.
-    // `key` was already derived above (600k rounds); reuse it rather than re-deriving.
-    let new_verification = verification_hash(&key);
-    sqlx::query("INSERT OR REPLACE INTO vault_meta (key, value) VALUES ('verification', ?)")
-        .bind(STANDARD.encode(new_verification))
-        .execute(db)
-        .await?;
+    if needs_rehash {
+        // Transparently upgrade the stored verification to the current round count.
+        let new_verification = verification_hash(&key);
+        sqlx::query("INSERT OR REPLACE INTO vault_meta (key, value) VALUES ('verification', ?)")
+            .bind(STANDARD.encode(new_verification))
+            .execute(db)
+            .await?;
+    }
 
     Ok(Some(key))
 }
