@@ -89,6 +89,7 @@ export default function SftpBrowser({ sessionId }: Props) {
     setPeerSessionId(null);
     setLeftPaneSelection(value);
     setActivePane("local");
+    setShowLocalPane(true);
     if (prevId) void closeSession(prevId);
 
     if (value === "local") return;
@@ -329,6 +330,9 @@ export default function SftpBrowser({ sessionId }: Props) {
         onToggleLocalPane={() => setShowLocalPane((v) => !v)}
         activePane={activePane}
         localSelectedCount={localSelected.length}
+        leftPaneSelection={leftPaneSelection}
+        onLeftPaneChange={(v) => { void handleLeftPaneChange(v); }}
+        leftPaneServers={otherServers}
       />
 
       <div className="flex flex-1 min-h-0">
@@ -336,52 +340,37 @@ export default function SftpBrowser({ sessionId }: Props) {
         {showLocalPane && (
           <>
             <div className="flex-1 min-w-0 border-r border-stroke-subtle flex flex-col">
-              {/* Unified left-pane header — always visible */}
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-stroke-subtle bg-surface-1 shrink-0">
-                <select
-                  value={leftPaneSelection}
-                  onChange={(e) => { void handleLeftPaneChange(e.target.value); }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="text-xs bg-surface-2 border border-stroke-subtle rounded px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-accent/50 shrink-0"
-                >
-                  <option value="local">Local</option>
-                  {otherServers.map((s) => (
-                    <option key={s.id} value={s.id}>{s.displayName}</option>
-                  ))}
-                </select>
-
-                {/* Peer navigation — only shown when a remote session is selected */}
-                {!leftPaneIsLocal && validPeer && (
-                  <>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); peerPane.handleUp(); }}
-                      disabled={peerPane.isBusy || peerPane.session?.currentPath === "/"}
-                      className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                      title="Go up (peer)"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 16 16" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12V4M4 8l4-4 4 4" />
-                      </svg>
-                    </button>
-                    <PathBar
-                      path={peerPane.session?.currentPath ?? ""}
-                      busy={peerPane.isBusy}
-                      onNavigateTo={(p) => { peerPane.navigate(p); }}
-                    />
-                    <button
-                      onClick={(e) => { e.stopPropagation(); peerPane.handleRefresh(); }}
-                      disabled={peerPane.isBusy}
-                      className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30"
-                      title="Refresh (peer)"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                    </button>
-                  </>
-                )}
-              </div>
+              {/* Peer navigation header — only shown when a remote session is active */}
+              {!leftPaneIsLocal && validPeer && (
+                <div className="flex items-center gap-2 px-3 py-2 border-b border-stroke-subtle bg-surface-1 shrink-0">
+                  <button
+                    onClick={peerPane.handleUp}
+                    disabled={peerPane.isBusy || peerPane.session?.currentPath === "/"}
+                    className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Go up (peer)"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 16 16" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12V4M4 8l4-4 4 4" />
+                    </svg>
+                  </button>
+                  <PathBar
+                    path={peerPane.session?.currentPath ?? ""}
+                    busy={peerPane.isBusy}
+                    onNavigateTo={(p) => { peerPane.navigate(p); }}
+                  />
+                  <button
+                    onClick={peerPane.handleRefresh}
+                    disabled={peerPane.isBusy}
+                    className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30"
+                    title="Refresh (peer)"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
+                </div>
+              )}
 
               {/* Left pane body */}
               {leftPaneIsLocal ? (

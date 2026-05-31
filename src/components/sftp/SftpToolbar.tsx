@@ -58,6 +58,11 @@ export function PathBar({ path, busy, onNavigateTo }: { path: string; busy: bool
   );
 }
 
+interface LeftPaneServer {
+  id: string;
+  displayName: string;
+}
+
 interface Props {
   currentPath: string;
   selectedCount: number;
@@ -80,6 +85,9 @@ interface Props {
   onToggleLocalPane: () => void;
   activePane?: "local" | "remote";
   localSelectedCount?: number;
+  leftPaneSelection: string;
+  onLeftPaneChange: (value: string) => void;
+  leftPaneServers: LeftPaneServer[];
 }
 
 function ToolbarBtn({
@@ -127,6 +135,9 @@ export default function SftpToolbar({
   onToggleLocalPane,
   activePane = "remote",
   localSelectedCount = 0,
+  leftPaneSelection,
+  onLeftPaneChange,
+  leftPaneServers,
 }: Props) {
   const hasSelection = selectedCount > 0;
   const canDownload = hasSelection && !selectedHasDir;
@@ -137,8 +148,8 @@ export default function SftpToolbar({
       <div className="h-12 flex items-center gap-1 px-2">
         <button
           onClick={onToggleLocalPane}
-          title={showLocalPane ? "Hide local pane" : "Show local files"}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${
+          title={showLocalPane ? "Hide left pane" : "Show left pane"}
+          className={`p-1.5 rounded transition-colors ${
             showLocalPane ? "text-white bg-surface-4" : "text-muted hover:text-white hover:bg-surface-4"
           }`}
         >
@@ -146,19 +157,18 @@ export default function SftpToolbar({
             <rect x="1" y="2" width="14" height="12" rx="1.5" />
             <path strokeLinecap="round" d="M6 2v12" />
           </svg>
-          Local
         </button>
 
-        {/* Active-pane indicator — only visible in split mode */}
-        {showLocalPane && (
-          <span className={`ml-1 px-2 py-0.5 rounded-full text-sm font-medium transition-colors ${
-            remoteActive
-              ? "bg-surface-4 text-secondary"
-              : "bg-accent/15 text-accent-fg"
-          }`}>
-            {remoteActive ? "Remote" : "Local"}
-          </span>
-        )}
+        <select
+          value={leftPaneSelection}
+          onChange={(e) => { onLeftPaneChange(e.target.value); }}
+          className="text-xs bg-surface-3 border border-stroke-subtle rounded px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-accent/50"
+        >
+          <option value="local">Local</option>
+          {leftPaneServers.map((s) => (
+            <option key={s.id} value={s.id}>{s.displayName}</option>
+          ))}
+        </select>
 
         {/* Remote controls — dimmed when local pane is focused */}
         <div className={`flex items-center gap-1 transition-opacity duration-150 ${remoteActive ? "" : "opacity-40"}`}>
