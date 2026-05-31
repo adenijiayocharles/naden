@@ -90,14 +90,15 @@ function SortIndicator({ active, dir }: { active: boolean; dir: SortDir }) {
 
 function ColHeader({ label, colKey, sortKey, sortDir, align = "left", className = "px-2", onSort }: {
   label: string; colKey: SortKey; sortKey: SortKey; sortDir: SortDir;
-  align?: "left" | "right"; className?: string; onSort: (k: SortKey) => void;
+  align?: "left" | "center" | "right"; className?: string; onSort: (k: SortKey) => void;
 }) {
   const active = sortKey === colKey;
+  const btnAlign = align === "right" ? "ml-auto" : align === "center" ? "mx-auto" : "";
   return (
-    <div className={`${className} py-2 font-medium text-xs uppercase tracking-wider text-${align}`}>
+    <div className={`${className} py-2 font-medium text-sm uppercase tracking-wider text-${align}`}>
       <button
         onClick={() => onSort(colKey)}
-        className={`flex items-center gap-0.5 transition-colors ${align === "right" ? "ml-auto" : ""} ${active ? "text-white" : "text-faint hover:text-muted"}`}
+        className={`flex items-center gap-0.5 transition-colors ${btnAlign} ${active ? "text-white" : "text-faint hover:text-muted"}`}
       >
         {label}
         <SortIndicator active={active} dir={sortDir} />
@@ -113,7 +114,7 @@ export function MenuItem({ onClick, danger, disabled, children }: {
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`w-full text-left px-3 py-1.5 text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+      className={`w-full text-left px-3 py-1.5 text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
         danger ? "text-red-400 hover:bg-red-950/40" : "text-secondary hover:bg-surface-4 hover:text-white"
       }`}
     >
@@ -154,7 +155,7 @@ export function ContextMenuPopup({ x, y, onClose, children }: {
   );
 }
 
-const GRID_COLS = "1fr 5rem 7rem 6rem";
+const GRID_COLS = "1fr 1fr 1fr 1fr";
 
 // NOTE: defined outside SftpFileList so it doesn't get recreated on every render.
 const Row = ({ index, style, entries, selectedSet, renaming, renameValue, dblClickRef, onSelect, onNavigate, onRenameStart, onRenameChange, onRenameCommit, onRenameCancel, onChmod, onContextMenu, onDragStart }: RowComponentProps<RowData>) => {
@@ -211,39 +212,39 @@ const Row = ({ index, style, entries, selectedSet, renaming, renameValue, dblCli
               if (e.key === "Escape") onRenameCancel();
             }}
             onBlur={onRenameCommit}
-            className="flex-1 h-6 bg-surface-3 border border-accent rounded px-1.5 text-xs text-white outline-none font-mono min-w-0"
+            className="flex-1 h-6 bg-surface-3 border border-accent rounded px-1.5 text-xs text-white outline-none min-w-0"
           />
         ) : (
-          <span className="truncate font-mono text-xs" title={entry.name}>{entry.name}</span>
+          <span className="truncate text-xs" title={entry.name}>{entry.name}</span>
         )}
         {entry.isSymlink && (
-          <span className="text-xs text-accent-fg opacity-70 shrink-0 font-mono" title="Symbolic link">@</span>
+          <span className="text-xs text-accent-fg opacity-70 shrink-0" title="Symbolic link">@</span>
         )}
       </div>
 
       {/* Size cell */}
-      <div className="px-2 flex items-center justify-end text-faint font-mono text-xs tabular-nums">
+      <div className="px-2 flex items-center justify-center text-faint text-xs tabular-nums">
         {formatSize(entry.size, entry.isDir)}
       </div>
 
       {/* Modified cell */}
-      <div className="px-2 flex items-center justify-end text-faint text-xs">
+      <div className="px-2 flex items-center justify-center text-faint text-xs">
         {formatDate(entry.modified)}
       </div>
 
       {/* Permissions cell */}
-      <div className="pl-2 pr-4 flex items-center justify-end">
+      <div className="pl-2 pr-4 flex items-center justify-center">
         {entry.permissions != null ? (
           <button
             onClick={(e) => { e.stopPropagation(); onChmod?.(entry.path, entry.permissions ?? 0o644); }}
-            className="font-mono text-xs text-faint hover:text-accent-fg transition-colors disabled:pointer-events-none"
+            className="text-xs text-faint hover:text-accent-fg transition-colors disabled:pointer-events-none"
             title="Click to change permissions"
             disabled={!onChmod}
           >
             {formatPermissions(entry.permissions)}
           </button>
         ) : (
-          <span className="font-mono text-xs text-dim">—</span>
+          <span className="text-xs text-dim">—</span>
         )}
       </div>
     </div>
@@ -313,9 +314,9 @@ export default function SftpFileList({
           style={{ gridTemplateColumns: GRID_COLS }}
         >
           <ColHeader label="NAME"     colKey="name"     sortKey={sortKey} sortDir={sortDir} className="px-2" onSort={onSort} />
-          <ColHeader label="SIZE"     colKey="size"     sortKey={sortKey} sortDir={sortDir} align="right" className="px-2" onSort={onSort} />
-          <ColHeader label="MODIFIED" colKey="modified" sortKey={sortKey} sortDir={sortDir} align="right" className="px-2" onSort={onSort} />
-          <div className="pl-2 pr-4 py-2 font-medium text-xs tracking-wider text-right">
+          <ColHeader label="SIZE"     colKey="size"     sortKey={sortKey} sortDir={sortDir} align="center" className="px-2" onSort={onSort} />
+          <ColHeader label="MODIFIED" colKey="modified" sortKey={sortKey} sortDir={sortDir} align="center" className="px-2" onSort={onSort} />
+          <div className="pl-2 pr-4 py-2 font-medium text-sm tracking-wider text-center">
             <span className="text-faint">PERMISSIONS</span>
           </div>
         </div>
@@ -332,7 +333,7 @@ export default function SftpFileList({
               <List
                 style={{ height: height ?? 0, width: width ?? 0 }}
                 rowCount={entries.length}
-                rowHeight={36}
+                rowHeight={40}
                 rowComponent={Row}
                 rowProps={rowData}
               />

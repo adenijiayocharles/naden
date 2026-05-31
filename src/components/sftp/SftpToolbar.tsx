@@ -24,15 +24,15 @@ export function PathBar({ path, busy, onNavigateTo }: { path: string; busy: bool
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
         onBlur={commit}
-        className="flex-1 h-6 bg-surface-3 border border-accent rounded px-2 text-xs text-white font-mono outline-none"
+        className="flex-1 h-7 bg-surface-3 border border-accent rounded px-2 text-sm text-white outline-none"
       />
     );
   }
 
   return (
-    <div className="flex items-center gap-0.5 min-w-0 font-mono text-xs overflow-hidden flex-1 cursor-text" onClick={() => { setInput(path); setEditing(true); }}>
+    <div className="flex items-center gap-0.5 min-w-0 text-sm overflow-hidden flex-1 cursor-text" onClick={() => { setInput(path); setEditing(true); }}>
       {busy && (
-        <svg className="w-3 h-3 animate-spin text-accent-fg shrink-0 mr-1" fill="none" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 animate-spin text-accent-fg shrink-0 mr-1" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
         </svg>
@@ -98,7 +98,7 @@ function ToolbarBtn({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs text-muted hover:text-white hover:bg-surface-4 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm text-muted hover:text-white hover:bg-surface-4 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
     >
       {children}
     </button>
@@ -134,15 +134,15 @@ export default function SftpToolbar({
 
   return (
     <div className="flex flex-col shrink-0 bg-surface-2 border-b border-stroke-subtle">
-      <div className="h-10 flex items-center gap-1 px-2">
+      <div className="h-12 flex items-center gap-1 px-2">
         <button
           onClick={onToggleLocalPane}
           title={showLocalPane ? "Hide local pane" : "Show local files"}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${
             showLocalPane ? "text-white bg-surface-4" : "text-muted hover:text-white hover:bg-surface-4"
           }`}
         >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
             <rect x="1" y="2" width="14" height="12" rx="1.5" />
             <path strokeLinecap="round" d="M6 2v12" />
           </svg>
@@ -151,7 +151,7 @@ export default function SftpToolbar({
 
         {/* Active-pane indicator — only visible in split mode */}
         {showLocalPane && (
-          <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
+          <span className={`ml-1 px-2 py-0.5 rounded-full text-sm font-medium transition-colors ${
             remoteActive
               ? "bg-surface-4 text-secondary"
               : "bg-accent/15 text-accent-fg"
@@ -162,15 +162,15 @@ export default function SftpToolbar({
 
         {/* Remote controls — dimmed when local pane is focused */}
         <div className={`flex items-center gap-1 transition-opacity duration-150 ${remoteActive ? "" : "opacity-40"}`}>
-          <div className="w-px h-4 bg-surface-4 mx-1" />
+          <div className="w-px h-5 bg-surface-4 mx-1" />
           <ToolbarBtn onClick={onNavigateUp} disabled={busy || currentPath === "/"} title="Up (remote)">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 12V4M4 8l4-4 4 4" />
             </svg>
           </ToolbarBtn>
 
           <ToolbarBtn onClick={onRefresh} disabled={busy} title="Refresh remote (⌘R)">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 8A5 5 0 113 8" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 4v4h-4" />
             </svg>
@@ -179,11 +179,11 @@ export default function SftpToolbar({
           <button
             onClick={onToggleHidden}
             title={showHidden ? "Hide dotfiles" : "Show hidden files"}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${
               showHidden ? "text-white bg-surface-4" : "text-muted hover:text-white hover:bg-surface-4"
             }`}
           >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
               {showHidden ? (
                 <>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" />
@@ -202,9 +202,9 @@ export default function SftpToolbar({
 
           {hasClipboard && (
             <>
-              <div className="w-px h-4 bg-surface-4 mx-1" />
+              <div className="w-px h-5 bg-surface-4 mx-1" />
               <ToolbarBtn onClick={onPaste} disabled={busy} title={`Paste ${clipboardMode === "copy" ? "(copy)" : "(move)"} here`}>
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
                   <rect x="2" y="4" width="10" height="11" rx="1" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1" />
                 </svg>
@@ -213,28 +213,28 @@ export default function SftpToolbar({
             </>
           )}
 
-          <div className="w-px h-4 bg-surface-4 mx-1" />
+          <div className="w-px h-5 bg-surface-4 mx-1" />
 
           <ToolbarBtn
             onClick={onUpload}
             disabled={remoteActive ? busy : busy || localSelectedCount === 0}
             title={remoteActive ? "Upload file to remote" : "Upload selected local files to remote"}
           >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 10V3M5 6l3-3 3 3M3 12h10" />
             </svg>
             Upload
           </ToolbarBtn>
 
           <ToolbarBtn onClick={onDownload} disabled={busy || !canDownload} title={remoteActive ? "Download selected from remote" : "Download selected remote files to local dir"}>
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 3v7M5 7l3 3 3-3M3 12h10" />
             </svg>
             Download{selectedCount > 1 && !selectedHasDir ? ` (${selectedCount})` : ""}
           </ToolbarBtn>
 
           <ToolbarBtn onClick={onNewFolder} disabled={busy} title="New folder on remote">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M2 5a2 2 0 012-2h2.586l2 2H12a2 2 0 012 2v5a2 2 0 01-2 2H4a2 2 0 01-2-2V5z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 8v4M6 10h4" />
             </svg>
@@ -242,7 +242,7 @@ export default function SftpToolbar({
           </ToolbarBtn>
 
           <ToolbarBtn onClick={onNewFile} disabled={busy} title="New file on remote">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V6M9 2l4 4M9 2v4h4" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 9h4M8 7v4" />
             </svg>
@@ -254,15 +254,15 @@ export default function SftpToolbar({
 
       {/* Path row — hidden in split mode; each pane owns its own path bar */}
       {!showLocalPane && (
-        <div className="flex items-center px-3 py-2 border-t border-stroke-subtle gap-3 min-w-0">
+        <div className="flex items-center px-3 py-2.5 border-t border-stroke-subtle gap-3 min-w-0">
           <PathBar path={currentPath} busy={busy} onNavigateTo={onNavigateTo} />
           {hasClipboard ? (
-            <span className="text-xs text-accent-fg shrink-0">
+            <span className="text-sm text-accent-fg shrink-0">
               ● {clipboardMode === "copy" ? "copied" : "cut"} — paste to move here
             </span>
           ) : null}
           {editingCount > 0 && (
-            <span className="text-xs text-amber-400 shrink-0 flex items-center gap-1">
+            <span className="text-sm text-amber-400 shrink-0 flex items-center gap-1">
               <span className="animate-pulse">●</span>
               Watching {editingCount} file{editingCount > 1 ? "s" : ""}
             </span>

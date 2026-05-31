@@ -221,19 +221,40 @@ export default function SftpBrowser({ sessionId }: Props) {
 
       {/* Per-pane remote path bar — only in split mode */}
       {showLocalPane && (
-        <div className="flex items-center px-3 py-2 border-b border-stroke-subtle bg-surface-1 shrink-0 gap-3">
+        <div className="flex items-center gap-3 px-3 py-2.5 border-b border-stroke-subtle bg-surface-1 shrink-0">
+          <button
+            onClick={handleUp}
+            disabled={isBusy || session.currentPath === "/"}
+            className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Go up (remote)"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 16 16" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 12V4M4 8l4-4 4 4" />
+            </svg>
+          </button>
           <PathBar
             path={session.currentPath}
             busy={isBusy}
             onNavigateTo={(p) => { navigate(p); }}
           />
-          {clipboard ? (
-            <span className="text-xs text-accent-fg shrink-0">
+          <button
+            onClick={handleRefresh}
+            disabled={isBusy}
+            className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30"
+            title="Refresh (remote)"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+          {clipboard && (
+            <span className="text-sm text-accent-fg shrink-0">
               ● {clipboard.mode === "copy" ? "copied" : "cut"} — paste to move here
             </span>
-          ) : null}
+          )}
           {editingFiles.length > 0 && (
-            <span className="text-xs text-amber-400 shrink-0 flex items-center gap-1">
+            <span className="text-sm text-amber-400 shrink-0 flex items-center gap-1">
               <span className="animate-pulse">●</span>
               Watching {editingFiles.length} file{editingFiles.length > 1 ? "s" : ""}
             </span>
