@@ -47,6 +47,17 @@ anyhow = "1"
 thiserror = "1"
 base64 = "0.22"
 
+# Compile crypto crates with full optimizations even in debug builds.
+# PBKDF2-HMAC-SHA256 at 600k rounds is ~30s unoptimized vs ~1s optimized.
+[profile.dev.package.sha2]
+opt-level = 3
+
+[profile.dev.package.hmac]
+opt-level = 3
+
+[profile.dev.package.pbkdf2]
+opt-level = 3
+
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
 block2 = "0.6"
