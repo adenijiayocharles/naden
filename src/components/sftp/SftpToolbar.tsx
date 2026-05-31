@@ -159,16 +159,18 @@ export default function SftpToolbar({
           </svg>
         </button>
 
-        <select
-          value={leftPaneSelection}
-          onChange={(e) => { onLeftPaneChange(e.target.value); }}
-          className="text-xs bg-surface-3 border border-stroke-subtle rounded px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-accent/50"
-        >
-          <option value="local">Local</option>
-          {leftPaneServers.map((s) => (
-            <option key={s.id} value={s.id}>{s.displayName}</option>
-          ))}
-        </select>
+        {showLocalPane && (
+          <select
+            value={leftPaneSelection}
+            onChange={(e) => { onLeftPaneChange(e.target.value); }}
+            className="text-xs bg-surface-3 border border-stroke-subtle rounded px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-accent/50"
+          >
+            <option value="local">Local</option>
+            {leftPaneServers.map((s) => (
+              <option key={s.id} value={s.id}>{s.displayName}</option>
+            ))}
+          </select>
+        )}
 
         {/* Remote controls — dimmed when local pane is focused */}
         <div className={`flex items-center gap-1 transition-opacity duration-150 ${remoteActive ? "" : "opacity-40"}`}>
