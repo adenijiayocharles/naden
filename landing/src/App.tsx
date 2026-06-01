@@ -154,7 +154,7 @@ function Nav() {
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
         <img src="/server.png" alt="SSHelter" style={{ width: 28, height: 28 }} />
-        <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.3 }}>SSHelter</span>
+        <span style={{ fontSize: 26, fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.5 }}>SSHelter</span>
       </div>
 
       {/* Links */}
