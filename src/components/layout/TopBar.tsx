@@ -29,7 +29,7 @@ export default function TopBar() {
       >
         <div className="flex-1 flex items-center justify-center pointer-events-none">
           <span className="text-sm text-secondary select-none">
-            SSHManager{activeSession ? ` — ${activeSession.serverName}` : ""}
+            SSHelter{activeSession ? ` — ${activeSession.serverName}` : ""}
           </span>
         </div>
 

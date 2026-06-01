@@ -44,7 +44,7 @@ export default function VaultSetupModal() {
         <div className="text-center mb-8">
           <div className="text-5xl mb-4 text-accent">⬡</div>
           <h1 className="text-2xl font-bold text-white mb-1">
-            SSH <span className="text-accent">Manager</span>
+            SSH<span className="text-accent">elter</span>
           </h1>
           <p className="text-muted text-sm">Set a master password to protect your stored credentials.</p>
         </div>

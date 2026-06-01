@@ -427,7 +427,7 @@ fn handle_message(
                 base.to_string_lossy()
             );
             let tmp = std::env::temp_dir()
-                .join("ssh-manager-copy")
+                .join("sshelter-copy")
                 .join(unique_name);
             let _ = std::fs::create_dir_all(tmp.parent().unwrap_or(&std::env::temp_dir()));
             let tmp_str = tmp.to_string_lossy().into_owned();
@@ -581,8 +581,8 @@ fn open_edit(
         _ => {} // None (no extension) is permitted as plain text
     }
 
-    // Build temp dir: <os_tmp>/ssh-manager/<session_id>/
-    let temp_dir = std::env::temp_dir().join("ssh-manager").join(session_id);
+    // Build temp dir: <os_tmp>/sshelter/<session_id>/
+    let temp_dir = std::env::temp_dir().join("sshelter").join(session_id);
     std::fs::create_dir_all(&temp_dir)
         .map_err(|e| AppError::Io(format!("cannot create temp dir: {e}")))?;
 

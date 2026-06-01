@@ -7,7 +7,7 @@ use std::path::PathBuf;
 pub async fn init_db(data_dir: PathBuf) -> Result<SqlitePool, AppError> {
     std::fs::create_dir_all(&data_dir)?;
 
-    let db_path = data_dir.join("ssh-manager.db");
+    let db_path = data_dir.join("sshelter.db");
     let db_url = format!("sqlite:{}?mode=rwc", db_path.display());
 
     let pool = SqlitePoolOptions::new()

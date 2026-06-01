@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::error::AppError;
 
-const SERVICE: &str = "com.sshmanager.app";
+const SERVICE: &str = "com.sshelter.app";
 
 /// Stores `secret` in the OS keychain. Returns a `vault_credential_id` UUID to
 /// persist in `servers.vault_credential_id` — the actual secret never touches the DB.

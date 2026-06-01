@@ -4438,7 +4438,35 @@ dependencies = [
 ]
 
 [[package]]
-name = "ssh-manager"
+name = "ssh2"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f84d13b3b8a0d4e91a2629911e951db1bb8671512f5c09d7d4ba34500ba68c8"
+dependencies = [
+ "bitflags 2.11.1",
+ "libc",
+ "libssh2-sys",
+ "parking_lot",
+]
+
+[[package]]
+name = "ssh2-config"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2e5a3352c5c624ed815d37c1c4c760aeaa119352091ca93ca5566f4ad48562c"
+dependencies = [
+ "anyhow",
+ "bitflags 2.11.1",
+ "dirs",
+ "git2",
+ "glob",
+ "log",
+ "thiserror 2.0.18",
+ "wildmatch",
+]
+
+[[package]]
+name = "sshelter"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -4472,34 +4500,6 @@ dependencies = [
  "tokio",
  "uuid",
  "zeroize",
-]
-
-[[package]]
-name = "ssh2"
-version = "0.9.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f84d13b3b8a0d4e91a2629911e951db1bb8671512f5c09d7d4ba34500ba68c8"
-dependencies = [
- "bitflags 2.11.1",
- "libc",
- "libssh2-sys",
- "parking_lot",
-]
-
-[[package]]
-name = "ssh2-config"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2e5a3352c5c624ed815d37c1c4c760aeaa119352091ca93ca5566f4ad48562c"
-dependencies = [
- "anyhow",
- "bitflags 2.11.1",
- "dirs",
- "git2",
- "glob",
- "log",
- "thiserror 2.0.18",
- "wildmatch",
 ]
 
 [[package]]

@@ -176,7 +176,7 @@ pub fn run() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("error while building SSH Manager")
+        .expect("error while building SSHelter")
         .run(|app, event| {
             // On macOS, clicking the Dock icon fires Reopen regardless of
             // whether the window is hidden or miniaturized. A miniaturized
@@ -250,7 +250,7 @@ fn build_app_menu(
 
     let app_menu = Submenu::with_items(
         app,
-        "SSH Manager",
+        "SSHelter",
         true,
         &[
             &PredefinedMenuItem::about(app, None, None)?,

@@ -1,14 +1,14 @@
-# SSH Manager — Features
+# SSHelter — Features
 
 ## Everything you need to manage servers, nothing you don't.
 
-SSH Manager replaces scattered config files, sticky-note passwords, and five different terminal windows with one fast, secure desktop app.
+SSHelter replaces scattered config files, sticky-note passwords, and five different terminal windows with one fast, secure desktop app.
 
 ---
 
 ## Organised server inventory
 
-Stop digging through `~/.ssh/config` to remember which IP belongs to which project. SSH Manager gives every server a name, a group, a colour, and tags — so your infrastructure is always one glance away.
+Stop digging through `~/.ssh/config` to remember which IP belongs to which project. SSHelter gives every server a name, a group, a colour, and tags — so your infrastructure is always one glance away.
 
 - **Groups & colours** — organise servers by project, environment, or team. Collapse groups you're not working in.
 - **Tags** — cross-cutting labels for when one server belongs to multiple contexts (e.g. `#production` and `#eu-west`).
@@ -23,10 +23,10 @@ Stop digging through `~/.ssh/config` to remember which IP belongs to which proje
 Click a server, get a shell. No commands to remember, no flags to look up.
 
 - **Built-in terminal** — a full terminal emulator inside the app. Open multiple sessions side-by-side in tabs, drag to reorder, and switch between them instantly.
-- **System terminal** — prefer iTerm2 or Windows Terminal? SSH Manager can hand off to your native terminal app instead.
+- **System terminal** — prefer iTerm2 or Windows Terminal? SSHelter can hand off to your native terminal app instead.
 - **Multi-session tabs** — keep a production shell, a staging shell, and a log tail all open at the same time.
-- **Auto-reconnect** — if your laptop wakes from sleep and a session drops, SSH Manager reconnects it automatically.
-- **Jump host support** — connect through bastion servers without touching a command line. Chain up to 10 hops and SSH Manager handles the tunnel for you.
+- **Auto-reconnect** — if your laptop wakes from sleep and a session drops, SSHelter reconnects it automatically.
+- **Jump host support** — connect through bastion servers without touching a command line. Chain up to 10 hops and SSHelter handles the tunnel for you.
 
 ---
 
@@ -54,7 +54,7 @@ Your passwords and SSH keys are encrypted and stored in the OS keychain (Keychai
 
 ## Find any server in under a second
 
-With dozens or hundreds of servers, search is everything. SSH Manager's fuzzy search scans display names, hostnames, IPs, usernames, and tags simultaneously — results appear as you type.
+With dozens or hundreds of servers, search is everything. SSHelter's fuzzy search scans display names, hostnames, IPs, usernames, and tags simultaneously — results appear as you type.
 
 - Filter by group, tag, or favourites from the sidebar.
 - Sort by name, hostname, or last connected time.
@@ -64,7 +64,7 @@ With dozens or hundreds of servers, search is everything. SSH Manager's fuzzy se
 
 ## Import from your existing SSH config
 
-Already have a `~/.ssh/config`? Import it in seconds. SSH Manager parses every `Host` entry, shows you a preview, and lets you pick exactly which ones to bring in. Identity files, custom ports, and usernames all carry over automatically.
+Already have a `~/.ssh/config`? Import it in seconds. SSHelter parses every `Host` entry, shows you a preview, and lets you pick exactly which ones to bring in. Identity files, custom ports, and usernames all carry over automatically.
 
 ---
 
@@ -97,7 +97,7 @@ The built-in terminal isn't an afterthought.
 
 ## Personalise everything
 
-SSH Manager adapts to how you work, not the other way around.
+SSHelter adapts to how you work, not the other way around.
 
 - **4 themes** — Dark, OLED, Dim, and Light.
 - **9 accent colours** — Lime, Green, Cyan, Blue, Purple, Orange, Pink, Red, and White. The accent colour touches every interactive element in the app.

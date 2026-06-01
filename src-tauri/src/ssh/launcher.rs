@@ -72,7 +72,7 @@ async fn launch_macos(argv: Vec<String>) -> Result<(), AppError> {
     use std::io::Write as _;
     use std::os::unix::fs::OpenOptionsExt as _;
 
-    let script_path = std::env::temp_dir().join(format!("ssh-manager-{}.sh", uuid::Uuid::new_v4()));
+    let script_path = std::env::temp_dir().join(format!("sshelter-{}.sh", uuid::Uuid::new_v4()));
 
     // POSIX single-quote-wrap each argument for the script body.
     let shell_cmd = argv
@@ -125,7 +125,7 @@ async fn launch_macos(argv: Vec<String>) -> Result<(), AppError> {
 #[cfg(target_os = "windows")]
 async fn launch_windows(argv: Vec<String>) -> Result<(), AppError> {
     let script_path =
-        std::env::temp_dir().join(format!("ssh-manager-{}.bat", uuid::Uuid::new_v4()));
+        std::env::temp_dir().join(format!("sshelter-{}.bat", uuid::Uuid::new_v4()));
 
     // Batch double-quote each argument; double any internal double-quotes and
     // escape % as %% so cmd.exe does not expand environment variables inside

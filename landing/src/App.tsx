@@ -153,8 +153,8 @@ function Nav() {
     }}>
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-        <img src="/server.png" alt="SSH Manager" style={{ width: 28, height: 28 }} />
-        <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.3 }}>SSH Manager</span>
+        <img src="/server.png" alt="SSHelter" style={{ width: 28, height: 28 }} />
+        <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.3 }}>SSHelter</span>
       </div>
 
       {/* Links */}
@@ -323,7 +323,7 @@ function Hero() {
       }}>
         <img
           src="/screenshot-terminal.png"
-          alt="SSH Manager terminal session"
+          alt="SSHelter terminal session"
           style={{
             width: "100%",
             display: "block",
@@ -387,7 +387,7 @@ function SftpSection() {
       {/* App preview — SFTP */}
       <img
         src="/screenshot-sftp.png"
-        alt="SSH Manager SFTP file browser"
+        alt="SSHelter SFTP file browser"
         style={{
           width: "100%",
           display: "block",
@@ -606,7 +606,7 @@ function VaultSection() {
         {/* Vault screenshot */}
         <img
           src="/screenshot-vault.png"
-          alt="SSH Manager credential vault settings"
+          alt="SSHelter credential vault settings"
           style={{
             borderRadius: 14,
             border: "1px solid rgba(255,255,255,0.07)",
@@ -728,7 +728,7 @@ function DocsSection() {
             {
               n: "2",
               title: "Set up the vault",
-              body: <>On first launch, SSH Manager asks you to create a master password. This derives the AES-256 vault key and is never stored on disk. Add a password or key passphrase in the server's <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Credentials</strong> tab.</>,
+              body: <>On first launch, SSHelter asks you to create a master password. This derives the AES-256 vault key and is never stored on disk. Add a password or key passphrase in the server's <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Credentials</strong> tab.</>,
             },
             {
               n: "3",
@@ -822,7 +822,7 @@ function DocsSection() {
       case "terminal": return (
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.5, marginBottom: 6 }}>Terminal</h2>
-          <DocP>SSH Manager embeds a full <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>xterm.js</strong> terminal — every session runs natively in-app with no external emulator required.</DocP>
+          <DocP>SSHelter embeds a full <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>xterm.js</strong> terminal — every session runs natively in-app with no external emulator required.</DocP>
 
           <DocH3>Multi-tab sessions</DocH3>
           <DocP>Open up to 20 simultaneous SSH sessions as tabs. Drag tabs to reorder. Click <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>+</strong> in the tab bar to start a new session to any server.</DocP>
@@ -841,7 +841,7 @@ function DocsSection() {
       case "sftp": return (
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.5, marginBottom: 6 }}>SFTP browser</h2>
-          <DocP>A dual-pane file manager built into SSH Manager — local filesystem on the left, remote server on the right. No separate FTP client needed.</DocP>
+          <DocP>A dual-pane file manager built into SSHelter — local filesystem on the left, remote server on the right. No separate FTP client needed.</DocP>
 
           <DocH3>Opening the browser</DocH3>
           <DocP>While connected to a server, click the <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>folder icon</strong> in the top toolbar to open the SFTP pane for that session.</DocP>
@@ -850,7 +850,7 @@ function DocsSection() {
           <DocP>Drag files from the local pane to the remote pane to upload, or the other direction to download. Right-click any file for explicit <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Upload</strong> or <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Download</strong> options.</DocP>
 
           <DocH3>In-place editing</DocH3>
-          <DocP>Double-click any remote file to open it in your default local app. SSH Manager watches the local temp copy and automatically re-uploads it the moment you save — no manual transfer required.</DocP>
+          <DocP>Double-click any remote file to open it in your default local app. SSHelter watches the local temp copy and automatically re-uploads it the moment you save — no manual transfer required.</DocP>
 
           <DocH3>Permissions (chmod)</DocH3>
           <DocP>Click any permission string (e.g. <InlineCode>rwxr-xr-x</InlineCode>) to open the chmod dialog. Enter an octal code like <InlineCode>755</InlineCode>, or toggle individual bits using the checkbox grid.</DocP>
@@ -863,13 +863,13 @@ function DocsSection() {
           <DocP>Every credential is encrypted with <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>AES-256-GCM</strong> before touching disk. The vault key is derived from your master password via PBKDF2 — it is never stored anywhere.</DocP>
 
           <DocH3>First-time setup</DocH3>
-          <DocP>SSH Manager prompts you to create a master password on first launch. Choose something strong — this is the sole key to your stored credentials.</DocP>
+          <DocP>SSHelter prompts you to create a master password on first launch. Choose something strong — this is the sole key to your stored credentials.</DocP>
 
           <DocH3>Touch ID</DocH3>
-          <DocP>Go to <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Settings → Vault → Enable Touch ID</strong>. Once enabled, SSH Manager uses biometrics to unlock instead of typing your master password. Requires a Mac with Touch ID hardware.</DocP>
+          <DocP>Go to <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Settings → Vault → Enable Touch ID</strong>. Once enabled, SSHelter uses biometrics to unlock instead of typing your master password. Requires a Mac with Touch ID hardware.</DocP>
 
           <DocH3>Auto-lock</DocH3>
-          <DocP>Configure the idle timeout in <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Settings → Vault</strong>. SSH Manager locks automatically when you step away.</DocP>
+          <DocP>Configure the idle timeout in <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Settings → Vault</strong>. SSHelter locks automatically when you step away.</DocP>
 
           <DocH3>Changing your password</DocH3>
           <DocP>Go to <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Settings → Vault → Change Master Password</strong>. All credentials are transparently re-encrypted with the new key.</DocP>
@@ -879,13 +879,13 @@ function DocsSection() {
       case "jumphost": return (
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.5, marginBottom: 6 }}>Jump hosts</h2>
-          <DocP>SSH Manager supports multi-hop tunneling through bastion servers. Each hop in the chain uses its own vault credentials independently.</DocP>
+          <DocP>SSHelter supports multi-hop tunneling through bastion servers. Each hop in the chain uses its own vault credentials independently.</DocP>
 
           <DocH3>Setup</DocH3>
-          <DocStep n="1" accent="#a78bfa">Add the bastion server as a normal server entry in SSH Manager.</DocStep>
+          <DocStep n="1" accent="#a78bfa">Add the bastion server as a normal server entry in SSHelter.</DocStep>
           <DocStep n="2" accent="#a78bfa">Open the bastion's settings and enable <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>"Use as jump host"</strong>.</DocStep>
           <DocStep n="3" accent="#a78bfa">Edit your target server and select the bastion from the <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Jump host</strong> dropdown in the Connection section.</DocStep>
-          <DocStep n="4" accent="#a78bfa">Connect to the target normally — SSH Manager resolves the proxy chain automatically.</DocStep>
+          <DocStep n="4" accent="#a78bfa">Connect to the target normally — SSHelter resolves the proxy chain automatically.</DocStep>
 
           <DocH3>Multi-hop chains</DocH3>
           <DocP>Chain up to three hops (A → B → C) by assigning a jump host that itself has a jump host. Each server's credentials are resolved from the vault independently.</DocP>
@@ -895,10 +895,10 @@ function DocsSection() {
       case "sshconfig": return (
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", letterSpacing: -0.5, marginBottom: 6 }}>SSH Config Import</h2>
-          <DocP>If you already manage servers in <InlineCode>~/.ssh/config</InlineCode>, import them all into SSH Manager with a single click.</DocP>
+          <DocP>If you already manage servers in <InlineCode>~/.ssh/config</InlineCode>, import them all into SSHelter with a single click.</DocP>
 
           <DocH3>How to import</DocH3>
-          <DocStep n="1" accent="#38bdf8">Go to <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>File → Import SSH Config</strong>. SSH Manager reads <InlineCode>~/.ssh/config</InlineCode> automatically.</DocStep>
+          <DocStep n="1" accent="#38bdf8">Go to <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>File → Import SSH Config</strong>. SSHelter reads <InlineCode>~/.ssh/config</InlineCode> automatically.</DocStep>
           <DocStep n="2" accent="#38bdf8">Review the preview of all detected hosts. Uncheck any you don't want to import.</DocStep>
           <DocStep n="3" accent="#38bdf8">Click <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Import</strong>. New servers appear in the sidebar under "Ungrouped".</DocStep>
 
@@ -937,7 +937,7 @@ function DocsSection() {
           <div style={{ borderRadius: 8, border: "1px solid var(--stroke-subtle)", overflow: "hidden", marginBottom: 16 }}>
             {[
               { field: "Timestamp",  desc: "Date and time of the connection attempt" },
-              { field: "Server",     desc: "Display name as configured in SSH Manager" },
+              { field: "Server",     desc: "Display name as configured in SSHelter" },
               { field: "Hostname",   desc: "Host and port used for the connection" },
               { field: "Username",   desc: "SSH username for the session" },
               { field: "Duration",   desc: "Total session time for successful connections" },
@@ -998,7 +998,7 @@ function DocsSection() {
           Everything you need to know.
         </h2>
         <p style={{ fontSize: 17, color: "var(--text-secondary)", maxWidth: 440, margin: "0 auto", lineHeight: 1.65 }}>
-          Guides and references for every feature in SSH Manager.
+          Guides and references for every feature in SSHelter.
         </p>
       </div>
 
@@ -1164,8 +1164,8 @@ function Footer() {
       gap: 16,
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <img src="/server.png" alt="SSH Manager" style={{ width: 22, height: 22 }} />
-        <span style={{ fontSize: 13, color: "var(--text-muted)" }}>SSH Manager · Built with Tauri + React + Rust</span>
+        <img src="/server.png" alt="SSHelter" style={{ width: 22, height: 22 }} />
+        <span style={{ fontSize: 13, color: "var(--text-muted)" }}>SSHelter · Built with Tauri + React + Rust</span>
       </div>
       <div style={{ display: "flex", gap: 22 }}>
         {["GitHub", "Changelog", "License"].map((link) => (

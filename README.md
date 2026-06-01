@@ -1,4 +1,4 @@
-# SSH Manager
+# SSHelter
 
 A fast, secure desktop application for managing SSH connections. Built for engineers who manage many servers and need an organised, keyboard-driven workflow without scattered config files or plaintext credentials.
 

@@ -215,7 +215,7 @@ pub async fn cross_copy_sftp_file(
             .into_owned();
 
         let unique = format!("{}-{}", uuid::Uuid::new_v4().simple(), filename);
-        let tmp = std::env::temp_dir().join("ssh-manager-xcopy").join(&unique);
+        let tmp = std::env::temp_dir().join("sshelter-xcopy").join(&unique);
         let _ = std::fs::create_dir_all(tmp.parent().unwrap_or(&std::env::temp_dir()));
         let tmp_str = tmp.to_string_lossy().into_owned();
         // Reject dst_dir values that could escape via path components.
