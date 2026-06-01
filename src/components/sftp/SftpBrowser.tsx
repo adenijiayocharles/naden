@@ -25,9 +25,7 @@ export default function SftpBrowser({ sessionId }: Props) {
   const allServers = useServerStore((s) => s.servers);
 
   // Viewing options — separate state per pane
-  const [showHidden, setShowHidden] = useState(true);
-  const [showHiddenLocal, setShowHiddenLocal] = useState(true);
-  const [showHiddenPeer, setShowHiddenPeer] = useState(true);
+  const [showHidden, setShowHidden] = useState(false);
   const [localNewFolderTrigger, setLocalNewFolderTrigger] = useState(0);
   const [localNewFileTrigger, setLocalNewFileTrigger] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey>("name");
@@ -196,7 +194,7 @@ export default function SftpBrowser({ sessionId }: Props) {
   // but we never render or interact with peerPane in that state.
   const peerPane = useRemotePane({
     sessionId: effectivePeerId,
-    showHidden: showHiddenPeer,
+    showHidden,
     sortKey: sortKeyPeer,
     sortDir: sortDirPeer,
     localCurrentPath: "",
@@ -304,19 +302,7 @@ export default function SftpBrowser({ sessionId }: Props) {
     peerPane.handleSelect(path, meta, shift);
   };
 
-  const currentShowHidden =
-    showLocalPane && activePane === "local"
-      ? leftPaneIsLocal ? showHiddenLocal : showHiddenPeer
-      : showHidden;
-
-  const handleToggleHidden = () => {
-    if (showLocalPane && activePane === "local") {
-      if (leftPaneIsLocal) setShowHiddenLocal((v) => !v);
-      else setShowHiddenPeer((v) => !v);
-    } else {
-      setShowHidden((v) => !v);
-    }
-  };
+  const handleToggleHidden = () => setShowHidden((v) => !v);
 
   const isConnecting = session.status === "connecting";
   const isError = session.status === "error";
@@ -336,7 +322,7 @@ export default function SftpBrowser({ sessionId }: Props) {
         hasClipboard={clipboard !== null}
         clipboardMode={clipboard?.mode ?? null}
         onPaste={handlePaste}
-        showHidden={currentShowHidden}
+        showHidden={showHidden}
         onToggleHidden={handleToggleHidden}
         busy={isBusy}
         onNavigateTo={(path) => { navigate(path); }}
@@ -419,7 +405,7 @@ export default function SftpBrowser({ sessionId }: Props) {
                   onSelectedChange={setLocalSelected}
                   onPathChange={setLocalCurrentPath}
                   onActivate={() => setActivePane("local")}
-                  showHidden={showHiddenLocal}
+                  showHidden={showHidden}
                   newFolderTrigger={localNewFolderTrigger}
                   newFileTrigger={localNewFileTrigger}
                   onDropRemotePaths={handleDownloadPaths}
