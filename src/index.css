@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 html, body, #root { background: #0d0d0d; }
+html, body { overscroll-behavior: none; }
 @theme {
   /* Accent */
   --color-accent: #CDFF00;
