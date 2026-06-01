@@ -369,7 +369,7 @@ export default function AppShell() {
                     </>
                   )}
                 </div>
-                <div className="flex-1 overflow-y-auto p-4">
+                <div className="flex-1 overflow-y-auto p-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   <ServerList />
                 </div>
                 {bulkMode && <BulkActionBar />}
