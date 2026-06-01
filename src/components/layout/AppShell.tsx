@@ -407,7 +407,7 @@ export default function AppShell() {
             <div className="flex flex-col flex-1 min-w-0">
               {/* Unified tab bar */}
               <div
-                className="h-12 bg-surface-1 border-b border-stroke-subtle flex items-center shrink-0"
+                className="h-14 bg-surface-1 border-b border-stroke-subtle flex items-center shrink-0"
                 onDragLeave={(e) => {
                   if (!e.currentTarget.contains(e.relatedTarget as Node)) resetDrag();
                 }}
