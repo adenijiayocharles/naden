@@ -12,6 +12,11 @@ import type {
 import type { Snippet, CreateSnippetPayload, UpdateSnippetPayload } from "../types/snippet";
 import type { DirListing } from "../types/sftp";
 import type { LocalFileEntry } from "../types/local";
+import type {
+  PortForward,
+  CreatePortForwardPayload,
+  UpdatePortForwardPayload,
+} from "../types/portForward";
 
 export interface ReachabilityResult {
   reachable: boolean;
@@ -116,6 +121,21 @@ export const vaultCommands = {
 
   deleteCredential: (vaultCredentialId: string) =>
     invoke<void>("delete_credential", { vaultCredentialId }),
+
+  biometricAvailable: () =>
+    invoke<boolean>("vault_biometric_available"),
+
+  biometricEnabled: () =>
+    invoke<boolean>("vault_biometric_enabled"),
+
+  enableBiometric: () =>
+    invoke<void>("vault_enable_biometric"),
+
+  disableBiometric: () =>
+    invoke<void>("vault_disable_biometric"),
+
+  unlockBiometric: () =>
+    invoke<void>("vault_unlock_biometric"),
 };
 
 export const localCommands = {
@@ -238,4 +258,27 @@ export const logCommands = {
 export const trayCommands = {
   updateMenu: (servers: { id: string; displayName: string; hostname: string }[]) =>
     invoke<void>("update_tray_menu", { servers }),
+};
+
+export const tunnelCommands = {
+  listPortForwards: (serverId?: string) =>
+    invoke<PortForward[]>("list_port_forwards", { serverId: serverId ?? null }),
+
+  createPortForward: (payload: CreatePortForwardPayload) =>
+    invoke<PortForward>("create_port_forward", { payload }),
+
+  updatePortForward: (id: string, payload: UpdatePortForwardPayload) =>
+    invoke<PortForward>("update_port_forward", { id, payload }),
+
+  deletePortForward: (id: string) =>
+    invoke<void>("delete_port_forward", { id }),
+
+  startTunnel: (forwardId: string) =>
+    invoke<void>("start_tunnel", { forwardId }),
+
+  stopTunnel: (forwardId: string) =>
+    invoke<void>("stop_tunnel", { forwardId }),
+
+  listActiveTunnelIds: () =>
+    invoke<string[]>("list_active_tunnel_ids"),
 };

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useServerStore } from "../store/serverStore";
 import { useVaultStore } from "../store/vaultStore";
 import { useUiStore } from "../store/uiStore";
+import { useTunnelStore } from "../store/tunnelStore";
 import { useTerminalSettings } from "../lib/terminalSettings";
 import { settingsCommands } from "../lib/tauriCommands";
 
@@ -23,11 +24,13 @@ export function useAppInit() {
   const loadTerminalSettings = useTerminalSettings((s) => s.load);
   const setOnboardingComplete = useUiStore((s) => s.setOnboardingComplete);
   const setOnboardingChecked = useUiStore((s) => s.setOnboardingChecked);
+  const loadTunnels = useTunnelStore((s) => s.load);
 
   useEffect(() => {
     void fetchAll();
     void check();
     void loadTerminalSettings();
+    void loadTunnels();
 
     Promise.all([
       settingsCommands.getSetting("theme"),
@@ -56,5 +59,5 @@ export function useAppInit() {
       .catch(() => {
         setOnboardingChecked();
       });
-  }, [fetchAll, check, loadTerminalSettings, setOnboardingComplete, setOnboardingChecked]);
+  }, [fetchAll, check, loadTerminalSettings, loadTunnels, setOnboardingComplete, setOnboardingChecked]);
 }

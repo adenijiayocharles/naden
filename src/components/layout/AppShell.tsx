@@ -26,6 +26,7 @@ import OnboardingWizard from "../onboarding/OnboardingWizard";
 import SftpBrowser from "../sftp/SftpBrowser";
 import BulkActionBar from "../servers/BulkActionBar";
 import SnippetList from "../snippets/SnippetList";
+import TunnelPanel from "../tunnels/TunnelPanel";
 import ClipboardClearBanner from "./ClipboardClearBanner";
 import { useSnippetStore } from "../../store/snippetStore";
 import type { SessionStatus } from "../../store/terminalStore";
@@ -289,10 +290,10 @@ export default function AppShell() {
 
       <div className="flex flex-col flex-1 min-w-0">
         <div className="flex flex-1 min-h-0">
-          {/* Server list / logs */}
+          {/* Server list / logs / tunnels */}
           <main
             className={`shrink-0 transition-[width,padding] duration-200 ${
-              activeView === "logs" || activeView === "snippets"
+              activeView === "logs" || activeView === "snippets" || activeView === "tunnels"
                 ? "flex-1 overflow-hidden flex flex-col"
                 : hasPanel
                   ? serverListCollapsed
@@ -303,6 +304,13 @@ export default function AppShell() {
           >
             {activeView === "snippets" ? (
               <SnippetList />
+            ) : activeView === "tunnels" ? (
+              <>
+                <div className="px-4 h-14 border-b border-stroke-subtle shrink-0 flex items-center">
+                  <p className="text-sm font-semibold text-white">Port Forwards</p>
+                </div>
+                <TunnelPanel />
+              </>
             ) : activeView === "logs" ? (
               <>
                 <div className="px-4 py-2 border-b border-stroke-subtle shrink-0">
@@ -387,7 +395,7 @@ export default function AppShell() {
           </main>
 
           {/* Collapse / expand handle */}
-          {hasPanel && activeView !== "logs" && activeView !== "snippets" && (
+          {hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "tunnels" && (
             <button
               onClick={toggleServerList}
               aria-label={serverListCollapsed ? "Expand server list" : "Collapse server list"}
@@ -412,7 +420,7 @@ export default function AppShell() {
           )}
 
           {/* Unified panel: terminals + SFTP browsers */}
-          {hasPanel && activeView !== "logs" && activeView !== "snippets" && (
+          {hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "tunnels" && (
             <div className="flex flex-col flex-1 min-w-0">
               {/* Unified tab bar */}
               <div

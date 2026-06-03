@@ -9,6 +9,7 @@ import { useVaultStore } from "../../store/vaultStore";
 import { formatError } from "../../lib/errors";
 import Input from "../shared/Input";
 import Button from "../shared/Button";
+import PortForwardsSection from "./PortForwardsSection";
 
 interface FormData {
   displayName: string;
@@ -535,6 +536,16 @@ export default function ServerForm() {
           )}
 
 
+          {/* Port Forwards */}
+          {isEdit && editingServerId && (
+            <PortForwardsSection serverId={editingServerId} />
+          )}
+          {!isEdit && (
+            <p className="text-xs text-faint px-1">
+              Port forwards can be configured after saving the server.
+            </p>
+          )}
+
           {errors.submit && (
             <p className="text-sm text-red-400 bg-red-950 border border-red-800 rounded-md px-3 py-2">
               {errors.submit}
@@ -558,6 +569,9 @@ export default function ServerForm() {
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
+// NOTE: PortForwardsSection lives in ./PortForwardsSection.tsx
+
+// Field, SelectWrapper, and select() helpers follow below.
 function Field({
   label,
   children,

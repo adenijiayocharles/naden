@@ -6,6 +6,7 @@ import Input from "../shared/Input";
 import Button from "../shared/Button";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
+import { useTunnelStore } from "../../store/tunnelStore";
 import VaultCountdown from "./VaultCountdown";
 import { formatError } from "../../lib/errors";
 import type { Group, Tag } from "../../types/server";
@@ -424,6 +425,7 @@ export default function Sidebar() {
     filterGroupId, filterTagId, filterFavourites,
     setFilterGroup, setFilterTag, setFilterFavourites,
     activeView, openAdd, closeForm, expandServerList, openImportSshConfig, openSnippets,
+    openTunnels,
   } = useUiStore();
 
   const snippetCount = useSnippetStore((s) => s.snippets.length);
@@ -433,6 +435,9 @@ export default function Sidebar() {
   const activeSessions = [...terminalSessions, ...sftpSessions].filter(
     (s) => s.status === "connected",
   ).length;
+
+  const tunnelStatuses = useTunnelStore((s) => s.statuses);
+  const activeTunnels = Object.values(tunnelStatuses).filter((s) => s === "active").length;
 
   const [editingGroup, setEditingGroup] = useState<{ group: Group; initialDelete: boolean } | null>(null);
   const [creatingGroup, setCreatingGroup] = useState(false);
@@ -453,7 +458,7 @@ export default function Sidebar() {
   }, [addMenuOpen]);
 
   const selectFilter = (fn: () => void) => () => {
-    if (activeView === "logs" || activeView === "snippets") closeForm();
+    if (activeView === "logs" || activeView === "snippets" || activeView === "tunnels") closeForm();
     expandServerList();
     fn();
   };
@@ -478,7 +483,7 @@ export default function Sidebar() {
       <nav className="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
         {/* All Servers */}
         <NavRow
-          active={!filterGroupId && !filterTagId && !filterFavourites && activeView !== "logs" && activeView !== "snippets"}
+          active={!filterGroupId && !filterTagId && !filterFavourites && activeView !== "logs" && activeView !== "snippets" && activeView !== "tunnels"}
           onClick={selectFilter(() => { setFilterGroup(null); setFilterTag(null); setFilterFavourites(false); })}
           label={
             <span className="flex items-center gap-2">
@@ -513,9 +518,24 @@ export default function Sidebar() {
           }
         />
 
+        {/* Tunnels */}
+        <NavRow
+          active={activeView === "tunnels"}
+          onClick={() => openTunnels()}
+          count={activeTunnels > 0 ? activeTunnels : undefined}
+          label={
+            <span className="flex items-center gap-2">
+              <svg className="w-3.5 h-3.5 shrink-0 text-muted" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 8h4M10 8h4M6 5l-2 3 2 3M10 5l2 3-2 3" />
+              </svg>
+              Tunnels
+            </span>
+          }
+        />
+
         {/* Favourites */}
         <NavRow
-          active={filterFavourites && activeView !== "logs" && activeView !== "snippets"}
+          active={filterFavourites && activeView !== "logs" && activeView !== "snippets" && activeView !== "tunnels"}
           onClick={selectFilter(() => setFilterFavourites(!filterFavourites))}
           label={
             <span className="flex items-center gap-2">
@@ -547,7 +567,7 @@ export default function Sidebar() {
             <GroupRow
               key={g.id}
               group={g}
-              active={filterGroupId === g.id && activeView !== "logs" && activeView !== "snippets"}
+              active={filterGroupId === g.id && activeView !== "logs" && activeView !== "snippets" && activeView !== "tunnels"}
               count={countByGroup[g.id] ?? 0}
               onClick={selectFilter(() => setFilterGroup(g.id))}
               onEdit={() => setEditingGroup({ group: g, initialDelete: false })}
@@ -576,7 +596,7 @@ export default function Sidebar() {
               <TagRow
                 key={t.id}
                 tag={t}
-                active={filterTagId === t.id && activeView !== "logs" && activeView !== "snippets"}
+                active={filterTagId === t.id && activeView !== "logs" && activeView !== "snippets" && activeView !== "tunnels"}
                 count={countByTag[t.id] ?? 0}
                 onClick={selectFilter(() => setFilterTag(t.id))}
                 onRename={() => setRenamingTag(t)}

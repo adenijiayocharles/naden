@@ -2,6 +2,7 @@ import type { Server } from "../../types/server";
 import { useServerActions, formatHost } from "./useServerActions";
 import { useUiStore } from "../../store/uiStore";
 import { useServerStore } from "../../store/serverStore";
+import { useTunnelStore } from "../../store/tunnelStore";
 import ServerKebabMenu from "./ServerKebabMenu";
 import DeleteServerModal from "./DeleteServerModal";
 import ConnectionErrorModal from "./ConnectionErrorModal";
@@ -48,6 +49,13 @@ export function ReachabilityDot({ serverId }: { serverId: string }) {
 
 export default function ServerCard({ server, groupColor, lastConnected }: ServerCardProps) {
   const actions = useServerActions(server);
+  const jumpHost = useServerStore((s) =>
+    server.jumpHostId ? s.servers.find((sv) => sv.id === server.jumpHostId) : undefined
+  );
+  const sid = server.id;
+  const hasActiveTunnel = useTunnelStore((s) =>
+    s.forwards.some((f) => f.serverId === sid && s.statuses[f.id] === "active")
+  );
   const bulkMode = useUiStore((s) => s.bulkMode);
   const isSelected = useUiStore((s) => s.bulkSelected.includes(server.id));
   const toggleSelected = useUiStore((s) => s.toggleSelected);
@@ -107,6 +115,22 @@ export default function ServerCard({ server, groupColor, lastConnected }: Server
             {lastConnected && (
               <span className="text-xs text-dim" title={new Date(lastConnected).toLocaleString()}>
                 {timeAgo(lastConnected)}
+              </span>
+            )}
+            {jumpHost && (
+              <span className="text-xs text-dim flex items-center gap-0.5 min-w-0" title={`Routes via ${jumpHost.displayName}`}>
+                <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2 8h9M8 5l3 3-3 3" />
+                  <circle cx="13" cy="8" r="1.5" fill="currentColor" stroke="none" />
+                </svg>
+                <span className="truncate">{jumpHost.displayName}</span>
+              </span>
+            )}
+            {hasActiveTunnel && (
+              <span className="text-xs text-accent flex items-center gap-0.5 shrink-0" title="Tunnel active">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 8h4M10 8h4M6 5l-2 3 2 3M10 5l2 3-2 3" />
+                </svg>
               </span>
             )}
           </div>
