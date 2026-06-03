@@ -1,0 +1,42 @@
+services:
+
+  # Reachable from your Mac at localhost:2222.
+  # Bridges the external and internal networks — the only route into the
+  # private subnet from the host machine.
+  bastion:
+    build: .
+    environment:
+      ROOT_PASSWORD: bastion-secret
+    ports:
+      - "2222:22"
+    networks:
+      - external
+      - internal
+    hostname: bastion
+
+  # NOT exposed to the host — unreachable except through the bastion.
+  # In SSHelter, set its hostname to "target" and route via the bastion.
+  target:
+    build: .
+    environment:
+      ROOT_PASSWORD: target-secret
+    networks:
+      - internal
+    hostname: target
+
+  # Optional second hop: bastion → relay → target2.
+  # Uncomment to test multi-hop chains.
+  # relay:
+  #   build: .
+  #   environment:
+  #     ROOT_PASSWORD: relay-secret
+  #   networks:
+  #     - internal
+  #   hostname: relay
+
+networks:
+  external:
+    driver: bridge
+  internal:
+    driver: bridge
+    internal: true   # no route to the host or internet from this network

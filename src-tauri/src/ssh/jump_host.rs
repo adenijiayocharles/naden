@@ -6,6 +6,7 @@ use std::os::unix::net::UnixStream;
 use crate::error::AppError;
 use crate::ssh::connection::{authenticate_session, verify_host_key, AuthInfo};
 
+#[derive(Clone)]
 pub struct JumpInfo {
     pub host: String,
     pub port: u16,

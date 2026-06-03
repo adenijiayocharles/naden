@@ -10,6 +10,7 @@ mod search;
 mod sftp;
 mod ssh;
 mod tray;
+mod tunnel;
 mod vault;
 
 pub struct AppState {
@@ -25,6 +26,8 @@ pub struct AppState {
     pub session_manager: ssh::connection::SessionManager,
     /// Active SFTP browser sessions.
     pub sftp_manager: sftp::SftpManager,
+    /// Active port-forward tunnels.
+    pub tunnel_manager: tunnel::TunnelManager,
     /// Timestamp of the last vault-related activity; used by the auto-lock task.
     pub last_vault_activity: tokio::sync::Mutex<std::time::Instant>,
     /// Set to true when the user explicitly calls vault_lock so the heartbeat
@@ -130,6 +133,19 @@ pub fn run() {
             commands::vault_commands::vault_change_password,
             commands::vault_commands::store_credential,
             commands::vault_commands::delete_credential,
+            commands::vault_commands::vault_biometric_available,
+            commands::vault_commands::vault_biometric_enabled,
+            commands::vault_commands::vault_enable_biometric,
+            commands::vault_commands::vault_disable_biometric,
+            commands::vault_commands::vault_unlock_biometric,
+            // Port forwards
+            commands::tunnel_commands::list_port_forwards,
+            commands::tunnel_commands::create_port_forward,
+            commands::tunnel_commands::update_port_forward,
+            commands::tunnel_commands::delete_port_forward,
+            commands::tunnel_commands::start_tunnel,
+            commands::tunnel_commands::stop_tunnel,
+            commands::tunnel_commands::list_active_tunnel_ids,
         ])
         .on_menu_event(|app, event| {
             let _ = app.emit(&format!("menu:{}", event.id().as_ref()), ());
@@ -167,6 +183,7 @@ pub fn run() {
                 server_cache: tokio::sync::RwLock::new(initial_cache),
                 session_manager: ssh::connection::SessionManager::new(),
                 sftp_manager: sftp::SftpManager::new(),
+                tunnel_manager: tunnel::TunnelManager::new(),
                 last_vault_activity: tokio::sync::Mutex::new(std::time::Instant::now()),
                 manually_locked: tokio::sync::Mutex::new(false),
             });

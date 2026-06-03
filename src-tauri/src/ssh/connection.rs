@@ -42,6 +42,7 @@ pub(crate) fn tcp_connect(host: &str, port: u16) -> Result<TcpStream, AppError> 
 /// Arguments: (outcome: String, error_message: Option<String>)
 pub type OnCloseCallback = Box<dyn FnOnce(String, Option<String>) + Send>;
 
+#[derive(Clone)]
 pub enum AuthInfo {
     Password(Zeroizing<String>),
     PubKey {

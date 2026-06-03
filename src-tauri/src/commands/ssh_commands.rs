@@ -106,27 +106,29 @@ pub(crate) async fn auth_for_server(
             })?;
             let key_path = expand_path(key_path_raw, app);
             let key_data = tokio::fs::read_to_string(&key_path).await.map_err(|e| {
+                // Log the full path for diagnostics; omit it from the user-facing message
+                // to avoid exposing filesystem layout through the IPC surface.
+                log::error!("cannot read key file \"{}\": {e}", key_path.display());
                 AppError::Ssh(format!(
-                    "Cannot read key file \"{}\": {e}",
-                    key_path.display()
+                    "Cannot read the identity file ({e}). Check the path in server settings."
                 ))
             })?;
 
             // Catch common mistake: user pointed at the public key (.pub) instead of private.
             if key_data.contains(" PUBLIC KEY-----") {
-                return Err(AppError::Ssh(format!(
-                    "\"{}\" is a public key file. \
-                     Edit the server and set the identity file to the private key \
-                     (the file without the .pub extension).",
-                    key_path.display()
-                )));
+                return Err(AppError::Ssh(
+                    "The identity file is a public key, not a private key. \
+                     Edit the server and set the path to the private key \
+                     (the file without the .pub extension)."
+                        .into(),
+                ));
             }
             if !key_data.contains("PRIVATE KEY") {
-                return Err(AppError::Ssh(format!(
-                    "\"{}\" does not look like an SSH private key. \
-                     Check the identity file path in the server settings.",
-                    key_path.display()
-                )));
+                return Err(AppError::Ssh(
+                    "The identity file does not look like an SSH private key. \
+                     Check the identity file path in the server settings."
+                        .into(),
+                ));
             }
 
             let passphrase = if let Some(vid) = &s.vault_credential_id {
@@ -349,9 +351,46 @@ pub async fn open_terminal_session(
         auth,
         jump_chain,
         Some(on_close),
-        app_handle,
+        app_handle.clone(),
         keepalive_interval,
-    )
+    )?;
+
+    // Auto-start any port forwards configured for this server.
+    let auto_fwds: Vec<_> = queries::list_port_forwards_db(&state.db, Some(&server_id))
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|f| f.auto_start && !state.tunnel_manager.is_active(&f.id))
+        .collect();
+
+    for fwd in auto_fwds {
+        let fwd_auth = match auth_for_server(&server, &state, &app_handle).await {
+            Ok(a) => a,
+            Err(e) => {
+                log::warn!(
+                    "[auto-start] could not get auth for tunnel {}: {e}",
+                    fwd.id
+                );
+                continue;
+            }
+        };
+        let fwd_jumps = build_jump_chain(&state.db, &server, &state, &app_handle)
+            .await
+            .unwrap_or_default();
+        let _ = state.tunnel_manager.start(
+            fwd,
+            crate::tunnel::TunnelTarget {
+                host: s.hostname.clone(),
+                port: u16::try_from(s.port).unwrap_or(22),
+                username: s.username.clone(),
+                auth: fwd_auth,
+                jump_chain: fwd_jumps,
+            },
+            app_handle.clone(),
+        );
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
