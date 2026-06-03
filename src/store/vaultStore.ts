@@ -26,12 +26,16 @@ export const useVaultStore = create<VaultStore>((set) => ({
 
   check: async () => {
     set({ isChecking: true });
-    const [isSetup, isUnlocked, isPasswordRequired] = await Promise.all([
-      invoke<boolean>("vault_is_setup"),
-      invoke<boolean>("vault_is_unlocked"),
-      invoke<boolean>("vault_is_password_required"),
-    ]);
-    set({ isSetup, isUnlocked, isPasswordRequired, isChecking: false });
+    try {
+      const [isSetup, isUnlocked, isPasswordRequired] = await Promise.all([
+        invoke<boolean>("vault_is_setup"),
+        invoke<boolean>("vault_is_unlocked"),
+        invoke<boolean>("vault_is_password_required"),
+      ]);
+      set({ isSetup, isUnlocked, isPasswordRequired });
+    } finally {
+      set({ isChecking: false });
+    }
   },
 
   setup: async (password) => {

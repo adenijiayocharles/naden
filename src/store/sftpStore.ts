@@ -78,6 +78,11 @@ export const useSftpStore = create<SftpStore>((set, get) => {
       }),
 
       listen<null>(`sftp:closed:${sessionId}`, () => {
+        // Mirror the terminal store pattern: if the session is already in error state
+        // the ErrorOverlay owns teardown (via the Reconnect button). Removing the
+        // session here would destroy it before the user can interact with the overlay.
+        const session = get().sessions.find((s) => s.id === sessionId);
+        if (session?.status === "error") return;
         get().removeSession(sessionId);
       }),
 
@@ -112,9 +117,10 @@ export const useSftpStore = create<SftpStore>((set, get) => {
 
     try {
       await sftpCommands.openSftpSession(serverId, sessionId);
-    } catch {
+    } catch (err) {
       teardown(sessionId);
       set((state) => dropFromState(state, sessionId));
+      throw err;
     }
 
     return sessionId;
