@@ -287,9 +287,12 @@ fn run_sftp_session(
                         };
                         let Ok(mtime) = meta.modified() else { continue };
                         if wf.last_mtime.map_or(true, |prev| mtime > prev) {
-                            wf.last_mtime = Some(mtime);
                             let ready = wf.last_upload_at.map_or(true, |t| t.elapsed() >= debounce);
                             if ready {
+                                // Update mtime only when we actually proceed with the upload so
+                                // the next poll still sees the change if we're in the debounce
+                                // window and would otherwise permanently drop the save.
+                                wf.last_mtime = Some(mtime);
                                 wf.last_upload_at = Some(std::time::Instant::now());
                                 if upload_file(
                                     &sftp,
@@ -426,9 +429,7 @@ fn handle_message(
                 uuid::Uuid::new_v4().simple(),
                 base.to_string_lossy()
             );
-            let tmp = std::env::temp_dir()
-                .join("sshelter-copy")
-                .join(unique_name);
+            let tmp = std::env::temp_dir().join("sshelter-copy").join(unique_name);
             let _ = std::fs::create_dir_all(tmp.parent().unwrap_or(&std::env::temp_dir()));
             let tmp_str = tmp.to_string_lossy().into_owned();
             let result = download_file(sftp, &src, &tmp_str, session_id, app_handle)
@@ -519,40 +520,49 @@ fn upload_file(
         .create(Path::new(remote_path))
         .map_err(|e| sftp_err("write to this directory", e))?;
 
-    let mut buf = vec![0u8; 65536];
-    let mut written: u64 = 0;
-    let throttle = std::time::Duration::from_millis(50);
-    let mut last_emit = std::time::Instant::now();
+    let result = (|| {
+        let mut buf = vec![0u8; 65536];
+        let mut written: u64 = 0;
+        let throttle = std::time::Duration::from_millis(50);
+        let mut last_emit = std::time::Instant::now();
 
-    loop {
-        let n = local_file
-            .read(&mut buf)
-            .map_err(|e| AppError::Io(format!("read error: {e}")))?;
-        if n == 0 {
-            break;
+        loop {
+            let n = local_file
+                .read(&mut buf)
+                .map_err(|e| AppError::Io(format!("read error: {e}")))?;
+            if n == 0 {
+                break;
+            }
+            remote_file
+                .write_all(&buf[..n])
+                .map_err(|e| AppError::Ssh(format!("Upload failed: {e}")))?;
+            written += n as u64;
+            let now = std::time::Instant::now();
+            if total > 0 && now.duration_since(last_emit) >= throttle {
+                last_emit = now;
+                let _ = app_handle.emit(
+                    &format!("sftp:upload_progress:{session_id}"),
+                    serde_json::json!({ "written": written, "total": total }),
+                );
+            }
         }
-        remote_file
-            .write_all(&buf[..n])
-            .map_err(|e| AppError::Ssh(format!("Upload failed: {e}")))?;
-        written += n as u64;
-        let now = std::time::Instant::now();
-        if total > 0 && now.duration_since(last_emit) >= throttle {
-            last_emit = now;
+        // Always emit a final event so the frontend reaches 100%.
+        if total > 0 {
             let _ = app_handle.emit(
                 &format!("sftp:upload_progress:{session_id}"),
                 serde_json::json!({ "written": written, "total": total }),
             );
         }
-    }
-    // Always emit a final event so the frontend reaches 100%.
-    if total > 0 {
-        let _ = app_handle.emit(
-            &format!("sftp:upload_progress:{session_id}"),
-            serde_json::json!({ "written": written, "total": total }),
-        );
+        Ok(())
+    })();
+
+    // Remove the truncated remote file if the upload failed mid-stream so we
+    // don't leave a silent, partial file at the destination.
+    if result.is_err() {
+        let _ = sftp.unlink(Path::new(remote_path));
     }
 
-    Ok(())
+    result
 }
 
 fn open_edit(
