@@ -115,7 +115,16 @@
       "Bash(sips *)",
       "Bash(npx tauri *)",
       "Bash(identify /Users/adenijiayocharles/Projects/SSHelter/landing/public/server.png)",
-      "Bash(security find-generic-password *)"
+      "Bash(security find-generic-password *)",
+      "Bash(identify /Users/adenijiayocharles/Projects/SSHManager/src/assets/server.png)",
+      "Bash(magick /Users/adenijiayocharles/Projects/SSHManager/landing/public/server.png -filter point -resize 1024x1024 /tmp/server_1024.png)",
+      "Bash(cargo doc *)",
+      "Bash(sed -n '85,100p' /Users/adenijiayocharles/Projects/SSHManager/src/components/servers/ServerCard.tsx)",
+      "Bash(sed -n '93,108p' /Users/adenijiayocharles/Projects/SSHManager/src/components/servers/ServerRow.tsx)",
+      "Bash(sed -n '80,105p' /Users/adenijiayocharles/Projects/SSHManager/src/components/servers/ServerCard.tsx)",
+      "Bash(sed -n '85,115p' /Users/adenijiayocharles/Projects/SSHManager/src/components/servers/ServerRow.tsx)",
+      "Bash(docker --version)",
+      "Bash(docker compose *)"
     ]
   }
 }
