@@ -77,8 +77,8 @@ pub async fn is_setup(db: &SqlitePool) -> Result<bool, AppError> {
 pub async fn setup(db: &SqlitePool, password: &str) -> Result<Zeroizing<[u8; KEY_LEN]>, AppError> {
     let salt = generate_salt();
     let salt_b64 = STANDARD.encode(salt);
-    let password_owned = password.to_owned();
-    let key = tokio::task::spawn_blocking(move || derive_key(&password_owned, &salt))
+    let password_owned = Zeroizing::new(password.to_owned());
+    let key = tokio::task::spawn_blocking(move || derive_key(&*password_owned, &salt))
         .await
         .map_err(|e| AppError::Vault(e.to_string()))?;
     let verification = verification_hash(&key);
@@ -123,14 +123,14 @@ pub async fn verify(
         .map_err(|e| AppError::Vault(e.to_string()))?;
 
     // Run PBKDF2 on the blocking thread pool — 600k rounds would stall the async executor.
-    let password_owned = password.to_owned();
+    let password_owned = Zeroizing::new(password.to_owned());
     let (key, needs_rehash) = tokio::task::spawn_blocking(move || {
-        let key = derive_key_with_rounds(&password_owned, &salt, ROUNDS);
+        let key = derive_key_with_rounds(&*password_owned, &salt, ROUNDS);
         if bool::from(verification_hash(&key).ct_eq(stored.as_slice())) {
             return (Some(key), false);
         }
         // Fall back to legacy round count to support vaults created before the upgrade.
-        let legacy_key = derive_key_with_rounds(&password_owned, &salt, LEGACY_ROUNDS);
+        let legacy_key = derive_key_with_rounds(&*password_owned, &salt, LEGACY_ROUNDS);
         if bool::from(verification_hash(&legacy_key).ct_eq(stored.as_slice())) {
             // Password correct but legacy rounds; `key` (600k) is already derived, reuse it.
             (Some(key), true)
@@ -147,12 +147,23 @@ pub async fn verify(
     };
 
     if needs_rehash {
-        // Transparently upgrade the stored verification to the current round count.
-        let new_verification = verification_hash(&key);
-        sqlx::query("INSERT OR REPLACE INTO vault_meta (key, value) VALUES ('verification', ?)")
+        // Only write the upgraded verification if the salt hasn't changed since we
+        // read it — a concurrent vault_enable_password/setup() may have written a
+        // new salt, in which case our derived verification is stale and would
+        // permanently corrupt the vault.
+        let current_salt: Option<String> =
+            sqlx::query_scalar("SELECT value FROM vault_meta WHERE key = 'pbkdf2_salt'")
+                .fetch_optional(db)
+                .await?;
+        if current_salt.as_deref() == Some(salt_b64.as_str()) {
+            let new_verification = verification_hash(&key);
+            sqlx::query(
+                "INSERT OR REPLACE INTO vault_meta (key, value) VALUES ('verification', ?)",
+            )
             .bind(STANDARD.encode(new_verification))
             .execute(db)
             .await?;
+        }
     }
 
     Ok(Some(key))

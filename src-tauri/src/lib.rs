@@ -27,6 +27,9 @@ pub struct AppState {
     pub sftp_manager: sftp::SftpManager,
     /// Timestamp of the last vault-related activity; used by the auto-lock task.
     pub last_vault_activity: tokio::sync::Mutex<std::time::Instant>,
+    /// Set to true when the user explicitly calls vault_lock so the heartbeat
+    /// does not auto-restore the key when password protection is disabled.
+    pub manually_locked: tokio::sync::Mutex<bool>,
 }
 
 #[tauri::command]
@@ -126,7 +129,6 @@ pub fn run() {
             commands::vault_commands::vault_enable_password,
             commands::vault_commands::vault_change_password,
             commands::vault_commands::store_credential,
-            commands::vault_commands::retrieve_credential,
             commands::vault_commands::delete_credential,
         ])
         .on_menu_event(|app, event| {
@@ -166,6 +168,7 @@ pub fn run() {
                 session_manager: ssh::connection::SessionManager::new(),
                 sftp_manager: sftp::SftpManager::new(),
                 last_vault_activity: tokio::sync::Mutex::new(std::time::Instant::now()),
+                manually_locked: tokio::sync::Mutex::new(false),
             });
 
             // Menubar tray icon — starts empty; frontend populates on first server load.

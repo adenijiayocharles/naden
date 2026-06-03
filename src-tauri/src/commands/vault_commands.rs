@@ -74,12 +74,13 @@ pub async fn vault_setup(
     master_password: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
+    let master_password = zeroize::Zeroizing::new(master_password);
     if master_password.len() < 8 {
         return Err(AppError::Validation(
             "master password must be at least 8 characters".into(),
         ));
     }
-    let key = crate::vault::master_password::setup(&state.db, &master_password).await?;
+    let key = crate::vault::master_password::setup(&state.db, &*master_password).await?;
     *state.vault_key.lock().await = Some(key);
     Ok(())
 }
@@ -89,44 +90,51 @@ pub async fn vault_unlock(
     master_password: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<bool, AppError> {
-    // Brute-force protection: check lockout before running the expensive KDF.
-    {
-        let mut failures = state.unlock_failures.lock().await;
-        let (_count, lockout_until) = &mut *failures;
+    let master_password = zeroize::Zeroizing::new(master_password);
 
-        if let Some(until) = *lockout_until {
-            if SystemTime::now() < until {
-                return Err(AppError::Vault(
-                    "too many failed attempts — please wait before trying again".into(),
-                ));
-            }
-            // Lockout window expired; reset so we can accept new attempts.
-            *lockout_until = None;
-        }
-        // Release the lock before the slow PBKDF2 call.
-        drop(failures);
+    // When password protection is disabled, any unlock call resets the manual lock.
+    if !master_password::is_password_required(&state.db).await? {
+        *state.manually_locked.lock().await = false;
+        *state.vault_key.lock().await = Some(zeroize::Zeroizing::new([0u8; 32]));
+        return Ok(true);
     }
 
-    match crate::vault::master_password::verify(&state.db, &master_password).await? {
+    // Hold the mutex for the entire check-and-verify sequence to prevent the
+    // TOCTOU race where two concurrent callers both see count < 5, drop the
+    // guard, and then both proceed to the expensive KDF call simultaneously.
+    let mut failures = state.unlock_failures.lock().await;
+
+    if let Some(until) = failures.1 {
+        if SystemTime::now() < until {
+            return Err(AppError::Vault(
+                "too many failed attempts — please wait before trying again".into(),
+            ));
+        }
+        failures.1 = None;
+    }
+
+    match crate::vault::master_password::verify(&state.db, &*master_password).await? {
         Some(key) => {
-            *state.unlock_failures.lock().await = (0, None);
+            *failures = (0, None);
+            drop(failures);
             persist_lockout(&state.db, 0, None).await;
+            *state.manually_locked.lock().await = false;
             *state.vault_key.lock().await = Some(key);
-            // Reset auto-lock timer on successful unlock
             *state.last_vault_activity.lock().await = std::time::Instant::now();
             Ok(true)
         }
         None => {
-            let mut failures = state.unlock_failures.lock().await;
-            let (count, lockout_until) = &mut *failures;
-            *count += 1;
+            failures.0 += 1;
             // After 5 failures, apply exponential backoff: 30s × 2^(extra failures), max 1 h.
-            if *count >= 5 {
-                let extra = (*count - 5).min(7);
+            if failures.0 >= 5 {
+                let extra = (failures.0 - 5).min(7);
                 let secs = 30u64 * (1u64 << extra);
-                *lockout_until = Some(SystemTime::now() + Duration::from_secs(secs));
+                failures.1 = Some(SystemTime::now() + Duration::from_secs(secs));
             }
-            persist_lockout(&state.db, *count, *lockout_until).await;
+            let count = failures.0;
+            let until = failures.1;
+            drop(failures);
+            persist_lockout(&state.db, count, until).await;
             Ok(false)
         }
     }
@@ -135,9 +143,12 @@ pub async fn vault_unlock(
 #[tauri::command]
 pub async fn vault_is_unlocked(state: tauri::State<'_, AppState>) -> Result<bool, AppError> {
     // When no master password is required the vault is always accessible,
-    // but vault_key starts as None on each restart. Auto-unlock here so the
-    // frontend never sees the locked state when password protection is off.
+    // but vault_key starts as None on each restart. Auto-unlock here on
+    // cold-start, but respect an explicit vault_lock call.
     if !master_password::is_password_required(&state.db).await? {
+        if *state.manually_locked.lock().await {
+            return Ok(false);
+        }
         let mut key = state.vault_key.lock().await;
         if key.is_none() {
             *key = Some(zeroize::Zeroizing::new([0u8; 32]));
@@ -149,6 +160,9 @@ pub async fn vault_is_unlocked(state: tauri::State<'_, AppState>) -> Result<bool
 
 #[tauri::command]
 pub async fn vault_lock(state: tauri::State<'_, AppState>) -> Result<(), AppError> {
+    // Record the explicit lock so vault_is_unlocked does not auto-restore the key
+    // during the next heartbeat when password protection is disabled.
+    *state.manually_locked.lock().await = true;
     // Assigning None drops the Zeroizing<[u8;32]>, which scrubs the key bytes.
     *state.vault_key.lock().await = None;
     Ok(())
@@ -167,18 +181,6 @@ pub async fn store_credential(
     vault::store_credential(&secret).await
 }
 
-/// Retrieves a secret from the OS keychain. Vault must be unlocked.
-#[tauri::command]
-pub async fn retrieve_credential(
-    vault_credential_id: String,
-    state: tauri::State<'_, AppState>,
-) -> Result<String, AppError> {
-    if state.vault_key.lock().await.is_none() {
-        return Err(AppError::Vault("vault is locked".into()));
-    }
-    vault::retrieve_credential(&vault_credential_id).await
-}
-
 #[tauri::command]
 pub async fn vault_is_password_required(
     state: tauri::State<'_, AppState>,
@@ -192,46 +194,47 @@ pub async fn vault_disable_password(
     current_password: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    // Apply the same brute-force lockout as vault_unlock so this command cannot
-    // be used to bypass the rate limit on password verification.
-    {
-        let mut failures = state.unlock_failures.lock().await;
-        let (_count, lockout_until) = &mut *failures;
-        if let Some(until) = *lockout_until {
-            if SystemTime::now() < until {
-                return Err(AppError::Vault(
-                    "too many failed attempts — please wait before trying again".into(),
-                ));
-            }
-            *lockout_until = None;
+    let current_password = zeroize::Zeroizing::new(current_password);
+
+    // Hold the mutex through verify to prevent TOCTOU on the failure counter.
+    let mut failures = state.unlock_failures.lock().await;
+
+    if let Some(until) = failures.1 {
+        if SystemTime::now() < until {
+            return Err(AppError::Vault(
+                "too many failed attempts — please wait before trying again".into(),
+            ));
         }
-        drop(failures);
+        failures.1 = None;
     }
 
-    match master_password::verify(&state.db, &current_password).await? {
+    match master_password::verify(&state.db, &*current_password).await? {
         None => {
-            let mut failures = state.unlock_failures.lock().await;
-            let (count, lockout_until) = &mut *failures;
-            *count += 1;
-            if *count >= 5 {
-                let extra = (*count - 5).min(7);
+            failures.0 += 1;
+            if failures.0 >= 5 {
+                let extra = (failures.0 - 5).min(7);
                 let secs = 30u64 * (1u64 << extra);
-                *lockout_until = Some(SystemTime::now() + Duration::from_secs(secs));
+                failures.1 = Some(SystemTime::now() + Duration::from_secs(secs));
             }
-            return Err(AppError::Vault("incorrect password".into()));
+            let count = failures.0;
+            let until = failures.1;
+            drop(failures);
+            persist_lockout(&state.db, count, until).await;
+            Err(AppError::Vault("incorrect password".into()))
         }
         Some(_) => {
-            *state.unlock_failures.lock().await = (0, None);
+            *failures = (0, None);
+            drop(failures);
+            persist_lockout(&state.db, 0, None).await;
+            master_password::disable_password(&state.db).await?;
+            // Ensure the vault stays unlocked with a placeholder key.
+            let mut key_guard = state.vault_key.lock().await;
+            if key_guard.is_none() {
+                *key_guard = Some(zeroize::Zeroizing::new([0u8; 32]));
+            }
+            Ok(())
         }
     }
-
-    master_password::disable_password(&state.db).await?;
-    // Ensure the vault stays unlocked with a placeholder key.
-    let mut key_guard = state.vault_key.lock().await;
-    if key_guard.is_none() {
-        *key_guard = Some(zeroize::Zeroizing::new([0u8; 32]));
-    }
-    Ok(())
 }
 
 /// Permanently opts out of vault password protection without requiring a current password.
@@ -254,12 +257,13 @@ pub async fn vault_enable_password(
     new_password: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
+    let new_password = zeroize::Zeroizing::new(new_password);
     if new_password.len() < 8 {
         return Err(AppError::Validation(
             "master password must be at least 8 characters".into(),
         ));
     }
-    let key = master_password::setup(&state.db, &new_password).await?;
+    let key = master_password::setup(&state.db, &*new_password).await?;
     master_password::set_password_required(&state.db, true).await?;
     *state.vault_key.lock().await = Some(key);
     Ok(())
@@ -272,48 +276,50 @@ pub async fn vault_change_password(
     new_password: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
+    let current_password = zeroize::Zeroizing::new(current_password);
+    let new_password = zeroize::Zeroizing::new(new_password);
+
     if new_password.len() < 8 {
         return Err(AppError::Validation(
             "master password must be at least 8 characters".into(),
         ));
     }
 
-    // Apply the same brute-force lockout as vault_unlock so this command cannot
-    // be used to bypass the rate limit on password verification.
-    {
-        let mut failures = state.unlock_failures.lock().await;
-        let (_count, lockout_until) = &mut *failures;
-        if let Some(until) = *lockout_until {
-            if SystemTime::now() < until {
-                return Err(AppError::Vault(
-                    "too many failed attempts — please wait before trying again".into(),
-                ));
-            }
-            *lockout_until = None;
+    // Hold the mutex through verify to prevent TOCTOU on the failure counter.
+    let mut failures = state.unlock_failures.lock().await;
+
+    if let Some(until) = failures.1 {
+        if SystemTime::now() < until {
+            return Err(AppError::Vault(
+                "too many failed attempts — please wait before trying again".into(),
+            ));
         }
-        drop(failures);
+        failures.1 = None;
     }
 
-    match master_password::verify(&state.db, &current_password).await? {
+    match master_password::verify(&state.db, &*current_password).await? {
         None => {
-            let mut failures = state.unlock_failures.lock().await;
-            let (count, lockout_until) = &mut *failures;
-            *count += 1;
-            if *count >= 5 {
-                let extra = (*count - 5).min(7);
+            failures.0 += 1;
+            if failures.0 >= 5 {
+                let extra = (failures.0 - 5).min(7);
                 let secs = 30u64 * (1u64 << extra);
-                *lockout_until = Some(SystemTime::now() + Duration::from_secs(secs));
+                failures.1 = Some(SystemTime::now() + Duration::from_secs(secs));
             }
-            return Err(AppError::Vault("incorrect current password".into()));
+            let count = failures.0;
+            let until = failures.1;
+            drop(failures);
+            persist_lockout(&state.db, count, until).await;
+            Err(AppError::Vault("incorrect current password".into()))
         }
         Some(_) => {
-            *state.unlock_failures.lock().await = (0, None);
+            *failures = (0, None);
+            drop(failures);
+            persist_lockout(&state.db, 0, None).await;
+            let key = master_password::setup(&state.db, &*new_password).await?;
+            *state.vault_key.lock().await = Some(key);
+            Ok(())
         }
     }
-
-    let key = master_password::setup(&state.db, &new_password).await?;
-    *state.vault_key.lock().await = Some(key);
-    Ok(())
 }
 
 /// Deletes a secret from the OS keychain. Vault must be unlocked.
