@@ -439,6 +439,123 @@ pub async fn create_tag_db(db: &SqlitePool, name: &str) -> Result<Tag, AppError>
         .await?)
 }
 
+// ── port forward queries ──────────────────────────────────────────────────────
+
+use crate::models::port_forward::{self, CreatePortForwardPayload, PortForward, UpdatePortForwardPayload};
+
+pub async fn get_port_forward_db(db: &SqlitePool, id: &str) -> Result<PortForward, AppError> {
+    sqlx::query_as("SELECT * FROM port_forwards WHERE id = ?")
+        .bind(id)
+        .fetch_optional(db)
+        .await?
+        .ok_or_else(|| AppError::NotFound(format!("port_forward '{id}' not found")))
+}
+
+pub async fn list_port_forwards_db(
+    db: &SqlitePool,
+    server_id: Option<&str>,
+) -> Result<Vec<PortForward>, AppError> {
+    Ok(match server_id {
+        Some(id) => sqlx::query_as(
+            "SELECT * FROM port_forwards WHERE server_id = ? ORDER BY created_at",
+        )
+        .bind(id)
+        .fetch_all(db)
+        .await?,
+        None => sqlx::query_as("SELECT * FROM port_forwards ORDER BY server_id, created_at")
+            .fetch_all(db)
+            .await?,
+    })
+}
+
+pub async fn create_port_forward_db(
+    db: &SqlitePool,
+    payload: &CreatePortForwardPayload,
+) -> Result<PortForward, AppError> {
+    let f = &payload.fields;
+    port_forward::validate(&f.forward_type, f.local_port, &f.remote_host, f.remote_port)?;
+
+    let id = Uuid::new_v4().to_string();
+    let now = Utc::now().to_rfc3339();
+
+    sqlx::query(
+        "INSERT INTO port_forwards
+         (id, server_id, label, forward_type, local_port, remote_host, remote_port, auto_start, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .bind(&id)
+    .bind(&payload.server_id)
+    .bind(f.label.trim())
+    .bind(&f.forward_type)
+    .bind(f.local_port)
+    .bind(&f.remote_host)
+    .bind(f.remote_port)
+    .bind(f.auto_start)
+    .bind(&now)
+    .bind(&now)
+    .execute(db)
+    .await?;
+
+    Ok(sqlx::query_as("SELECT * FROM port_forwards WHERE id = ?")
+        .bind(&id)
+        .fetch_one(db)
+        .await?)
+}
+
+pub async fn update_port_forward_db(
+    db: &SqlitePool,
+    id: &str,
+    payload: &UpdatePortForwardPayload,
+) -> Result<PortForward, AppError> {
+    port_forward::validate(
+        &payload.forward_type,
+        payload.local_port,
+        &payload.remote_host,
+        payload.remote_port,
+    )?;
+
+    let now = Utc::now().to_rfc3339();
+    let rows = sqlx::query(
+        "UPDATE port_forwards
+         SET label = ?, forward_type = ?, local_port = ?, remote_host = ?,
+             remote_port = ?, auto_start = ?, updated_at = ?
+         WHERE id = ?",
+    )
+    .bind(payload.label.trim())
+    .bind(&payload.forward_type)
+    .bind(payload.local_port)
+    .bind(&payload.remote_host)
+    .bind(payload.remote_port)
+    .bind(payload.auto_start)
+    .bind(&now)
+    .bind(id)
+    .execute(db)
+    .await?
+    .rows_affected();
+
+    if rows == 0 {
+        return Err(AppError::NotFound(format!("port_forward '{id}' not found")));
+    }
+
+    Ok(sqlx::query_as("SELECT * FROM port_forwards WHERE id = ?")
+        .bind(id)
+        .fetch_one(db)
+        .await?)
+}
+
+pub async fn delete_port_forward_db(db: &SqlitePool, id: &str) -> Result<(), AppError> {
+    let rows = sqlx::query("DELETE FROM port_forwards WHERE id = ?")
+        .bind(id)
+        .execute(db)
+        .await?
+        .rows_affected();
+
+    if rows == 0 {
+        return Err(AppError::NotFound(format!("port_forward '{id}' not found")));
+    }
+    Ok(())
+}
+
 // ── tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -644,5 +761,203 @@ mod tests {
         let t2 = create_tag_db(&db, "prod").await.unwrap();
         assert_eq!(t1.id, t2.id);
         assert_eq!(list_tags_db(&db).await.unwrap().len(), 1);
+    }
+
+    // ── port forward tests ────────────────────────────────────────────────────
+
+    fn fwd_payload(server_id: &str) -> CreatePortForwardPayload {
+        use crate::models::port_forward::PortForwardFields;
+        CreatePortForwardPayload {
+            server_id: server_id.into(),
+            fields: PortForwardFields {
+                label: "DB tunnel".into(),
+                forward_type: "local".into(),
+                local_port: 5432,
+                remote_host: "db.internal".into(),
+                remote_port: 5432,
+                auto_start: false,
+            },
+        }
+    }
+
+    async fn make_server(db: &SqlitePool) -> String {
+        create_server_db(db, &payload("Test", "host.example.com"))
+            .await
+            .unwrap()
+            .server
+            .id
+    }
+
+    #[tokio::test]
+    async fn create_and_list_port_forward() {
+        let db = make_pool().await;
+        let sid = make_server(&db).await;
+        let fwd = create_port_forward_db(&db, &fwd_payload(&sid)).await.unwrap();
+
+        assert_eq!(fwd.server_id, sid);
+        assert_eq!(fwd.forward_type, "local");
+        assert_eq!(fwd.local_port, 5432);
+        assert_eq!(fwd.remote_host, "db.internal");
+        assert!(!fwd.auto_start);
+
+        let list = list_port_forwards_db(&db, Some(&sid)).await.unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].id, fwd.id);
+    }
+
+    #[tokio::test]
+    async fn list_port_forwards_without_server_filter_returns_all() {
+        let db = make_pool().await;
+        let sid1 = make_server(&db).await;
+        let sid2 = create_server_db(&db, &payload("Other", "other.example.com"))
+            .await
+            .unwrap()
+            .server
+            .id;
+        create_port_forward_db(&db, &fwd_payload(&sid1)).await.unwrap();
+        create_port_forward_db(&db, &fwd_payload(&sid2)).await.unwrap();
+
+        let all = list_port_forwards_db(&db, None).await.unwrap();
+        assert_eq!(all.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn update_port_forward_persists_changes() {
+        let db = make_pool().await;
+        let sid = make_server(&db).await;
+        let fwd = create_port_forward_db(&db, &fwd_payload(&sid)).await.unwrap();
+
+        let updated = update_port_forward_db(
+            &db,
+            &fwd.id,
+            &UpdatePortForwardPayload {
+                label: "Updated".into(),
+                forward_type: "local".into(),
+                local_port: 15432,
+                remote_host: "db.internal".into(),
+                remote_port: 5432,
+                auto_start: true,
+            },
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(updated.label, "Updated");
+        assert_eq!(updated.local_port, 15432);
+        assert!(updated.auto_start);
+    }
+
+    #[tokio::test]
+    async fn delete_port_forward_removes_row() {
+        let db = make_pool().await;
+        let sid = make_server(&db).await;
+        let fwd = create_port_forward_db(&db, &fwd_payload(&sid)).await.unwrap();
+        delete_port_forward_db(&db, &fwd.id).await.unwrap();
+
+        let list = list_port_forwards_db(&db, Some(&sid)).await.unwrap();
+        assert!(list.is_empty());
+    }
+
+    #[tokio::test]
+    async fn delete_server_cascades_to_port_forwards() {
+        let db = make_pool().await;
+        let sid = make_server(&db).await;
+        create_port_forward_db(&db, &fwd_payload(&sid)).await.unwrap();
+
+        delete_server_db(&db, &sid).await.unwrap();
+
+        let list = list_port_forwards_db(&db, Some(&sid)).await.unwrap();
+        assert!(list.is_empty());
+    }
+
+    #[tokio::test]
+    async fn dynamic_forward_ignores_remote_host_and_port() {
+        let db = make_pool().await;
+        let sid = make_server(&db).await;
+        let fwd = create_port_forward_db(
+            &db,
+            &CreatePortForwardPayload {
+                server_id: sid.clone(),
+                fields: crate::models::port_forward::PortForwardFields {
+                    label: "SOCKS".into(),
+                    forward_type: "dynamic".into(),
+                    local_port: 1080,
+                    remote_host: String::new(),
+                    remote_port: 0,
+                    auto_start: false,
+                },
+            },
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(fwd.forward_type, "dynamic");
+        assert_eq!(fwd.local_port, 1080);
+    }
+
+    #[tokio::test]
+    async fn validation_rejects_invalid_forward_type() {
+        let db = make_pool().await;
+        let sid = make_server(&db).await;
+        let mut p = fwd_payload(&sid);
+        p.fields.forward_type = "banana".into();
+        assert!(matches!(
+            create_port_forward_db(&db, &p).await,
+            Err(AppError::Validation(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn validation_rejects_out_of_range_local_port() {
+        let db = make_pool().await;
+        let sid = make_server(&db).await;
+        let mut p = fwd_payload(&sid);
+        p.fields.local_port = 99999;
+        assert!(matches!(
+            create_port_forward_db(&db, &p).await,
+            Err(AppError::Validation(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn validation_rejects_missing_remote_host_for_local_forward() {
+        let db = make_pool().await;
+        let sid = make_server(&db).await;
+        let mut p = fwd_payload(&sid);
+        p.fields.remote_host = String::new();
+        assert!(matches!(
+            create_port_forward_db(&db, &p).await,
+            Err(AppError::Validation(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn update_nonexistent_forward_is_not_found() {
+        let db = make_pool().await;
+        assert!(matches!(
+            update_port_forward_db(
+                &db,
+                "no-such-id",
+                &UpdatePortForwardPayload {
+                    label: String::new(),
+                    forward_type: "local".into(),
+                    local_port: 22,
+                    remote_host: "h.example.com".into(),
+                    remote_port: 22,
+                    auto_start: false,
+                }
+            )
+            .await,
+            Err(AppError::NotFound(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn delete_nonexistent_forward_is_not_found() {
+        let db = make_pool().await;
+        assert!(matches!(
+            delete_port_forward_db(&db, "no-such-id").await,
+            Err(AppError::NotFound(_))
+        ));
     }
 }

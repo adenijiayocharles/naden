@@ -6,4 +6,5 @@ pub mod settings_commands;
 pub mod sftp_commands;
 pub mod snippet_commands;
 pub mod ssh_commands;
+pub mod tunnel_commands;
 pub mod vault_commands;
