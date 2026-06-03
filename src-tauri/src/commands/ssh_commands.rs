@@ -206,19 +206,66 @@ pub async fn import_ssh_config(
     config_parser::parse_ssh_config(&config_path, &app)
 }
 
+/// Validate hostname: reject empty strings and control characters that could
+/// indicate a crafted IPC payload. Parameterized queries protect the DB, but
+/// we still refuse obviously invalid values before they get stored.
+fn validate_import_hostname(hostname: &str) -> Result<(), AppError> {
+    if hostname.is_empty() {
+        return Err(AppError::Validation("hostname must not be empty".into()));
+    }
+    if hostname.bytes().any(|b| b < 0x20 || b == 0x7f) {
+        return Err(AppError::Validation(
+            "hostname contains invalid characters".into(),
+        ));
+    }
+    Ok(())
+}
+
+/// Validate that an identity file path stays within the user's home directory.
+/// Uses logical path normalization so the file does not need to exist yet.
+fn validate_import_identity_path(path: &str, app: &tauri::AppHandle) -> Result<(), AppError> {
+    let expanded = expand_path(path, app);
+    let home = crate::commands::local_commands::home_boundary();
+    // Normalize without hitting the filesystem so missing-key imports still pass.
+    let mut clean = std::path::PathBuf::new();
+    for component in expanded.components() {
+        match component {
+            std::path::Component::ParentDir => {
+                clean.pop();
+            }
+            c => clean.push(c),
+        }
+    }
+    if !clean.starts_with(&home) {
+        return Err(AppError::Validation(
+            "identity file path must be within home directory".into(),
+        ));
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn confirm_ssh_config_import(
     previews: Vec<ImportPreview>,
     state: tauri::State<'_, AppState>,
+    app: tauri::AppHandle,
 ) -> Result<Vec<ServerWithTags>, AppError> {
     let mut created = Vec::with_capacity(previews.len());
     for preview in &previews {
+        let hostname = preview
+            .hostname
+            .clone()
+            .unwrap_or_else(|| preview.pattern.clone());
+
+        validate_import_hostname(&hostname)?;
+
+        if let Some(ref key_path) = preview.identity_file_path {
+            validate_import_identity_path(key_path, &app)?;
+        }
+
         let payload = CreateServerPayload {
             display_name: preview.pattern.clone(),
-            hostname: preview
-                .hostname
-                .clone()
-                .unwrap_or_else(|| preview.pattern.clone()),
+            hostname,
             port: preview.port,
             username: preview.username.clone(),
             auth_method: preview
