@@ -80,7 +80,7 @@ pub async fn vault_setup(
             "master password must be at least 8 characters".into(),
         ));
     }
-    let key = crate::vault::master_password::setup(&state.db, &*master_password).await?;
+    let key = crate::vault::master_password::setup(&state.db, &master_password).await?;
     *state.vault_key.lock().await = Some(key);
     Ok(())
 }
@@ -113,7 +113,7 @@ pub async fn vault_unlock(
         failures.1 = None;
     }
 
-    match crate::vault::master_password::verify(&state.db, &*master_password).await? {
+    match crate::vault::master_password::verify(&state.db, &master_password).await? {
         Some(key) => {
             *failures = (0, None);
             drop(failures);
@@ -208,7 +208,7 @@ pub async fn vault_disable_password(
         failures.1 = None;
     }
 
-    match master_password::verify(&state.db, &*current_password).await? {
+    match master_password::verify(&state.db, &current_password).await? {
         None => {
             failures.0 += 1;
             if failures.0 >= 5 {
@@ -227,6 +227,13 @@ pub async fn vault_disable_password(
             drop(failures);
             persist_lockout(&state.db, 0, None).await;
             master_password::disable_password(&state.db).await?;
+            // Also clear any biometric key — it's tied to the vault key that no
+            // longer has a password gate, so it would unlock to nothing useful.
+            #[cfg(target_os = "macos")]
+            {
+                let _ = crate::platform::biometric::delete_key();
+                let _ = master_password::set_biometric_enabled(&state.db, false).await;
+            }
             // Ensure the vault stays unlocked with a placeholder key.
             let mut key_guard = state.vault_key.lock().await;
             if key_guard.is_none() {
@@ -263,7 +270,7 @@ pub async fn vault_enable_password(
             "master password must be at least 8 characters".into(),
         ));
     }
-    let key = master_password::setup(&state.db, &*new_password).await?;
+    let key = master_password::setup(&state.db, &new_password).await?;
     master_password::set_password_required(&state.db, true).await?;
     *state.vault_key.lock().await = Some(key);
     Ok(())
@@ -297,7 +304,7 @@ pub async fn vault_change_password(
         failures.1 = None;
     }
 
-    match master_password::verify(&state.db, &*current_password).await? {
+    match master_password::verify(&state.db, &current_password).await? {
         None => {
             failures.0 += 1;
             if failures.0 >= 5 {
@@ -315,10 +322,100 @@ pub async fn vault_change_password(
             *failures = (0, None);
             drop(failures);
             persist_lockout(&state.db, 0, None).await;
-            let key = master_password::setup(&state.db, &*new_password).await?;
+            let key = master_password::setup(&state.db, &new_password).await?;
+            // Update the biometric-stored key to match the new vault key so that
+            // Touch ID unlock remains valid after a password change.
+            #[cfg(target_os = "macos")]
+            if master_password::is_biometric_enabled(&state.db).await.unwrap_or(false) {
+                if let Err(e) = crate::platform::biometric::store_key(&key) {
+                    log::warn!("failed to update biometric key after password change: {e}");
+                    let _ = master_password::set_biometric_enabled(&state.db, false).await;
+                }
+            }
             *state.vault_key.lock().await = Some(key);
             Ok(())
         }
+    }
+}
+
+// ── Biometric commands ────────────────────────────────────────────────────────
+
+/// Returns true when Touch ID hardware is present and enrolled.
+/// Always false on non-macOS platforms.
+#[tauri::command]
+pub async fn vault_biometric_available() -> Result<bool, AppError> {
+    #[cfg(target_os = "macos")]
+    return Ok(crate::platform::biometric::is_available());
+    #[cfg(not(target_os = "macos"))]
+    Ok(false)
+}
+
+/// Returns true when biometric unlock has been enabled for this vault.
+#[tauri::command]
+pub async fn vault_biometric_enabled(
+    state: tauri::State<'_, AppState>,
+) -> Result<bool, AppError> {
+    if !master_password::is_password_required(&state.db).await? {
+        return Ok(false);
+    }
+    master_password::is_biometric_enabled(&state.db).await
+}
+
+/// Stores the current vault key for biometric unlock.
+/// Vault must already be unlocked.
+#[tauri::command]
+pub async fn vault_enable_biometric(
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    #[cfg(not(target_os = "macos"))]
+    return Err(AppError::Vault("biometric unlock is not supported on this platform".into()));
+
+    #[cfg(target_os = "macos")]
+    {
+        let key_guard = state.vault_key.lock().await;
+        let key = key_guard
+            .as_ref()
+            .ok_or_else(|| AppError::Vault("vault is locked".into()))?;
+        crate::platform::biometric::store_key(key)?;
+        drop(key_guard);
+        master_password::set_biometric_enabled(&state.db, true).await
+    }
+}
+
+/// Removes the stored biometric key and disables biometric unlock.
+#[tauri::command]
+pub async fn vault_disable_biometric(
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    #[cfg(not(target_os = "macos"))]
+    return Err(AppError::Vault("biometric unlock is not supported on this platform".into()));
+
+    #[cfg(target_os = "macos")]
+    {
+        crate::platform::biometric::delete_key()?;
+        master_password::set_biometric_enabled(&state.db, false).await
+    }
+}
+
+/// Unlocks the vault using Touch ID. Shows the system biometric prompt.
+#[tauri::command]
+pub async fn vault_unlock_biometric(
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    #[cfg(not(target_os = "macos"))]
+    return Err(AppError::Vault("biometric unlock is not supported on this platform".into()));
+
+    #[cfg(target_os = "macos")]
+    {
+        if !master_password::is_biometric_enabled(&state.db).await? {
+            return Err(AppError::Vault("biometric unlock is not enabled".into()));
+        }
+
+        let key = crate::platform::biometric::unlock().await?;
+        *state.manually_locked.lock().await = false;
+        *state.vault_key.lock().await = Some(key);
+        *state.last_vault_activity.lock().await = std::time::Instant::now();
+        Ok(())
     }
 }
 
@@ -332,4 +429,81 @@ pub async fn delete_credential(
         return Err(AppError::Vault("vault is locked".into()));
     }
     vault::delete_credential(&vault_credential_id).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+    async fn make_db() -> sqlx::SqlitePool {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query(
+            "CREATE TABLE vault_meta (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "CREATE TABLE settings (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn load_lockout_returns_zero_on_empty_db() {
+        let db = make_db().await;
+        let (failures, until) = load_lockout(&db).await;
+        assert_eq!(failures, 0);
+        assert!(until.is_none());
+    }
+
+    #[tokio::test]
+    async fn persist_and_reload_failure_count() {
+        let db = make_db().await;
+        persist_lockout(&db, 3, None).await;
+        let (failures, until) = load_lockout(&db).await;
+        assert_eq!(failures, 3);
+        assert!(until.is_none());
+    }
+
+    #[tokio::test]
+    async fn persist_and_reload_lockout_expiry() {
+        let db = make_db().await;
+        let expiry = SystemTime::now() + Duration::from_secs(3600);
+        persist_lockout(&db, 5, Some(expiry)).await;
+        let (_, until) = load_lockout(&db).await;
+        let loaded = until.expect("expiry should be present");
+        let diff = loaded
+            .duration_since(expiry)
+            .unwrap_or_else(|e| e.duration());
+        assert!(diff < Duration::from_secs(1));
+    }
+
+    #[tokio::test]
+    async fn load_lockout_discards_expired_lockout() {
+        let db = make_db().await;
+        let past = UNIX_EPOCH + Duration::from_secs(1);
+        persist_lockout(&db, 5, Some(past)).await;
+        let (failures, until) = load_lockout(&db).await;
+        assert_eq!(failures, 5);
+        assert!(until.is_none());
+    }
+
+    #[tokio::test]
+    async fn persist_lockout_zero_clears_state() {
+        let db = make_db().await;
+        let future = SystemTime::now() + Duration::from_secs(3600);
+        persist_lockout(&db, 3, Some(future)).await;
+        persist_lockout(&db, 0, None).await;
+        let (failures, until) = load_lockout(&db).await;
+        assert_eq!(failures, 0);
+        assert!(until.is_none());
+    }
 }

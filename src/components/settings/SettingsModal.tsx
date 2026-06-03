@@ -37,7 +37,16 @@ function PasswordInput({
 }
 
 export default function SettingsModal({ onClose }: Props) {
-  const { isPasswordRequired, disablePassword, enablePassword, changePassword } = useVaultStore();
+  const {
+    isPasswordRequired,
+    isBiometricAvailable,
+    isBiometricEnabled,
+    disablePassword,
+    enablePassword,
+    changePassword,
+    enableBiometric,
+    disableBiometric,
+  } = useVaultStore();
   const setVaultTimeoutMins = useUiStore((s) => s.setVaultTimeoutMins);
   const { fontSize, scrollback, copyOnSelect, fontFamily, setFontSize, setScrollback, setCopyOnSelect, setFontFamily } =
     useTerminalSettings();
@@ -224,6 +233,26 @@ export default function SettingsModal({ onClose }: Props) {
       setError(formatError(e));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const [biometricLoading, setBiometricLoading] = useState(false);
+
+  const toggleBiometric = async () => {
+    setBiometricLoading(true);
+    setError(null);
+    try {
+      if (isBiometricEnabled) {
+        await disableBiometric();
+        setSuccess("Touch ID unlock disabled.");
+      } else {
+        await enableBiometric();
+        setSuccess("Touch ID unlock enabled. Use Touch ID on the lock screen.");
+      }
+    } catch (e) {
+      setError(formatError(e));
+    } finally {
+      setBiometricLoading(false);
     }
   };
 
@@ -432,6 +461,34 @@ export default function SettingsModal({ onClose }: Props) {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Touch ID toggle — only shown when hardware is available and a password protects the vault */}
+            {isBiometricAvailable && isPasswordRequired && (
+              <div className="flex items-center justify-between py-3 border-t border-stroke-subtle">
+                <div>
+                  <p className="text-sm text-white font-medium">Touch ID unlock</p>
+                  <p className="text-xs text-muted mt-0.5">
+                    {isBiometricEnabled
+                      ? "Touch ID will be offered on the lock screen."
+                      : "Use Touch ID instead of typing your password."}
+                  </p>
+                </div>
+                <button
+                  onClick={() => { void toggleBiometric(); }}
+                  disabled={biometricLoading}
+                  className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ml-4 disabled:opacity-40 ${
+                    isBiometricEnabled ? "bg-accent" : "bg-dim"
+                  }`}
+                  aria-label="Toggle Touch ID unlock"
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                      isBiometricEnabled ? "translate-x-[22px]" : "translate-x-0"
+                    }`}
+                  />
+                </button>
               </div>
             )}
           </div>
