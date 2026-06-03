@@ -10,6 +10,8 @@ import { useWakeReconnect } from "../../hooks/useWakeReconnect";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { useVaultHeartbeat } from "../../hooks/useVaultHeartbeat";
 import { useMenuEvents } from "../../hooks/useMenuEvents";
+import { useTrayEvents } from "../../hooks/useTrayEvents";
+import { trayCommands } from "../../lib/tauriCommands";
 import SshConfigImport from "../servers/SshConfigImport";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
@@ -66,6 +68,7 @@ export default function AppShell() {
   useKeyboardShortcuts();
   useVaultHeartbeat();
   useMenuEvents();
+  useTrayEvents();
 
   const activeView = useUiStore((s) => s.activeView);
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
@@ -214,6 +217,12 @@ export default function AppShell() {
   useEffect(() => {
     if (activeView === "snippets") void fetchSnippets();
   }, [activeView, fetchSnippets]);
+
+  useEffect(() => {
+    void trayCommands.updateMenu(
+      servers.map((s) => ({ id: s.id, displayName: s.displayName, hostname: s.hostname })),
+    );
+  }, [servers]);
 
   useEffect(() => {
     if (!showNewTabPicker) return;

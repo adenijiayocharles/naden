@@ -234,3 +234,8 @@ export const logCommands = {
   getLastConnectedMap: () =>
     invoke<Record<string, string>>("get_last_connected_map"),
 };
+
+export const trayCommands = {
+  updateMenu: (servers: { id: string; displayName: string; hostname: string }[]) =>
+    invoke<void>("update_tray_menu", { servers }),
+};

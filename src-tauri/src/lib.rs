@@ -9,6 +9,7 @@ mod power;
 mod search;
 mod sftp;
 mod ssh;
+mod tray;
 mod vault;
 
 pub struct AppState {
@@ -26,6 +27,14 @@ pub struct AppState {
     pub sftp_manager: sftp::SftpManager,
     /// Timestamp of the last vault-related activity; used by the auto-lock task.
     pub last_vault_activity: tokio::sync::Mutex<std::time::Instant>,
+}
+
+#[tauri::command]
+fn update_tray_menu(
+    app: tauri::AppHandle,
+    servers: Vec<tray::TrayServer>,
+) -> Result<(), String> {
+    tray::rebuild(&app, &servers).map_err(|e| e.to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -103,6 +112,8 @@ pub fn run() {
             commands::ssh_commands::close_terminal_session,
             commands::ssh_commands::send_terminal_input,
             commands::ssh_commands::resize_terminal,
+            // Tray
+            update_tray_menu,
             // Vault
             commands::vault_commands::vault_is_setup,
             commands::vault_commands::vault_setup,
@@ -156,6 +167,9 @@ pub fn run() {
                 sftp_manager: sftp::SftpManager::new(),
                 last_vault_activity: tokio::sync::Mutex::new(std::time::Instant::now()),
             });
+
+            // Menubar tray icon — starts empty; frontend populates on first server load.
+            tray::setup_tray(app.handle()).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
             // Spawn vault auto-lock background task using Tauri's runtime,
             // which is already active during setup (unlike tokio::spawn).
