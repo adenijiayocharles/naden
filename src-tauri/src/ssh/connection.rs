@@ -390,12 +390,18 @@ fn run_session(
             loop {
                 match channel.read(&mut buf) {
                     Ok(0) => {
-                        if !coalesced.is_empty() {
-                            let encoded =
-                                base64::engine::general_purpose::STANDARD.encode(&coalesced);
-                            let _ = app_handle.emit(&output_event, encoded);
+                        // In non-blocking mode libssh2 returns Ok(0) to mean "no data
+                        // available right now", not true EOF. Only exit the session
+                        // when the channel has confirmed end-of-file.
+                        if channel.eof() {
+                            if !coalesced.is_empty() {
+                                let encoded =
+                                    base64::engine::general_purpose::STANDARD.encode(&coalesced);
+                                let _ = app_handle.emit(&output_event, encoded);
+                            }
+                            break 'io;
                         }
-                        break 'io;
+                        break;
                     }
                     Ok(n) => {
                         active = true;
@@ -424,6 +430,9 @@ fn run_session(
                             )));
                         }
                         session.set_blocking(false);
+                        // Clear the timeout — a non-zero value leaks into subsequent
+                        // non-blocking reads and causes spurious disconnects on slow links.
+                        session.set_timeout(0);
                     }
                     Ok(SessionMessage::Resize(cols, rows)) => {
                         active = true;
@@ -451,6 +460,7 @@ fn run_session(
                     session.set_timeout(2000);
                     let _ = session.keepalive_send();
                     session.set_blocking(false);
+                    session.set_timeout(0);
                     last_keepalive = std::time::Instant::now();
                 }
                 std::thread::sleep(std::time::Duration::from_millis(20));
