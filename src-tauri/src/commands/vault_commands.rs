@@ -227,13 +227,6 @@ pub async fn vault_disable_password(
             drop(failures);
             persist_lockout(&state.db, 0, None).await;
             master_password::disable_password(&state.db).await?;
-            // Also clear any biometric key — it's tied to the vault key that no
-            // longer has a password gate, so it would unlock to nothing useful.
-            #[cfg(target_os = "macos")]
-            {
-                let _ = crate::platform::biometric::delete_key();
-                let _ = master_password::set_biometric_enabled(&state.db, false).await;
-            }
             // Ensure the vault stays unlocked with a placeholder key.
             let mut key_guard = state.vault_key.lock().await;
             if key_guard.is_none() {
@@ -323,99 +316,9 @@ pub async fn vault_change_password(
             drop(failures);
             persist_lockout(&state.db, 0, None).await;
             let key = master_password::setup(&state.db, &new_password).await?;
-            // Update the biometric-stored key to match the new vault key so that
-            // Touch ID unlock remains valid after a password change.
-            #[cfg(target_os = "macos")]
-            if master_password::is_biometric_enabled(&state.db).await.unwrap_or(false) {
-                if let Err(e) = crate::platform::biometric::store_key(&key) {
-                    log::warn!("failed to update biometric key after password change: {e}");
-                    let _ = master_password::set_biometric_enabled(&state.db, false).await;
-                }
-            }
             *state.vault_key.lock().await = Some(key);
             Ok(())
         }
-    }
-}
-
-// ── Biometric commands ────────────────────────────────────────────────────────
-
-/// Returns true when Touch ID hardware is present and enrolled.
-/// Always false on non-macOS platforms.
-#[tauri::command]
-pub async fn vault_biometric_available() -> Result<bool, AppError> {
-    #[cfg(target_os = "macos")]
-    return Ok(crate::platform::biometric::is_available());
-    #[cfg(not(target_os = "macos"))]
-    Ok(false)
-}
-
-/// Returns true when biometric unlock has been enabled for this vault.
-#[tauri::command]
-pub async fn vault_biometric_enabled(
-    state: tauri::State<'_, AppState>,
-) -> Result<bool, AppError> {
-    if !master_password::is_password_required(&state.db).await? {
-        return Ok(false);
-    }
-    master_password::is_biometric_enabled(&state.db).await
-}
-
-/// Stores the current vault key for biometric unlock.
-/// Vault must already be unlocked.
-#[tauri::command]
-pub async fn vault_enable_biometric(
-    state: tauri::State<'_, AppState>,
-) -> Result<(), AppError> {
-    #[cfg(not(target_os = "macos"))]
-    return Err(AppError::Vault("biometric unlock is not supported on this platform".into()));
-
-    #[cfg(target_os = "macos")]
-    {
-        let key_guard = state.vault_key.lock().await;
-        let key = key_guard
-            .as_ref()
-            .ok_or_else(|| AppError::Vault("vault is locked".into()))?;
-        crate::platform::biometric::store_key(key)?;
-        drop(key_guard);
-        master_password::set_biometric_enabled(&state.db, true).await
-    }
-}
-
-/// Removes the stored biometric key and disables biometric unlock.
-#[tauri::command]
-pub async fn vault_disable_biometric(
-    state: tauri::State<'_, AppState>,
-) -> Result<(), AppError> {
-    #[cfg(not(target_os = "macos"))]
-    return Err(AppError::Vault("biometric unlock is not supported on this platform".into()));
-
-    #[cfg(target_os = "macos")]
-    {
-        crate::platform::biometric::delete_key()?;
-        master_password::set_biometric_enabled(&state.db, false).await
-    }
-}
-
-/// Unlocks the vault using Touch ID. Shows the system biometric prompt.
-#[tauri::command]
-pub async fn vault_unlock_biometric(
-    state: tauri::State<'_, AppState>,
-) -> Result<(), AppError> {
-    #[cfg(not(target_os = "macos"))]
-    return Err(AppError::Vault("biometric unlock is not supported on this platform".into()));
-
-    #[cfg(target_os = "macos")]
-    {
-        if !master_password::is_biometric_enabled(&state.db).await? {
-            return Err(AppError::Vault("biometric unlock is not enabled".into()));
-        }
-
-        let key = crate::platform::biometric::unlock().await?;
-        *state.manually_locked.lock().await = false;
-        *state.vault_key.lock().await = Some(key);
-        *state.last_vault_activity.lock().await = std::time::Instant::now();
-        Ok(())
     }
 }
 

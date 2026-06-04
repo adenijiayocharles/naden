@@ -122,20 +122,6 @@ export const vaultCommands = {
   deleteCredential: (vaultCredentialId: string) =>
     invoke<void>("delete_credential", { vaultCredentialId }),
 
-  biometricAvailable: () =>
-    invoke<boolean>("vault_biometric_available"),
-
-  biometricEnabled: () =>
-    invoke<boolean>("vault_biometric_enabled"),
-
-  enableBiometric: () =>
-    invoke<void>("vault_enable_biometric"),
-
-  disableBiometric: () =>
-    invoke<void>("vault_disable_biometric"),
-
-  unlockBiometric: () =>
-    invoke<void>("vault_unlock_biometric"),
 };
 
 export const localCommands = {

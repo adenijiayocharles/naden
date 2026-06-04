@@ -45,24 +45,6 @@ pub async fn is_password_required(db: &SqlitePool) -> Result<bool, AppError> {
     Ok(val.map(|v| v != "false").unwrap_or(true))
 }
 
-pub async fn is_biometric_enabled(db: &SqlitePool) -> Result<bool, AppError> {
-    let val: Option<String> =
-        sqlx::query_scalar("SELECT value FROM vault_meta WHERE key = 'biometric_enabled'")
-            .fetch_optional(db)
-            .await?;
-    Ok(val.map(|v| v == "true").unwrap_or(false))
-}
-
-pub async fn set_biometric_enabled(db: &SqlitePool, enabled: bool) -> Result<(), AppError> {
-    sqlx::query(
-        "INSERT OR REPLACE INTO vault_meta (key, value) VALUES ('biometric_enabled', ?)",
-    )
-    .bind(if enabled { "true" } else { "false" })
-    .execute(db)
-    .await?;
-    Ok(())
-}
-
 pub async fn set_password_required(db: &SqlitePool, required: bool) -> Result<(), AppError> {
     sqlx::query("INSERT OR REPLACE INTO vault_meta (key, value) VALUES ('password_required', ?)")
         .bind(if required { "true" } else { "false" })
@@ -304,59 +286,4 @@ mod tests {
         assert_eq!(key1.as_slice(), key2.as_slice());
     }
 
-    #[tokio::test]
-    async fn biometric_disabled_by_default() {
-        let db = make_db().await;
-        assert!(!is_biometric_enabled(&db).await.unwrap());
-    }
-
-    #[tokio::test]
-    async fn set_biometric_enabled_true_persists() {
-        let db = make_db().await;
-        set_biometric_enabled(&db, true).await.unwrap();
-        assert!(is_biometric_enabled(&db).await.unwrap());
-    }
-
-    #[tokio::test]
-    async fn set_biometric_enabled_false_after_true() {
-        let db = make_db().await;
-        set_biometric_enabled(&db, true).await.unwrap();
-        set_biometric_enabled(&db, false).await.unwrap();
-        assert!(!is_biometric_enabled(&db).await.unwrap());
-    }
-
-    #[tokio::test]
-    async fn set_biometric_enabled_idempotent() {
-        let db = make_db().await;
-        set_biometric_enabled(&db, true).await.unwrap();
-        set_biometric_enabled(&db, true).await.unwrap();
-        assert!(is_biometric_enabled(&db).await.unwrap());
-    }
-
-    #[tokio::test]
-    async fn biometric_and_password_flags_are_independent() {
-        let db = make_db().await;
-        set_biometric_enabled(&db, true).await.unwrap();
-        assert!(is_password_required(&db).await.unwrap());
-
-        set_password_required(&db, false).await.unwrap();
-        assert!(is_biometric_enabled(&db).await.unwrap());
-    }
-
-    #[tokio::test]
-    async fn disable_password_does_not_clear_biometric_flag() {
-        let db = make_db().await;
-        setup(&db, "somepassword").await.unwrap();
-        set_biometric_enabled(&db, true).await.unwrap();
-        disable_password(&db).await.unwrap();
-        assert!(is_biometric_enabled(&db).await.unwrap());
-    }
-
-    #[tokio::test]
-    async fn set_biometric_enabled_upserts_existing_row() {
-        let db = make_db().await;
-        set_biometric_enabled(&db, true).await.unwrap();
-        set_biometric_enabled(&db, false).await.unwrap();
-        assert!(!is_biometric_enabled(&db).await.unwrap());
-    }
 }

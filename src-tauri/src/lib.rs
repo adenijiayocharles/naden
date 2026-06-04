@@ -133,11 +133,6 @@ pub fn run() {
             commands::vault_commands::vault_change_password,
             commands::vault_commands::store_credential,
             commands::vault_commands::delete_credential,
-            commands::vault_commands::vault_biometric_available,
-            commands::vault_commands::vault_biometric_enabled,
-            commands::vault_commands::vault_enable_biometric,
-            commands::vault_commands::vault_disable_biometric,
-            commands::vault_commands::vault_unlock_biometric,
             // Port forwards
             commands::tunnel_commands::list_port_forwards,
             commands::tunnel_commands::create_port_forward,
@@ -256,6 +251,17 @@ async fn auto_lock_task(app: tauri::AppHandle) {
 
         if timeout_mins == 0 {
             // Auto-lock is disabled — poll infrequently to detect when it's re-enabled.
+            tokio::time::sleep(std::time::Duration::from_secs(300)).await;
+            continue;
+        }
+
+        // Auto-lock only makes sense when a master password is required; without one
+        // the heartbeat immediately restores the key on the next tick, making the lock
+        // a no-op that just breaks in-flight credential lookups.
+        let password_required = vault::master_password::is_password_required(&state.db)
+            .await
+            .unwrap_or(true);
+        if !password_required {
             tokio::time::sleep(std::time::Duration::from_secs(300)).await;
             continue;
         }

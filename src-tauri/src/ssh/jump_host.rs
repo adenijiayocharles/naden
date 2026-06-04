@@ -78,9 +78,19 @@ fn one_hop(
     let channel = session
         .channel_direct_tcpip(next_host, next_port, None)
         .map_err(|e| {
-            AppError::Ssh(format!(
-                "direct-tcpip to {next_host}:{next_port} failed: {e}"
-            ))
+            let msg = e.to_string();
+            if msg.contains("administratively prohibited") || msg.contains("Channel open failure") {
+                AppError::Ssh(format!(
+                    "The jump host '{}' refused to forward to {next_host}:{next_port}. \
+                     Check that AllowTcpForwarding is enabled in the jump host's sshd_config.",
+                    jump.host
+                ))
+            } else {
+                AppError::Ssh(format!(
+                    "Could not open tunnel through '{}' to {next_host}:{next_port}: {e}",
+                    jump.host
+                ))
+            }
         })?;
 
     let (proxy_sock, consumer_sock) =
@@ -121,7 +131,14 @@ fn proxy_loop(channel: &mut ssh2::Channel, sock: &mut UnixStream) {
         let mut active = false;
 
         match channel.read(&mut buf) {
-            Ok(0) => break,
+            // In non-blocking mode libssh2 returns Ok(0) to mean "no data right
+            // now", not true EOF. Only close the tunnel when the channel confirms
+            // end-of-file; otherwise treat it the same as WouldBlock.
+            Ok(0) => {
+                if channel.eof() {
+                    break;
+                }
+            }
             Ok(n) => {
                 active = true;
                 if sock.write_all(&buf[..n]).is_err() {
