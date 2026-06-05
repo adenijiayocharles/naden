@@ -69,6 +69,7 @@ export default function ServerCard({ server, groupColor, lastConnected }: Server
     <>
     <div
       onClick={handleClick}
+      style={groupColor && !isSelected ? { backgroundColor: `${groupColor}18` } : undefined}
       className={`bg-surface-1 border rounded-lg p-3 flex flex-col gap-3 transition-colors select-none
         ${isSelected ? "border-accent/50 bg-accent/5" : "border-stroke-subtle"}
         ${actions.connecting ? "opacity-60 cursor-wait" : "hover:border-stroke cursor-pointer hover:bg-surface-2"}`}
