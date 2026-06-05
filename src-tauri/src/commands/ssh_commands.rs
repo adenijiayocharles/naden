@@ -88,14 +88,14 @@ pub(crate) async fn auth_for_server(
                 .vault_credential_id
                 .as_deref()
                 .ok_or_else(|| AppError::Vault("no vault credential for password auth".into()))?;
-            // Hold the lock across the retrieval so the auto-lock task cannot fire
-            // in the window between the is_none() check and retrieve_credential().
-            let guard = state.vault_key.lock().await;
-            if guard.is_none() {
-                return Err(AppError::Vault("vault is locked".into()));
-            }
-            let password = vault::retrieve_credential(vault_id).await?;
-            drop(guard);
+            let key: [u8; 32] = {
+                let guard = state.vault_key.lock().await;
+                match guard.as_ref() {
+                    None => return Err(AppError::Vault("vault is locked".into())),
+                    Some(k) => **k,
+                }
+            };
+            let password = vault::retrieve_credential(&state.db, &key, vault_id).await?;
             Ok(AuthInfo::Password(Zeroizing::new(password)))
         }
         "key" => {
@@ -132,8 +132,12 @@ pub(crate) async fn auth_for_server(
             }
 
             let passphrase = if let Some(vid) = &s.vault_credential_id {
-                if state.vault_key.lock().await.is_some() {
-                    vault::retrieve_credential(vid).await.ok()
+                let key_opt: Option<[u8; 32]> = {
+                    let guard = state.vault_key.lock().await;
+                    guard.as_ref().map(|k| **k)
+                };
+                if let Some(key) = key_opt {
+                    vault::retrieve_credential(&state.db, &key, vid).await.ok()
                 } else {
                     None
                 }

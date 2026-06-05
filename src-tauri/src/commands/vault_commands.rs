@@ -168,17 +168,21 @@ pub async fn vault_lock(state: tauri::State<'_, AppState>) -> Result<(), AppErro
     Ok(())
 }
 
-/// Stores `secret` in the OS keychain. Vault must be unlocked.
+/// Encrypts `secret` with the current vault key and stores it in the DB.
 /// Returns a `vault_credential_id` to persist in the DB.
 #[tauri::command]
 pub async fn store_credential(
     secret: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<String, AppError> {
-    if state.vault_key.lock().await.is_none() {
-        return Err(AppError::Vault("vault is locked".into()));
-    }
-    vault::store_credential(&secret).await
+    let key: [u8; 32] = {
+        let guard = state.vault_key.lock().await;
+        match guard.as_ref() {
+            None => return Err(AppError::Vault("vault is locked".into())),
+            Some(k) => **k,
+        }
+    };
+    vault::store_credential(&state.db, &key, &secret).await
 }
 
 #[tauri::command]
@@ -222,16 +226,16 @@ pub async fn vault_disable_password(
             persist_lockout(&state.db, count, until).await;
             Err(AppError::Vault("incorrect password".into()))
         }
-        Some(_) => {
+        Some(old_key) => {
             *failures = (0, None);
             drop(failures);
             persist_lockout(&state.db, 0, None).await;
+            // Re-encrypt all credentials from the PBKDF2 key to the no-password
+            // placeholder ([0u8;32]) before removing the master password.
+            let zero_key = [0u8; 32];
+            vault::reencrypt_all(&state.db, &*old_key, &zero_key).await?;
             master_password::disable_password(&state.db).await?;
-            // Ensure the vault stays unlocked with a placeholder key.
-            let mut key_guard = state.vault_key.lock().await;
-            if key_guard.is_none() {
-                *key_guard = Some(zeroize::Zeroizing::new([0u8; 32]));
-            }
+            *state.vault_key.lock().await = Some(zeroize::Zeroizing::new(zero_key));
             Ok(())
         }
     }
@@ -263,9 +267,12 @@ pub async fn vault_enable_password(
             "master password must be at least 8 characters".into(),
         ));
     }
-    let key = master_password::setup(&state.db, &new_password).await?;
+    let new_key = master_password::setup(&state.db, &new_password).await?;
     master_password::set_password_required(&state.db, true).await?;
-    *state.vault_key.lock().await = Some(key);
+    // Credentials were stored with the no-password placeholder ([0u8;32]); re-encrypt to the new key.
+    let zero_key = [0u8; 32];
+    vault::reencrypt_all(&state.db, &zero_key, &*new_key).await?;
+    *state.vault_key.lock().await = Some(new_key);
     Ok(())
 }
 
@@ -311,18 +318,19 @@ pub async fn vault_change_password(
             persist_lockout(&state.db, count, until).await;
             Err(AppError::Vault("incorrect current password".into()))
         }
-        Some(_) => {
+        Some(old_key) => {
             *failures = (0, None);
             drop(failures);
             persist_lockout(&state.db, 0, None).await;
-            let key = master_password::setup(&state.db, &new_password).await?;
-            *state.vault_key.lock().await = Some(key);
+            let new_key = master_password::setup(&state.db, &new_password).await?;
+            vault::reencrypt_all(&state.db, &*old_key, &*new_key).await?;
+            *state.vault_key.lock().await = Some(new_key);
             Ok(())
         }
     }
 }
 
-/// Deletes a secret from the OS keychain. Vault must be unlocked.
+/// Deletes a credential from the DB. Vault must be unlocked.
 #[tauri::command]
 pub async fn delete_credential(
     vault_credential_id: String,
@@ -331,7 +339,7 @@ pub async fn delete_credential(
     if state.vault_key.lock().await.is_none() {
         return Err(AppError::Vault("vault is locked".into()));
     }
-    vault::delete_credential(&vault_credential_id).await
+    vault::delete_credential(&state.db, &vault_credential_id).await
 }
 
 #[cfg(test)]

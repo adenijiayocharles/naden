@@ -54,7 +54,7 @@ pub async fn update_server(
             if let Ok(existing) = queries::get_server_db(&state.db, &id).await {
                 if existing.server.auth_method == "password" {
                     if let Some(cred_id) = existing.server.vault_credential_id {
-                        let _ = vault::delete_credential(&cred_id).await;
+                        let _ = vault::delete_credential(&state.db, &cred_id).await;
                     }
                 }
             }
@@ -70,7 +70,7 @@ pub async fn delete_server(id: String, state: tauri::State<'_, AppState>) -> Res
     // Clean up the keychain entry before removing the DB row so it doesn't leak.
     if let Ok(s) = queries::get_server_db(&state.db, &id).await {
         if let Some(cred_id) = s.server.vault_credential_id {
-            let _ = vault::delete_credential(&cred_id).await;
+            let _ = vault::delete_credential(&state.db, &cred_id).await;
         }
     }
     queries::delete_server_db(&state.db, &id).await?;
@@ -107,12 +107,19 @@ pub async fn duplicate_server(
     let original = queries::get_server_db(&state.db, &server_id).await?;
     let s = &original.server;
 
-    // Provision a fresh keychain entry so the duplicate doesn't share the original's
-    // credential — sharing would cause a use-after-free when either server is deleted.
+    // Provision a fresh credential entry so the duplicate doesn't share the original's
+    // credential — sharing would cause a double-delete when either server is deleted.
     let new_vault_credential_id = if s.auth_method == "password" {
         if let Some(cred_id) = &s.vault_credential_id {
-            match vault::retrieve_credential(cred_id).await {
-                Ok(secret) => Some(vault::store_credential(&secret).await?),
+            let key: [u8; 32] = {
+                let guard = state.vault_key.lock().await;
+                match guard.as_ref() {
+                    None => return Err(AppError::Vault("vault is locked".into())),
+                    Some(k) => **k,
+                }
+            };
+            match vault::retrieve_credential(&state.db, &key, cred_id).await {
+                Ok(secret) => Some(vault::store_credential(&state.db, &key, &secret).await?),
                 Err(_) => None,
             }
         } else {
