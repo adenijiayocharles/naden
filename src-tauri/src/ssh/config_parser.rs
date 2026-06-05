@@ -15,6 +15,8 @@ pub struct ImportPreview {
     pub port: Option<i64>,
     pub username: Option<String>,
     pub identity_file_path: Option<String>,
+    /// First entry from `ProxyJump` — the pattern name of the jump host.
+    pub proxy_jump: Option<String>,
 }
 
 pub fn parse_ssh_config(
@@ -54,12 +56,15 @@ fn parse_ssh_config_inner(
                 .and_then(|v| v.first())
                 .map(|pb| expand_tilde(pb, home_dir));
 
+            let proxy_jump = p.proxy_jump.as_ref().and_then(|v| v.first()).cloned();
+
             previews.push(ImportPreview {
                 pattern: name,
                 hostname: p.host_name.clone(),
                 port: p.port.map(|n| n as i64),
                 username: p.user.clone(),
                 identity_file_path: identity,
+                proxy_jump,
             });
         }
     }
@@ -170,5 +175,31 @@ mod tests {
         assert_eq!(previews[0].pattern, "myalias");
         // No HostName directive — hostname field is None
         assert!(previews[0].hostname.is_none());
+    }
+
+    #[test]
+    fn captures_proxy_jump() {
+        let config = "\
+Host bastion\n  HostName localhost\n  Port 2222\n  User admin\n\
+Host private\n  HostName 10.10.0.20\n  Port 2222\n  User ubuntu\n  ProxyJump bastion\n";
+        let path = write_config(config);
+        let previews = parse_ssh_config_inner(&path, None).unwrap();
+        fs::remove_file(&path).ok();
+
+        assert_eq!(previews.len(), 2);
+        let bastion = previews.iter().find(|p| p.pattern == "bastion").unwrap();
+        let private = previews.iter().find(|p| p.pattern == "private").unwrap();
+
+        assert!(bastion.proxy_jump.is_none());
+        assert_eq!(private.proxy_jump.as_deref(), Some("bastion"));
+    }
+
+    #[test]
+    fn no_proxy_jump_is_none() {
+        let path = write_config("Host direct\n  HostName 1.2.3.4\n");
+        let previews = parse_ssh_config_inner(&path, None).unwrap();
+        fs::remove_file(&path).ok();
+
+        assert!(previews[0].proxy_jump.is_none());
     }
 }

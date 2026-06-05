@@ -252,18 +252,28 @@ pub async fn confirm_ssh_config_import(
     state: tauri::State<'_, AppState>,
     app: tauri::AppHandle,
 ) -> Result<Vec<ServerWithTags>, AppError> {
+    // Validate all entries before inserting any.
+    for preview in &previews {
+        let hostname = preview
+            .hostname
+            .as_deref()
+            .unwrap_or(&preview.pattern);
+        validate_import_hostname(hostname)?;
+        if let Some(ref key_path) = preview.identity_file_path {
+            validate_import_identity_path(key_path, &app)?;
+        }
+    }
+
+    // Pass 1: insert every host; build a pattern → server-id map for jump wiring.
+    let mut pattern_to_id: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
     let mut created = Vec::with_capacity(previews.len());
+
     for preview in &previews {
         let hostname = preview
             .hostname
             .clone()
             .unwrap_or_else(|| preview.pattern.clone());
-
-        validate_import_hostname(&hostname)?;
-
-        if let Some(ref key_path) = preview.identity_file_path {
-            validate_import_identity_path(key_path, &app)?;
-        }
 
         let payload = CreateServerPayload {
             display_name: preview.pattern.clone(),
@@ -281,11 +291,55 @@ pub async fn confirm_ssh_config_import(
             jump_host_id: None,
             tag_ids: None,
         };
-        created.push(queries::create_server_db(&state.db, &payload).await?);
+        let server = queries::create_server_db(&state.db, &payload).await?;
+        pattern_to_id.insert(preview.pattern.clone(), server.server.id.clone());
+        created.push(server);
+    }
+
+    // Pass 2: wire ProxyJump relationships.
+    for preview in &previews {
+        let Some(ref jump_pattern) = preview.proxy_jump else {
+            continue;
+        };
+        let Some(jump_id) = pattern_to_id.get(jump_pattern) else {
+            // Jump target wasn't in this import batch — skip silently.
+            continue;
+        };
+        let dependent_id = pattern_to_id[&preview.pattern].clone();
+
+        // Mark the jump host as a jump host — targeted update so other fields
+        // (identity_file_path, auth_method, etc.) set during import are not wiped.
+        let now = chrono::Utc::now().to_rfc3339();
+        sqlx::query(
+            "UPDATE servers SET is_jump_host = 1, updated_at = ? WHERE id = ?",
+        )
+        .bind(&now)
+        .bind(jump_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
+
+        // Link the dependent server to its jump host.
+        sqlx::query(
+            "UPDATE servers SET jump_host_id = ?, updated_at = ? WHERE id = ?",
+        )
+        .bind(jump_id)
+        .bind(&now)
+        .bind(&dependent_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
     }
 
     // Flush the in-memory cache so list_servers returns the newly imported entries.
     if let Ok(fresh) = queries::list_servers_db(&state.db).await {
+        // Rebuild `created` from the refreshed list so callers see updated jump fields.
+        let ids: std::collections::HashSet<&str> = pattern_to_id.values().map(String::as_str).collect();
+        created = fresh
+            .iter()
+            .filter(|s| ids.contains(s.server.id.as_str()))
+            .cloned()
+            .collect();
         *state.server_cache.write().await = fresh;
     }
 
