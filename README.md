@@ -7,12 +7,15 @@ A fast, secure desktop application for managing SSH connections. Built for engin
 - **Server inventory** — add, edit, and organise servers with display name, hostname/IP, port, username, tags, and groups
 - **One-click connect** — launch sessions in the built-in terminal or your system terminal
 - **Built-in terminal** — multi-tab terminal emulator (up to 20 concurrent sessions) with drag-to-reorder tabs
-- **SFTP browser** — browse, upload, and download files over SFTP alongside your terminal sessions
-- **Credential vault** — AES-256 encrypted local storage for SSH keys and passwords; unlocked via master password or Touch ID / Windows Hello
-- **Jump host support** — define bastion/proxy-jump chains (A → B → C) that resolve automatically on connect
+- **SFTP browser** — browse, upload, download, and chmod files over SFTP alongside your terminal sessions
+- **Credential vault** — AES-256 encrypted local storage for SSH keys and passwords; unlocked via master password
+- **Jump host support** — define bastion/proxy-jump chains (A → B → C) that resolve automatically on connect; wired automatically when importing from `~/.ssh/config`
+- **Port forwarding** — manage local, remote, and dynamic (SOCKS5) SSH tunnels per server; start/stop individually with live status
+- **Command snippets** — save and send reusable shell commands to the active terminal session
 - **Fuzzy search** — real-time search across server name, hostname, IP, username, and tags
-- **SSH config import** — parse `~/.ssh/config` and preview before importing
+- **SSH config import** — parse `~/.ssh/config`, preview hosts, and import with ProxyJump relationships resolved
 - **Audit log** — local log of every connection attempt with timestamp, host, username, duration, and outcome; exportable to CSV
+- **System tray** — quick-connect to any server or open an SFTP session directly from the menu bar
 - **Wake reconnect** — automatically reconnects sessions that drop when the machine sleeps
 
 ## Tech Stack
@@ -83,27 +86,31 @@ Run these from the `src-tauri/` directory, or prefix with `cargo -C src-tauri`.
 ```
 src/
   components/
-    layout/       # AppShell, Sidebar, TopBar, tab bar
-    servers/      # Server list, row, form, bulk actions
+    layout/       # AppShell, Sidebar, TopBar, tab bar, vault countdown
+    servers/      # Server list, card, row, form, bulk actions, port forwards section
     terminal/     # Terminal pane and tab management
-    sftp/         # SFTP browser, file list, toolbar
+    sftp/         # SFTP browser, file list, toolbar, chmod dialog
+    tunnels/      # Port forward management panel
+    snippets/     # Command snippet list and form
     vault/        # Lock screen and setup modal
     settings/     # Settings modal
     log/          # Audit log view
     onboarding/   # First-run wizard
-    shared/       # Error boundary, connection overlay
-  hooks/          # useAppInit, useWakeReconnect, useKeyboardShortcuts, useVaultHeartbeat
-  store/          # Zustand stores (server, terminal, sftp, ui, vault)
-  lib/            # Tauri command wrappers, session buffer, vault activity
+    shared/       # Error boundary, connection overlay, shared inputs
+  hooks/          # useAppInit, useWakeReconnect, useKeyboardShortcuts, useVaultHeartbeat, useMenuEvents, useTrayEvents
+  store/          # Zustand stores (server, terminal, sftp, tunnel, snippet, ui, vault)
+  lib/            # Tauri command wrappers, session buffer, vault activity, clipboard clear
   types/          # Shared TypeScript types
 
 src-tauri/src/
-  commands/       # Tauri command handlers (ssh, sftp, vault, server, settings, log, backup)
+  commands/       # Tauri command handlers (ssh, sftp, vault, server, settings, log, tunnel, snippet)
   ssh/            # Connection manager, jump host tunnelling, SSH config parser, launcher
   sftp/           # SFTP session manager
+  tunnel/         # Local, remote, and dynamic port-forward engine
   vault/          # AES-256 credential vault, master password
   db/             # SQLite queries and migrations
   search/         # nucleo-based fuzzy search
+  platform/       # macOS-specific native integrations
   models/         # Shared data models
 ```
 
