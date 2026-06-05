@@ -40,8 +40,6 @@ export default function ServerList() {
   const [showAddPicker, setShowAddPicker] = useState(false);
   const viewMode = useUiStore((s) => s.viewMode);
   const sortMode = useUiStore((s) => s.sortMode);
-  const collapsedGroups = useUiStore((s) => s.collapsedGroups);
-  const toggleGroupCollapse = useUiStore((s) => s.toggleGroupCollapse);
   const filterGroupId = useUiStore((s) => s.filterGroupId);
   const filterTagId = useUiStore((s) => s.filterTagId);
   const filterFavourites = useUiStore((s) => s.filterFavourites);
@@ -268,79 +266,10 @@ export default function ServerList() {
     );
   }
 
-  // ── Default view ────────────────────────────────────────────────────────────
-  const byGroup = new Map<string, typeof sortedFiltered>();
-  const ungrouped: typeof sortedFiltered = [];
-  for (const s of sortedFiltered) {
-    if (s.groupId) {
-      const arr = byGroup.get(s.groupId) ?? [];
-      arr.push(s);
-      byGroup.set(s.groupId, arr);
-    } else {
-      ungrouped.push(s);
-    }
-  }
-  const sections = groups
-    .map((g) => ({ group: g, items: byGroup.get(g.id) ?? [] }))
-    .filter(({ items }) => items.length > 0);
-
+  // ── Default view (All Servers) — flat list, no group sections ──────────────
   return (
-    <div className="space-y-6">
-
-      {sections.map(({ group, items }) => {
-        const collapsed = collapsedGroups.has(group.id);
-        return (
-          <section key={group.id}>
-            <button
-              onClick={() => toggleGroupCollapse(group.id)}
-              className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-2 w-full text-left select-none"
-              style={{ color: group.color ?? "var(--color-faint)" }}
-            >
-              <svg
-                className={`w-2.5 h-2.5 shrink-0 transition-transform ${collapsed ? "" : "rotate-90"}`}
-                fill="none" viewBox="0 0 6 10" stroke="currentColor" strokeWidth={2}
-                strokeLinecap="round" strokeLinejoin="round"
-              >
-                <polyline points="1,1 5,5 1,9" />
-              </svg>
-              {group.color && (
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
-              )}
-              {group.name}
-              <span className="text-dim normal-case font-normal tracking-normal">{items.length}</span>
-            </button>
-            {!collapsed && (
-              <div className={listClass}>
-                {items.map((s) => renderItem(s))}
-              </div>
-            )}
-          </section>
-        );
-      })}
-
-      {ungrouped.length > 0 && (
-        <section>
-          <button
-            onClick={() => toggleGroupCollapse("__ungrouped__")}
-            className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-2 w-full text-left select-none text-faint"
-          >
-            <svg
-              className={`w-2.5 h-2.5 shrink-0 transition-transform ${collapsedGroups.has("__ungrouped__") ? "" : "rotate-90"}`}
-              fill="none" viewBox="0 0 6 10" stroke="currentColor" strokeWidth={2}
-              strokeLinecap="round" strokeLinejoin="round"
-            >
-              <polyline points="1,1 5,5 1,9" />
-            </svg>
-            Ungrouped
-            <span className="text-dim normal-case font-normal tracking-normal">{ungrouped.length}</span>
-          </button>
-          {!collapsedGroups.has("__ungrouped__") && (
-            <div className={listClass}>
-              {ungrouped.map((s) => renderItem(s))}
-            </div>
-          )}
-        </section>
-      )}
+    <div className={listClass}>
+      {sortedFiltered.map((s) => renderItem(s))}
     </div>
   );
 }
