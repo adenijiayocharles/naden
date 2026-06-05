@@ -94,13 +94,19 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
         }
       }),
 
-      listen<null>(`terminal:closed:${sessionId}`, () => {
+      listen<boolean>(`terminal:closed:${sessionId}`, ({ payload: isClean }) => {
         const session = get().sessions.find((s) => s.id === sessionId);
         if (!session) return;
 
         // Auto-reconnect attempt ended — close silently (one shot, no retry).
         if (autoReconnectSessions.has(sessionId)) {
           get().removeSession(sessionId); // teardownResources called inside
+          return;
+        }
+
+        // User typed `exit` — the shell exited cleanly. Close the tab immediately.
+        if (isClean && connectedSessions.has(sessionId)) {
+          get().removeSession(sessionId);
           return;
         }
 

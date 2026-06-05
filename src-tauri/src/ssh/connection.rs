@@ -493,5 +493,6 @@ fn run_session(
         let _ = app_handle.emit(&format!("terminal:error:{session_id}"), msg);
     }
 
-    let _ = app_handle.emit(&closed_event, ());
+    // Payload: true = clean exit (user typed `exit`), false = unexpected drop.
+    let _ = app_handle.emit(&closed_event, result.is_ok());
 }
