@@ -250,9 +250,24 @@ export default function TerminalPane({ sessionId }: Props) {
       });
       resizeObserver.observe(containerRef.current);
 
+      // Re-arm cursor blink. WKWebView freezes the CSS animation when the app
+      // is backgrounded or when focus moves away. Toggle cursorBlink off→on in
+      // a new frame to force the browser to discard the frozen animation state.
+      const restartBlink = () => {
+        const t = termRef.current;
+        if (!t?.options.cursorBlink) return;
+        t.options.cursorBlink = false;
+        requestAnimationFrame(() => {
+          if (termRef.current) termRef.current.options.cursorBlink = true;
+        });
+      };
+      window.addEventListener("focus", restartBlink);
+      term.textarea?.addEventListener("focus", restartBlink);
+
       // Update terminal colours when the app theme or accent changes.
       const themeObserver = new MutationObserver(() => {
         term.options.theme = getTermTheme();
+        restartBlink();
       });
       themeObserver.observe(document.documentElement, {
         attributes: true,
@@ -269,6 +284,8 @@ export default function TerminalPane({ sessionId }: Props) {
         if (resizeTimer.current) clearTimeout(resizeTimer.current);
         resizeObserver.disconnect();
         themeObserver.disconnect();
+        window.removeEventListener("focus", restartBlink);
+        term.textarea?.removeEventListener("focus", restartBlink);
         unsub();
         dataDisposer.dispose();
         selectionDisposer?.dispose();
