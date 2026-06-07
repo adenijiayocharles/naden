@@ -4,12 +4,19 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v0.1.0)"
+        required: true
 
 jobs:
   release:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
 
       - uses: actions/setup-node@v4
         with:
@@ -30,8 +37,8 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "SSHelter ${{ github.ref_name }}"
+          tagName: ${{ github.event.inputs.tag || github.ref_name }}
+          releaseName: "SSHelter ${{ github.event.inputs.tag || github.ref_name }}"
           releaseBody: "See the assets below to download this version."
           releaseDraft: true
           prerelease: false
