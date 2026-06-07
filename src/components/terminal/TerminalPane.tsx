@@ -10,6 +10,12 @@ import { useTerminalSettings, fontCss, resolveTermTheme } from "../../lib/termin
 import { ensureCanvasFonts, ensureFont } from "../../lib/canvasFonts";
 import { ConnectingOverlay, ErrorOverlay, ReconnectingOverlay } from "../shared/ConnectionOverlay";
 import { useSnippetStore } from "../../store/snippetStore";
+import { usePlaybookStore } from "../../store/playbookStore";
+import { usePlaybookRunStore } from "../../store/playbookRunStore";
+import { useServerStore } from "../../store/serverStore";
+import { resolvePlaybookStep } from "../../lib/playbookVariables";
+import PlaybookRunBar from "./PlaybookRunBar";
+import type { Playbook } from "../../types/playbook";
 
 // Matches xterm's auto-reply to a Device Status Report / cursor-position query
 // (ESC[6n -> ESC[<row>;<col>R) — a per-session PTY reply, never user input.
@@ -39,8 +45,17 @@ export default function TerminalPane({ sessionId }: Props) {
   const snippetPickerRef = useRef<HTMLDivElement>(null);
   const snippetButtonRef = useRef<HTMLButtonElement>(null);
 
+  const [playbookPickerOpen, setPlaybookPickerOpen] = useState(false);
+  const [playbookQuery, setPlaybookQuery] = useState("");
+  const playbookPickerRef = useRef<HTMLDivElement>(null);
+  const playbookButtonRef = useRef<HTMLButtonElement>(null);
+
   const snippets = useSnippetStore((s) => s.snippets);
   const fetchSnippets = useSnippetStore((s) => s.fetchAll);
+
+  const playbooks = usePlaybookStore((s) => s.playbooks);
+  const fetchPlaybooks = usePlaybookStore((s) => s.fetchAll);
+  const startPlaybookRun = usePlaybookRunStore((s) => s.start);
   // Ref mirror of searchQuery so findNext/findPrevious always read the latest
   // value without needing searchQuery in their dependency arrays. If they closed
   // over state, a stale value would mismatch xterm's cachedSearchTerm and cause
@@ -386,9 +401,119 @@ export default function TerminalPane({ sessionId }: Props) {
     return () => document.removeEventListener("mousedown", handler);
   }, [snippetPickerOpen]);
 
+  const filteredPlaybooks = useMemo(() => {
+    if (!playbookQuery.trim()) return playbooks;
+    const q = playbookQuery.toLowerCase();
+    return playbooks.filter(
+      (pb) => pb.title.toLowerCase().includes(q) || pb.description?.toLowerCase().includes(q),
+    );
+  }, [playbooks, playbookQuery]);
+
+  const openPlaybookPicker = useCallback(() => {
+    if (playbookPickerOpen) {
+      setPlaybookPickerOpen(false);
+      setPlaybookQuery("");
+      return;
+    }
+    if (playbooks.length === 0) void fetchPlaybooks();
+    setPlaybookPickerOpen(true);
+    setPlaybookQuery("");
+  }, [playbookPickerOpen, playbooks.length, fetchPlaybooks]);
+
+  const startPlaybook = useCallback((playbook: Playbook) => {
+    const server = useServerStore.getState().servers.find((sv) => sv.id === session?.serverId);
+    if (!server) return;
+
+    startPlaybookRun(
+      playbook,
+      (raw) => resolvePlaybookStep(raw, server),
+      (resolved) => terminalCommands.sendTerminalInput(sessionId, resolved + "\n"),
+    );
+    setPlaybookPickerOpen(false);
+    setPlaybookQuery("");
+  }, [session?.serverId, sessionId, startPlaybookRun]);
+
+  useEffect(() => {
+    if (!playbookPickerOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        !playbookPickerRef.current?.contains(e.target as Node) &&
+        !playbookButtonRef.current?.contains(e.target as Node)
+      ) {
+        setPlaybookPickerOpen(false);
+        setPlaybookQuery("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [playbookPickerOpen]);
+
   return (
-    <div className="relative h-full w-full bg-surface-1">
+    <div className="relative h-full w-full bg-surface-1 flex flex-col">
+      <PlaybookRunBar />
+      <div className="relative flex-1 min-h-0">
       <div ref={containerRef} className="absolute inset-0 overflow-hidden" />
+
+      {/* Playbook picker — floats over terminal at bottom-right, above the snippet picker */}
+      <div className="absolute bottom-14 right-4 z-30 flex flex-col items-end gap-1">
+        {playbookPickerOpen && (
+          <div
+            ref={playbookPickerRef}
+            className="mb-1 w-64 bg-surface-2 border border-stroke rounded-lg shadow-2xl overflow-hidden flex flex-col"
+          >
+            <div className="p-2 border-b border-stroke-subtle shrink-0">
+              <input
+                autoFocus
+                type="text"
+                value={playbookQuery}
+                onChange={(e) => setPlaybookQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") { setPlaybookPickerOpen(false); setPlaybookQuery(""); }
+                  if (e.key === "Enter" && filteredPlaybooks.length === 1) startPlaybook(filteredPlaybooks[0]);
+                }}
+                placeholder="Search playbooks…"
+                className="w-full bg-surface-3 border border-stroke rounded px-2.5 py-1.5 text-sm text-white placeholder-faint outline-none focus:border-accent transition-colors"
+              />
+            </div>
+            <div className="overflow-y-auto h-[134px] p-2 flex flex-col gap-1.5">
+              {filteredPlaybooks.length > 0 ? (
+                filteredPlaybooks.map((pb) => (
+                  <button
+                    key={pb.id}
+                    onClick={() => startPlaybook(pb)}
+                    className="w-full text-left bg-surface-1 border border-stroke-subtle rounded-lg px-3 py-2.5 hover:border-stroke hover:bg-surface-2 transition-colors group"
+                  >
+                    <p className="text-sm font-medium text-white truncate">{pb.title}</p>
+                    <p className="text-xs text-dim font-mono truncate mt-1 group-hover:text-muted">
+                      {pb.steps.length} step{pb.steps.length === 1 ? "" : "s"}
+                      {pb.description ? ` — ${pb.description}` : ""}
+                    </p>
+                  </button>
+                ))
+              ) : (
+                <p className="py-4 text-center text-sm text-dim">
+                  {playbooks.length === 0 ? "No playbooks saved" : "No matches"}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+        <button
+          ref={playbookButtonRef}
+          onClick={openPlaybookPicker}
+          title="Run a playbook"
+          aria-label="Open playbook picker"
+          className={`w-7 h-7 flex items-center justify-center rounded transition-colors ${
+            playbookPickerOpen
+              ? "bg-accent/20 text-accent-fg"
+              : "bg-surface-3/70 text-dim hover:text-muted hover:bg-surface-3"
+          }`}
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="6,4 12,8 6,12" />
+          </svg>
+        </button>
+      </div>
 
       {/* Snippet picker — floats over terminal at bottom-right */}
       <div className="absolute bottom-3 right-4 z-30 flex flex-col items-end gap-1">
@@ -510,6 +635,7 @@ export default function TerminalPane({ sessionId }: Props) {
           onClose={() => { void closeSession(sessionId); }}
         />
       )}
+      </div>
     </div>
   );
 }

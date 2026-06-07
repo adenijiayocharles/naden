@@ -10,6 +10,7 @@ import type {
   ImportPreview,
 } from "../types/server";
 import type { Snippet, CreateSnippetPayload, UpdateSnippetPayload } from "../types/snippet";
+import type { Playbook, CreatePlaybookPayload, UpdatePlaybookPayload } from "../types/playbook";
 import type { DirListing } from "../types/sftp";
 import type { LocalFileEntry } from "../types/local";
 import type {
@@ -210,6 +211,20 @@ export const snippetCommands = {
 
   deleteSnippet: (id: string) =>
     invoke<void>("delete_snippet", { id }),
+};
+
+export const playbookCommands = {
+  listPlaybooks: () =>
+    invoke<Playbook[]>("list_playbooks"),
+
+  createPlaybook: (payload: CreatePlaybookPayload) =>
+    invoke<Playbook>("create_playbook", { payload }),
+
+  updatePlaybook: (id: string, payload: UpdatePlaybookPayload) =>
+    invoke<Playbook>("update_playbook", { id, payload }),
+
+  deletePlaybook: (id: string) =>
+    invoke<void>("delete_playbook", { id }),
 };
 
 export const logCommands = {

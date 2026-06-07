@@ -1,5 +1,6 @@
 pub mod local_commands;
 pub mod log_commands;
+pub mod playbook_commands;
 pub mod search_commands;
 pub mod server_commands;
 pub mod settings_commands;

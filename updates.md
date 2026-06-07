@@ -13,7 +13,7 @@
 - [x] Per-session terminal settings (font size, scrollback)
 - [x] Copy-on-select
 - [x] Terminal search (Ctrl+F)
-- [ ] Multi-server command broadcast — grid of synced terminal panes with fan-out input and a destructive-command guard
+- [x] Multi-server command broadcast — grid of synced terminal panes with fan-out input and a destructive-command guard
 
 ## Security
 - [x] Vault auto-lock with countdown indicator
@@ -24,6 +24,7 @@
 ## Features
 - [x] SFTP file browser
 - [x] Encrypted backup export / import
+- [x] Audit log + CSV export — connection history with outcome/date filters, clear-logs, last-connected tracking
 
 ## Code Quality
 - [x] Frontend unit tests (Vitest)

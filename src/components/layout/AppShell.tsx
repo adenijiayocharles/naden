@@ -28,9 +28,11 @@ import OnboardingWizard from "../onboarding/OnboardingWizard";
 import SftpBrowser from "../sftp/SftpBrowser";
 import BulkActionBar from "../servers/BulkActionBar";
 import SnippetList from "../snippets/SnippetList";
+import PlaybookList from "../playbooks/PlaybookList";
 import TunnelPanel from "../tunnels/TunnelPanel";
 import ClipboardClearBanner from "./ClipboardClearBanner";
 import { useSnippetStore } from "../../store/snippetStore";
+import { usePlaybookStore } from "../../store/playbookStore";
 import type { SessionStatus } from "../../store/terminalStore";
 import type { SftpStatus } from "../../store/sftpStore";
 
@@ -121,6 +123,7 @@ export default function AppShell() {
   const servers = useServerStore((s) => s.servers);
   const terminalOpenSession = useTerminalStore((s) => s.openSession);
   const fetchSnippets = useSnippetStore((s) => s.fetchAll);
+  const fetchPlaybooks = usePlaybookStore((s) => s.fetchAll);
 
   const [activePanelType, setActivePanelType] = useState<PanelType>("terminal");
   const [showNewTabPicker, setShowNewTabPicker] = useState(false);
@@ -224,6 +227,10 @@ export default function AppShell() {
   }, [activeView, fetchSnippets]);
 
   useEffect(() => {
+    if (activeView === "playbooks") void fetchPlaybooks();
+  }, [activeView, fetchPlaybooks]);
+
+  useEffect(() => {
     void trayCommands.updateMenu(
       servers.map((s) => ({ id: s.id, displayName: s.displayName, hostname: s.hostname })),
     );
@@ -299,7 +306,7 @@ export default function AppShell() {
             className={`shrink-0 transition-[width,padding] duration-200 ${
               activeBroadcastGroupId
                 ? "w-0 p-0 overflow-hidden"
-                : activeView === "logs" || activeView === "snippets" || activeView === "tunnels"
+                : activeView === "logs" || activeView === "snippets" || activeView === "playbooks" || activeView === "tunnels"
                   ? "flex-1 overflow-hidden flex flex-col"
                   : hasPanel
                     ? serverListCollapsed
@@ -310,6 +317,8 @@ export default function AppShell() {
           >
             {activeView === "snippets" ? (
               <SnippetList />
+            ) : activeView === "playbooks" ? (
+              <PlaybookList />
             ) : activeView === "tunnels" ? (
               <TunnelPanel />
             ) : activeView === "logs" ? (
@@ -396,7 +405,7 @@ export default function AppShell() {
           </main>
 
           {/* Collapse / expand handle */}
-          {!activeBroadcastGroupId && hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "tunnels" && (
+          {!activeBroadcastGroupId && hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && (
             <button
               onClick={toggleServerList}
               aria-label={serverListCollapsed ? "Expand server list" : "Collapse server list"}
@@ -421,7 +430,7 @@ export default function AppShell() {
           )}
 
           {/* Unified panel: terminals + SFTP browsers */}
-          {hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "tunnels" && (
+          {hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && (
             <div className="flex flex-col flex-1 min-w-0">
               {/* Unified tab bar */}
               <div

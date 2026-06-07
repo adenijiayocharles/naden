@@ -75,6 +75,11 @@ pub fn run() {
             commands::snippet_commands::create_snippet,
             commands::snippet_commands::update_snippet,
             commands::snippet_commands::delete_snippet,
+            // Playbooks
+            commands::playbook_commands::list_playbooks,
+            commands::playbook_commands::create_playbook,
+            commands::playbook_commands::update_playbook,
+            commands::playbook_commands::delete_playbook,
             // Search
             commands::search_commands::fuzzy_search,
             // Logs

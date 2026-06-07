@@ -1,25 +1,14 @@
 import { create } from "zustand";
 import { terminalCommands } from "../lib/tauriCommands";
+import { isDestructiveCommand } from "../lib/destructiveCommands";
 import { useTerminalStore } from "./terminalStore";
+
+export { isDestructiveCommand } from "../lib/destructiveCommands";
 
 export interface BroadcastGroup {
   id: string;
   name: string;
   sessionIds: string[];
-}
-
-// Commands that pause broadcast and require an explicit per-host confirmation
-// before being sent to every pane in the group.
-const DESTRUCTIVE_PATTERNS = [
-  /\brm\s+-rf\b/,
-  /\bshutdown\b/,
-  /\breboot\b/,
-  /\bdd\s+if=/,
-  /\bmkfs\b/,
-];
-
-export function isDestructiveCommand(data: string): boolean {
-  return DESTRUCTIVE_PATTERNS.some((pattern) => pattern.test(data));
 }
 
 interface BroadcastStore {
