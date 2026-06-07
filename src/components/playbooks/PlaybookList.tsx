@@ -80,7 +80,7 @@ function StepRow({
           className="p-1 rounded text-dim hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
           title="Move up"
         >
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 9V3M3 6l3-3 3 3" />
           </svg>
         </button>
@@ -91,7 +91,7 @@ function StepRow({
           className="p-1 rounded text-dim hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
           title="Move down"
         >
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 3v6M3 6l3 3 3-3" />
           </svg>
         </button>
@@ -102,7 +102,7 @@ function StepRow({
           className="p-1 rounded text-dim hover:text-red-400 hover:bg-surface-3 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
           title="Remove step"
         >
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
             <path d="M2.5 2.5l7 7M9.5 2.5l-7 7" />
           </svg>
         </button>

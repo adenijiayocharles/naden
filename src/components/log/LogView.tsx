@@ -14,7 +14,7 @@ const PAGE = 50;
 
 const OUTCOME_STYLES: Record<LogOutcome, string> = {
   connecting: "text-yellow-400",
-  success:    "text-accent-fg",
+  success:    "text-green-400",
   user_closed:"text-muted",
   failure:    "text-red-400",
   timeout:    "text-orange-400",

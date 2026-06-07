@@ -9,7 +9,7 @@ import EmptyState from "../shared/EmptyState";
 import DeleteTunnelModal from "./DeleteTunnelModal";
 
 const STATUS_DOT: Record<TunnelStatus, string> = {
-  active:     "bg-accent",
+  active:     "bg-green-500",
   connecting: "bg-yellow-500",
   error:      "bg-red-500",
   idle:       "bg-dim",
@@ -131,7 +131,7 @@ function AddTunnelModal({ onClose }: { onClose: () => void }) {
             className="text-muted hover:text-white transition-colors"
             aria-label="Close"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" d="M3 3l10 10M13 3L3 13" />
             </svg>
           </button>

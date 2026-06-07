@@ -523,7 +523,7 @@ export default function ServerForm() {
                       <span key={i} className="flex items-center gap-1">
                         <span className={i === 0 || i === chain.length - 1
                           ? "text-muted"
-                          : "text-accent-fg font-medium"}>
+                          : "text-secondary font-medium"}>
                           {label}
                         </span>
                         {i < chain.length - 1 && <span className="text-dim">→</span>}

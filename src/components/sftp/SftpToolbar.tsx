@@ -153,7 +153,7 @@ export default function SftpToolbar({
             showLocalPane ? "text-white bg-surface-4" : "text-muted hover:text-white hover:bg-surface-4"
           }`}
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
             <rect x="1" y="2" width="14" height="12" rx="1.5" />
             <path strokeLinecap="round" d="M6 2v12" />
           </svg>
@@ -176,13 +176,13 @@ export default function SftpToolbar({
         <div className={`flex items-center gap-1 transition-opacity duration-150 ${remoteActive ? "" : "opacity-40"}`}>
           <div className="w-px h-5 bg-surface-4 mx-1" />
           <ToolbarBtn onClick={onNavigateUp} disabled={busy || currentPath === "/"} title="Up (remote)">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 12V4M4 8l4-4 4 4" />
             </svg>
           </ToolbarBtn>
 
           <ToolbarBtn onClick={onRefresh} disabled={busy} title="Refresh remote (⌘R)">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 8A5 5 0 113 8" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 4v4h-4" />
             </svg>
@@ -195,7 +195,7 @@ export default function SftpToolbar({
               showHidden ? "text-white bg-surface-4" : "text-muted hover:text-white hover:bg-surface-4"
             }`}
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
               {showHidden ? (
                 <>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" />
@@ -216,7 +216,7 @@ export default function SftpToolbar({
             <>
               <div className="w-px h-5 bg-surface-4 mx-1" />
               <ToolbarBtn onClick={onPaste} disabled={busy} title={`Paste ${clipboardMode === "copy" ? "(copy)" : "(move)"} here`}>
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
                   <rect x="2" y="4" width="10" height="11" rx="1" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1" />
                 </svg>
@@ -232,21 +232,21 @@ export default function SftpToolbar({
             disabled={remoteActive ? busy : busy || localSelectedCount === 0}
             title={remoteActive ? "Upload file to remote" : "Upload selected local files to remote"}
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 10V3M5 6l3-3 3 3M3 12h10" />
             </svg>
             Upload
           </ToolbarBtn>
 
           <ToolbarBtn onClick={onDownload} disabled={busy || !canDownload} title={remoteActive ? "Download selected from remote" : "Download selected remote files to local dir"}>
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 3v7M5 7l3 3 3-3M3 12h10" />
             </svg>
             Download{selectedCount > 1 && !selectedHasDir ? ` (${selectedCount})` : ""}
           </ToolbarBtn>
 
           <ToolbarBtn onClick={onNewFolder} disabled={busy} title="New folder on remote">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M2 5a2 2 0 012-2h2.586l2 2H12a2 2 0 012 2v5a2 2 0 01-2 2H4a2 2 0 01-2-2V5z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 8v4M6 10h4" />
             </svg>
@@ -254,7 +254,7 @@ export default function SftpToolbar({
           </ToolbarBtn>
 
           <ToolbarBtn onClick={onNewFile} disabled={busy} title="New file on remote">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V6M9 2l4 4M9 2v4h4" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 9h4M8 7v4" />
             </svg>

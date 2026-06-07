@@ -105,9 +105,9 @@ export default function BroadcastGrid({ groupId }: Props) {
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="px-4 py-2 border-b border-accent/40 bg-accent/5 flex items-center gap-2 shrink-0 text-xs">
-        <span className="w-2 h-2 rounded-full bg-accent shrink-0" aria-hidden="true" />
-        <span className="text-accent-fg font-semibold">Broadcasting to {targetCount} of {panes.length} hosts</span>
+      <div className="px-4 py-2 border-b border-yellow-500/40 bg-yellow-500/5 flex items-center gap-2 shrink-0 text-xs">
+        <span className="w-2 h-2 rounded-full bg-yellow-500 shrink-0" aria-hidden="true" />
+        <span className="text-yellow-400 font-semibold">Broadcasting to {targetCount} of {panes.length} hosts</span>
         <span className="text-faint">— keystrokes are sent to every unmuted pane</span>
         <div className="relative ml-auto">
           <button

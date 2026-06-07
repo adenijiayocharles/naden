@@ -40,14 +40,14 @@ type PanelType = "terminal" | "sftp";
 
 const TERMINAL_STATUS_COLORS: Record<SessionStatus, string> = {
   connecting: "bg-yellow-500",
-  connected: "bg-accent",
+  connected: "bg-green-500",
   disconnected: "bg-dim",
   error: "bg-red-500",
 };
 
 const SFTP_STATUS_COLORS: Record<SftpStatus, string> = {
   connecting: "bg-yellow-500",
-  connected: "bg-accent",
+  connected: "bg-green-500",
   error: "bg-red-500",
 };
 

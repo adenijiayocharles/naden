@@ -246,7 +246,7 @@ export default function SettingsModal({ onClose }: Props) {
           <h2 className="text-lg font-semibold text-white">Settings</h2>
           <div className="flex items-center gap-3">
             <span
-              className={`text-xs text-accent-fg transition-opacity duration-300 ${savedFlash ? "opacity-100" : "opacity-0"}`}
+              className={`text-xs text-green-400 transition-opacity duration-300 ${savedFlash ? "opacity-100" : "opacity-0"}`}
               aria-live="polite"
             >
               ✓ Saved
@@ -394,7 +394,7 @@ export default function SettingsModal({ onClose }: Props) {
                   className="w-full text-left py-3 text-sm text-secondary hover:text-white transition-colors flex items-center justify-between"
                 >
                   <span>Change master password</span>
-                  <svg className={`w-3.5 h-3.5 text-muted transition-transform ${activeForm === "change" ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className={`w-3.5 h-3.5 text-muted transition-transform ${activeForm === "change" ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>

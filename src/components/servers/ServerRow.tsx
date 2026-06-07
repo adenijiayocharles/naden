@@ -55,7 +55,7 @@ export default function ServerRow({ server, groupColor, lastConnected, narrow }:
         </div>
       ) : (
         <div
-          className={`w-1.5 h-1.5 rounded-full shrink-0 ${actions.connecting ? "bg-accent animate-pulse" : ""}`}
+          className={`w-1.5 h-1.5 rounded-full shrink-0 ${actions.connecting ? "bg-yellow-500 animate-pulse" : ""}`}
           style={!actions.connecting ? { backgroundColor: groupColor ?? "var(--color-dim)" } : undefined}
         />
       )}
@@ -78,12 +78,12 @@ export default function ServerRow({ server, groupColor, lastConnected, narrow }:
       {!narrow && (
         <>
           {server.authMethod === "password" ? (
-            <svg className="w-3.5 h-3.5 text-muted shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Password auth</title>
+            <svg className="w-3.5 h-3.5 text-muted shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}><title>Password auth</title>
               <rect x="3" y="7" width="10" height="8" rx="1.5" />
               <path strokeLinecap="round" d="M5 7V5a3 3 0 016 0v2" />
             </svg>
           ) : (
-            <svg className="w-3.5 h-3.5 text-muted shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}><title>Key auth</title>
+            <svg className="w-3.5 h-3.5 text-muted shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}><title>Key auth</title>
               <circle cx="6" cy="8" r="3.5" />
               <path strokeLinecap="round" d="M9 8h5M12 6v4" />
             </svg>
@@ -106,11 +106,11 @@ export default function ServerRow({ server, groupColor, lastConnected, narrow }:
               </span>
             )}
             {server.isJumpHost && (
-              <span className="text-xs bg-accent/10 text-accent-fg px-1.5 py-0.5 rounded">Jump</span>
+              <span className="text-xs bg-surface-3 border border-stroke text-faint px-1.5 py-0.5 rounded">Jump</span>
             )}
             {jumpHost && (
               <span className="text-meta text-dim flex items-center gap-0.5 min-w-0 max-w-[120px]" title={`Routes via ${jumpHost.displayName}`}>
-                <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+                <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2 8h9M8 5l3 3-3 3" />
                   <circle cx="13" cy="8" r="1.5" fill="currentColor" stroke="none" />
                 </svg>
@@ -118,8 +118,8 @@ export default function ServerRow({ server, groupColor, lastConnected, narrow }:
               </span>
             )}
             {hasActiveTunnel && (
-              <span className="text-xs text-accent flex items-center gap-0.5 shrink-0" title="Tunnel active">
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <span className="text-xs text-green-400 flex items-center gap-0.5 shrink-0" title="Tunnel active">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M2 8h4M10 8h4M6 5l-2 3 2 3M10 5l2 3-2 3" />
                 </svg>
               </span>

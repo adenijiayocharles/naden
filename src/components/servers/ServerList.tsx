@@ -213,7 +213,7 @@ export default function ServerList() {
                   className="text-muted hover:text-white p-1 rounded transition-colors shrink-0"
                   aria-label="Close"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
                     <line x1="3" y1="3" x2="13" y2="13" />
                     <line x1="13" y1="3" x2="3" y2="13" />
                   </svg>

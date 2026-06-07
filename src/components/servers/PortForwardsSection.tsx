@@ -159,7 +159,7 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
                     : `localhost:${fwd.localPort} → ${fwd.remoteHost}:${fwd.remotePort}`}
                 </span>
                 {fwd.label && <span className="text-faint ml-1.5">({fwd.label})</span>}
-                {fwd.autoStart && <span className="text-accent ml-1.5">auto</span>}
+                {fwd.autoStart && <span className="text-faint ml-1.5">auto</span>}
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button
@@ -168,7 +168,7 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
                   className="text-muted hover:text-white transition-colors"
                   aria-label="Edit"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M11 2l3 3-8 8H3v-3l8-8z" />
                   </svg>
                 </button>
@@ -178,7 +178,7 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
                   className="text-muted hover:text-red-400 transition-colors"
                   aria-label="Delete"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h10M6 4V2h4v2M5 4l1 9h4l1-9" />
                   </svg>
                 </button>

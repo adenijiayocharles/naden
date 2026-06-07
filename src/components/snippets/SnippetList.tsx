@@ -158,7 +158,7 @@ function SnippetCard({
             title="Copy"
           >
             {copied ? (
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 14 14" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 14 14" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="2,7 5,11 12,3" />
               </svg>
             ) : (

@@ -13,7 +13,7 @@ export default function VaultCountdown() {
           ? "bg-amber-950/30 border-amber-900/40 text-amber-500"
           : "bg-surface-0 border-stroke-subtle text-faint"
     }`}>
-      <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
+      <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
         <rect x="5" y="1" width="6" height="3" rx="1" />
         <path strokeLinecap="round" d="M3 5.5A2.5 2.5 0 015.5 3h5A2.5 2.5 0 0113 5.5v7A2.5 2.5 0 0110.5 15h-5A2.5 2.5 0 013 12.5v-7z" />
         <path strokeLinecap="round" d="M8 7v3" />
