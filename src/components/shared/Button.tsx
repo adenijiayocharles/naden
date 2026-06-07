@@ -9,10 +9,10 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<Variant, string> = {
-  primary:   "bg-accent text-black font-semibold hover:bg-accent-hover disabled:opacity-50",
-  secondary: "bg-surface-3 text-secondary hover:text-white hover:bg-surface-4 disabled:opacity-40",
-  danger:    "bg-red-950/50 border border-red-900/50 text-red-400 hover:bg-red-900/40 hover:text-red-300 disabled:opacity-40",
-  delete:    "bg-red-600 text-white font-semibold hover:bg-red-500 disabled:opacity-50",
+  primary:   "bg-accent text-black font-semibold shadow-card hover:bg-accent-hover hover:shadow-card-hover hover:-translate-y-px disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none",
+  secondary: "bg-surface-3 text-secondary shadow-card hover:text-white hover:bg-surface-4 hover:shadow-card-hover hover:-translate-y-px disabled:opacity-40 disabled:translate-y-0 disabled:shadow-none",
+  danger:    "bg-red-950/50 border border-red-900/50 text-red-400 shadow-card hover:bg-red-900/40 hover:text-red-300 hover:shadow-card-hover hover:-translate-y-px disabled:opacity-40 disabled:translate-y-0 disabled:shadow-none",
+  delete:    "bg-red-600 text-white font-semibold shadow-card hover:bg-red-500 hover:shadow-card-hover hover:-translate-y-px disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none",
   ghost:     "text-faint hover:text-white disabled:opacity-40",
 };
 
@@ -30,7 +30,7 @@ export default function Button({
   return (
     <button
       className={twMerge(
-        "inline-flex items-center justify-center rounded transition-colors",
+        "inline-flex items-center justify-center rounded transition-[background-color,color,box-shadow,transform] duration-200 ease-premium",
         sizes[size],
         variants[variant],
         className,

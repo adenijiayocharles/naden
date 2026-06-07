@@ -146,7 +146,7 @@ export default function BulkActionBar() {
           </Button>
 
           {showGroupPicker && (
-            <div className="absolute bottom-full mb-1 right-0 bg-surface-2 border border-stroke rounded-lg shadow-2xl min-w-[160px] py-1 z-30">
+            <div className="absolute bottom-full mb-1 right-0 bg-surface-2 border border-stroke rounded-lg shadow-overlay min-w-[160px] py-1 z-30">
               <button
                 onClick={() => { void handleMoveToGroup(null); }}
                 className="w-full text-left px-3 py-2 text-sm text-secondary hover:bg-surface-4 hover:text-white transition-colors"
@@ -182,11 +182,11 @@ export default function BulkActionBar() {
 
       {confirmDelete && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 animate-backdrop-in"
           onClick={() => setConfirmDelete(false)}
         >
           <div
-            className="bg-surface-2 border border-stroke rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6 flex flex-col gap-4"
+            className="bg-surface-2 border border-stroke rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm mx-4 p-6 flex flex-col gap-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-col gap-1">

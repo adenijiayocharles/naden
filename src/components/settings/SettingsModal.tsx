@@ -237,10 +237,10 @@ export default function SettingsModal({ onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/85 animate-backdrop-in flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
+      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-lg flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-stroke-subtle shrink-0">
           <h2 className="text-lg font-semibold text-white">Settings</h2>

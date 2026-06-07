@@ -120,10 +120,10 @@ function AddTunnelModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/85 animate-backdrop-in flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-surface-2 border border-stroke rounded-xl shadow-2xl w-full max-w-md flex flex-col">
+      <div className="bg-surface-2 border border-stroke rounded-xl shadow-overlay animate-overlay-in w-full max-w-md flex flex-col">
         <div className="px-5 py-4 border-b border-stroke-subtle flex items-center justify-between">
           <h2 className="text-white font-semibold text-base">Add port forward</h2>
           <button

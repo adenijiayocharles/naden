@@ -16,11 +16,11 @@ export default function DeleteServerModal({ serverName, deleting, onConfirm, onC
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 animate-backdrop-in"
       onClick={onCancel}
     >
       <div
-        className="bg-surface-2 border border-stroke rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6 flex flex-col gap-4"
+        className="bg-surface-2 border border-stroke rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm mx-4 p-6 flex flex-col gap-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col gap-1">

@@ -8,10 +8,10 @@ interface Props {
 export default function ConnectionErrorModal({ serverName, message, onRetry, onClose }: Props) {
   return (
     <div
-      className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/85 animate-backdrop-in flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-surface-1 border border-stroke rounded-xl shadow-2xl w-full max-w-sm p-6">
+      <div className="bg-surface-1 border border-stroke rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm p-6">
         <div className="flex items-start gap-3 mb-4">
           <div className="w-8 h-8 rounded-full bg-red-950/60 border border-red-800/50 flex items-center justify-center shrink-0 mt-0.5">
             <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>

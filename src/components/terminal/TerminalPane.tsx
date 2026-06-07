@@ -482,7 +482,7 @@ export default function TerminalPane({ sessionId }: Props) {
         {playbookPickerOpen && (
           <div
             ref={playbookPickerRef}
-            className="mb-1 w-64 bg-surface-2 border border-stroke rounded-lg shadow-2xl overflow-hidden flex flex-col"
+            className="mb-1 w-64 bg-surface-2 border border-stroke rounded-lg shadow-overlay overflow-hidden flex flex-col"
           >
             <div className="p-2 border-b border-stroke-subtle shrink-0">
               <input
@@ -543,7 +543,7 @@ export default function TerminalPane({ sessionId }: Props) {
         {snippetPickerOpen && (
           <div
             ref={snippetPickerRef}
-            className="mb-1 w-64 bg-surface-2 border border-stroke rounded-lg shadow-2xl overflow-hidden flex flex-col"
+            className="mb-1 w-64 bg-surface-2 border border-stroke rounded-lg shadow-overlay overflow-hidden flex flex-col"
           >
             <div className="p-2 border-b border-stroke-subtle shrink-0">
               <input

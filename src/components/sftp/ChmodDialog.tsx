@@ -14,7 +14,7 @@ export default function ChmodDialog({ target, mode, disabled, onModeChange, onAp
 
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/85">
-      <div className="bg-surface-1 border border-stroke-subtle rounded-lg shadow-xl w-80 p-5 flex flex-col gap-4">
+      <div className="bg-surface-1 border border-stroke-subtle rounded-lg shadow-overlay animate-overlay-in w-80 p-5 flex flex-col gap-4">
         <div>
           <h3 className="text-sm font-semibold text-white">Change Permissions</h3>
           <p className="text-xs text-faint mt-0.5 font-mono truncate">{target.path}</p>

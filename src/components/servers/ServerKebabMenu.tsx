@@ -72,7 +72,7 @@ export default function ServerKebabMenu({
       </button>
 
       {menuOpen && (
-        <div ref={menuRef2} className="absolute right-0 top-8 bg-surface-2 border border-stroke rounded-lg shadow-2xl z-20 min-w-[170px] py-1">
+        <div ref={menuRef2} className="absolute right-0 top-8 bg-surface-2 border border-stroke rounded-lg shadow-overlay z-20 min-w-[170px] py-1">
           <button
             onClick={onEdit}
             className="w-full text-left px-3 py-2 text-sm text-secondary hover:bg-surface-4 hover:text-white transition-colors"

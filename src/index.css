@@ -40,6 +40,51 @@ body {
 
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
   --font-mono: "SF Mono", ui-monospace, "Cascadia Code", "Fira Code", monospace;
+
+  /* Elevation — layered shadows give resting/hover depth instead of flat borders.
+     Inset highlight simulates light catching a raised edge on dark surfaces. */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  --shadow-card-hover: 0 12px 28px -10px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  --shadow-overlay: 0 24px 64px -12px rgba(0, 0, 0, 0.6), 0 8px 24px -8px rgba(0, 0, 0, 0.4);
+
+  /* Motion — ease-out-expo-style deceleration reads as "premium" vs. linear/ease.
+     Pair with Tailwind's numeric duration-* utilities (e.g. duration-200). */
+  --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Overlay entrance — backdrop fades in while the panel rises and settles,
+     giving modals a sense of weight instead of popping in instantly. */
+  --animate-overlay-in: overlay-in 220ms var(--ease-premium) both;
+  --animate-backdrop-in: backdrop-in 180ms ease-out both;
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .animate-overlay-in,
+  .animate-backdrop-in {
+    animation: none;
+  }
 }
 
 @layer base {

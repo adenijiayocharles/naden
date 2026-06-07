@@ -73,8 +73,8 @@ export default function OnboardingWizard({ onComplete }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-2xl w-full max-w-md flex flex-col">
+    <div className="fixed inset-0 bg-black/80 animate-backdrop-in flex items-center justify-center z-50 p-4">
+      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-md flex flex-col">
         {/* Progress bar */}
         <div className="h-1 bg-surface-4 rounded-t-xl overflow-hidden">
           <div

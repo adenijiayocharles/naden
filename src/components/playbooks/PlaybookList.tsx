@@ -171,12 +171,12 @@ function PlaybookFormModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/85 animate-backdrop-in flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-2xl w-full max-w-xl p-5 flex flex-col gap-3 max-h-[85vh]">
+      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-xl p-5 flex flex-col gap-3 max-h-[85vh]">
         <h3 className="text-sm font-semibold text-white">
           {playbook ? "Edit Playbook" : "New Playbook"}
         </h3>
@@ -247,12 +247,12 @@ function DeleteConfirmModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/85 animate-backdrop-in flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-2xl w-full max-w-sm p-5 flex flex-col gap-4">
+      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm p-5 flex flex-col gap-4">
         <div>
           <h3 className="text-sm font-semibold text-white mb-1">Delete playbook?</h3>
           <p className="text-sm text-muted">

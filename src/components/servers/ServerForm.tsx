@@ -252,10 +252,10 @@ export default function ServerForm() {
 
   return (
     <div
-      className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/85 animate-backdrop-in flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) handleClose(); }}
     >
-      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-lg max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-stroke-subtle shrink-0">
           <h2 className="text-lg font-semibold text-white">
@@ -455,7 +455,7 @@ export default function ServerForm() {
                 placeholder="Type a tag and press Enter"
               />
               {tagDropdownOpen && tagSuggestions.length > 0 && (
-                <div className="absolute z-20 top-full mt-1 w-full bg-surface-2 border border-stroke rounded-lg shadow-xl max-h-40 overflow-y-auto">
+                <div className="absolute z-20 top-full mt-1 w-full bg-surface-2 border border-stroke rounded-lg shadow-overlay max-h-40 overflow-y-auto">
                   {tagSuggestions.map((t) => (
                     <button
                       key={t.id}

@@ -148,7 +148,7 @@ export function ContextMenuPopup({ x, y, onClose, children }: {
     <div
       ref={menuRef}
       style={{ left: x, top: y }}
-      className="fixed z-50 bg-surface-2 border border-stroke rounded-lg shadow-2xl py-1 min-w-[160px]"
+      className="fixed z-50 bg-surface-2 border border-stroke rounded-lg shadow-overlay py-1 min-w-[160px]"
     >
       {children}
     </div>
