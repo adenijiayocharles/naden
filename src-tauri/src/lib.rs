@@ -202,6 +202,11 @@ pub fn run() {
             // Spawn the sleep-watcher thread that emits `system:wake` on resume.
             power::start_sleep_watcher(app.handle().clone());
 
+            // Register the `sshelter` CLI command in ~/.local/bin so the app
+            // can be launched from a terminal regardless of install location.
+            #[cfg(unix)]
+            std::thread::spawn(platform::cli_install::ensure_installed);
+
             // Install the native macOS drag region monitor for the custom title bar.
             #[cfg(target_os = "macos")]
             if let Some(window) = app.get_webview_window("main") {

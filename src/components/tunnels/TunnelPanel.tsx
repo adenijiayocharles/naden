@@ -6,10 +6,11 @@ import type { ForwardType, PortForward, TunnelStatus } from "../../types/portFor
 import Input from "../shared/Input";
 import Button from "../shared/Button";
 import EmptyState from "../shared/EmptyState";
+import DeleteTunnelModal from "./DeleteTunnelModal";
 
 const STATUS_DOT: Record<TunnelStatus, string> = {
   active:     "bg-accent",
-  connecting: "bg-yellow-500 animate-pulse",
+  connecting: "bg-yellow-500",
   error:      "bg-red-500",
   idle:       "bg-dim",
 };
@@ -19,6 +20,12 @@ const STATUS_LABEL: Record<TunnelStatus, string> = {
   connecting: "Connecting…",
   error:      "Error",
   idle:       "Idle",
+};
+
+const TYPE_BADGE: Record<ForwardType, string> = {
+  local:   "border-blue-900 bg-blue-950/60 text-blue-300",
+  dynamic: "border-purple-900 bg-purple-950/60 text-purple-300",
+  remote:  "border-orange-900 bg-orange-950/60 text-orange-300",
 };
 
 const FORWARD_TYPES: { value: ForwardType; label: string; hint: string }[] = [
@@ -260,64 +267,70 @@ const TunnelRow = memo(function TunnelRow({
   const status: TunnelStatus = useTunnelStore((s) => s.statuses[fwd.id] ?? "idle");
   const err = useTunnelStore((s) => s.errors[fwd.id]);
   const isRunning = status === "active" || status === "connecting";
+  const isDynamic = fwd.forwardType === "dynamic";
+
+  const dotClass = `w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[status]} ${isRunning ? "animate-pulse" : ""}`;
 
   return (
-    <div className="group flex items-center gap-3 px-3 py-2.5 border-b border-stroke-subtle last:border-b-0 first:rounded-t-lg last:rounded-b-lg select-none hover:bg-surface-1 transition-colors">
-      <span
-        className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[status]}`}
-        title={STATUS_LABEL[status]}
-      />
+    <div className="group flex flex-col gap-1 px-3 py-2.5 border-b border-stroke-subtle last:border-b-0 first:rounded-t-lg last:rounded-b-lg select-none hover:bg-surface-1 transition-colors">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className={dotClass} title={STATUS_LABEL[status]} />
+          <span className="text-sm font-mono text-white truncate">localhost:{fwd.localPort}</span>
+        </div>
 
-      <div className="flex-1 min-w-0">
-        <span className="text-sm font-mono text-white">
-          {fwd.forwardType === "dynamic"
-            ? `localhost:${fwd.localPort}`
-            : `localhost:${fwd.localPort} → ${fwd.remoteHost}:${fwd.remotePort}`}
-        </span>
-        <span className={`ml-1.5 text-[10px] px-1 py-0.5 rounded font-medium ${
-          fwd.forwardType === "local"   ? "bg-blue-950 text-blue-300" :
-          fwd.forwardType === "dynamic" ? "bg-purple-950 text-purple-300" :
-                                          "bg-orange-950 text-orange-300"
-        }`}>
+        <span className={`shrink-0 text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full border ${TYPE_BADGE[fwd.forwardType]}`}>
           {fwd.forwardType}
         </span>
-        {fwd.label && <span className="ml-1.5 text-sm text-faint">{fwd.label}</span>}
-        {err && status === "error" && (
-          <span className="ml-2 text-xs text-red-400">{formatError(err)}</span>
-        )}
+
+        <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+          {!isDynamic && (
+            <>
+              <span className="text-sm font-mono text-white truncate text-right">{fwd.remoteHost}:{fwd.remotePort}</span>
+              <span className={dotClass} title={STATUS_LABEL[status]} />
+            </>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => isRunning ? onStop(fwd.id) : onStart(fwd.id)}
+            disabled={status === "connecting"}
+            title={isRunning ? "Stop tunnel" : "Start tunnel"}
+            className={`p-1 rounded transition-colors disabled:opacity-40 ${
+              isRunning
+                ? "text-dim hover:text-red-400 hover:bg-surface-3"
+                : "text-dim hover:text-accent hover:bg-surface-3"
+            }`}
+          >
+            {isRunning ? (
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 14 14">
+                <rect x="2" y="2" width="10" height="10" rx="1.5" />
+              </svg>
+            ) : (
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 14 14">
+                <polygon points="3,2 11,7 3,12" />
+              </svg>
+            )}
+          </button>
+          <button
+            onClick={() => onDelete(fwd.id)}
+            title="Delete"
+            className="p-1 rounded text-dim hover:text-red-400 hover:bg-surface-3 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 4h10M6 4V2h4v2M5 4v9a1 1 0 001 1h4a1 1 0 001-1V4" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={() => isRunning ? onStop(fwd.id) : onStart(fwd.id)}
-          disabled={status === "connecting"}
-          title={isRunning ? "Stop tunnel" : "Start tunnel"}
-          className={`p-1 rounded transition-colors disabled:opacity-40 ${
-            isRunning
-              ? "text-dim hover:text-red-400 hover:bg-surface-3"
-              : "text-dim hover:text-accent hover:bg-surface-3"
-          }`}
-        >
-          {isRunning ? (
-            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 14 14">
-              <rect x="2" y="2" width="10" height="10" rx="1.5" />
-            </svg>
-          ) : (
-            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 14 14">
-              <polygon points="3,2 11,7 3,12" />
-            </svg>
-          )}
-        </button>
-        <button
-          onClick={() => onDelete(fwd.id)}
-          title="Delete"
-          className="p-1 rounded text-dim hover:text-red-400 hover:bg-surface-3 transition-colors"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 4h10M6 4V2h4v2M5 4v9a1 1 0 001 1h4a1 1 0 001-1V4" />
-          </svg>
-        </button>
-      </div>
+      {(fwd.label || (err && status === "error")) && (
+        <div className="pl-[14px] flex items-center gap-2 text-xs">
+          {fwd.label && <span className="text-faint">{fwd.label}</span>}
+          {err && status === "error" && <span className="text-red-400">{formatError(err)}</span>}
+        </div>
+      )}
     </div>
   );
 });
@@ -333,12 +346,25 @@ export default function TunnelPanel() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<PortForward | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const handleStart = (id: string) => { void startTunnel(id).catch(() => {}); };
   const handleStop  = (id: string) => { void stopTunnel(id).catch(() => {}); };
   const handleDelete = (id: string) => {
-    if (!window.confirm("Delete this port forward?")) return;
-    void remove(id).catch(() => {});
+    setDeleteTarget(forwards.find((fwd) => fwd.id === id) ?? null);
+  };
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await remove(deleteTarget.id);
+      setDeleteTarget(null);
+    } catch {
+      // remove() surfaces its own error via the store; keep the modal open so the user can retry.
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const filtered = useMemo(() => {
@@ -448,6 +474,20 @@ export default function TunnelPanel() {
       </div>
 
       {modalOpen && <AddTunnelModal onClose={() => setModalOpen(false)} />}
+
+      {deleteTarget && (
+        <DeleteTunnelModal
+          label={
+            deleteTarget.label ||
+            (deleteTarget.forwardType === "dynamic"
+              ? `localhost:${deleteTarget.localPort}`
+              : `localhost:${deleteTarget.localPort} → ${deleteTarget.remoteHost}:${deleteTarget.remotePort}`)
+          }
+          deleting={deleting}
+          onConfirm={() => { void handleConfirmDelete(); }}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   );
 }
