@@ -5,7 +5,7 @@ import { SearchAddon } from "@xterm/addon-search";
 import { terminalCommands, clipboardCommands } from "../../lib/tauriCommands";
 import { sessionBuffer } from "../../lib/sessionBuffer";
 import { useTerminalStore } from "../../store/terminalStore";
-import { useTerminalSettings, fontCss } from "../../lib/terminalSettings";
+import { useTerminalSettings, fontCss, resolveTermTheme } from "../../lib/terminalSettings";
 import { ensureCanvasFonts, ensureFont } from "../../lib/canvasFonts";
 import { ConnectingOverlay, ErrorOverlay, ReconnectingOverlay } from "../shared/ConnectionOverlay";
 import { useSnippetStore } from "../../store/snippetStore";
@@ -107,7 +107,7 @@ export default function TerminalPane({ sessionId }: Props) {
 
       // Read settings after the await — load() may have finished during the wait,
       // giving us the user's saved font rather than the store default.
-      const { fontSize, scrollback, copyOnSelect, fontFamily } =
+      const { fontSize, scrollback, copyOnSelect, fontFamily, termTheme } =
         useTerminalSettings.getState();
       const css = fontCss(fontFamily);
 
@@ -119,36 +119,12 @@ export default function TerminalPane({ sessionId }: Props) {
 
       if (cancelled || !containerRef.current) return;
 
-      const getTermTheme = () => {
-        const root = document.documentElement;
-        const bg = getComputedStyle(root).getPropertyValue("--color-surface-1").trim() || "#111111";
-        const accent = getComputedStyle(root).getPropertyValue("--color-accent").trim() || "#CDFF00";
-        const accentHover = getComputedStyle(root).getPropertyValue("--color-accent-hover").trim() || accent;
-        const isLight = root.dataset.theme === "light";
-        return {
-          background: bg,
-          foreground: isLight ? "#1e1e2e" : "#e0e0e0",
-          cursor: accent,
-          // In light mode the cursor is a coloured block — white text inside it reads fine
-          cursorAccent: isLight ? "#ffffff" : "#000000",
-          selectionBackground: `${accent}40`,
-          // ANSI green (color 2) — used by default bash/zsh prompt for user@host
-          green: accent,
-          brightGreen: accentHover,
-          // ANSI black is invisible on a light background without an override
-          ...(isLight && {
-            black: "#3c3c3c",
-            brightBlack: "#6c6c6c",
-          }),
-        };
-      };
-
       const term = new Terminal({
         cursorBlink: true,
         fontFamily: css,
         fontSize,
         scrollback,
-        theme: getTermTheme(),
+        theme: resolveTermTheme(termTheme),
       });
 
       const fitAddon = new FitAddon();
@@ -160,6 +136,9 @@ export default function TerminalPane({ sessionId }: Props) {
       });
 
       term.open(containerRef.current);
+      // xterm never sets viewport.style.backgroundColor — apply the theme
+      // background to .xterm itself so it shows through the transparent viewport.
+      if (term.element) term.element.style.backgroundColor = resolveTermTheme(termTheme).background ?? "";
       fitAddon.fit();
       term.focus();
 
@@ -178,7 +157,9 @@ export default function TerminalPane({ sessionId }: Props) {
       requestAnimationFrame(() => {
         if (cancelled) return;
         term.options.fontFamily = css;
-        term.options.theme = getTermTheme();
+        const theme = resolveTermTheme(termTheme);
+        term.options.theme = theme;
+        if (term.element) term.element.style.backgroundColor = theme.background ?? "";
         requestAnimationFrame(() => {
           if (cancelled) return;
           fitAddon.fit();
@@ -265,8 +246,11 @@ export default function TerminalPane({ sessionId }: Props) {
       term.textarea?.addEventListener("focus", restartBlink);
 
       // Update terminal colours when the app theme or accent changes.
+      // Only relevant when terminal theme is "system" (reads CSS vars).
       const themeObserver = new MutationObserver(() => {
-        term.options.theme = getTermTheme();
+        const theme = resolveTermTheme(useTerminalSettings.getState().termTheme);
+        term.options.theme = theme;
+        if (term.element) term.element.style.backgroundColor = theme.background ?? "";
         restartBlink();
       });
       themeObserver.observe(document.documentElement, {
@@ -311,9 +295,10 @@ export default function TerminalPane({ sessionId }: Props) {
     };
   }, [sessionId]); // settings read via getState() intentionally — avoids recreating live sessions
 
-  // Live-reload font size and family into open tabs whenever either setting changes.
+  // Live-reload font size, family, and colour theme into open tabs whenever any setting changes.
   const fontSize = useTerminalSettings((s) => s.fontSize);
   const fontFamily = useTerminalSettings((s) => s.fontFamily);
+  const termTheme = useTerminalSettings((s) => s.termTheme);
   useEffect(() => {
     const term = termRef.current;
     const fitAddon = fitAddonRef.current;
@@ -325,12 +310,15 @@ export default function TerminalPane({ sessionId }: Props) {
       if (!termRef.current || !fitAddonRef.current) return;
       term.options.fontSize = fontSize;
       term.options.fontFamily = css;
+      const resolvedTheme = resolveTermTheme(termTheme);
+      term.options.theme = resolvedTheme;
+      if (term.element) term.element.style.backgroundColor = resolvedTheme.background ?? "";
       requestAnimationFrame(() => {
         fitAddonRef.current?.fit();
         term.refresh(0, term.rows - 1);
       });
     });
-  }, [fontSize, fontFamily]);
+  }, [fontSize, fontFamily, termTheme]);
 
   const filteredSnippets = useMemo(() => {
     if (!snippetQuery.trim()) return snippets;
@@ -374,7 +362,7 @@ export default function TerminalPane({ sessionId }: Props) {
 
   return (
     <div className="relative h-full w-full bg-surface-1">
-      <div ref={containerRef} className="absolute inset-4 overflow-hidden" />
+      <div ref={containerRef} className="absolute inset-0 overflow-hidden" />
 
       {/* Snippet picker — floats over terminal at bottom-right */}
       <div className="absolute bottom-3 right-4 z-30 flex flex-col items-end gap-1">

@@ -1,7 +1,16 @@
 @import "tailwindcss";
 
-html, body, #root { background: #0d0d0d; }
-html, body { overscroll-behavior: none; }
+html,
+body,
+#root {
+  background: #0d0d0d;
+}
+
+html,
+body {
+  overscroll-behavior: none;
+}
+
 @theme {
   /* Accent */
   --color-accent: #CDFF00;
@@ -34,6 +43,7 @@ html, body { overscroll-behavior: none; }
 }
 
 @layer base {
+
   html,
   body {
     overflow: hidden;
@@ -44,7 +54,10 @@ html, body { overscroll-behavior: none; }
     font-family: var(--font-sans);
   }
 
-  code, kbd, pre, .font-mono {
+  code,
+  kbd,
+  pre,
+  .font-mono {
     font-family: var(--font-mono);
   }
 
@@ -114,27 +127,25 @@ html, body { overscroll-behavior: none; }
   }
 }
 
-/* xterm internal padding — the fit addon reads .xterm padding via
-   getComputedStyle and subtracts it from available dimensions, so
-   column/row counts stay accurate.
-   background-color is set here (not on .xterm-viewport) because xterm's
-   JS sets viewport.style.backgroundColor as an inline style, which
-   causes var() resolution to be unreliable when overridden with
-   !important across themes. .xterm itself is never touched by xterm's
-   JS, so the CSS variable always resolves from the root cascade. */
+/* .xterm padding is read by FitAddon via getComputedStyle to reduce the
+   computed col/row count, reserving space for the inset. The viewport
+   covers the full .xterm box (inset:0 from padding edge), so the theme
+   background fills the padding zone — xterm.js sets
+   viewport.style.backgroundColor from the active theme, so the inset
+   area always matches the terminal background regardless of which theme
+   is selected. */
 .xterm {
   padding: 6px 10px;
-  background-color: var(--color-surface-1);
 }
 
-/* .xterm-viewport is position:absolute;inset:0 inside .xterm (covering
-   the padding area) and defaults to background:#000. Making it
-   transparent lets .xterm's background show through uniformly.
+/* TerminalPane.tsx sets term.element.style.backgroundColor to the active
+   theme's background after every theme change. Making the viewport
+   transparent lets that colour show through in the padding zone around
+   .xterm-screen, so the inset area always matches the terminal theme.
    overscroll-behavior:contain prevents macOS WKWebView from consuming
-   wheel events when the terminal reaches its scroll boundary — without
-   it, rubber-band momentum on the WebView's native scroll view can eat
-   events that should go to xterm's viewport. */
+   wheel events at the scroll boundary. */
 .xterm-viewport {
+  padding: 6px 10px;
   background-color: transparent !important;
   overscroll-behavior: contain;
 }
@@ -145,9 +156,11 @@ html, body { overscroll-behavior: none; }
 .xterm-viewport::-webkit-scrollbar {
   width: 4px;
 }
+
 .xterm-viewport::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .xterm-viewport::-webkit-scrollbar-thumb {
   background: rgba(128, 128, 128, 0.3);
   border-radius: 2px;
@@ -186,4 +199,3 @@ button:focus-visible {
     width: 45%;
   }
 }
-

@@ -3,7 +3,7 @@ import Input from "../shared/Input";
 import Button from "../shared/Button";
 import { useVaultStore } from "../../store/vaultStore";
 import { useUiStore } from "../../store/uiStore";
-import { useTerminalSettings, TERMINAL_FONTS, fontCss } from "../../lib/terminalSettings";
+import { useTerminalSettings, TERMINAL_FONTS, TERMINAL_THEMES, fontCss } from "../../lib/terminalSettings";
 import { settingsCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import { passwordStrength } from "../../lib/passwordStrength";
@@ -44,7 +44,7 @@ export default function SettingsModal({ onClose }: Props) {
     changePassword,
   } = useVaultStore();
   const setVaultTimeoutMins = useUiStore((s) => s.setVaultTimeoutMins);
-  const { fontSize, scrollback, copyOnSelect, fontFamily, setFontSize, setScrollback, setCopyOnSelect, setFontFamily } =
+  const { fontSize, scrollback, copyOnSelect, fontFamily, termTheme, setFontSize, setScrollback, setCopyOnSelect, setFontFamily, setTermTheme } =
     useTerminalSettings();
   const [activeForm, setActiveForm] = useState<ActiveForm>("none");
   const [error, setError] = useState<string | null>(null);
@@ -476,7 +476,40 @@ export default function SettingsModal({ onClose }: Props) {
           {/* Terminal section */}
           <div id="settings-terminal" data-section="terminal">
             <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Terminal</p>
-            <p className="text-xs text-faint mb-3">Changes apply to new sessions.</p>
+            <p className="text-xs text-faint mb-3">Font changes apply to new sessions. Theme applies immediately.</p>
+
+            {/* Colour theme swatches */}
+            <div className="pb-3 border-b border-stroke-subtle mb-0">
+              <p className="text-sm text-white font-medium mb-2">Colour theme</p>
+              <div className="grid grid-cols-5 gap-2">
+                {TERMINAL_THEMES.map(({ id, label, bg, fg }) => (
+                  <button
+                    key={id}
+                    onClick={() => { setTermTheme(id); flashSaved(); }}
+                    title={label}
+                    className={`rounded-lg border-2 overflow-hidden transition-all ${
+                      termTheme === id ? "border-accent" : "border-transparent hover:border-stroke"
+                    }`}
+                  >
+                    <div
+                      className="h-10 flex items-center justify-center gap-0.5 px-1"
+                      style={{ backgroundColor: bg }}
+                    >
+                      <span className="font-mono text-[9px] leading-none select-none" style={{ color: fg }}>{">"}</span>
+                      <span
+                        className="inline-block w-[5px] h-[9px] rounded-[1px]"
+                        style={{ backgroundColor: fg, opacity: 0.85 }}
+                      />
+                    </div>
+                    <div className="bg-surface-2 py-0.5 px-1">
+                      <p className={`text-[10px] leading-tight truncate ${termTheme === id ? "text-accent-fg" : "text-secondary"}`}>
+                        {label}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div className="flex items-center justify-between py-3 border-b border-stroke-subtle">
               <div className="min-w-0 mr-4">
