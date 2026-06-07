@@ -135,7 +135,7 @@ body {
    area always matches the terminal background regardless of which theme
    is selected. */
 .xterm {
-  padding: 6px 10px;
+  padding: 10px 14px;
 }
 
 /* TerminalPane.tsx sets term.element.style.backgroundColor to the active
@@ -145,7 +145,7 @@ body {
    overscroll-behavior:contain prevents macOS WKWebView from consuming
    wheel events at the scroll boundary. */
 .xterm-viewport {
-  padding: 6px 10px;
+  padding: 10px 14px;
   background-color: transparent !important;
   overscroll-behavior: contain;
 }

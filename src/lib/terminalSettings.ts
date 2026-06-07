@@ -24,7 +24,7 @@ export function fontCss(id: TerminalFontId): string {
 // ── Colour themes ─────────────────────────────────────────────────────────────
 
 export const TERMINAL_THEMES = [
-  { id: "system",          label: "System",          bg: "#111111", fg: "#e0e0e0" },
+  { id: "system",          label: "Default",         bg: "#111111", fg: "#e0e0e0" },
   { id: "dracula",         label: "Dracula",         bg: "#282a36", fg: "#f8f8f2" },
   { id: "one-dark",        label: "One Dark",        bg: "#282c34", fg: "#abb2bf" },
   { id: "nord",            label: "Nord",            bg: "#2e3440", fg: "#d8dee9" },
