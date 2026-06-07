@@ -64,7 +64,7 @@ export default function VaultSetupModal() {
                 <div className="flex-1 h-1 bg-surface-4 rounded-full overflow-hidden">
                   <div className={`h-full rounded-full transition-all ${color}`} style={{ width: pct }} />
                 </div>
-                <span className="text-xs text-muted w-16 text-right">{label}</span>
+                <span className="text-meta text-muted w-16 text-right">{label}</span>
               </div>
             )}
           </div>
@@ -96,7 +96,7 @@ export default function VaultSetupModal() {
           >
             {skipping ? "Skipping…" : "Continue without password protection"}
           </button>
-          <p className="text-xs text-dim mt-1">
+          <p className="text-meta text-dim mt-1">
             You can enable a master password anytime in Settings.
           </p>
         </div>

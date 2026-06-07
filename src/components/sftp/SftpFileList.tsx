@@ -244,7 +244,7 @@ const Row = ({ index, style, entries, selectedSet, renaming, renameValue, dblCli
             {formatPermissions(entry.permissions)}
           </button>
         ) : (
-          <span className="text-xs text-dim">—</span>
+          <span className="text-meta text-dim">—</span>
         )}
       </div>
     </div>

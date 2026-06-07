@@ -46,7 +46,7 @@ function SnippetFormModal({
       }}
     >
       <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-lg p-5 flex flex-col gap-3">
-        <h3 className="text-sm font-semibold text-white">
+        <h3 className="text-title text-white">
           {snippet ? "Edit Snippet" : "New Snippet"}
         </h3>
         <Input
@@ -106,7 +106,7 @@ function DeleteConfirmModal({
     >
       <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm p-5 flex flex-col gap-4">
         <div>
-          <h3 className="text-sm font-semibold text-white mb-1">Delete snippet?</h3>
+          <h3 className="text-title text-white mb-1">Delete snippet?</h3>
           <p className="text-sm text-muted">
             "{snippet.title}" will be permanently deleted.
           </p>

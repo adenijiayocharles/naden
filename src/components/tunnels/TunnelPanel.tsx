@@ -169,7 +169,7 @@ function AddTunnelModal({ onClose }: { onClose: () => void }) {
                 </button>
               ))}
             </div>
-            <p className="mt-1 text-xs text-faint">
+            <p className="mt-1 text-meta text-faint">
               {FORWARD_TYPES.find((t) => t.value === form.forwardType)?.hint}
             </p>
           </div>

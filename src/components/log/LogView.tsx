@@ -327,7 +327,7 @@ export default function LogView() {
 
       {/* Outcome filter is client-side only — results come from the already-loaded page */}
       {filterOutcome && (
-        <div className="px-5 py-1.5 bg-surface-0 border-b border-stroke-subtle text-xs text-faint shrink-0">
+        <div className="px-5 py-1.5 bg-surface-0 border-b border-stroke-subtle text-meta text-faint shrink-0">
           Showing from loaded entries only — scroll down to load more, then re-apply.
         </div>
       )}
@@ -422,7 +422,7 @@ export default function LogView() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-col gap-1">
-              <h2 className="text-white font-semibold text-base">Clear all logs?</h2>
+              <h2 className="text-title text-white">Clear all logs?</h2>
               <p className="text-muted text-sm">All connection history will be permanently deleted. This cannot be undone.</p>
             </div>
             <div className="flex gap-3 justify-end">

@@ -58,13 +58,13 @@ function GroupCreateModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 bg-black/85 animate-backdrop-in flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm p-5">
-        <h3 className="text-sm font-semibold text-white mb-4">New Group</h3>
+        <h3 className="text-title text-white mb-4">New Group</h3>
         <div className="space-y-3">
           <Input autoFocus value={name} onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) void handleCreate(); }}
             placeholder="Group name" />
           <div>
-            <p className="text-xs text-faint mb-2">Color</p>
+            <p className="text-meta text-faint mb-2">Color</p>
             <ColorPicker value={color} onChange={setColor} />
           </div>
           {error && <p className="text-xs text-red-400">{error}</p>}
@@ -119,12 +119,12 @@ function GroupEditModal({ group, onClose, initialDelete = false }: { group: Grou
     <div className="fixed inset-0 bg-black/85 animate-backdrop-in flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm p-5">
-        <h3 className="text-sm font-semibold text-white mb-4">Edit Group</h3>
+        <h3 className="text-title text-white mb-4">Edit Group</h3>
         <div className="space-y-3">
           <Input autoFocus value={name} onChange={(e) => setName(e.target.value)}
             placeholder="Group name" />
           <div>
-            <p className="text-xs text-faint mb-2">Color</p>
+            <p className="text-meta text-faint mb-2">Color</p>
             <ColorPicker value={color} onChange={setColor} />
           </div>
           {error && <p className="text-xs text-red-400">{error}</p>}
@@ -175,7 +175,7 @@ function TagRenameModal({ tag, onClose }: { tag: Tag; onClose: () => void }) {
     <div className="fixed inset-0 bg-black/85 animate-backdrop-in flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm p-5">
-        <h3 className="text-sm font-semibold text-white mb-4">Rename Tag</h3>
+        <h3 className="text-title text-white mb-4">Rename Tag</h3>
         <Input autoFocus value={name} onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") void handleSave(); if (e.key === "Escape") onClose(); }}
           placeholder="Tag name" />
@@ -634,7 +634,7 @@ export default function Sidebar() {
 
       {/* Status bar */}
       <div className="px-3 py-2.5 border-t border-stroke-subtle shrink-0 flex items-center gap-2">
-        <span className="flex-1 text-xs text-dim">
+        <span className="flex-1 text-meta text-dim">
           {servers.length} {servers.length === 1 ? "server" : "servers"}
           {activeSessions > 0 && (
             <> · <span className="text-accent-fg">{activeSessions} active</span></>

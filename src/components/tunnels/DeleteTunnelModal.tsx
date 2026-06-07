@@ -24,7 +24,7 @@ export default function DeleteTunnelModal({ label, deleting, onConfirm, onCancel
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col gap-1">
-          <h2 className="text-white font-semibold text-base">Delete port forward?</h2>
+          <h2 className="text-title text-white">Delete port forward?</h2>
           <p className="text-muted text-sm">
             <span className="text-white font-medium font-mono">{label}</span> will be permanently removed.
             This cannot be undone.

@@ -190,7 +190,7 @@ export default function BulkActionBar() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-col gap-1">
-              <h2 className="text-white font-semibold text-base">
+              <h2 className="text-title text-white">
                 Delete {count} server{count !== 1 ? "s" : ""}?
               </h2>
               <p className="text-muted text-sm">

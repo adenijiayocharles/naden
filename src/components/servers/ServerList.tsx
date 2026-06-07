@@ -231,7 +231,7 @@ export default function ServerList() {
                   </svg>
                   <div>
                     <p className="text-sm font-medium text-white">Add manually</p>
-                    <p className="text-xs text-muted mt-0.5">Fill in the host, port, and auth details yourself.</p>
+                    <p className="text-meta text-muted mt-0.5">Fill in the host, port, and auth details yourself.</p>
                   </div>
                 </button>
                 <button
@@ -246,7 +246,7 @@ export default function ServerList() {
                   </svg>
                   <div>
                     <p className="text-sm font-medium text-white">Import from ~/.ssh/config</p>
-                    <p className="text-xs text-muted mt-0.5">Pick hosts already defined in your SSH config file.</p>
+                    <p className="text-meta text-muted mt-0.5">Pick hosts already defined in your SSH config file.</p>
                   </div>
                 </button>
               </div>

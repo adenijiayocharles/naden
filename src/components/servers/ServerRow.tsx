@@ -99,7 +99,7 @@ export default function ServerRow({ server, groupColor, lastConnected, narrow }:
             <ReachabilityDot serverId={server.id} />
             {lastConnected && (
               <span
-                className="text-xs text-dim font-mono hidden lg:block"
+                className="text-meta text-dim font-mono hidden lg:block"
                 title={new Date(lastConnected).toLocaleString()}
               >
                 {timeAgo(lastConnected)}
@@ -109,7 +109,7 @@ export default function ServerRow({ server, groupColor, lastConnected, narrow }:
               <span className="text-xs bg-accent/10 text-accent-fg px-1.5 py-0.5 rounded">Jump</span>
             )}
             {jumpHost && (
-              <span className="text-xs text-dim flex items-center gap-0.5 min-w-0 max-w-[120px]" title={`Routes via ${jumpHost.displayName}`}>
+              <span className="text-meta text-dim flex items-center gap-0.5 min-w-0 max-w-[120px]" title={`Routes via ${jumpHost.displayName}`}>
                 <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2 8h9M8 5l3 3-3 3" />
                   <circle cx="13" cy="8" r="1.5" fill="currentColor" stroke="none" />
@@ -133,7 +133,7 @@ export default function ServerRow({ server, groupColor, lastConnected, narrow }:
               </span>
             ))}
             {server.tags.length > 3 && (
-              <span className="text-xs text-dim">+{server.tags.length - 3}</span>
+              <span className="text-meta text-dim">+{server.tags.length - 3}</span>
             )}
           </div>
         </>

@@ -128,7 +128,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                         <div className="flex-1 h-1 bg-surface-4 rounded-full overflow-hidden">
                           <div className={`h-full rounded-full transition-all ${strengthColor}`} style={{ width: strengthPct }} />
                         </div>
-                        <span className="text-xs text-faint w-16 text-right">{strengthLabel}</span>
+                        <span className="text-meta text-faint w-16 text-right">{strengthLabel}</span>
                       </div>
                     )}
                   </div>

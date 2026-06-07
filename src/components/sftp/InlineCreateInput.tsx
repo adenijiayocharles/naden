@@ -13,7 +13,7 @@ export default function InlineCreateInput({ label, placeholder, onCommit, onCanc
 
   return (
     <div className="px-4 py-2 bg-surface-1 border-b border-stroke-subtle flex items-center gap-2 shrink-0">
-      <span className="text-xs text-muted">{label}</span>
+      <span className="text-meta text-muted">{label}</span>
       <input
         ref={ref}
         defaultValue=""

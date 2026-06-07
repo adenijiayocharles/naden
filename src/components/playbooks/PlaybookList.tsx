@@ -177,7 +177,7 @@ function PlaybookFormModal({
       }}
     >
       <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-xl p-5 flex flex-col gap-3 max-h-[85vh]">
-        <h3 className="text-sm font-semibold text-white">
+        <h3 className="text-title text-white">
           {playbook ? "Edit Playbook" : "New Playbook"}
         </h3>
         <Input
@@ -254,7 +254,7 @@ function DeleteConfirmModal({
     >
       <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm p-5 flex flex-col gap-4">
         <div>
-          <h3 className="text-sm font-semibold text-white mb-1">Delete playbook?</h3>
+          <h3 className="text-title text-white mb-1">Delete playbook?</h3>
           <p className="text-sm text-muted">
             "{playbook.title}" and its {playbook.steps.length} step{playbook.steps.length === 1 ? "" : "s"} will be permanently deleted.
           </p>
@@ -293,7 +293,7 @@ function PlaybookCard({
         <div className="min-w-0">
           <p className="text-sm font-medium text-white leading-snug break-words">{playbook.title}</p>
           {playbook.description && (
-            <p className="text-xs text-dim leading-snug break-words mt-0.5">{playbook.description}</p>
+            <p className="text-meta text-dim leading-snug break-words mt-0.5">{playbook.description}</p>
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">

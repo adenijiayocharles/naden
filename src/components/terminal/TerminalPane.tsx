@@ -507,7 +507,7 @@ export default function TerminalPane({ sessionId }: Props) {
                     className="w-full text-left bg-surface-1 border border-stroke-subtle rounded-lg px-3 py-2.5 hover:border-stroke hover:bg-surface-2 transition-colors group"
                   >
                     <p className="text-sm font-medium text-white truncate">{pb.title}</p>
-                    <p className="text-xs text-dim font-mono truncate mt-1 group-hover:text-muted">
+                    <p className="text-meta text-dim font-mono truncate mt-1 group-hover:text-muted">
                       {pb.steps.length} step{pb.steps.length === 1 ? "" : "s"}
                       {pb.description ? ` — ${pb.description}` : ""}
                     </p>
@@ -568,7 +568,7 @@ export default function TerminalPane({ sessionId }: Props) {
                     className="w-full text-left bg-surface-1 border border-stroke-subtle rounded-lg px-3 py-2.5 hover:border-stroke hover:bg-surface-2 transition-colors group"
                   >
                     <p className="text-sm font-medium text-white truncate">{sn.title}</p>
-                    <p className="text-xs text-dim font-mono truncate mt-1 group-hover:text-muted">{sn.body}</p>
+                    <p className="text-meta text-dim font-mono truncate mt-1 group-hover:text-muted">{sn.body}</p>
                   </button>
                 ))
               ) : (
@@ -626,7 +626,7 @@ export default function TerminalPane({ sessionId }: Props) {
             className="bg-transparent text-sm text-white placeholder-[#555] outline-none w-44 pl-2"
           />
           {searchResults && (
-            <span className="text-xs text-dim tabular-nums shrink-0">
+            <span className="text-meta text-dim tabular-nums shrink-0">
               {searchResults.index !== undefined ? `${searchResults.index + 1}/` : ""}{searchResults.count}
             </span>
           )}

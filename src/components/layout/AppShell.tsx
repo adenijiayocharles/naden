@@ -574,7 +574,7 @@ export default function AppShell() {
                               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-secondary hover:bg-surface-3 hover:text-white transition-colors text-left"
                             >
                               <span className="flex-1 truncate">{server.displayName}</span>
-                              <span className="text-xs text-dim truncate max-w-[90px]">{server.hostname}</span>
+                              <span className="text-meta text-dim truncate max-w-[90px]">{server.hostname}</span>
                             </button>
                           ))
                         ) : (

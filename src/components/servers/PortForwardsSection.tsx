@@ -207,7 +207,7 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
             ))}
           </div>
 
-          <p className="text-xs text-faint -mt-1">
+          <p className="text-meta text-faint -mt-1">
             {FORWARD_TYPES.find((t) => t.value === fwdForm.forwardType)?.hint}
           </p>
 
@@ -288,7 +288,7 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
       )}
 
       {serverForwards.length === 0 && !adding && (
-        <p className="text-xs text-faint">No port forwards. Click + Add to create one.</p>
+        <p className="text-meta text-faint">No port forwards. Click + Add to create one.</p>
       )}
     </div>
   );

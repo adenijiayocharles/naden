@@ -73,7 +73,7 @@ export default function VaultLockScreen() {
 
         {vaultNotSetUp && (
           <div className="mt-6 p-4 bg-surface-1 border border-stroke rounded-lg text-center">
-            <p className="text-xs text-muted mb-3">
+            <p className="text-meta text-muted mb-3">
               Vault data may be missing or corrupted. You can re-check vault status to return to the setup screen.
             </p>
             <button

@@ -51,6 +51,22 @@ body {
      Pair with Tailwind's numeric duration-* utilities (e.g. duration-200). */
   --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
 
+  /* Section/modal heading — bundles size, tracking and weight so markup says
+     `text-title` instead of repeating `text-sm font-semibold` everywhere.
+     Slightly larger than body text with tighter tracking for hierarchy. */
+  --text-title: 0.9375rem;
+  --text-title--line-height: 1.4;
+  --text-title--letter-spacing: -0.012em;
+  --text-title--font-weight: 600;
+
+  /* Meta/caption text — field labels, hints, timestamps. Small text reads
+     better with looser (not tighter) tracking, plus a touch of weight so it
+     doesn't disappear at 12px. Pairs with text-faint/text-dim/text-muted. */
+  --text-meta: 0.75rem;
+  --text-meta--line-height: 1.4;
+  --text-meta--letter-spacing: 0.012em;
+  --text-meta--font-weight: 500;
+
   /* Overlay entrance — backdrop fades in while the panel rises and settles,
      giving modals a sense of weight instead of popping in instantly. */
   --animate-overlay-in: overlay-in 220ms var(--ease-premium) both;

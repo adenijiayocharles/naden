@@ -287,7 +287,7 @@ export default function SettingsModal({ onClose }: Props) {
             </div>
 
             {/* Accent colour */}
-            <p className="text-xs text-muted mt-4 mb-2">Accent colour</p>
+            <p className="text-meta text-muted mt-4 mb-2">Accent colour</p>
             <div className="flex gap-2 flex-wrap">
               {ACCENTS.map(({ id, base }) => (
                 <button
@@ -311,7 +311,7 @@ export default function SettingsModal({ onClose }: Props) {
             <div className="flex items-center justify-between py-3 border-b border-stroke-subtle">
               <div>
                 <p className="text-sm text-white font-medium">Require master password</p>
-                <p className="text-xs text-muted mt-0.5">
+                <p className="text-meta text-muted mt-0.5">
                   {isPasswordRequired
                     ? "App is locked with a password on launch."
                     : "App opens without a password. Credentials still use the OS keychain."}
@@ -367,7 +367,7 @@ export default function SettingsModal({ onClose }: Props) {
                       <div className="flex-1 h-1 bg-surface-4 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full transition-all ${strengthColor}`} style={{ width: strengthPct }} />
                       </div>
-                      <span className="text-xs text-muted w-16 text-right">{strengthLabel}</span>
+                      <span className="text-meta text-muted w-16 text-right">{strengthLabel}</span>
                     </div>
                   )}
                 </div>
@@ -418,7 +418,7 @@ export default function SettingsModal({ onClose }: Props) {
                           <div className="flex-1 h-1 bg-surface-4 rounded-full overflow-hidden">
                             <div className={`h-full rounded-full transition-all ${strengthColor}`} style={{ width: strengthPct }} />
                           </div>
-                          <span className="text-xs text-muted w-16 text-right">{strengthLabel}</span>
+                          <span className="text-meta text-muted w-16 text-right">{strengthLabel}</span>
                         </div>
                       )}
                     </div>
@@ -446,7 +446,7 @@ export default function SettingsModal({ onClose }: Props) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-white font-medium">Auto-lock vault</p>
-                <p className="text-xs text-muted mt-0.5">Lock after this many minutes of inactivity (0 = never)</p>
+                <p className="text-meta text-muted mt-0.5">Lock after this many minutes of inactivity (0 = never)</p>
               </div>
               <select
                 value={timeoutMins}
@@ -475,7 +475,7 @@ export default function SettingsModal({ onClose }: Props) {
           {/* Terminal section */}
           <div id="settings-terminal" data-section="terminal">
             <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Terminal</p>
-            <p className="text-xs text-faint mb-3">Font changes apply to new sessions. Theme applies immediately.</p>
+            <p className="text-meta text-faint mb-3">Font changes apply to new sessions. Theme applies immediately.</p>
 
             {/* Colour theme swatches */}
             <div className="pb-3 border-b border-stroke-subtle mb-0">
@@ -514,7 +514,7 @@ export default function SettingsModal({ onClose }: Props) {
               <div className="min-w-0 mr-4">
                 <p className="text-sm text-white font-medium">Font</p>
                 <p
-                  className="text-xs text-muted mt-0.5 truncate"
+                  className="text-meta text-muted mt-0.5 truncate"
                   style={{ fontFamily: fontCss(fontFamily) }}
                 >
                   the quick brown fox
@@ -549,7 +549,7 @@ export default function SettingsModal({ onClose }: Props) {
             <div className="flex items-center justify-between py-3 border-b border-stroke-subtle">
               <div>
                 <p className="text-sm text-white font-medium">Scrollback lines</p>
-                <p className="text-xs text-muted mt-0.5">Lines retained above the viewport</p>
+                <p className="text-meta text-muted mt-0.5">Lines retained above the viewport</p>
               </div>
               <select
                 value={scrollback}
@@ -565,7 +565,7 @@ export default function SettingsModal({ onClose }: Props) {
             <div className="flex items-center justify-between py-3">
               <div>
                 <p className="text-sm text-white font-medium">Copy on select</p>
-                <p className="text-xs text-muted mt-0.5">Automatically copy selected text to clipboard</p>
+                <p className="text-meta text-muted mt-0.5">Automatically copy selected text to clipboard</p>
               </div>
               <select
                 value={copyOnSelect ? "on" : "off"}
@@ -581,7 +581,7 @@ export default function SettingsModal({ onClose }: Props) {
             <div className="flex items-center justify-between py-3 border-t border-stroke-subtle">
               <div className="min-w-0 mr-4">
                 <p className="text-sm text-white font-medium">SSH keepalive</p>
-                <p className="text-xs text-muted mt-0.5">Send periodic packets to prevent idle session drops</p>
+                <p className="text-meta text-muted mt-0.5">Send periodic packets to prevent idle session drops</p>
               </div>
               <select
                 value={keepaliveInterval}

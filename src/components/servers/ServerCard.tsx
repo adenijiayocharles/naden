@@ -115,12 +115,12 @@ export default function ServerCard({ server, groupColor, lastConnected }: Server
               </svg>
             )}
             {lastConnected && (
-              <span className="text-xs text-dim" title={new Date(lastConnected).toLocaleString()}>
+              <span className="text-meta text-dim" title={new Date(lastConnected).toLocaleString()}>
                 {timeAgo(lastConnected)}
               </span>
             )}
             {jumpHost && (
-              <span className="text-xs text-dim flex items-center gap-0.5 min-w-0" title={`Routes via ${jumpHost.displayName}`}>
+              <span className="text-meta text-dim flex items-center gap-0.5 min-w-0" title={`Routes via ${jumpHost.displayName}`}>
                 <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2 8h9M8 5l3 3-3 3" />
                   <circle cx="13" cy="8" r="1.5" fill="currentColor" stroke="none" />

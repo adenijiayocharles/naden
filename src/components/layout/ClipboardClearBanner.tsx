@@ -44,7 +44,7 @@ export default function ClipboardClearBanner() {
   if (secondsLeft === null || dismissed) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-surface-3 border border-stroke rounded-lg shadow-overlay px-4 py-2.5 text-xs text-muted">
+    <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-surface-3 border border-stroke rounded-lg shadow-overlay px-4 py-2.5 text-meta text-muted">
       <svg className="w-3.5 h-3.5 shrink-0 text-faint" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
         <rect x="3" y="1" width="10" height="14" rx="1.5" />
         <path strokeLinecap="round" d="M6 1v2h4V1" />

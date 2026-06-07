@@ -345,9 +345,9 @@ export default function SftpBrowser({ sessionId }: Props) {
       {/* Transfer progress bar — spans full width, only visible during transfers */}
       {activeLabel && (
         <div className="shrink-0 px-4 py-2 bg-surface-2 border-b border-stroke-subtle flex items-center gap-3">
-          <span className="text-xs text-muted truncate flex-1 min-w-0">{activeLabel}</span>
+          <span className="text-meta text-muted truncate flex-1 min-w-0">{activeLabel}</span>
           {pct !== null && (
-            <span className="text-xs text-muted tabular-nums shrink-0">{pct}%</span>
+            <span className="text-meta text-muted tabular-nums shrink-0">{pct}%</span>
           )}
           <div className="w-40 shrink-0 h-1.5 bg-surface-4 rounded-full overflow-hidden">
             {pct !== null ? (

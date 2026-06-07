@@ -24,7 +24,7 @@ export default function DeleteServerModal({ serverName, deleting, onConfirm, onC
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col gap-1">
-          <h2 className="text-white font-semibold text-base">Delete server?</h2>
+          <h2 className="text-title text-white">Delete server?</h2>
           <p className="text-muted text-sm">
             <span className="text-white font-medium">{serverName}</span> will be permanently removed.
             This cannot be undone.

@@ -20,8 +20,8 @@ export default function ConnectionErrorModal({ serverName, message, onRetry, onC
             </svg>
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-white mb-0.5">Connection failed</p>
-            <p className="text-xs text-muted">{serverName}</p>
+            <p className="text-title text-white mb-0.5">Connection failed</p>
+            <p className="text-meta text-muted">{serverName}</p>
           </div>
         </div>
 

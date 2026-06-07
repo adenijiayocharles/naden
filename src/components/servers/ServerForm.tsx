@@ -518,7 +518,7 @@ export default function ServerForm() {
                 const target = form.displayName.trim() || "this server";
                 chain.push(target);
                 return (
-                  <div className="mt-2 flex items-center flex-wrap gap-1 text-xs text-faint">
+                  <div className="mt-2 flex items-center flex-wrap gap-1 text-meta text-faint">
                     {chain.map((label, i) => (
                       <span key={i} className="flex items-center gap-1">
                         <span className={i === 0 || i === chain.length - 1
@@ -541,7 +541,7 @@ export default function ServerForm() {
             <PortForwardsSection serverId={editingServerId} />
           )}
           {!isEdit && (
-            <p className="text-xs text-faint px-1">
+            <p className="text-meta text-faint px-1">
               Port forwards can be configured after saving the server.
             </p>
           )}
