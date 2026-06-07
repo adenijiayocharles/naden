@@ -332,6 +332,21 @@ pub async fn vault_change_password(
 
 /// Deletes a credential from the DB. Vault must be unlocked.
 #[tauri::command]
+pub async fn retrieve_credential(
+    vault_credential_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<String, AppError> {
+    let key: [u8; 32] = {
+        let guard = state.vault_key.lock().await;
+        match guard.as_ref() {
+            None => return Err(AppError::Vault("vault is locked".into())),
+            Some(k) => **k,
+        }
+    };
+    vault::retrieve_credential(&state.db, &key, &vault_credential_id).await
+}
+
+#[tauri::command]
 pub async fn delete_credential(
     vault_credential_id: String,
     state: tauri::State<'_, AppState>,
