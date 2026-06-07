@@ -305,12 +305,7 @@ export default function AppShell() {
             {activeView === "snippets" ? (
               <SnippetList />
             ) : activeView === "tunnels" ? (
-              <>
-                <div className="px-4 h-14 border-b border-stroke-subtle shrink-0 flex items-center">
-                  <p className="text-sm font-semibold text-white">Port Forwards</p>
-                </div>
-                <TunnelPanel />
-              </>
+              <TunnelPanel />
             ) : activeView === "logs" ? (
               <>
                 <div className="px-4 py-2 border-b border-stroke-subtle shrink-0">
