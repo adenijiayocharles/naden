@@ -24,21 +24,11 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
 
     TrayIconBuilder::with_id("sshelter")
         .icon(icon)
+        .icon_as_template(true)
         .menu(&menu)
         .show_menu_on_left_click(true)
         .tooltip("SSHelter")
         .on_menu_event(|app, event| handle_menu_event(app, event.id().as_ref()))
-        .on_tray_icon_event(|tray, event| {
-            // Left-click without opening the menu: show the window.
-            if let tauri::tray::TrayIconEvent::Click {
-                button: tauri::tray::MouseButton::Left,
-                button_state: tauri::tray::MouseButtonState::Up,
-                ..
-            } = event
-            {
-                show_window(tray.app_handle());
-            }
-        })
         .build(app)?;
 
     Ok(())
