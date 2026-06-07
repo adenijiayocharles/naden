@@ -21,6 +21,14 @@ import type { Playbook } from "../../types/playbook";
 // (ESC[6n -> ESC[<row>;<col>R) — a per-session PTY reply, never user input.
 const TERMINAL_REPLY_PATTERN = /^\x1b\[\d+;\d+R$/;
 
+// Matches an interactive password/passphrase prompt at the end of incoming PTY
+// output (e.g. "Password:", "[sudo] password for alex:", "Enter passphrase for
+// key '...':"). Used to stop fanning out keystrokes mid-broadcast — typing a
+// secret into one server's prompt must never replay it into every other pane.
+const PASSWORD_PROMPT_PATTERN = /(password|passphrase)[^:\n]*:\s*$/i;
+const ANSI_ESCAPE_PATTERN = /\x1b\[[0-9;]*[a-zA-Z]/g;
+const textDecoder = new TextDecoder();
+
 interface Props {
   sessionId: string;
 }
@@ -66,6 +74,10 @@ export default function TerminalPane({ sessionId }: Props) {
   // cleared by incoming SSH output between the typing call and Enter/button press.
   // getSelectionPosition() returns 1-based coords; terminal.select() takes 0-based.
   const lastFoundRef = useRef<{ col: number; row: number } | null>(null);
+  // Set when the remote just printed a password/passphrase prompt; cleared once
+  // the user submits with Enter. While true, this pane's keystrokes go only to
+  // its own session — never broadcast to the rest of the group.
+  const awaitingSecretInputRef = useRef(false);
 
   const isConnecting = session?.status === "connecting";
   const isError = session?.status === "error";
@@ -223,9 +235,11 @@ export default function TerminalPane({ sessionId }: Props) {
 
       // Replay buffered output then subscribe to live bytes — race-free because
       // subscribeAndReplay sets the subscriber before snapshotting the buffer
-      const { chunks, unsub } = sessionBuffer.subscribeAndReplay(sessionId, (data) =>
-        term.write(data),
-      );
+      const { chunks, unsub } = sessionBuffer.subscribeAndReplay(sessionId, (data) => {
+        term.write(data);
+        const text = textDecoder.decode(data).replace(ANSI_ESCAPE_PATTERN, "");
+        if (PASSWORD_PROMPT_PATTERN.test(text)) awaitingSecretInputRef.current = true;
+      });
       if (chunks.length === 1) {
         term.write(chunks[0]);
       } else if (chunks.length > 1) {
@@ -243,6 +257,15 @@ export default function TerminalPane({ sessionId }: Props) {
         // with literal garbage like ";17R". Route anything matching a known
         // terminal-reply pattern straight to this session, never fanned out.
         if (TERMINAL_REPLY_PATTERN.test(data)) {
+          terminalCommands.sendTerminalInput(sessionId, data).catch(() => {});
+          return;
+        }
+
+        // A password/passphrase prompt is currently showing in this pane — keep
+        // every keystroke (including the submitting Enter) local to this session
+        // only, then resume normal fan-out once the secret has been submitted.
+        if (awaitingSecretInputRef.current) {
+          if (data.includes("\r") || data.includes("\n")) awaitingSecretInputRef.current = false;
           terminalCommands.sendTerminalInput(sessionId, data).catch(() => {});
           return;
         }
