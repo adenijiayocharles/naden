@@ -317,19 +317,18 @@ export default function SettingsModal({ onClose }: Props) {
                     : "App opens without a password. Credentials still use the OS keychain."}
                 </p>
               </div>
-              <button
-                onClick={handleToggle}
-                className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ml-4 ${
-                  isPasswordRequired ? "bg-accent" : "bg-dim"
-                }`}
-                aria-label="Toggle vault password"
+              <select
+                value={isPasswordRequired ? "enabled" : "disabled"}
+                onChange={(e) => {
+                  const wantsEnabled = e.target.value === "enabled";
+                  if (wantsEnabled !== isPasswordRequired) handleToggle();
+                }}
+                aria-label="Require master password"
+                className="ml-4 h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
               >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                    isPasswordRequired ? "translate-x-[22px]" : "translate-x-0"
-                  }`}
-                />
-              </button>
+                <option value="enabled">Enabled</option>
+                <option value="disabled">Disabled</option>
+              </select>
             </div>
 
             {/* Disable password form */}
@@ -568,19 +567,15 @@ export default function SettingsModal({ onClose }: Props) {
                 <p className="text-sm text-white font-medium">Copy on select</p>
                 <p className="text-xs text-muted mt-0.5">Automatically copy selected text to clipboard</p>
               </div>
-              <button
-                onClick={() => { setCopyOnSelect(!copyOnSelect); flashSaved(); }}
-                className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ml-4 ${
-                  copyOnSelect ? "bg-accent" : "bg-dim"
-                }`}
-                aria-label="Toggle copy on select"
+              <select
+                value={copyOnSelect ? "on" : "off"}
+                onChange={(e) => { setCopyOnSelect(e.target.value === "on"); flashSaved(); }}
+                aria-label="Copy on select"
+                className="ml-4 h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
               >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                    copyOnSelect ? "translate-x-[22px]" : "translate-x-0"
-                  }`}
-                />
-              </button>
+                <option value="on">On</option>
+                <option value="off">Off</option>
+              </select>
             </div>
 
             <div className="flex items-center justify-between py-3 border-t border-stroke-subtle">
