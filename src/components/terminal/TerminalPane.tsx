@@ -5,10 +5,15 @@ import { SearchAddon } from "@xterm/addon-search";
 import { terminalCommands, clipboardCommands } from "../../lib/tauriCommands";
 import { sessionBuffer } from "../../lib/sessionBuffer";
 import { useTerminalStore } from "../../store/terminalStore";
+import { useBroadcastStore } from "../../store/broadcastStore";
 import { useTerminalSettings, fontCss, resolveTermTheme } from "../../lib/terminalSettings";
 import { ensureCanvasFonts, ensureFont } from "../../lib/canvasFonts";
 import { ConnectingOverlay, ErrorOverlay, ReconnectingOverlay } from "../shared/ConnectionOverlay";
 import { useSnippetStore } from "../../store/snippetStore";
+
+// Matches xterm's auto-reply to a Device Status Report / cursor-position query
+// (ESC[6n -> ESC[<row>;<col>R) — a per-session PTY reply, never user input.
+const TERMINAL_REPLY_PATTERN = /^\x1b\[\d+;\d+R$/;
 
 interface Props {
   sessionId: string;
@@ -217,7 +222,28 @@ export default function TerminalPane({ sessionId }: Props) {
       }
 
       const dataDisposer = term.onData((data) => {
-        terminalCommands.sendTerminalInput(sessionId, data).catch(() => {});
+        // xterm answers terminal queries (e.g. cursor-position requests, ESC[6n)
+        // automatically through this same onData callback. Those replies belong
+        // only to this session's own PTY — broadcasting them corrupts other panes
+        // with literal garbage like ";17R". Route anything matching a known
+        // terminal-reply pattern straight to this session, never fanned out.
+        if (TERMINAL_REPLY_PATTERN.test(data)) {
+          terminalCommands.sendTerminalInput(sessionId, data).catch(() => {});
+          return;
+        }
+
+        // Read broadcast state fresh on each keystroke rather than subscribing —
+        // this handler is registered once on mount and must see the latest group.
+        const broadcast = useBroadcastStore.getState();
+        const group = broadcast.groups.find((g) => g.id === broadcast.activeGroupId);
+        const isSynced = group?.sessionIds.includes(sessionId) && !broadcast.excludedSessionIds.has(sessionId);
+
+        if (isSynced) {
+          // broadcastInput fans out to every synced pane in the group, including this one
+          void broadcast.broadcastInput(data);
+        } else {
+          terminalCommands.sendTerminalInput(sessionId, data).catch(() => {});
+        }
       });
 
       // Rate-limit PTY resize to ≤1/100ms (xterm fires continuously during drag)

@@ -13,6 +13,7 @@
 - [x] Per-session terminal settings (font size, scrollback)
 - [x] Copy-on-select
 - [x] Terminal search (Ctrl+F)
+- [ ] Multi-server command broadcast — grid of synced terminal panes with fan-out input and a destructive-command guard
 
 ## Security
 - [x] Vault auto-lock with countdown indicator

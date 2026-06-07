@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { useUiStore } from "../../store/uiStore";
 import { useServerStore } from "../../store/serverStore";
+import { useTerminalStore } from "../../store/terminalStore";
+import { useBroadcastStore } from "../../store/broadcastStore";
 import { formatError } from "../../lib/errors";
 import Button from "../shared/Button";
+
+const MAX_BROADCAST_HOSTS = 9;
 
 export default function BulkActionBar() {
   const bulkSelected = useUiStore((s) => s.bulkSelected);
@@ -13,7 +17,10 @@ export default function BulkActionBar() {
   const groups = useServerStore((s) => s.groups);
   const deleteServer = useServerStore((s) => s.deleteServer);
   const moveServerGroup = useServerStore((s) => s.moveServerGroup);
+  const openTerminalSession = useTerminalStore((s) => s.openSession);
+  const createBroadcastGroup = useBroadcastStore((s) => s.createGroup);
 
+  const [connectingGroup, setConnectingGroup] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showGroupPicker, setShowGroupPicker] = useState(false);
@@ -52,6 +59,37 @@ export default function BulkActionBar() {
     }
   };
 
+  const handleConnectAsGroup = async () => {
+    setBusy(true);
+    setConnectingGroup(true);
+    setError(null);
+    try {
+      const targets = bulkSelected
+        .map((id) => servers.find((s) => s.id === id))
+        .filter((s): s is NonNullable<typeof s> => !!s)
+        .slice(0, MAX_BROADCAST_HOSTS);
+
+      const sessionIds: string[] = [];
+      for (const target of targets) {
+        const sessionId = await openTerminalSession(target.id, target.displayName);
+        if (sessionId) sessionIds.push(sessionId);
+      }
+
+      if (sessionIds.length > 0) {
+        const name = targets.length === 1 ? targets[0].displayName : `${targets.length} servers`;
+        createBroadcastGroup(name, sessionIds);
+        toggleBulkMode();
+      } else {
+        setError("Could not open any terminal sessions");
+      }
+    } catch (e) {
+      setError(formatError(e));
+    } finally {
+      setBusy(false);
+      setConnectingGroup(false);
+    }
+  };
+
   const handleMoveToGroup = async (groupId: string | null) => {
     setShowGroupPicker(false);
     setBusy(true);
@@ -84,6 +122,17 @@ export default function BulkActionBar() {
 
       <div className="ml-auto flex items-center gap-2 relative">
         {error && <span className="text-sm text-red-400 max-w-xs truncate">{error}</span>}
+
+        {/* Connect as broadcast group */}
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => { void handleConnectAsGroup(); }}
+          disabled={busy || count === 0}
+          title={count > MAX_BROADCAST_HOSTS ? `Opens the first ${MAX_BROADCAST_HOSTS} selected servers` : undefined}
+        >
+          {connectingGroup ? "Connecting…" : `Connect as group${count > 0 ? ` (${Math.min(count, MAX_BROADCAST_HOSTS)})` : ""}`}
+        </Button>
 
         {/* Move to group */}
         <div className="relative">

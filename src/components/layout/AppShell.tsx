@@ -3,6 +3,7 @@ import { useUiStore, type ViewMode, type SortMode } from "../../store/uiStore";
 import Input from "../shared/Input";
 import { useVaultStore } from "../../store/vaultStore";
 import { useTerminalStore } from "../../store/terminalStore";
+import { useBroadcastStore } from "../../store/broadcastStore";
 import { useSftpStore } from "../../store/sftpStore";
 import { useServerStore } from "../../store/serverStore";
 import { useAppInit } from "../../hooks/useAppInit";
@@ -21,6 +22,7 @@ import ServerForm from "../servers/ServerForm";
 import VaultLockScreen from "../vault/VaultLockScreen";
 import VaultSetupModal from "../vault/VaultSetupModal";
 import TerminalPane from "../terminal/TerminalPane";
+import BroadcastGrid from "../terminal/BroadcastGrid";
 import LogView from "../log/LogView";
 import OnboardingWizard from "../onboarding/OnboardingWizard";
 import SftpBrowser from "../sftp/SftpBrowser";
@@ -102,6 +104,8 @@ export default function AppShell() {
   const terminalSetActive = useTerminalStore((s) => s.setActive);
   const terminalClose = useTerminalStore((s) => s.closeSession);
   const terminalReorder = useTerminalStore((s) => s.reorderSessions);
+
+  const activeBroadcastGroupId = useBroadcastStore((s) => s.activeGroupId);
 
   const allSftpSessions = useSftpStore((s) => s.sessions);
   const sftpSessions = useMemo(
@@ -286,20 +290,22 @@ export default function AppShell() {
       <TopBar />
 
       <div className="flex flex-1 min-h-0">
-      {!sidebarCollapsed && <Sidebar />}
+      {!sidebarCollapsed && !activeBroadcastGroupId && <Sidebar />}
 
       <div className="flex flex-col flex-1 min-w-0">
         <div className="flex flex-1 min-h-0">
           {/* Server list / logs / tunnels */}
           <main
             className={`shrink-0 transition-[width,padding] duration-200 ${
-              activeView === "logs" || activeView === "snippets" || activeView === "tunnels"
-                ? "flex-1 overflow-hidden flex flex-col"
-                : hasPanel
-                  ? serverListCollapsed
-                    ? "w-0 p-0 overflow-hidden"
-                    : "w-72 border-r border-stroke-subtle overflow-hidden flex flex-col"
-                  : "flex-1 overflow-hidden flex flex-col"
+              activeBroadcastGroupId
+                ? "w-0 p-0 overflow-hidden"
+                : activeView === "logs" || activeView === "snippets" || activeView === "tunnels"
+                  ? "flex-1 overflow-hidden flex flex-col"
+                  : hasPanel
+                    ? serverListCollapsed
+                      ? "w-0 p-0 overflow-hidden"
+                      : "w-72 border-r border-stroke-subtle overflow-hidden flex flex-col"
+                    : "flex-1 overflow-hidden flex flex-col"
             }`}
           >
             {activeView === "snippets" ? (
@@ -390,7 +396,7 @@ export default function AppShell() {
           </main>
 
           {/* Collapse / expand handle */}
-          {hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "tunnels" && (
+          {!activeBroadcastGroupId && hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "tunnels" && (
             <button
               onClick={toggleServerList}
               aria-label={serverListCollapsed ? "Expand server list" : "Collapse server list"}
@@ -599,7 +605,9 @@ export default function AppShell() {
 
               {/* Panel content */}
               <div className="flex-1 min-h-0">
-                {activePanelType === "terminal" && terminalActiveId && (
+                {activeBroadcastGroupId ? (
+                  <BroadcastGrid key={activeBroadcastGroupId} groupId={activeBroadcastGroupId} />
+                ) : activePanelType === "terminal" && terminalActiveId && (
                   <TerminalPane key={terminalActiveId} sessionId={terminalActiveId} />
                 )}
                 {activePanelType === "sftp" && sftpActiveId && (
