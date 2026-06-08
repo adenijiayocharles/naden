@@ -4,7 +4,9 @@ import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { terminalCommands, clipboardCommands } from "../../lib/tauriCommands";
 import { sessionBuffer } from "../../lib/sessionBuffer";
+import { shadowInputBuffer } from "../../lib/shadowInputBuffer";
 import { useTerminalStore } from "../../store/terminalStore";
+import { useCommandHistoryStore } from "../../store/commandHistoryStore";
 import { useBroadcastStore } from "../../store/broadcastStore";
 import { useTerminalSettings, fontCss, resolveTermTheme } from "../../lib/terminalSettings";
 import { ensureCanvasFonts, ensureFont } from "../../lib/canvasFonts";
@@ -151,6 +153,8 @@ export default function TerminalPane({ sessionId }: Props) {
 
       if (cancelled || !containerRef.current) return;
 
+      shadowInputBuffer.attach(sessionId);
+
       const term = new Terminal({
         cursorBlink: true,
         fontFamily: css,
@@ -270,6 +274,35 @@ export default function TerminalPane({ sessionId }: Props) {
           return;
         }
 
+        // Right arrow with an active suggestion accepts it: forward just the
+        // remainder so the shell receives it as if typed (its own history and
+        // completion stay in control), and fold it into the shadow line so the
+        // ghost text disappears in step. Sent directly — never broadcast —
+        // because every pane's suggestion is local to its own shadow line, and
+        // fanning this one out would inject the wrong text into the others.
+        if (data === "\x1b[C") {
+          const acceptServerId = useTerminalStore.getState().sessions.find((s) => s.id === sessionId)?.serverId;
+          const currentLine = shadowInputBuffer.getLine(sessionId);
+          const activeSuggestion = acceptServerId && currentLine
+            ? useCommandHistoryStore.getState().suggest(acceptServerId, currentLine)
+            : null;
+          if (activeSuggestion) {
+            const remainder = activeSuggestion.slice(currentLine.length);
+            shadowInputBuffer.feed(sessionId, remainder);
+            terminalCommands.sendTerminalInput(sessionId, remainder).catch(() => {});
+            return;
+          }
+        }
+
+        // Replay into the shadow line for local command suggestions. Only
+        // reachable here — never for terminal replies or secret-prompt input —
+        // so passwords/passphrases can never end up in suggestion history.
+        const completedCommand = shadowInputBuffer.feed(sessionId, data);
+        if (completedCommand) {
+          const serverId = useTerminalStore.getState().sessions.find((s) => s.id === sessionId)?.serverId;
+          if (serverId) useCommandHistoryStore.getState().recordCommand(serverId, completedCommand);
+        }
+
         // Read broadcast state fresh on each keystroke rather than subscribing —
         // this handler is registered once on mount and must see the latest group.
         const broadcast = useBroadcastStore.getState();
@@ -282,6 +315,45 @@ export default function TerminalPane({ sessionId }: Props) {
         } else {
           terminalCommands.sendTerminalInput(sessionId, data).catch(() => {});
         }
+      });
+
+      // Dim inline "ghost text" completing the current line from this server's
+      // recent command history (accepted via -> above). Rendered as a DOM node
+      // over .xterm-screen rather than written into the buffer — xterm has no
+      // inline-suggestion concept, and writing into the buffer would collide
+      // with the PTY's own echo.
+      const suggestionGhost = document.createElement("div");
+      suggestionGhost.className = "terminal-suggestion-ghost";
+      suggestionGhost.style.display = "none";
+      term.element?.querySelector<HTMLElement>(".xterm-screen")?.appendChild(suggestionGhost);
+
+      const renderSuggestion = (line: string) => {
+        const serverId = useTerminalStore.getState().sessions.find((s) => s.id === sessionId)?.serverId;
+        const suggestion = serverId && line ? useCommandHistoryStore.getState().suggest(serverId, line) : null;
+        if (!suggestion) {
+          suggestionGhost.style.display = "none";
+          return;
+        }
+
+        const rowsEl = term.element?.querySelector<HTMLElement>(".xterm-rows");
+        if (!rowsEl || term.cols === 0 || term.rows === 0) return;
+        const cellWidth = rowsEl.clientWidth / term.cols;
+        const cellHeight = rowsEl.clientHeight / term.rows;
+        const { cursorX, cursorY } = term.buffer.active;
+
+        suggestionGhost.textContent = suggestion.slice(line.length);
+        suggestionGhost.style.left = `${cursorX * cellWidth}px`;
+        suggestionGhost.style.top = `${cursorY * cellHeight}px`;
+        suggestionGhost.style.height = `${cellHeight}px`;
+        suggestionGhost.style.lineHeight = `${cellHeight}px`;
+        suggestionGhost.style.display = "block";
+      };
+      const unsubscribeSuggestion = shadowInputBuffer.subscribe(sessionId, renderSuggestion);
+      // Incoming PTY output can scroll the cursor to a new row without any
+      // keystroke (e.g. async log lines) — re-anchor the ghost so it doesn't
+      // linger over what's now a stale row.
+      const cursorMoveDisposer = term.onCursorMove(() => {
+        renderSuggestion(shadowInputBuffer.getLine(sessionId));
       });
 
       // Rate-limit PTY resize to ≤1/100ms (xterm fires continuously during drag)
@@ -335,6 +407,10 @@ export default function TerminalPane({ sessionId }: Props) {
         window.removeEventListener("focus", restartBlink);
         term.textarea?.removeEventListener("focus", restartBlink);
         unsub();
+        shadowInputBuffer.detach(sessionId);
+        unsubscribeSuggestion();
+        cursorMoveDisposer.dispose();
+        suggestionGhost.remove();
         dataDisposer.dispose();
         selectionDisposer?.dispose();
         searchAddonRef.current = null;

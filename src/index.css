@@ -227,6 +227,15 @@ body {
   border-radius: 2px;
 }
 
+/* Inline command-suggestion ghost text. Positioned in JS against .xterm-screen
+   (which xterm itself sets to position:relative) at the cursor cell. */
+.terminal-suggestion-ghost {
+  position: absolute;
+  pointer-events: none;
+  white-space: pre;
+  color: var(--color-dim);
+}
+
 /* Visible focus ring for keyboard navigation (WCAG 2.4.7).
    box-shadow approach avoids layout shifts and works inside overflow:hidden. */
 input:focus-visible,
