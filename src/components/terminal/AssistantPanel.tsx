@@ -53,6 +53,7 @@ export function AssistantPanel({
   const messages = useAssistantStore((s) => s.byServer.get(serverId)?.messages ?? EMPTY_MESSAGES);
   const isSending = useAssistantStore((s) => s.byServer.get(serverId)?.isSending ?? false);
   const history = useAssistantStore((s) => s.byServer.get(serverId)?.history ?? EMPTY_HISTORY);
+  const activeProvider = useAssistantStore((s) => s.byServer.get(serverId)?.activeProvider);
   const sendMessage = useAssistantStore((s) => s.sendMessage);
   const startNewChat = useAssistantStore((s) => s.startNewChat);
   const openChat = useAssistantStore((s) => s.openChat);
@@ -62,6 +63,7 @@ export function AssistantPanel({
   const [includeContext, setIncludeContext] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
   const historyPickerRef = useRef<HTMLDivElement>(null);
 
@@ -108,18 +110,29 @@ export function AssistantPanel({
     const trimmed = input.trim();
     if (!trimmed || isSending) return;
     setInput("");
+    // Reset textarea height after clearing
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
     const context = includeContext
       ? buildContext(serverName, connectionStatus, connectionError, getRecentOutput())
       : undefined;
-    void sendMessage(serverId, trimmed, context);
+    void sendMessage(serverId, trimmed, context, status?.provider ?? undefined);
   };
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [input]);
 
   const isReady = status?.configured && status.enabled;
 
   return (
-    <div className="absolute top-0 right-0 bottom-0 w-80 z-40 bg-surface-2 border-l border-stroke shadow-overlay flex flex-col">
+    <div className="absolute top-0 right-0 bottom-0 w-[480px] z-40 bg-surface-2 border-l border-stroke shadow-overlay flex flex-col">
       <div className="relative flex items-center justify-between px-3 py-2.5 border-b border-stroke-subtle shrink-0">
-        <span className="text-sm font-medium text-white">Assistant</span>
+        <span className="text-sm font-medium text-white">AI Assistant</span>
         <div className="flex items-center gap-1">
           <button
             ref={historyButtonRef}
@@ -199,7 +212,7 @@ export function AssistantPanel({
         <>
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-2.5 flex flex-col gap-2.5">
             {messages.length === 0 ? (
-              <p className="text-meta text-dim text-center mt-4">Ask about commands, errors, or what's on screen.</p>
+              <p className="text-sm text-dim text-center mt-4">Ask about commands, errors, or what's on screen.</p>
             ) : (
               messages.map((m) => (
                 <div key={m.id} className={`flex flex-col gap-1 ${m.role === "user" ? "items-end" : "items-start"}`}>
@@ -220,8 +233,13 @@ export function AssistantPanel({
               ))
             )}
           </div>
+          {activeProvider && status?.provider && activeProvider !== status.provider && messages.length > 0 && (
+            <div className="px-2.5 py-2 border-t border-yellow-800/40 bg-yellow-950/30 text-xs text-yellow-400 shrink-0">
+              This conversation was started with {activeProvider === "anthropic" ? "Anthropic" : "OpenAI"}. Replies will now use {status.provider === "anthropic" ? "Anthropic" : "OpenAI"}.
+            </div>
+          )}
           <div className="p-2.5 border-t border-stroke-subtle shrink-0">
-            <label className="flex items-center gap-1.5 text-meta text-dim cursor-pointer select-none mb-1.5">
+            <label className="flex items-center gap-1.5 text-sm text-dim cursor-pointer select-none mb-1.5">
               <input
                 type="checkbox"
                 checked={includeContext}
@@ -230,8 +248,9 @@ export function AssistantPanel({
               />
               Include terminal context (server, status, recent output)
             </label>
-            <div className="flex items-end gap-1.5">
+            <div className="flex items-start gap-1.5">
               <textarea
+                ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -240,9 +259,9 @@ export function AssistantPanel({
                     submit();
                   }
                 }}
-                rows={1}
+                rows={3}
                 placeholder="Ask the assistant…"
-                className="flex-1 resize-none bg-surface-3 border border-stroke rounded px-2.5 py-1.5 text-sm text-white placeholder-faint outline-none focus:border-accent transition-colors max-h-28"
+                className="flex-1 resize-none bg-surface-3 border border-stroke rounded px-2.5 py-1.5 text-sm text-white placeholder-faint outline-none focus:border-accent transition-colors overflow-y-auto max-h-36"
               />
               <button
                 onClick={submit}
