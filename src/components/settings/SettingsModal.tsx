@@ -63,6 +63,9 @@ export default function SettingsModal({ onClose }: Props) {
   const [assistantProvider, setAssistantProvider] = useState<"openai" | "anthropic">("openai");
   const [assistantKeyInput, setAssistantKeyInput] = useState("");
   const [assistantFormOpen, setAssistantFormOpen] = useState(false);
+  const [assistantChangeOpen, setAssistantChangeOpen] = useState(false);
+  const [assistantChangeProvider, setAssistantChangeProvider] = useState<"openai" | "anthropic">("openai");
+  const [assistantChangeKey, setAssistantChangeKey] = useState("");
   const [assistantError, setAssistantError] = useState<string | null>(null);
   const [assistantLoading, setAssistantLoading] = useState(false);
   useEffect(() => {
@@ -100,6 +103,22 @@ export default function SettingsModal({ onClose }: Props) {
     try {
       await assistantCommands.clearApiKey();
       setAssistantStatus((s) => ({ configured: false, provider: null, enabled: false, persistHistory: s?.persistHistory ?? false }));
+      flashSaved();
+    } catch (e) {
+      setAssistantError(formatError(e));
+    } finally {
+      setAssistantLoading(false);
+    }
+  };
+  const submitChangeProvider = async () => {
+    setAssistantLoading(true);
+    setAssistantError(null);
+    try {
+      await assistantCommands.setApiKey(assistantChangeProvider, assistantChangeKey);
+      await assistantCommands.setEnabled(true);
+      setAssistantStatus(await assistantCommands.getStatus());
+      setAssistantChangeKey("");
+      setAssistantChangeOpen(false);
       flashSaved();
     } catch (e) {
       setAssistantError(formatError(e));
@@ -694,13 +713,53 @@ export default function SettingsModal({ onClose }: Props) {
                 </div>
                 <div className="mt-1">
                   <button
+                    onClick={() => {
+                      setAssistantChangeOpen((v) => !v);
+                      setAssistantChangeProvider((assistantStatus.provider as "openai" | "anthropic") ?? "openai");
+                      setAssistantChangeKey("");
+                      setAssistantError(null);
+                    }}
+                    className="w-full text-left py-3 text-sm text-secondary hover:text-white transition-colors flex items-center justify-between"
+                  >
+                    <span>Change provider / API key</span>
+                    <svg className={`w-3.5 h-3.5 text-muted transition-transform ${assistantChangeOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {assistantChangeOpen && (
+                    <div className="mb-2 space-y-3 p-3 bg-surface-0 rounded-lg border border-stroke-subtle">
+                      <select
+                        value={assistantChangeProvider}
+                        onChange={(e) => setAssistantChangeProvider(e.target.value as "openai" | "anthropic")}
+                        aria-label="New AI provider"
+                        className="w-full h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent"
+                      >
+                        <option value="openai">OpenAI</option>
+                        <option value="anthropic">Anthropic</option>
+                      </select>
+                      <PasswordInput
+                        autoFocus
+                        value={assistantChangeKey}
+                        onChange={(v) => { setAssistantChangeKey(v); setAssistantError(null); }}
+                        placeholder="New API key"
+                      />
+                      {assistantError && <p className="text-xs text-red-400">{assistantError}</p>}
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => { setAssistantChangeOpen(false); setAssistantChangeKey(""); setAssistantError(null); }} className="flex-1">Cancel</Button>
+                        <Button size="sm" variant="primary" onClick={() => { void submitChangeProvider(); }} disabled={assistantLoading || !assistantChangeKey.trim()} className="flex-1">
+                          {assistantLoading ? "Saving…" : "Save"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  <button
                     onClick={() => { void forgetAssistantKey(); }}
                     disabled={assistantLoading}
-                    className="w-full text-left py-3 text-sm text-secondary hover:text-red-400 transition-colors disabled:opacity-40"
+                    className="w-full text-left py-3 text-sm text-secondary hover:text-red-400 transition-colors disabled:opacity-40 border-t border-stroke-subtle"
                   >
                     {assistantLoading ? "Removing…" : "Forget API key"}
                   </button>
-                  {assistantError && <p className="text-xs text-red-400">{assistantError}</p>}
+                  {assistantError && !assistantChangeOpen && <p className="text-xs text-red-400">{assistantError}</p>}
                 </div>
               </>
             ) : (
