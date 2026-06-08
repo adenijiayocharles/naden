@@ -55,9 +55,9 @@ function GroupCreateModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/85 animate-backdrop-in flex items-center justify-center z-50 p-4"
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-backdrop-in flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm p-5">
+      <div className="bg-surface-1/80 backdrop-blur-2xl border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm p-5">
         <h3 className="text-title text-white mb-4">New Group</h3>
         <div className="space-y-3">
           <Input autoFocus value={name} onChange={(e) => setName(e.target.value)}
@@ -116,9 +116,9 @@ function GroupEditModal({ group, onClose, initialDelete = false }: { group: Grou
   };
 
   return (
-    <div className="fixed inset-0 bg-black/85 animate-backdrop-in flex items-center justify-center z-50 p-4"
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-backdrop-in flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm p-5">
+      <div className="bg-surface-1/80 backdrop-blur-2xl border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm p-5">
         <h3 className="text-title text-white mb-4">Edit Group</h3>
         <div className="space-y-3">
           <Input autoFocus value={name} onChange={(e) => setName(e.target.value)}
@@ -172,9 +172,9 @@ function TagRenameModal({ tag, onClose }: { tag: Tag; onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/85 animate-backdrop-in flex items-center justify-center z-50 p-4"
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-backdrop-in flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm p-5">
+      <div className="bg-surface-1/80 backdrop-blur-2xl border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm p-5">
         <h3 className="text-title text-white mb-4">Rename Tag</h3>
         <Input autoFocus value={name} onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") void handleSave(); if (e.key === "Escape") onClose(); }}
@@ -650,7 +650,7 @@ export default function Sidebar() {
             + Add
           </Button>
           {addMenuOpen && (
-            <div className="absolute bottom-full right-0 mb-1.5 bg-surface-2 border border-stroke rounded-lg shadow-overlay py-1 min-w-[160px] z-50">
+            <div className="absolute bottom-full right-0 mb-1.5 bg-surface-2/80 backdrop-blur-xl border border-stroke rounded-lg shadow-overlay py-1 min-w-[160px] z-50">
               <button
                 onClick={() => { openAdd(); setAddMenuOpen(false); }}
                 className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-surface-4 transition-colors"

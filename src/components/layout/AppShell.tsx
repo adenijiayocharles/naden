@@ -532,7 +532,7 @@ export default function AppShell() {
                   {showNewTabPicker && (
                     <div
                       ref={newTabPickerRef}
-                      className="absolute top-full right-0 mt-1 w-60 bg-surface-2 border border-stroke rounded-lg shadow-overlay z-50 overflow-hidden"
+                      className="absolute top-full right-0 mt-1 w-60 bg-surface-2/80 backdrop-blur-xl border border-stroke rounded-lg shadow-overlay z-50 overflow-hidden"
                     >
                       <div className="p-2 border-b border-stroke-subtle">
                         <input
