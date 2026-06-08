@@ -29,6 +29,8 @@ export interface AssistantConversation {
   title: string;
   messages: AssistantMessage[];
   updatedAt: number;
+  /** Provider that generated the replies in this conversation ("openai" | "anthropic"). */
+  provider?: string;
 }
 
 // Held outside Zustand so cleanup functions are never serialised into state —
@@ -49,8 +51,8 @@ function deriveTitle(messages: AssistantMessage[]): string {
 }
 
 /** Packages the current conversation for the history list. */
-function archiveCurrent(activeChatId: string, messages: AssistantMessage[]): AssistantConversation {
-  return { id: activeChatId, title: deriveTitle(messages), messages, updatedAt: Date.now() };
+function archiveCurrent(activeChatId: string, messages: AssistantMessage[], provider?: string): AssistantConversation {
+  return { id: activeChatId, title: deriveTitle(messages), messages, updatedAt: Date.now(), provider };
 }
 
 /** A single server's chat — conversations never cross server boundaries. */
@@ -59,6 +61,8 @@ interface ServerAssistantState {
   isSending: boolean;
   activeChatId: string;
   history: AssistantConversation[];
+  /** Provider that was used for the active conversation's replies — undefined on a fresh chat. */
+  activeProvider?: string;
 }
 
 function createServerState(): ServerAssistantState {
@@ -70,6 +74,7 @@ interface PersistedServerChat {
   messages: AssistantMessage[];
   history: AssistantConversation[];
   activeChatId: string;
+  activeProvider?: string;
 }
 
 interface AssistantState {
@@ -82,7 +87,7 @@ interface AssistantState {
   /** Loads the archived transcript for `serverId` from disk, once, if nothing is in memory yet. */
   loadPersisted: (serverId: string) => Promise<void>;
 
-  sendMessage: (serverId: string, content: string, context?: AssistantMessageContext) => Promise<void>;
+  sendMessage: (serverId: string, content: string, context?: AssistantMessageContext, provider?: string) => Promise<void>;
   startNewChat: (serverId: string) => void;
   openChat: (serverId: string, id: string) => void;
 }
@@ -108,6 +113,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
       messages: s.messages,
       history: s.history,
       activeChatId: s.activeChatId,
+      activeProvider: s.activeProvider,
     };
     void assistantCommands.saveChatHistory(serverId, JSON.stringify(payload)).catch(() => {});
   };
@@ -143,10 +149,11 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
         messages: parsed.messages,
         history: parsed.history,
         activeChatId: parsed.activeChatId,
+        activeProvider: parsed.activeProvider,
       }));
     },
 
-    sendMessage: async (serverId, content, context) => {
+    sendMessage: async (serverId, content, context, provider) => {
       const trimmed = content.trim();
       const current = get().byServer.get(serverId) ?? createServerState();
       if (!trimmed || current.isSending) return;
@@ -176,6 +183,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
       withServer(serverId, (s) => ({
         messages: [...s.messages, userMessage, replyMessage],
         isSending: true,
+        activeProvider: provider ?? s.activeProvider,
       }));
 
       const updateReply = (updater: (m: AssistantMessage) => AssistantMessage) => {
@@ -222,7 +230,8 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
       withServer(serverId, (s) => ({
         messages: [],
         activeChatId: crypto.randomUUID(),
-        history: [archiveCurrent(s.activeChatId, s.messages), ...s.history],
+        activeProvider: undefined,
+        history: [archiveCurrent(s.activeChatId, s.messages, s.activeProvider), ...s.history],
       }));
       persist(serverId);
     },
@@ -238,7 +247,8 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
       withServer(serverId, (s) => ({
         messages: target.messages,
         activeChatId: target.id,
-        history: s.messages.length > 0 ? [archiveCurrent(s.activeChatId, s.messages), ...remaining] : remaining,
+        activeProvider: target.provider,
+        history: s.messages.length > 0 ? [archiveCurrent(s.activeChatId, s.messages, s.activeProvider), ...remaining] : remaining,
       }));
       persist(serverId);
     },
