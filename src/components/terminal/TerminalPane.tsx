@@ -17,6 +17,7 @@ import { usePlaybookRunStore } from "../../store/playbookRunStore";
 import { useServerStore } from "../../store/serverStore";
 import { resolvePlaybookStep } from "../../lib/playbookVariables";
 import PlaybookRunBar from "./PlaybookRunBar";
+import { AssistantPanel } from "./AssistantPanel";
 import type { Playbook } from "../../types/playbook";
 
 // Matches xterm's auto-reply to a Device Status Report / cursor-position query
@@ -59,6 +60,8 @@ export default function TerminalPane({ sessionId }: Props) {
   const [playbookQuery, setPlaybookQuery] = useState("");
   const playbookPickerRef = useRef<HTMLDivElement>(null);
   const playbookButtonRef = useRef<HTMLButtonElement>(null);
+
+  const [assistantPanelOpen, setAssistantPanelOpen] = useState(false);
 
   const snippets = useSnippetStore((s) => s.snippets);
   const fetchSnippets = useSnippetStore((s) => s.fetchAll);
@@ -460,6 +463,22 @@ export default function TerminalPane({ sessionId }: Props) {
     });
   }, [fontSize, fontFamily, termTheme]);
 
+  // Reads clean text (no escape sequences) from xterm's parsed buffer rather
+  // than the raw byte scrollback in sessionBuffer — the buffer already holds
+  // rendered lines, so no ANSI-stripping logic is needed here.
+  const getRecentTerminalText = useCallback((maxLines = 40) => {
+    const term = termRef.current;
+    if (!term) return "";
+    const buffer = term.buffer.active;
+    const start = Math.max(0, buffer.length - maxLines);
+    const lines: string[] = [];
+    for (let i = start; i < buffer.length; i++) {
+      const line = buffer.getLine(i);
+      if (line) lines.push(line.translateToString(true));
+    }
+    return lines.join("\n").trim();
+  }, []);
+
   const filteredSnippets = useMemo(() => {
     if (!snippetQuery.trim()) return snippets;
     const q = snippetQuery.toLowerCase();
@@ -552,6 +571,34 @@ export default function TerminalPane({ sessionId }: Props) {
       <PlaybookRunBar />
       <div className="relative flex-1 min-h-0">
       <div ref={containerRef} className="absolute inset-0 overflow-hidden" />
+
+      {/* AI assistant toggle — floats over terminal at bottom-right, above the playbook picker.
+          Hidden while the panel is open since it would sit underneath it; the panel has its own close button. */}
+      {!assistantPanelOpen && (
+        <div className="absolute bottom-[6.25rem] right-4 z-30">
+          <button
+            onClick={() => setAssistantPanelOpen(true)}
+            title="AI assistant"
+            aria-label="Open AI assistant"
+            className="w-7 h-7 flex items-center justify-center rounded transition-colors bg-surface-3/70 text-dim hover:text-muted hover:bg-surface-3"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 3h10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H7l-3 3v-3H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {assistantPanelOpen && (
+        <AssistantPanel
+          onClose={() => setAssistantPanelOpen(false)}
+          serverId={session?.serverId ?? ""}
+          serverName={session?.serverName ?? ""}
+          connectionStatus={session?.status ?? "connecting"}
+          connectionError={session?.errorMessage}
+          getRecentOutput={getRecentTerminalText}
+        />
+      )}
 
       {/* Playbook picker — floats over terminal at bottom-right, above the snippet picker */}
       <div className="absolute bottom-14 right-4 z-30 flex flex-col items-end gap-1">

@@ -46,6 +46,11 @@ uuid = { version = "1", features = ["v4", "serde"] }
 anyhow = "1"
 thiserror = "1"
 base64 = "0.22"
+# AI assistant (BYOK): HTTP client for provider APIs, streamed as SSE.
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+async-trait = "0.1"
+futures-util = "0.3"
+bytes = "1"
 
 # Compile crypto crates with full optimizations even in debug builds.
 # PBKDF2-HMAC-SHA256 at 600k rounds is ~30s unoptimized vs ~1s optimized.

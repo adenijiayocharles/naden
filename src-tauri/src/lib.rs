@@ -1,5 +1,6 @@
 use tauri::{Emitter, Manager};
 
+mod assistant;
 mod commands;
 mod db;
 pub mod error;
@@ -91,6 +92,15 @@ pub fn run() {
             commands::settings_commands::get_setting,
             commands::settings_commands::set_setting,
             commands::settings_commands::vault_heartbeat,
+            // AI Assistant (BYOK)
+            commands::assistant_commands::set_assistant_api_key,
+            commands::assistant_commands::clear_assistant_api_key,
+            commands::assistant_commands::set_assistant_enabled,
+            commands::assistant_commands::get_assistant_status,
+            commands::assistant_commands::send_assistant_message,
+            commands::assistant_commands::set_assistant_persist_history,
+            commands::assistant_commands::save_assistant_chat_history,
+            commands::assistant_commands::load_assistant_chat_history,
             // SFTP
             commands::sftp_commands::open_sftp_session,
             commands::sftp_commands::close_sftp_session,

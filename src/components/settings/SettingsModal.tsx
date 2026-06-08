@@ -4,7 +4,7 @@ import Button from "../shared/Button";
 import { useVaultStore } from "../../store/vaultStore";
 import { useUiStore } from "../../store/uiStore";
 import { useTerminalSettings, TERMINAL_FONTS, TERMINAL_THEMES, fontCss } from "../../lib/terminalSettings";
-import { settingsCommands } from "../../lib/tauriCommands";
+import { settingsCommands, assistantCommands, type AssistantStatus } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import { passwordStrength } from "../../lib/passwordStrength";
 
@@ -57,6 +57,56 @@ export default function SettingsModal({ onClose }: Props) {
     if (savedTimer.current) clearTimeout(savedTimer.current);
     savedTimer.current = setTimeout(() => setSavedFlash(false), 2000);
   }, []);
+
+  // AI Assistant (BYOK, opt-in)
+  const [assistantStatus, setAssistantStatus] = useState<AssistantStatus | null>(null);
+  const [assistantProvider, setAssistantProvider] = useState<"openai" | "anthropic">("openai");
+  const [assistantKeyInput, setAssistantKeyInput] = useState("");
+  const [assistantFormOpen, setAssistantFormOpen] = useState(false);
+  const [assistantError, setAssistantError] = useState<string | null>(null);
+  const [assistantLoading, setAssistantLoading] = useState(false);
+  useEffect(() => {
+    assistantCommands.getStatus().then(setAssistantStatus).catch(() => {});
+  }, []);
+  const submitAssistantKey = async () => {
+    setAssistantLoading(true);
+    setAssistantError(null);
+    try {
+      await assistantCommands.setApiKey(assistantProvider, assistantKeyInput);
+      await assistantCommands.setEnabled(true);
+      setAssistantStatus(await assistantCommands.getStatus());
+      setAssistantKeyInput("");
+      setAssistantFormOpen(false);
+      flashSaved();
+    } catch (e) {
+      setAssistantError(formatError(e));
+    } finally {
+      setAssistantLoading(false);
+    }
+  };
+  const toggleAssistantEnabled = async (enabled: boolean) => {
+    setAssistantStatus((s) => (s ? { ...s, enabled } : s));
+    await assistantCommands.setEnabled(enabled).catch(() => {});
+    flashSaved();
+  };
+  const toggleAssistantPersistHistory = async (persistHistory: boolean) => {
+    setAssistantStatus((s) => (s ? { ...s, persistHistory } : s));
+    await assistantCommands.setPersistHistory(persistHistory).catch(() => {});
+    flashSaved();
+  };
+  const forgetAssistantKey = async () => {
+    setAssistantLoading(true);
+    setAssistantError(null);
+    try {
+      await assistantCommands.clearApiKey();
+      setAssistantStatus((s) => ({ configured: false, provider: null, enabled: false, persistHistory: s?.persistHistory ?? false }));
+      flashSaved();
+    } catch (e) {
+      setAssistantError(formatError(e));
+    } finally {
+      setAssistantLoading(false);
+    }
+  };
 
   const scrollBodyRef = useRef<HTMLDivElement>(null);
 
@@ -595,6 +645,115 @@ export default function SettingsModal({ onClose }: Props) {
                 <option value="300">5 min</option>
               </select>
             </div>
+          </div>
+
+          {/* AI Assistant section (BYOK, opt-in) */}
+          <div id="settings-assistant" data-section="assistant">
+            <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">AI Assistant</p>
+            <p className="text-meta text-faint mb-3">
+              Bring your own API key. Off by default — when enabled, prompts you send may
+              include terminal context and are sent to the provider you choose below.
+            </p>
+
+            {assistantStatus?.configured ? (
+              <>
+                <div className="flex items-center justify-between py-3 border-b border-stroke-subtle">
+                  <div>
+                    <p className="text-sm text-white font-medium">Enable assistant</p>
+                    <p className="text-meta text-muted mt-0.5">
+                      Using your {assistantStatus.provider === "anthropic" ? "Anthropic" : "OpenAI"} key
+                    </p>
+                  </div>
+                  <select
+                    value={assistantStatus.enabled ? "enabled" : "disabled"}
+                    onChange={(e) => { void toggleAssistantEnabled(e.target.value === "enabled"); }}
+                    aria-label="Enable AI assistant"
+                    className="ml-4 h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+                  >
+                    <option value="enabled">Enabled</option>
+                    <option value="disabled">Disabled</option>
+                  </select>
+                </div>
+                <div className="flex items-center justify-between py-3 border-b border-stroke-subtle">
+                  <div>
+                    <p className="text-sm text-white font-medium">Save chat history</p>
+                    <p className="text-meta text-muted mt-0.5">
+                      Encrypted at rest with the same key as your credentials. Off by default —
+                      turning it off erases everything already saved.
+                    </p>
+                  </div>
+                  <select
+                    value={assistantStatus.persistHistory ? "on" : "off"}
+                    onChange={(e) => { void toggleAssistantPersistHistory(e.target.value === "on"); }}
+                    aria-label="Save AI assistant chat history to disk"
+                    className="ml-4 h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+                  >
+                    <option value="on">On</option>
+                    <option value="off">Off</option>
+                  </select>
+                </div>
+                <div className="mt-1">
+                  <button
+                    onClick={() => { void forgetAssistantKey(); }}
+                    disabled={assistantLoading}
+                    className="w-full text-left py-3 text-sm text-secondary hover:text-red-400 transition-colors disabled:opacity-40"
+                  >
+                    {assistantLoading ? "Removing…" : "Forget API key"}
+                  </button>
+                  {assistantError && <p className="text-xs text-red-400">{assistantError}</p>}
+                </div>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setAssistantFormOpen((v) => !v)}
+                  className="w-full text-left py-3 text-sm text-secondary hover:text-white transition-colors flex items-center justify-between"
+                >
+                  <span>Add API key</span>
+                  <svg className={`w-3.5 h-3.5 text-muted transition-transform ${assistantFormOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {assistantFormOpen && (
+                  <div className="mt-1 space-y-3 p-3 bg-surface-0 rounded-lg border border-stroke-subtle">
+                    <select
+                      value={assistantProvider}
+                      onChange={(e) => setAssistantProvider(e.target.value as typeof assistantProvider)}
+                      aria-label="AI provider"
+                      className="w-full h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent"
+                    >
+                      <option value="openai">OpenAI</option>
+                      <option value="anthropic">Anthropic</option>
+                    </select>
+                    <PasswordInput
+                      autoFocus
+                      value={assistantKeyInput}
+                      onChange={(v) => { setAssistantKeyInput(v); setAssistantError(null); }}
+                      placeholder="API key"
+                    />
+                    {assistantError && <p className="text-xs text-red-400">{assistantError}</p>}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => { setAssistantFormOpen(false); setAssistantKeyInput(""); setAssistantError(null); }}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => { void submitAssistantKey(); }}
+                        disabled={assistantLoading || !assistantKeyInput.trim()}
+                        className="flex-1"
+                      >
+                        {assistantLoading ? "Saving…" : "Save key"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           {/* Success banner */}
