@@ -125,6 +125,7 @@ function GenerateKeyModal({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState<GenForm>(BLANK_GEN);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [pathEdited, setPathEdited] = useState(false);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -134,9 +135,23 @@ function GenerateKeyModal({ onClose }: { onClose: () => void }) {
 
   const set = (field: keyof GenForm) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-      setForm((f) => ({ ...f, [field]: e.target.value }));
+      const value = e.target.value;
+      setForm((f) => {
+        const next = { ...f, [field]: value };
+        if (field === "name" && !pathEdited) {
+          const filename = value.toLowerCase().replace(/\s+/g, "_");
+          next.outputPath = filename ? `~/.ssh/${filename}` : "~/.ssh/";
+        }
+        return next;
+      });
       setError(null);
     };
+
+  const handlePathChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPathEdited(true);
+    setForm((f) => ({ ...f, outputPath: e.target.value }));
+    setError(null);
+  };
 
   const submit = async () => {
     if (!form.name.trim()) { setError("Name is required"); return; }
@@ -192,7 +207,7 @@ function GenerateKeyModal({ onClose }: { onClose: () => void }) {
             <label className="text-sm text-secondary">Save to</label>
             <Input
               value={form.outputPath}
-              onChange={set("outputPath")}
+              onChange={handlePathChange}
               placeholder="~/.ssh/id_ed25519"
             />
             <p className="text-xs text-faint">Public key will be saved alongside as <code className="font-mono">.pub</code></p>
@@ -351,7 +366,7 @@ export default function KeysView() {
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-stroke-subtle shrink-0">
         <div>
-          <h1 className="text-lg font-semibold text-white">SSH Keys</h1>
+          <h1 className="text-lg font-semibold text-white">Vault</h1>
           <p className="text-sm text-faint mt-0.5">Manage private keys used for authentication</p>
         </div>
         <div className="flex items-center gap-2">

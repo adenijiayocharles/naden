@@ -557,7 +557,7 @@ export default function Sidebar() {
           }
         />
 
-        {/* SSH Keys */}
+        {/* Vault */}
         <NavRow
           active={activeView === "keys"}
           onClick={() => openKeys()}
@@ -567,7 +567,7 @@ export default function Sidebar() {
                 <path d="M10 2a4 4 0 100 8 4 4 0 000-8zM6.5 7.5L2 12" />
                 <path d="M3.5 13.5l1-1M5.5 13.5l1-1" />
               </svg>
-              SSH Keys
+              Vault
             </span>
           }
         />
