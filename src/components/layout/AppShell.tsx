@@ -14,6 +14,7 @@ import { useMenuEvents } from "../../hooks/useMenuEvents";
 import { useTrayEvents } from "../../hooks/useTrayEvents";
 import { trayCommands } from "../../lib/tauriCommands";
 import SshConfigImport from "../servers/SshConfigImport";
+import SettingsPage from "../settings/SettingsPage";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import TabItem from "./TabItem";
@@ -306,7 +307,7 @@ export default function AppShell() {
             className={`shrink-0 transition-[width,padding] duration-200 ${
               activeBroadcastGroupId
                 ? "w-0 p-0 overflow-hidden"
-                : activeView === "logs" || activeView === "snippets" || activeView === "playbooks" || activeView === "tunnels"
+                : activeView === "logs" || activeView === "snippets" || activeView === "playbooks" || activeView === "tunnels" || activeView === "settings"
                   ? "flex-1 overflow-hidden flex flex-col"
                   : hasPanel
                     ? serverListCollapsed
@@ -315,7 +316,9 @@ export default function AppShell() {
                     : "flex-1 overflow-hidden flex flex-col"
             }`}
           >
-            {activeView === "snippets" ? (
+            {activeView === "settings" ? (
+              <SettingsPage />
+            ) : activeView === "snippets" ? (
               <SnippetList />
             ) : activeView === "playbooks" ? (
               <PlaybookList />
@@ -405,7 +408,7 @@ export default function AppShell() {
           </main>
 
           {/* Collapse / expand handle */}
-          {!activeBroadcastGroupId && hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && (
+          {!activeBroadcastGroupId && hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings" && (
             <button
               onClick={toggleServerList}
               aria-label={serverListCollapsed ? "Expand server list" : "Collapse server list"}
@@ -430,7 +433,7 @@ export default function AppShell() {
           )}
 
           {/* Unified panel: terminals + SFTP browsers */}
-          {hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && (
+          {hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings" && (
             <div className="flex flex-col flex-1 min-w-0">
               {/* Unified tab bar */}
               <div
@@ -511,6 +514,7 @@ export default function AppShell() {
                       onDrop={(e) => handleDrop(session.id, "sftp", e)}
                     />
                   ))}
+
                   </div>
                 </div>
 

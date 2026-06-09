@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { Server } from "../types/server";
 
-type ActiveView = "list" | "add" | "edit" | "logs" | "snippets" | "playbooks" | "tunnels";
+type ActiveView = "list" | "add" | "edit" | "logs" | "snippets" | "playbooks" | "tunnels" | "settings";
 export type ViewMode = "card" | "row";
 export type SortMode = "default" | "name_asc" | "name_desc" | "host" | "last_connected";
 interface UiStore {
@@ -12,7 +12,6 @@ interface UiStore {
   collapsedGroups: Set<string>;
   sidebarCollapsed: boolean;
   serverListCollapsed: boolean;
-  settingsOpen: boolean;
   importSshConfigOpen: boolean;
   onboardingComplete: boolean;
   onboardingChecked: boolean;
@@ -35,7 +34,6 @@ interface UiStore {
   openTunnels: () => void;
   closeForm: () => void;
   openSettings: () => void;
-  closeSettings: () => void;
   openImportSshConfig: () => void;
   closeImportSshConfig: () => void;
   setOnboardingComplete: (v: boolean) => void;
@@ -68,7 +66,6 @@ export const useUiStore = create<UiStore>((set) => ({
   collapsedGroups: new Set<string>(),
   sidebarCollapsed: false,
   serverListCollapsed: false,
-  settingsOpen: false,
   importSshConfigOpen: false,
   onboardingComplete: true, // assume complete until checked
   onboardingChecked: false,
@@ -90,8 +87,7 @@ export const useUiStore = create<UiStore>((set) => ({
   openPlaybooks: () => set({ activeView: "playbooks", editingServerId: null }),
   openTunnels: () => set({ activeView: "tunnels", editingServerId: null }),
   closeForm: () => set({ activeView: "list", editingServerId: null }),
-  openSettings: () => set({ settingsOpen: true }),
-  closeSettings: () => set({ settingsOpen: false }),
+  openSettings: () => set({ activeView: "settings", editingServerId: null }),
   openImportSshConfig: () => set({ importSshConfigOpen: true }),
   closeImportSshConfig: () => set({ importSshConfigOpen: false }),
   setOnboardingComplete: (v) => set({ onboardingComplete: v }),

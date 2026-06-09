@@ -221,7 +221,9 @@ export function AssistantPanel({
                   )}
                   <div
                     className={`max-w-[90%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap break-words ${
-                      m.role === "user" ? "bg-accent/20 text-white" : "bg-surface-3 text-white"
+                      m.role === "user"
+                        ? "bg-accent/35 text-white border border-accent/40"
+                        : "bg-surface-3 text-white border border-stroke"
                     }`}
                   >
                     {m.content || (m.status === "streaming" ? "…" : "")}

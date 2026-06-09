@@ -1,7 +1,6 @@
 import { useUiStore } from "../../store/uiStore";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
-import SettingsModal from "../settings/SettingsModal";
 
 export default function TopBar() {
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
@@ -9,9 +8,7 @@ export default function TopBar() {
   const activeView = useUiStore((s) => s.activeView);
   const openLogs = useUiStore((s) => s.openLogs);
   const closeForm = useUiStore((s) => s.closeForm);
-  const settingsOpen = useUiStore((s) => s.settingsOpen);
   const openSettings = useUiStore((s) => s.openSettings);
-  const closeSettings = useUiStore((s) => s.closeSettings);
 
   const terminalSessions = useTerminalStore((s) => s.sessions);
   const terminalActiveId = useTerminalStore((s) => s.activeSessionId);
@@ -23,8 +20,7 @@ export default function TopBar() {
     sftpSessions.find((s) => s.id === sftpActiveId);
 
   return (
-    <>
-      <header
+    <header
         className="h-11 shrink-0 border-b border-stroke-subtle bg-surface-base flex items-center pl-[72px] pr-3"
       >
         <div className="flex-1 flex items-center justify-center pointer-events-none">
@@ -67,9 +63,6 @@ export default function TopBar() {
             </svg>
           </button>
         </div>
-      </header>
-
-      {settingsOpen && <SettingsModal onClose={closeSettings} />}
-    </>
+    </header>
   );
 }
