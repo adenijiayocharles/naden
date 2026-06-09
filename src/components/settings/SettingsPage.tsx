@@ -128,33 +128,49 @@ export default function SettingsPage() {
 
   // AI Assistant
   const [assistantStatus, setAssistantStatus] = useState<AssistantStatus | null>(null);
-  const [assistantProvider, setAssistantProvider] = useState<"openai" | "anthropic">("openai");
-  const [assistantKeyInput, setAssistantKeyInput] = useState("");
-  const [assistantFormOpen, setAssistantFormOpen] = useState(false);
-  const [assistantChangeOpen, setAssistantChangeOpen] = useState(false);
-  const [assistantChangeProvider, setAssistantChangeProvider] = useState<"openai" | "anthropic">("openai");
-  const [assistantChangeKey, setAssistantChangeKey] = useState("");
+  const [addingProvider, setAddingProvider] = useState<"openai" | "anthropic" | null>(null);
+  const [addKeyInput, setAddKeyInput] = useState("");
+  const [confirmForgetProvider, setConfirmForgetProvider] = useState<"openai" | "anthropic" | null>(null);
   const [assistantError, setAssistantError] = useState<string | null>(null);
   const [assistantLoading, setAssistantLoading] = useState(false);
-  const [confirmForget, setConfirmForget] = useState(false);
   useEffect(() => {
     assistantCommands.getStatus().then(setAssistantStatus).catch(() => {});
   }, []);
-  const submitAssistantKey = async () => {
+  const submitAddKey = async (provider: "openai" | "anthropic") => {
     setAssistantLoading(true);
     setAssistantError(null);
     try {
-      await assistantCommands.setApiKey(assistantProvider, assistantKeyInput);
-      await assistantCommands.setEnabled(true);
+      await assistantCommands.setApiKey(provider, addKeyInput);
+      if (!assistantStatus?.openaiConfigured && !assistantStatus?.anthropicConfigured) {
+        await assistantCommands.setEnabled(true);
+      }
       setAssistantStatus(await assistantCommands.getStatus());
-      setAssistantKeyInput("");
-      setAssistantFormOpen(false);
+      setAddKeyInput("");
+      setAddingProvider(null);
       flashSaved();
     } catch (e) {
       setAssistantError(formatError(e));
     } finally {
       setAssistantLoading(false);
     }
+  };
+  const forgetProviderKey = async (provider: "openai" | "anthropic") => {
+    setAssistantLoading(true);
+    setAssistantError(null);
+    try {
+      await assistantCommands.clearProviderKey(provider);
+      setAssistantStatus(await assistantCommands.getStatus());
+      flashSaved();
+    } catch (e) {
+      setAssistantError(formatError(e));
+    } finally {
+      setAssistantLoading(false);
+    }
+  };
+  const switchToProvider = async (provider: string) => {
+    setAssistantStatus((s) => (s ? { ...s, activeProvider: provider } : s));
+    await assistantCommands.switchProvider(provider).catch(() => {});
+    flashSaved();
   };
   const toggleAssistantEnabled = async (enabled: boolean) => {
     setAssistantStatus((s) => (s ? { ...s, enabled } : s));
@@ -165,35 +181,6 @@ export default function SettingsPage() {
     setAssistantStatus((s) => (s ? { ...s, persistHistory } : s));
     await assistantCommands.setPersistHistory(persistHistory).catch(() => {});
     flashSaved();
-  };
-  const forgetAssistantKey = async () => {
-    setAssistantLoading(true);
-    setAssistantError(null);
-    try {
-      await assistantCommands.clearApiKey();
-      setAssistantStatus((s) => ({ configured: false, provider: null, enabled: false, persistHistory: s?.persistHistory ?? false }));
-      flashSaved();
-    } catch (e) {
-      setAssistantError(formatError(e));
-    } finally {
-      setAssistantLoading(false);
-    }
-  };
-  const submitChangeProvider = async () => {
-    setAssistantLoading(true);
-    setAssistantError(null);
-    try {
-      await assistantCommands.setApiKey(assistantChangeProvider, assistantChangeKey);
-      await assistantCommands.setEnabled(true);
-      setAssistantStatus(await assistantCommands.getStatus());
-      setAssistantChangeKey("");
-      setAssistantChangeOpen(false);
-      flashSaved();
-    } catch (e) {
-      setAssistantError(formatError(e));
-    } finally {
-      setAssistantLoading(false);
-    }
   };
 
   // Theme
@@ -661,15 +648,91 @@ export default function SettingsPage() {
                 description="Bring your own API key. Off by default — when enabled, prompts you send may include terminal context and are sent to the provider you choose below."
               />
 
-              {assistantStatus?.configured ? (
+              {/* Per-provider rows */}
+              {(["openai", "anthropic"] as const).map((p) => {
+                const isConfigured = p === "openai" ? assistantStatus?.openaiConfigured : assistantStatus?.anthropicConfigured;
+                const isAdding = addingProvider === p;
+                const label = p === "openai" ? "OpenAI" : "Anthropic";
+                return (
+                  <div key={p} className="border-b border-stroke-subtle">
+                    <div className="flex items-center justify-between py-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-sm text-white font-medium">{label}</span>
+                        {isConfigured && (
+                          <span className="text-[11px] font-medium text-green-400 bg-green-950/50 border border-green-800/40 rounded px-1.5 py-0.5 leading-none">
+                            Configured
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        {isConfigured && (
+                          <button
+                            onClick={() => { setConfirmForgetProvider(p); setAssistantError(null); }}
+                            disabled={assistantLoading}
+                            className="text-sm text-secondary hover:text-red-400 transition-colors disabled:opacity-40"
+                          >
+                            Forget
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            setAddingProvider(isAdding ? null : p);
+                            setAddKeyInput("");
+                            setAssistantError(null);
+                          }}
+                          className="text-sm text-secondary hover:text-white transition-colors flex items-center gap-1"
+                        >
+                          {isConfigured ? "Update key" : "Add key"}
+                          <svg className={`w-3 h-3 text-muted transition-transform ${isAdding ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    {isAdding && (
+                      <div className="mb-3 space-y-3 p-3 bg-surface-0 rounded-lg border border-stroke-subtle">
+                        <PasswordInput
+                          autoFocus
+                          value={addKeyInput}
+                          onChange={(v) => { setAddKeyInput(v); setAssistantError(null); }}
+                          placeholder={`${label} API key`}
+                        />
+                        {assistantError && <p className="text-xs text-red-400">{assistantError}</p>}
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => { setAddingProvider(null); setAddKeyInput(""); setAssistantError(null); }} className="flex-1">Cancel</Button>
+                          <Button size="sm" variant="primary" onClick={() => { void submitAddKey(p); }} disabled={assistantLoading || !addKeyInput.trim()} className="flex-1">
+                            {assistantLoading ? "Saving…" : "Save key"}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Active provider — only when both configured */}
+              {assistantStatus?.openaiConfigured && assistantStatus?.anthropicConfigured && (
+                <Row>
+                  <RowLabel title="Active provider" description="Which provider handles your messages" />
+                  <select
+                    value={assistantStatus.activeProvider ?? ""}
+                    onChange={(e) => { void switchToProvider(e.target.value); }}
+                    aria-label="Active AI provider"
+                    className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+                  >
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic</option>
+                  </select>
+                </Row>
+              )}
+
+              {/* Enable + history — only when at least one key configured */}
+              {(assistantStatus?.openaiConfigured || assistantStatus?.anthropicConfigured) && (
                 <>
                   <Row>
-                    <RowLabel
-                      title="Enable assistant"
-                      description={`Using your ${assistantStatus.provider === "anthropic" ? "Anthropic" : "OpenAI"} key`}
-                    />
+                    <RowLabel title="Enable assistant" />
                     <select
-                      value={assistantStatus.enabled ? "enabled" : "disabled"}
+                      value={assistantStatus!.enabled ? "enabled" : "disabled"}
                       onChange={(e) => { void toggleAssistantEnabled(e.target.value === "enabled"); }}
                       aria-label="Enable AI assistant"
                       className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
@@ -678,14 +741,13 @@ export default function SettingsPage() {
                       <option value="disabled">Disabled</option>
                     </select>
                   </Row>
-
                   <Row>
                     <RowLabel
                       title="Save chat history"
                       description="Encrypted at rest with the same key as your credentials. Off by default — turning it off erases everything already saved."
                     />
                     <select
-                      value={assistantStatus.persistHistory ? "on" : "off"}
+                      value={assistantStatus!.persistHistory ? "on" : "off"}
                       onChange={(e) => { void toggleAssistantPersistHistory(e.target.value === "on"); }}
                       aria-label="Save AI assistant chat history to disk"
                       className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
@@ -694,107 +756,23 @@ export default function SettingsPage() {
                       <option value="off">Off</option>
                     </select>
                   </Row>
+                </>
+              )}
 
-                  <div className="mt-1">
-                    <button
-                      onClick={() => {
-                        setAssistantChangeOpen((v) => !v);
-                        setAssistantChangeProvider((assistantStatus.provider as "openai" | "anthropic") ?? "openai");
-                        setAssistantChangeKey("");
-                        setAssistantError(null);
-                        setConfirmForget(false);
-                      }}
-                      className="w-full text-left py-3 text-sm text-secondary hover:text-white transition-colors flex items-center justify-between border-b border-stroke-subtle"
-                    >
-                      <span>Change provider / API key</span>
-                      <svg className={`w-3.5 h-3.5 text-muted transition-transform ${assistantChangeOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    {assistantChangeOpen && (
-                      <div className="my-2 space-y-3 p-3 bg-surface-0 rounded-lg border border-stroke-subtle">
-                        <select
-                          value={assistantChangeProvider}
-                          onChange={(e) => setAssistantChangeProvider(e.target.value as "openai" | "anthropic")}
-                          aria-label="New AI provider"
-                          className="w-full h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent"
-                        >
-                          <option value="openai">OpenAI</option>
-                          <option value="anthropic">Anthropic</option>
-                        </select>
-                        <PasswordInput
-                          autoFocus
-                          value={assistantChangeKey}
-                          onChange={(v) => { setAssistantChangeKey(v); setAssistantError(null); }}
-                          placeholder="New API key"
-                        />
-                        {assistantError && <p className="text-xs text-red-400">{assistantError}</p>}
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => { setAssistantChangeOpen(false); setAssistantChangeKey(""); setAssistantError(null); }} className="flex-1">Cancel</Button>
-                          <Button size="sm" variant="primary" onClick={() => { void submitChangeProvider(); }} disabled={assistantLoading || !assistantChangeKey.trim()} className="flex-1">
-                            {assistantLoading ? "Saving…" : "Save"}
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                    <button
-                      onClick={() => setConfirmForget(true)}
-                      disabled={assistantLoading}
-                      className="w-full text-left py-3 text-sm text-secondary hover:text-red-400 transition-colors disabled:opacity-40 border-b border-stroke-subtle"
-                    >
-                      Forget API key
-                    </button>
-                    {confirmForget && (
-                      <ConfirmDeleteModal
-                        title="Forget API key?"
-                        description="The stored API key will be permanently removed. The assistant will be disabled."
-                        confirmLabel="Forget key"
-                        busy={assistantLoading}
-                        onConfirm={() => { setConfirmForget(false); void forgetAssistantKey(); }}
-                        onCancel={() => setConfirmForget(false)}
-                      />
-                    )}
-                    {assistantError && !assistantChangeOpen && <p className="text-xs text-red-400 mt-1">{assistantError}</p>}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => setAssistantFormOpen((v) => !v)}
-                    className="w-full text-left py-3 text-sm text-secondary hover:text-white transition-colors flex items-center justify-between border-b border-stroke-subtle"
-                  >
-                    <span>Add API key</span>
-                    <svg className={`w-3.5 h-3.5 text-muted transition-transform ${assistantFormOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {assistantFormOpen && (
-                    <div className="my-2 space-y-3 p-3 bg-surface-0 rounded-lg border border-stroke-subtle">
-                      <select
-                        value={assistantProvider}
-                        onChange={(e) => setAssistantProvider(e.target.value as typeof assistantProvider)}
-                        aria-label="AI provider"
-                        className="w-full h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent"
-                      >
-                        <option value="openai">OpenAI</option>
-                        <option value="anthropic">Anthropic</option>
-                      </select>
-                      <PasswordInput
-                        autoFocus
-                        value={assistantKeyInput}
-                        onChange={(v) => { setAssistantKeyInput(v); setAssistantError(null); }}
-                        placeholder="API key"
-                      />
-                      {assistantError && <p className="text-xs text-red-400">{assistantError}</p>}
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => { setAssistantFormOpen(false); setAssistantKeyInput(""); setAssistantError(null); }} className="flex-1">Cancel</Button>
-                        <Button size="sm" variant="primary" onClick={() => { void submitAssistantKey(); }} disabled={assistantLoading || !assistantKeyInput.trim()} className="flex-1">
-                          {assistantLoading ? "Saving…" : "Save key"}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </>
+              {/* Per-provider forget confirmation */}
+              {confirmForgetProvider && (
+                <ConfirmDeleteModal
+                  title={`Forget ${confirmForgetProvider === "openai" ? "OpenAI" : "Anthropic"} key?`}
+                  description="The stored API key will be permanently removed."
+                  confirmLabel="Forget key"
+                  busy={assistantLoading}
+                  onConfirm={() => {
+                    const p = confirmForgetProvider;
+                    setConfirmForgetProvider(null);
+                    void forgetProviderKey(p);
+                  }}
+                  onCancel={() => setConfirmForgetProvider(null)}
+                />
               )}
             </div>
           )}

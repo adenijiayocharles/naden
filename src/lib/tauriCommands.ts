@@ -126,8 +126,9 @@ export const vaultCommands = {
 };
 
 export interface AssistantStatus {
-  configured: boolean;
-  provider: string | null;
+  openaiConfigured: boolean;
+  anthropicConfigured: boolean;
+  activeProvider: string | null;
   enabled: boolean;
   persistHistory: boolean;
 }
@@ -143,6 +144,12 @@ export const assistantCommands = {
 
   clearApiKey: () =>
     invoke<void>("clear_assistant_api_key"),
+
+  clearProviderKey: (provider: string) =>
+    invoke<void>("clear_assistant_provider_key", { provider }),
+
+  switchProvider: (provider: string) =>
+    invoke<void>("switch_assistant_provider", { provider }),
 
   setEnabled: (enabled: boolean) =>
     invoke<void>("set_assistant_enabled", { enabled }),

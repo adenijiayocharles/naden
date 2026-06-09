@@ -79,7 +79,7 @@ export function AssistantPanel({
         useAssistantStore.getState().setPersistEnabled(s.persistHistory);
         if (s.persistHistory) void useAssistantStore.getState().loadPersisted(serverId);
       })
-      .catch(() => { if (!cancelled) setStatus({ configured: false, provider: null, enabled: false, persistHistory: false }); });
+      .catch(() => { if (!cancelled) setStatus({ openaiConfigured: false, anthropicConfigured: false, activeProvider: null, enabled: false, persistHistory: false }); });
     return () => { cancelled = true; };
   }, [serverId]);
 
@@ -117,7 +117,7 @@ export function AssistantPanel({
     const context = includeContext
       ? buildContext(serverName, connectionStatus, connectionError, getRecentOutput())
       : undefined;
-    void sendMessage(serverId, trimmed, context, status?.provider ?? undefined);
+    void sendMessage(serverId, trimmed, context, status?.activeProvider ?? undefined);
   };
 
   useEffect(() => {
@@ -127,7 +127,7 @@ export function AssistantPanel({
     el.style.height = `${el.scrollHeight}px`;
   }, [input]);
 
-  const isReady = status?.configured && status.enabled;
+  const isReady = (status?.openaiConfigured || status?.anthropicConfigured) && status?.enabled;
 
   return (
     <div className="absolute top-0 right-0 bottom-0 w-[480px] z-40 bg-surface-2 border-l border-stroke shadow-overlay flex flex-col">
@@ -198,13 +198,13 @@ export function AssistantPanel({
           <p className="text-sm text-dim">
             {status === null
               ? "Loading…"
-              : !status.configured
+              : !status.openaiConfigured && !status.anthropicConfigured
               ? "Bring your own API key to chat with an AI assistant."
               : "The assistant is currently turned off."}
           </p>
           {status !== null && (
             <p className="text-meta text-faint">
-              Open Settings → AI Assistant to {status.configured ? "turn it on" : "add a key"}.
+              Open Settings → AI Assistant to {status.openaiConfigured || status.anthropicConfigured ? "turn it on" : "add a key"}.
             </p>
           )}
         </div>
@@ -235,9 +235,9 @@ export function AssistantPanel({
               ))
             )}
           </div>
-          {activeProvider && status?.provider && activeProvider !== status.provider && messages.length > 0 && (
+          {activeProvider && status?.activeProvider && activeProvider !== status.activeProvider && messages.length > 0 && (
             <div className="px-2.5 py-2 border-t border-yellow-800/40 bg-yellow-950/30 text-xs text-yellow-400 shrink-0">
-              This conversation was started with {activeProvider === "anthropic" ? "Anthropic" : "OpenAI"}. Replies will now use {status.provider === "anthropic" ? "Anthropic" : "OpenAI"}.
+              This conversation was started with {activeProvider === "anthropic" ? "Anthropic" : "OpenAI"}. Replies will now use {status.activeProvider === "anthropic" ? "Anthropic" : "OpenAI"}.
             </div>
           )}
           <div className="p-2.5 border-t border-stroke-subtle shrink-0">
