@@ -489,7 +489,7 @@ export default function Sidebar() {
       <nav className="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
         {/* All Servers */}
         <NavRow
-          active={!filterGroupId && !filterTagId && !filterFavourites && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels"}
+          active={!filterGroupId && !filterTagId && !filterFavourites && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings"}
           onClick={selectFilter(() => { setFilterGroup(null); setFilterTag(null); setFilterFavourites(false); })}
           label={
             <span className="flex items-center gap-2">
@@ -559,7 +559,7 @@ export default function Sidebar() {
 
         {/* Favourites */}
         <NavRow
-          active={filterFavourites && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels"}
+          active={filterFavourites && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings"}
           onClick={selectFilter(() => setFilterFavourites(!filterFavourites))}
           label={
             <span className="flex items-center gap-2">
@@ -591,7 +591,7 @@ export default function Sidebar() {
             <GroupRow
               key={g.id}
               group={g}
-              active={filterGroupId === g.id && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels"}
+              active={filterGroupId === g.id && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings"}
               count={countByGroup[g.id] ?? 0}
               onClick={selectFilter(() => setFilterGroup(g.id))}
               onEdit={() => setEditingGroup(g)}
@@ -620,7 +620,7 @@ export default function Sidebar() {
               <TagRow
                 key={t.id}
                 tag={t}
-                active={filterTagId === t.id && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels"}
+                active={filterTagId === t.id && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings"}
                 count={countByTag[t.id] ?? 0}
                 onClick={selectFilter(() => setFilterTag(t.id))}
                 onRename={() => setRenamingTag(t)}
