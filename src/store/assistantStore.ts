@@ -36,6 +36,9 @@ export interface AssistantConversation {
 // Held outside Zustand so cleanup functions are never serialised into state —
 // same rationale as terminalStore's sessionUnlisteners.
 const requestUnlisteners = new Map<string, UnlistenFn[]>();
+// Per-server debounce timers for persist() — collapses rapid saves (e.g.
+// startNewChat → openChat → sendMessage) into a single vault write.
+const persistTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 function teardownRequest(requestId: string) {
   requestUnlisteners.get(requestId)?.forEach((fn) => fn());
@@ -102,20 +105,26 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
     });
   };
 
-  // Fire-and-forget: a failed save shouldn't interrupt the conversation, and
-  // there's nothing actionable for the user to do about a background write.
+  // Fire-and-forget with a 500 ms trailing debounce per server. Collapses rapid
+  // successive calls (e.g. startNewChat followed immediately by sendMessage) into
+  // a single vault write. Also prevents concurrent saves for the same server from
+  // racing to create/delete vault rows.
   const persist = (serverId: string) => {
     if (!get().persistEnabled) return;
-    const s = get().byServer.get(serverId);
-    if (!s) return;
-
-    const payload: PersistedServerChat = {
-      messages: s.messages,
-      history: s.history,
-      activeChatId: s.activeChatId,
-      activeProvider: s.activeProvider,
-    };
-    void assistantCommands.saveChatHistory(serverId, JSON.stringify(payload)).catch(() => {});
+    const existing = persistTimers.get(serverId);
+    if (existing) clearTimeout(existing);
+    persistTimers.set(serverId, setTimeout(() => {
+      persistTimers.delete(serverId);
+      const s = get().byServer.get(serverId);
+      if (!s) return;
+      const payload: PersistedServerChat = {
+        messages: s.messages,
+        history: s.history,
+        activeChatId: s.activeChatId,
+        activeProvider: s.activeProvider,
+      };
+      void assistantCommands.saveChatHistory(serverId, JSON.stringify(payload)).catch(() => {});
+    }, 500));
   };
 
   return {

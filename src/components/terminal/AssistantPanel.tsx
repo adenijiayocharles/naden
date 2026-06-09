@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 
 import { assistantCommands, type AssistantStatus } from "../../lib/tauriCommands";
 import { timeAgo } from "../../lib/format";
@@ -13,6 +13,110 @@ import {
 const EMPTY_MESSAGES: AssistantMessage[] = [];
 const EMPTY_HISTORY: AssistantConversation[] = [];
 
+const SHELL_LANGS = new Set(["", "bash", "sh", "shell", "zsh", "fish", "console", "terminal"]);
+
+type MessageBlock =
+  | { type: "text"; content: string }
+  | { type: "code"; lang: string; content: string };
+
+function parseBlocks(text: string): MessageBlock[] {
+  const blocks: MessageBlock[] = [];
+  const re = /```(\w*)\n?([\s\S]*?)```/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) blocks.push({ type: "text", content: text.slice(last, m.index) });
+    blocks.push({ type: "code", lang: m[1].toLowerCase(), content: m[2].trimEnd() });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) blocks.push({ type: "text", content: text.slice(last) });
+  return blocks;
+}
+
+// Inline confirmation state lives here so each code block is independent.
+function CodeBlock({ content, isShell, onRunCommand }: {
+  content: string;
+  isShell: boolean;
+  onRunCommand?: (cmd: string) => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const handleRun = () => {
+    if (!confirming) { setConfirming(true); return; }
+    setConfirming(false);
+    onRunCommand?.(content);
+  };
+  return (
+    <div className="relative my-1.5 rounded bg-black/40 border border-stroke-subtle overflow-hidden">
+      <pre className={`text-sm font-mono px-3 py-2.5 overflow-x-auto text-secondary leading-relaxed ${isShell && onRunCommand ? "pb-9" : ""}`}>{content}</pre>
+      {isShell && onRunCommand && (
+        confirming ? (
+          <div className="flex items-center justify-between px-3 py-1.5 bg-yellow-950/60 border-t border-yellow-800/40">
+            <span className="text-[11px] text-yellow-300">Run this command in the terminal?</span>
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => setConfirming(false)}
+                className="px-2 py-0.5 text-[11px] text-secondary hover:text-white rounded border border-stroke transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRun}
+                className="px-2 py-0.5 text-[11px] font-semibold text-black bg-accent rounded hover:bg-accent-hover transition-colors"
+              >
+                Run
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={handleRun}
+            title="Run in terminal"
+            className="absolute top-1.5 right-1.5 px-2 py-1 text-[11px] font-semibold text-black bg-accent rounded hover:bg-accent-hover transition-colors leading-none"
+          >
+            Run
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
+const AssistantMessageContent = memo(function AssistantMessageContent({
+  content,
+  streaming,
+  onRunCommand,
+}: {
+  content: string;
+  streaming: boolean;
+  onRunCommand?: (cmd: string) => void;
+}) {
+  if (streaming || !content) {
+    return <span className="whitespace-pre-wrap break-words">{content || "…"}</span>;
+  }
+  // Skip the regex parser on very long responses to avoid UI thread stalls.
+  if (content.length > 100_000) {
+    return <span className="whitespace-pre-wrap break-words">{content}</span>;
+  }
+  const blocks = parseBlocks(content);
+  return (
+    <>
+      {blocks.map((b, i) => {
+        if (b.type === "text") {
+          return <span key={i} className="whitespace-pre-wrap break-words">{b.content}</span>;
+        }
+        return (
+          <CodeBlock
+            key={i}
+            content={b.content}
+            isShell={SHELL_LANGS.has(b.lang)}
+            onRunCommand={onRunCommand}
+          />
+        );
+      })}
+    </>
+  );
+});
+
 interface AssistantPanelProps {
   onClose: () => void;
   serverId: string;
@@ -21,6 +125,8 @@ interface AssistantPanelProps {
   connectionError?: string;
   /** Returns recent terminal lines (already stripped of escape sequences) for the "include context" toggle. */
   getRecentOutput: (maxLines?: number) => string;
+  /** Sends a command to the active terminal session. */
+  onRunCommand?: (cmd: string) => void;
 }
 
 function buildContext(
@@ -49,11 +155,14 @@ export function AssistantPanel({
   connectionStatus,
   connectionError,
   getRecentOutput,
+  onRunCommand,
 }: AssistantPanelProps) {
-  const messages = useAssistantStore((s) => s.byServer.get(serverId)?.messages ?? EMPTY_MESSAGES);
-  const isSending = useAssistantStore((s) => s.byServer.get(serverId)?.isSending ?? false);
-  const history = useAssistantStore((s) => s.byServer.get(serverId)?.history ?? EMPTY_HISTORY);
-  const activeProvider = useAssistantStore((s) => s.byServer.get(serverId)?.activeProvider);
+  // Single Map lookup per render instead of one per selector.
+  const ss = useAssistantStore((s) => s.byServer.get(serverId));
+  const messages = ss?.messages ?? EMPTY_MESSAGES;
+  const isSending = ss?.isSending ?? false;
+  const history = ss?.history ?? EMPTY_HISTORY;
+  const activeProvider = ss?.activeProvider;
   const sendMessage = useAssistantStore((s) => s.sendMessage);
   const startNewChat = useAssistantStore((s) => s.startNewChat);
   const openChat = useAssistantStore((s) => s.openChat);
@@ -220,13 +329,21 @@ export function AssistantPanel({
                     <p className="text-meta text-faint italic">{m.contextLabel}</p>
                   )}
                   <div
-                    className={`max-w-[90%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap break-words ${
+                    className={`max-w-[90%] rounded-lg px-3 py-2 text-sm ${
                       m.role === "user"
-                        ? "bg-accent/35 text-white border border-accent/40"
+                        ? "bg-accent/35 text-white border border-accent/40 whitespace-pre-wrap break-words"
                         : "bg-surface-3 text-white border border-stroke"
                     }`}
                   >
-                    {m.content || (m.status === "streaming" ? "…" : "")}
+                    {m.role === "user" ? (
+                      m.content || ""
+                    ) : (
+                      <AssistantMessageContent
+                        content={m.content}
+                        streaming={m.status === "streaming"}
+                        onRunCommand={onRunCommand}
+                      />
+                    )}
                   </div>
                   {m.status === "error" && (
                     <p className="text-meta text-red-400">{m.errorMessage ?? "Something went wrong."}</p>
