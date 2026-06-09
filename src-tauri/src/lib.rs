@@ -95,6 +95,8 @@ pub fn run() {
             // AI Assistant (BYOK)
             commands::assistant_commands::set_assistant_api_key,
             commands::assistant_commands::clear_assistant_api_key,
+            commands::assistant_commands::clear_assistant_provider_key,
+            commands::assistant_commands::switch_assistant_provider,
             commands::assistant_commands::set_assistant_enabled,
             commands::assistant_commands::get_assistant_status,
             commands::assistant_commands::send_assistant_message,
