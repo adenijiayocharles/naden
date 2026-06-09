@@ -611,7 +611,7 @@ export default function SftpBrowser({ sessionId }: Props) {
 
       {/* File synced flash */}
       {fileSyncedFlash && (
-        <div className="px-4 py-2 bg-green-950/30 border-b border-green-900/40 flex items-center gap-2 text-xs text-green-400">
+        <div className="px-4 py-2 bg-success-subtle border-b border-success-subtle flex items-center gap-2 text-xs text-success">
           <span>↑</span>
           {fileSyncedFlash}
         </div>
@@ -619,7 +619,7 @@ export default function SftpBrowser({ sessionId }: Props) {
 
       {/* Watching files banner */}
       {editingFiles.length > 0 && (
-        <div className="px-4 py-1.5 bg-amber-950/20 border-b border-amber-900/30 flex items-center gap-2 text-xs text-amber-400/80">
+        <div className="px-4 py-1.5 bg-warning-subtle border-b border-warning-subtle flex items-center gap-2 text-xs text-warning">
           <span className="animate-pulse">●</span>
           Watching {editingFiles.length} file{editingFiles.length > 1 ? "s" : ""} for changes
           <div className="flex gap-1 ml-auto">

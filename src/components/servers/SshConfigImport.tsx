@@ -130,11 +130,11 @@ export default function SshConfigImport({ onClose }: Props) {
           </div>
 
           {error && (
-            <p className="text-sm text-red-400 bg-red-950 border border-red-800 rounded-md px-3 py-2">{error}</p>
+            <p className="text-sm text-error bg-error-subtle border border-error-subtle rounded-md px-3 py-2">{error}</p>
           )}
 
           {imported !== null && (
-            <p className="text-sm text-green-400 bg-green-950 border border-green-800 rounded-md px-3 py-2">
+            <p className="text-sm text-success bg-success-subtle border border-success-subtle rounded-md px-3 py-2">
               ✓ Imported {imported} server{imported !== 1 ? "s" : ""} successfully.
             </p>
           )}

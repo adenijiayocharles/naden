@@ -350,7 +350,7 @@ export default function SettingsPage() {
         </div>
         <div className="px-3 pb-1 h-5">
           <span
-            className={`text-xs text-green-400 transition-opacity duration-300 ${savedFlash ? "opacity-100" : "opacity-0"}`}
+            className={`text-xs text-success transition-opacity duration-300 ${savedFlash ? "opacity-100" : "opacity-0"}`}
             aria-live="polite"
           >
             ✓ Saved
@@ -438,7 +438,7 @@ export default function SettingsPage() {
                 <div className="mt-3 mb-2 space-y-3 p-3 bg-surface-0 rounded-lg border border-stroke-subtle">
                   <p className="text-xs text-secondary">Enter your current master password to disable vault protection.</p>
                   <PasswordInput autoFocus value={disablePwd} onChange={setDisablePwd} placeholder="Current password" />
-                  {error && <p className="text-xs text-red-400">{error}</p>}
+                  {error && <p className="text-xs text-error">{error}</p>}
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => openForm("none")} className="flex-1">Cancel</Button>
                     <Button size="sm" onClick={() => { void submitDisable(); }} disabled={loading || !disablePwd} className="flex-1 bg-red-500 hover:bg-red-400 text-black font-semibold disabled:opacity-40">
@@ -463,7 +463,7 @@ export default function SettingsPage() {
                     )}
                   </div>
                   <PasswordInput value={enableConfirm} onChange={(v) => { setEnableConfirm(v); setError(null); }} placeholder="Confirm password" />
-                  {error && <p className="text-xs text-red-400">{error}</p>}
+                  {error && <p className="text-xs text-error">{error}</p>}
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => openForm("none")} className="flex-1">Cancel</Button>
                     <Button size="sm" variant="primary" onClick={() => { void submitEnable(); }} disabled={loading || enablePwd.length < 8 || enablePwd !== enableConfirm} className="flex-1">
@@ -499,7 +499,7 @@ export default function SettingsPage() {
                         )}
                       </div>
                       <PasswordInput value={changeConfirm} onChange={(v) => { setChangeConfirm(v); setError(null); }} placeholder="Confirm new password" />
-                      {error && <p className="text-xs text-red-400">{error}</p>}
+                      {error && <p className="text-xs text-error">{error}</p>}
                       <div className="flex gap-2">
                         <Button size="sm" onClick={() => openForm("none")} className="flex-1">Cancel</Button>
                         <Button size="sm" variant="primary" onClick={() => { void submitChange(); }} disabled={loading || !changeCurrent || changeNew.length < 8 || changeNew !== changeConfirm} className="flex-1">
@@ -525,8 +525,8 @@ export default function SettingsPage() {
                 </select>
               </Row>
               {autoLockNeedsPassword && (
-                <div className="mb-3 flex items-center justify-between gap-3 bg-[#1a1a0a] border border-yellow-800/50 rounded-lg px-3 py-2">
-                  <p className="text-xs text-yellow-400">A master password is required to use auto-lock.</p>
+                <div className="mb-3 flex items-center justify-between gap-3 bg-warning-subtle border border-warning-subtle rounded-lg px-3 py-2">
+                  <p className="text-xs text-warning">A master password is required to use auto-lock.</p>
                   <button onClick={() => { setAutoLockNeedsPassword(false); openForm("enable"); }} className="text-xs text-accent hover:text-accent-hover shrink-0 transition-colors">
                     Set password →
                   </button>
@@ -534,7 +534,7 @@ export default function SettingsPage() {
               )}
 
               {success && (
-                <p className="text-sm text-green-400 bg-green-950 border border-green-800 rounded-md px-3 py-2 mt-4">
+                <p className="text-sm text-success bg-success-subtle border border-success-subtle rounded-md px-3 py-2 mt-4">
                   ✓ {success}
                 </p>
               )}
@@ -659,7 +659,7 @@ export default function SettingsPage() {
                       <div className="flex items-center gap-2.5">
                         <span className="text-sm text-white font-medium">{label}</span>
                         {isConfigured && (
-                          <span className="text-[11px] font-medium text-green-400 bg-green-950/50 border border-green-800/40 rounded px-1.5 py-0.5 leading-none">
+                          <span className="text-[11px] font-medium text-success bg-success-subtle border border-success-subtle rounded px-1.5 py-0.5 leading-none">
                             Configured
                           </span>
                         )}
@@ -697,7 +697,7 @@ export default function SettingsPage() {
                           onChange={(v) => { setAddKeyInput(v); setAssistantError(null); }}
                           placeholder={`${label} API key`}
                         />
-                        {assistantError && <p className="text-xs text-red-400">{assistantError}</p>}
+                        {assistantError && <p className="text-xs text-error">{assistantError}</p>}
                         <div className="flex gap-2">
                           <Button size="sm" onClick={() => { setAddingProvider(null); setAddKeyInput(""); setAssistantError(null); }} className="flex-1">Cancel</Button>
                           <Button size="sm" variant="primary" onClick={() => { void submitAddKey(p); }} disabled={assistantLoading || !addKeyInput.trim()} className="flex-1">

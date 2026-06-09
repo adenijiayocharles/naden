@@ -12,8 +12,8 @@ export default function PlaybookRunBar() {
 
   if (status.kind === "awaiting-confirmation") {
     return (
-      <div className="px-4 py-2 bg-red-950/30 border-b border-red-900/40 flex items-center gap-3 text-xs shrink-0">
-        <span className="text-red-300 flex-1">
+      <div className="px-4 py-2 bg-error-subtle border-b border-error-subtle flex items-center gap-3 text-xs shrink-0">
+        <span className="text-error flex-1">
           Step {status.stepIndex + 1}/{playbook.steps.length} — send{" "}
           <span className="font-mono text-white">{status.resolvedCommand}</span>? This looks destructive.
         </span>

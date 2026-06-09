@@ -14,10 +14,10 @@ import { formatError } from "../../lib/errors";
 const PAGE = 50;
 
 const OUTCOME_STYLES: Record<LogOutcome, string> = {
-  connecting: "text-yellow-400",
-  success:    "text-green-400",
+  connecting: "text-warning",
+  success:    "text-success",
   user_closed:"text-muted",
-  failure:    "text-red-400",
+  failure:    "text-error",
   timeout:    "text-orange-400",
 };
 
@@ -323,7 +323,7 @@ export default function LogView() {
       </div>
 
       {error && (
-        <p className="text-sm text-red-400 px-5 py-2 border-b border-stroke-subtle shrink-0">{error}</p>
+        <p className="text-sm text-error px-5 py-2 border-b border-stroke-subtle shrink-0">{error}</p>
       )}
 
       {/* Outcome filter is client-side only — results come from the already-loaded page */}

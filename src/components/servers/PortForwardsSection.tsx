@@ -269,7 +269,7 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
             </label>
           </div>
 
-          {fwdError && <p className="text-xs text-red-400">{fwdError}</p>}
+          {fwdError && <p className="text-xs text-error">{fwdError}</p>}
 
           <div className="flex gap-2">
             <Button type="button" onClick={cancelEdit} className="flex-1">

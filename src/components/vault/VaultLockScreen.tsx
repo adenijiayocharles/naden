@@ -80,7 +80,7 @@ export default function VaultLockScreen() {
             </button>
           </div>
 
-          {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+          {error && <p className="text-sm text-error text-center">{error}</p>}
 
           <button
             type="submit"

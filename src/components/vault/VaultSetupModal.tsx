@@ -77,7 +77,7 @@ export default function VaultSetupModal() {
             className="bg-surface-1 px-4"
           />
 
-          {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+          {error && <p className="text-sm text-error text-center">{error}</p>}
 
           <button
             type="submit"

@@ -122,7 +122,7 @@ export default function BulkActionBar() {
       </Button>
 
       <div className="ml-auto flex items-center gap-2 relative">
-        {error && <span className="text-sm text-red-400 max-w-xs truncate">{error}</span>}
+        {error && <span className="text-sm text-error max-w-xs truncate">{error}</span>}
 
         {/* Connect as broadcast group */}
         <Button

@@ -13,8 +13,8 @@ export default function ConnectionErrorModal({ serverName, message, onRetry, onC
     >
       <div className="bg-surface-1 border border-stroke rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm p-6">
         <div className="flex items-start gap-3 mb-4">
-          <div className="w-8 h-8 rounded-full bg-red-950/60 border border-red-800/50 flex items-center justify-center shrink-0 mt-0.5">
-            <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
+          <div className="w-8 h-8 rounded-full bg-error-subtle border border-error-subtle flex items-center justify-center shrink-0 mt-0.5">
+            <svg className="w-4 h-4 text-error" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 3v5M8 10.5v1" />
               <circle cx="8" cy="8" r="7" />
             </svg>

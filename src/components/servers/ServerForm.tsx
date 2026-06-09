@@ -547,7 +547,7 @@ export default function ServerForm() {
           )}
 
           {errors.submit && (
-            <p className="text-sm text-red-400 bg-red-950 border border-red-800 rounded-md px-3 py-2">
+            <p className="text-sm text-error bg-error-subtle border border-error-subtle rounded-md px-3 py-2">
               {errors.submit}
             </p>
           )}
@@ -588,11 +588,11 @@ function Field({
       {label && (
         <label className="block text-sm font-medium text-secondary mb-1">
           {label}
-          {required && <span className="text-red-400 ml-0.5">*</span>}
+          {required && <span className="text-error ml-0.5">*</span>}
         </label>
       )}
       {children}
-      {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
+      {error && <p className="text-xs text-error mt-1">{error}</p>}
     </div>
   );
 }

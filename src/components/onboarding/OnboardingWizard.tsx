@@ -138,7 +138,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                     onChange={(e) => { setConfirm(e.target.value); setVaultError(null); }}
                     placeholder="Confirm password"
                   />
-                  {vaultError && <p className="text-xs text-red-400">{vaultError}</p>}
+                  {vaultError && <p className="text-xs text-error">{vaultError}</p>}
                 </div>
               ) : (
                 <div className="p-3 bg-surface-0 border border-stroke-subtle rounded-lg text-sm text-muted">

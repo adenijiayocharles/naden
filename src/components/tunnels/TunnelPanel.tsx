@@ -231,7 +231,7 @@ function AddTunnelModal({ onClose }: { onClose: () => void }) {
             </label>
           </div>
 
-          {formError && <p className="text-xs text-red-400">{formError}</p>}
+          {formError && <p className="text-xs text-error">{formError}</p>}
         </div>
 
         <div className="px-5 py-4 border-t border-stroke-subtle flex gap-2 justify-end">
@@ -328,7 +328,7 @@ const TunnelRow = memo(function TunnelRow({
       {(fwd.label || (err && status === "error")) && (
         <div className="pl-[14px] flex items-center gap-2 text-xs">
           {fwd.label && <span className="text-faint">{fwd.label}</span>}
-          {err && status === "error" && <span className="text-red-400">{formatError(err)}</span>}
+          {err && status === "error" && <span className="text-error">{formatError(err)}</span>}
         </div>
       )}
     </div>

@@ -50,8 +50,8 @@ function CodeBlock({ content, isShell, onRunCommand }: {
       <pre className={`text-sm font-mono px-3 py-2.5 overflow-x-auto text-secondary leading-relaxed ${isShell && onRunCommand ? "pb-9" : ""}`}>{content}</pre>
       {isShell && onRunCommand && (
         confirming ? (
-          <div className="flex items-center justify-between px-3 py-1.5 bg-yellow-950/60 border-t border-yellow-800/40">
-            <span className="text-[11px] text-yellow-300">Run this command in the terminal?</span>
+          <div className="flex items-center justify-between px-3 py-1.5 bg-warning-subtle border-t border-warning-subtle">
+            <span className="text-[11px] text-warning">Run this command in the terminal?</span>
             <div className="flex gap-1.5">
               <button
                 onClick={() => setConfirming(false)}
@@ -346,14 +346,14 @@ export function AssistantPanel({
                     )}
                   </div>
                   {m.status === "error" && (
-                    <p className="text-meta text-red-400">{m.errorMessage ?? "Something went wrong."}</p>
+                    <p className="text-meta text-error">{m.errorMessage ?? "Something went wrong."}</p>
                   )}
                 </div>
               ))
             )}
           </div>
           {activeProvider && status?.activeProvider && activeProvider !== status.activeProvider && messages.length > 0 && (
-            <div className="px-2.5 py-2 border-t border-yellow-800/40 bg-yellow-950/30 text-xs text-yellow-400 shrink-0">
+            <div className="px-2.5 py-2 border-t border-warning-subtle bg-warning-subtle text-xs text-warning shrink-0">
               This conversation was started with {activeProvider === "anthropic" ? "Anthropic" : "OpenAI"}. Replies will now use {status.activeProvider === "anthropic" ? "Anthropic" : "OpenAI"}.
             </div>
           )}

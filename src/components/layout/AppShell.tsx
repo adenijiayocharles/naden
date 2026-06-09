@@ -556,7 +556,7 @@ export default function AppShell() {
                         />
                       </div>
                       {pickerError && (
-                        <p className="px-3 py-2 text-xs text-red-400 border-b border-stroke-subtle bg-red-950/30">
+                        <p className="px-3 py-2 text-xs text-error border-b border-stroke-subtle bg-error-subtle">
                           {pickerError}
                         </p>
                       )}

@@ -129,7 +129,7 @@ export default function ServerCard({ server, groupColor, lastConnected }: Server
               </span>
             )}
             {hasActiveTunnel && (
-              <span className="text-xs text-green-400 flex items-center gap-0.5 shrink-0" title="Tunnel active">
+              <span className="text-xs text-success flex items-center gap-0.5 shrink-0" title="Tunnel active">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M2 8h4M10 8h4M6 5l-2 3 2 3M10 5l2 3-2 3" />
                 </svg>
@@ -182,7 +182,7 @@ export default function ServerCard({ server, groupColor, lastConnected }: Server
         </div>
       )}
 
-      {actions.error && <p className="text-xs text-red-400">{actions.error}</p>}
+      {actions.error && <p className="text-xs text-error">{actions.error}</p>}
     </div>
 
     {actions.deleteModalOpen && (

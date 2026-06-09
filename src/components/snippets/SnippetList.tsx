@@ -62,7 +62,7 @@ function SnippetFormModal({
           placeholder="Command or text…"
           minHeight="140px"
         />
-        {error && <p className="text-xs text-red-400">{error}</p>}
+        {error && <p className="text-xs text-error">{error}</p>}
         <div className="flex items-center justify-end gap-2">
           <Button size="sm" onClick={onClose}>
             Cancel
@@ -106,7 +106,7 @@ function SnippetCard({
         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={() => void handleCopy()}
-            className={`p-1 rounded transition-colors ${copied ? "text-green-400" : "text-dim hover:text-muted hover:bg-surface-3"}`}
+            className={`p-1 rounded transition-colors ${copied ? "text-success" : "text-dim hover:text-muted hover:bg-surface-3"}`}
             title="Copy"
           >
             {copied ? (

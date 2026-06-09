@@ -29,7 +29,7 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
       ))}
       <button
         onClick={() => onChange("")}
-        className={`w-5 h-5 rounded-full border transition-transform ${!value ? "scale-125 ring-2 ring-white/30 border-white/30" : "border-[#444] hover:scale-110"}`}
+        className={`w-5 h-5 rounded-full border transition-transform ${!value ? "scale-125 ring-2 ring-stroke border-stroke" : "border-[#444] hover:scale-110"}`}
       />
     </div>
   );
@@ -68,7 +68,7 @@ function GroupCreateModal({ onClose }: { onClose: () => void }) {
             <p className="text-meta text-faint mb-2">Color</p>
             <ColorPicker value={color} onChange={setColor} />
           </div>
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          {error && <p className="text-xs text-error">{error}</p>}
         </div>
         <div className="flex items-center justify-end gap-2 mt-5">
           <Button size="sm" onClick={onClose}>Cancel</Button>
@@ -112,7 +112,7 @@ function GroupEditModal({ group, onClose, onDelete }: { group: Group; onClose: (
             <p className="text-meta text-faint mb-2">Color</p>
             <ColorPicker value={color} onChange={setColor} />
           </div>
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          {error && <p className="text-xs text-error">{error}</p>}
         </div>
         <div className="flex items-center gap-2 mt-5">
           <Button size="sm" variant="ghost" onClick={onDelete} disabled={busy} className="text-red-500 hover:text-red-400 mr-auto px-0">Delete</Button>
@@ -154,7 +154,7 @@ function TagRenameModal({ tag, onClose }: { tag: Tag; onClose: () => void }) {
         <Input autoFocus value={name} onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") void handleSave(); if (e.key === "Escape") onClose(); }}
           placeholder="Tag name" />
-        {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+        {error && <p className="text-xs text-error mt-2">{error}</p>}
         <div className="flex items-center justify-end gap-2 mt-5">
           <Button size="sm" onClick={onClose}>Cancel</Button>
           <Button size="sm" variant="primary" onClick={() => { void handleSave(); }} disabled={busy || !name.trim()}>

@@ -77,7 +77,7 @@ export function ConnectingOverlay({ serverName, onCancel }: ConnectingProps) {
 export function ErrorOverlay({ errorMessage, onClose, onReconnect }: ErrorProps) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-0/95 gap-4">
-      <p className="text-red-400 text-sm font-medium">Connection failed</p>
+      <p className="text-error text-sm font-medium">Connection failed</p>
       {errorMessage && (
         <p className="text-faint text-xs max-w-xs text-center">{errorMessage}</p>
       )}

@@ -210,7 +210,7 @@ function PlaybookFormModal({
           </Button>
         </div>
 
-        {error && <p className="text-xs text-red-400">{error}</p>}
+        {error && <p className="text-xs text-error">{error}</p>}
         <div className="flex items-center justify-end gap-2">
           <Button size="sm" onClick={onClose}>
             Cancel
