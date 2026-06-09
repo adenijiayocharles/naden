@@ -5,6 +5,7 @@ import type { SshKey, GenerateKeyPayload } from "../types/sshKey";
 interface SshKeyStore {
   keys: SshKey[];
   isLoading: boolean;
+  loaded: boolean;
   error: string | null;
 
   load: () => Promise<void>;
@@ -15,16 +16,19 @@ interface SshKeyStore {
   getPublicKey: (id: string) => Promise<string>;
 }
 
-export const useSshKeyStore = create<SshKeyStore>((set) => ({
+export const useSshKeyStore = create<SshKeyStore>((set, get) => ({
   keys: [],
   isLoading: false,
+  loaded: false,
   error: null,
 
   load: async () => {
+    const { loaded, isLoading } = get();
+    if (loaded || isLoading) return;
     set({ isLoading: true, error: null });
     try {
       const keys = await keyCommands.listSshKeys();
-      set({ keys, isLoading: false });
+      set({ keys, isLoading: false, loaded: true });
     } catch (e) {
       set({ isLoading: false, error: String(e) });
     }
