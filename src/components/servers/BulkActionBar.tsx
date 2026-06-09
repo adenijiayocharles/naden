@@ -5,6 +5,7 @@ import { useTerminalStore } from "../../store/terminalStore";
 import { useBroadcastStore } from "../../store/broadcastStore";
 import { formatError } from "../../lib/errors";
 import Button from "../shared/Button";
+import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 
 const MAX_BROADCAST_HOSTS = 9;
 
@@ -181,43 +182,14 @@ export default function BulkActionBar() {
       </div>
 
       {confirmDelete && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 animate-backdrop-in"
-          onClick={() => setConfirmDelete(false)}
-        >
-          <div
-            className="bg-surface-2 border border-stroke rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm mx-4 p-6 flex flex-col gap-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex flex-col gap-1">
-              <h2 className="text-title text-white">
-                Delete {count} server{count !== 1 ? "s" : ""}?
-              </h2>
-              <p className="text-muted text-sm">
-                {count === 1
-                  ? "This server will be permanently removed."
-                  : `All ${count} selected servers will be permanently removed.`}{" "}
-                This cannot be undone.
-              </p>
-            </div>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setConfirmDelete(false)}
-                disabled={busy}
-                className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors disabled:opacity-40"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => { void handleDeleteAll(); }}
-                disabled={busy}
-                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-500 rounded transition-colors disabled:opacity-40"
-              >
-                {busy ? "Deleting…" : `Delete ${count}`}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDeleteModal
+          title={`Delete ${count} server${count !== 1 ? "s" : ""}?`}
+          description={count === 1 ? "This server will be permanently removed. This cannot be undone." : `All ${count} selected servers will be permanently removed. This cannot be undone.`}
+          confirmLabel={`Delete ${count}`}
+          busy={busy}
+          onConfirm={() => { void handleDeleteAll(); }}
+          onCancel={() => setConfirmDelete(false)}
+        />
       )}
     </div>
   );

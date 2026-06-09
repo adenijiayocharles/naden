@@ -6,7 +6,7 @@ import type { ForwardType, PortForward, TunnelStatus } from "../../types/portFor
 import Input from "../shared/Input";
 import Button from "../shared/Button";
 import EmptyState from "../shared/EmptyState";
-import DeleteTunnelModal from "./DeleteTunnelModal";
+import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 
 const STATUS_DOT: Record<TunnelStatus, string> = {
   active:     "bg-green-500",
@@ -476,14 +476,10 @@ export default function TunnelPanel() {
       {modalOpen && <AddTunnelModal onClose={() => setModalOpen(false)} />}
 
       {deleteTarget && (
-        <DeleteTunnelModal
-          label={
-            deleteTarget.label ||
-            (deleteTarget.forwardType === "dynamic"
-              ? `localhost:${deleteTarget.localPort}`
-              : `localhost:${deleteTarget.localPort} → ${deleteTarget.remoteHost}:${deleteTarget.remotePort}`)
-          }
-          deleting={deleting}
+        <ConfirmDeleteModal
+          title="Delete port forward?"
+          description={<><span className="text-white font-medium font-mono">{deleteTarget.label || (deleteTarget.forwardType === "dynamic" ? `localhost:${deleteTarget.localPort}` : `localhost:${deleteTarget.localPort} → ${deleteTarget.remoteHost}:${deleteTarget.remotePort}`)}</span> will be permanently removed. This cannot be undone.</>}
+          busy={deleting}
           onConfirm={() => { void handleConfirmDelete(); }}
           onCancel={() => setDeleteTarget(null)}
         />

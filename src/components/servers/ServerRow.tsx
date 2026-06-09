@@ -4,7 +4,7 @@ import { useUiStore } from "../../store/uiStore";
 import { useServerStore } from "../../store/serverStore";
 import { useTunnelStore } from "../../store/tunnelStore";
 import ServerKebabMenu from "./ServerKebabMenu";
-import DeleteServerModal from "./DeleteServerModal";
+import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import ConnectionErrorModal from "./ConnectionErrorModal";
 import { FavouriteButton, ReachabilityDot } from "./ServerCard";
 import { timeAgo } from "../../lib/format";
@@ -167,9 +167,10 @@ export default function ServerRow({ server, groupColor, lastConnected, narrow }:
     </div>
 
     {actions.deleteModalOpen && (
-      <DeleteServerModal
-        serverName={server.displayName}
-        deleting={actions.deleting}
+      <ConfirmDeleteModal
+        title="Delete server?"
+        description={<><span className="text-white font-medium">{server.displayName}</span> will be permanently removed. This cannot be undone.</>}
+        busy={actions.deleting}
         onConfirm={() => { void actions.commitDelete(); }}
         onCancel={() => actions.setDeleteModalOpen(false)}
       />

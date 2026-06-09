@@ -4,6 +4,7 @@ import { formatError } from "../../lib/errors";
 import type { ForwardType, PortForward } from "../../types/portForward";
 import Input from "../shared/Input";
 import Button from "../shared/Button";
+import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 
 const FORWARD_TYPES: { value: ForwardType; label: string; hint: string }[] = [
   { value: "local",   label: "Local",   hint: "localhost:localPort → remoteHost:remotePort" },
@@ -38,6 +39,7 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
   const [fwdForm, setFwdForm] = useState<FwdFormState>(BLANK_FWD);
   const [fwdError, setFwdError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const setF = (field: keyof FwdFormState) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -116,7 +118,6 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Delete this port forward?")) return;
     await remove(id).catch(() => {});
     if (editingId === id) cancelEdit();
   };
@@ -174,7 +175,7 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
                 </button>
                 <button
                   type="button"
-                  onClick={() => { void handleDelete(fwd.id); }}
+                  onClick={() => setPendingDeleteId(fwd.id)}
                   className="text-muted hover:text-red-400 transition-colors"
                   aria-label="Delete"
                 >
@@ -289,6 +290,15 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
 
       {serverForwards.length === 0 && !adding && (
         <p className="text-meta text-faint">No port forwards. Click + Add to create one.</p>
+      )}
+
+      {pendingDeleteId && (
+        <ConfirmDeleteModal
+          title="Delete port forward?"
+          description="This port forward will be permanently removed. This cannot be undone."
+          onConfirm={() => { void handleDelete(pendingDeleteId); setPendingDeleteId(null); }}
+          onCancel={() => setPendingDeleteId(null)}
+        />
       )}
     </div>
   );
