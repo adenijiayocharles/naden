@@ -62,6 +62,34 @@ pub async fn retrieve_credential(db: &SqlitePool, key: &[u8], id: &str) -> Resul
     String::from_utf8(plaintext.to_vec()).map_err(|e| AppError::Vault(e.to_string()))
 }
 
+/// Re-encrypts `secret` over an existing credential row in place, generating a
+/// fresh nonce. The credential ID is preserved so no archive pointer update is
+/// needed — safe to call concurrently with reads.
+pub async fn update_credential(
+    db: &SqlitePool,
+    key: &[u8],
+    id: &str,
+    secret: &str,
+) -> Result<(), AppError> {
+    let mut nonce_bytes = [0u8; 12];
+    getrandom::getrandom(&mut nonce_bytes).map_err(|e| AppError::Vault(e.to_string()))?;
+
+    let cipher = Aes256Gcm::new_from_slice(key)
+        .map_err(|_| AppError::Vault("invalid key length".into()))?;
+    let ciphertext = cipher
+        .encrypt(Nonce::from_slice(&nonce_bytes), secret.as_bytes())
+        .map_err(|_| AppError::Vault("encryption failed".into()))?;
+
+    sqlx::query("UPDATE vault_credentials SET nonce = ?, ciphertext = ? WHERE id = ?")
+        .bind(nonce_bytes.as_slice())
+        .bind(&ciphertext)
+        .bind(id)
+        .execute(db)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
+    Ok(())
+}
+
 /// Removes a credential row. No-ops silently when the ID does not exist.
 pub async fn delete_credential(db: &SqlitePool, id: &str) -> Result<(), AppError> {
     sqlx::query("DELETE FROM vault_credentials WHERE id = ?")

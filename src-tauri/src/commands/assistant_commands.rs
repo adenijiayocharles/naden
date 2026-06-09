@@ -15,9 +15,15 @@ const ANTHROPIC_KEY_ID_KEY: &str = "ai_assistant_anthropic_key_id";
 // Shared toggles.
 const ENABLED_KEY: &str = "ai_assistant_enabled";
 const PERSIST_HISTORY_KEY: &str = "ai_assistant_persist_history";
+// Sentinel written after first migration so the check is a single read.
+const MIGRATED_KEY: &str = "ai_assistant_migrated";
 // Legacy single-key settings — only read during migration; never written.
 const LEGACY_PROVIDER_KEY: &str = "ai_assistant_provider";
 const LEGACY_KEY_ID_KEY: &str = "ai_assistant_key_id";
+
+// Hard limits for send_assistant_message.
+const MAX_MESSAGES: usize = 200;
+const MAX_TOTAL_CONTENT_BYTES: usize = 200_000;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -66,22 +72,66 @@ fn key_id_setting(provider: &str) -> Result<&'static str, AppError> {
 
 /// One-time migration: if the old single-key settings exist, move the credential
 /// to its provider-specific slot and set the active provider, then delete the
-/// legacy keys so this only runs once.
+/// legacy keys. Guarded by a sentinel so subsequent calls cost a single read.
+/// All writes are inside a transaction so a crash leaves state consistent and
+/// migration retries cleanly on next launch.
 async fn migrate_legacy_key(db: &SqlitePool) -> Result<(), AppError> {
+    // Fast path — sentinel present means migration already completed.
+    if read_setting(db, MIGRATED_KEY).await?.is_some() {
+        return Ok(());
+    }
+
     let legacy_key_id = read_setting(db, LEGACY_KEY_ID_KEY).await?;
     let legacy_provider = read_setting(db, LEGACY_PROVIDER_KEY).await?;
 
+    let mut tx = db
+        .begin()
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
+
     if let (Some(key_id), Some(provider)) = (legacy_key_id, legacy_provider) {
         let dest = key_id_setting(&provider)?;
-        write_setting(db, dest, &key_id).await?;
-        // Only set the active provider if nothing is set yet.
-        if read_setting(db, ACTIVE_PROVIDER_KEY).await?.is_none() {
-            write_setting(db, ACTIVE_PROVIDER_KEY, &provider).await?;
+        sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+            .bind(dest)
+            .bind(&key_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+
+        let has_active: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM settings WHERE key = ?")
+                .bind(ACTIVE_PROVIDER_KEY)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|e| AppError::Database(e.to_string()))?;
+        if has_active == 0 {
+            sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+                .bind(ACTIVE_PROVIDER_KEY)
+                .bind(&provider)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| AppError::Database(e.to_string()))?;
         }
-        clear_setting(db, LEGACY_KEY_ID_KEY).await?;
-        clear_setting(db, LEGACY_PROVIDER_KEY).await?;
+
+        sqlx::query("DELETE FROM settings WHERE key = ? OR key = ?")
+            .bind(LEGACY_KEY_ID_KEY)
+            .bind(LEGACY_PROVIDER_KEY)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
     }
-    Ok(())
+
+    // Sentinel inside the transaction — if commit fails, migration retries next open.
+    sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+        .bind(MIGRATED_KEY)
+        .bind("1")
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
+
+    tx.commit()
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))
 }
 
 /// Stores the user's API key for `provider`, encrypted in the vault.
@@ -249,14 +299,26 @@ pub async fn set_assistant_persist_history(
     write_setting(&state.db, PERSIST_HISTORY_KEY, if enabled { "true" } else { "false" }).await
 }
 
-/// Encrypts `payload` (the JSON-serialised per-server transcript) and upserts
-/// it under `server_id`, replacing any prior archive for that server.
+/// Encrypts `payload` (the JSON-serialised per-server transcript) and saves it
+/// under `server_id`. On subsequent calls the credential is updated in place so
+/// the archive pointer never changes and there is no window for orphaned rows.
 #[tauri::command]
 pub async fn save_assistant_chat_history(
     server_id: String,
     payload: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
+    // Reject arbitrary server_id strings — prevents vault oracle abuse from a
+    // compromised webview that can call IPC commands.
+    let server_exists: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM servers WHERE id = ?")
+        .bind(&server_id)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
+    if server_exists == 0 {
+        return Err(AppError::Validation("unknown server".into()));
+    }
+
     let persist_enabled = read_setting(&state.db, PERSIST_HISTORY_KEY)
         .await?
         .map(|v| v == "true")
@@ -275,30 +337,36 @@ pub async fn save_assistant_chat_history(
         }
     };
 
-    let existing: Option<(String,)> =
-        sqlx::query_as("SELECT credential_id FROM assistant_chat_archive WHERE server_id = ?")
+    let existing: Option<String> =
+        sqlx::query_scalar("SELECT credential_id FROM assistant_chat_archive WHERE server_id = ?")
             .bind(&server_id)
             .fetch_optional(&state.db)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
 
-    let credential_id = vault::store_credential(&state.db, &vault_key, &payload).await?;
-
-    sqlx::query(
-        "INSERT INTO assistant_chat_archive (server_id, credential_id, updated_at) VALUES (?, ?, ?)
-         ON CONFLICT (server_id) DO UPDATE SET credential_id = excluded.credential_id, updated_at = excluded.updated_at",
-    )
-    .bind(&server_id)
-    .bind(&credential_id)
-    .bind(chrono::Utc::now().timestamp())
-    .execute(&state.db)
-    .await
-    .map_err(|e| AppError::Database(e.to_string()))?;
-
-    if let Some((old_credential_id,)) = existing {
-        if old_credential_id != credential_id {
-            vault::delete_credential(&state.db, &old_credential_id).await?;
-        }
+    if let Some(credential_id) = existing {
+        // Update ciphertext in place — same ID, new nonce, zero orphan risk.
+        vault::update_credential(&state.db, &vault_key, &credential_id, &payload).await?;
+        sqlx::query(
+            "UPDATE assistant_chat_archive SET updated_at = ? WHERE server_id = ?",
+        )
+        .bind(chrono::Utc::now().timestamp())
+        .bind(&server_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
+    } else {
+        let credential_id =
+            vault::store_credential(&state.db, &vault_key, &payload).await?;
+        sqlx::query(
+            "INSERT INTO assistant_chat_archive (server_id, credential_id, updated_at) VALUES (?, ?, ?)",
+        )
+        .bind(&server_id)
+        .bind(&credential_id)
+        .bind(chrono::Utc::now().timestamp())
+        .execute(&state.db)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
     }
 
     Ok(())
@@ -311,6 +379,15 @@ pub async fn load_assistant_chat_history(
     server_id: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<Option<String>, AppError> {
+    let server_exists: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM servers WHERE id = ?")
+        .bind(&server_id)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
+    if server_exists == 0 {
+        return Err(AppError::Validation("unknown server".into()));
+    }
+
     let persist_enabled = read_setting(&state.db, PERSIST_HISTORY_KEY)
         .await?
         .map(|v| v == "true")
@@ -385,17 +462,27 @@ pub async fn send_assistant_message(
     let api_key = vault::retrieve_credential(&state.db, &vault_key, &key_id).await?;
     let provider = assistant::provider_for(&provider_id)?;
 
+    if messages.len() > MAX_MESSAGES {
+        return Err(AppError::Validation(format!(
+            "message count exceeds limit ({MAX_MESSAGES})"
+        )));
+    }
+    let total_bytes: usize = messages.iter().map(|m| m.content.len()).sum();
+    if total_bytes > MAX_TOTAL_CONTENT_BYTES {
+        return Err(AppError::Validation("message content too large".into()));
+    }
+
     let chat_messages: Vec<ChatMessage> = messages
         .into_iter()
-        .map(|m| ChatMessage {
-            role: if m.role == "assistant" {
-                Role::Assistant
-            } else {
-                Role::User
-            },
-            content: m.content,
+        .map(|m| {
+            let role = match m.role.as_str() {
+                "assistant" => Ok(Role::Assistant),
+                "user" => Ok(Role::User),
+                other => Err(AppError::Validation(format!("invalid role: {other}"))),
+            }?;
+            Ok(ChatMessage { role, content: m.content })
         })
-        .collect();
+        .collect::<Result<Vec<_>, AppError>>()?;
 
     tauri::async_runtime::spawn(async move {
         let token_event = format!("assistant:token:{request_id}");
@@ -411,7 +498,13 @@ pub async fn send_assistant_message(
                 let _ = app_handle.emit(&format!("assistant:done:{request_id}"), ());
             }
             Err(e) => {
-                let _ = app_handle.emit(&format!("assistant:error:{request_id}"), e.to_string());
+                // Log the full error internally; never forward raw provider errors
+                // to the frontend as they may contain truncated API key hints.
+                eprintln!("[assistant] stream error for {request_id}: {e}");
+                let _ = app_handle.emit(
+                    &format!("assistant:error:{request_id}"),
+                    "provider request failed",
+                );
             }
         }
     });
