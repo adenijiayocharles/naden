@@ -7,7 +7,7 @@ import { formatSize, formatDate } from "../../lib/format";
 import { formatError } from "../../lib/errors";
 import { PathBar } from "./SftpToolbar";
 import { FileIcon, MenuItem, ContextMenuPopup } from "./SftpFileList";
-import DeleteConfirmBanner from "./DeleteConfirmBanner";
+import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import ErrorBanner from "./ErrorBanner";
 import InlineCreateInput from "./InlineCreateInput";
 import { joinPath, parentPath } from "../../lib/path";
@@ -333,9 +333,13 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
         </button>
       </div>
 
-      {/* Delete confirmation */}
       {confirmingDelete && (
-        <DeleteConfirmBanner count={selCount} onConfirm={() => { void commitDelete(); }} onCancel={() => setConfirmingDelete(false)} />
+        <ConfirmDeleteModal
+          title={`Delete ${selCount} item${selCount !== 1 ? "s" : ""}?`}
+          description="These files will be permanently deleted. This cannot be undone."
+          onConfirm={() => { void commitDelete(); }}
+          onCancel={() => setConfirmingDelete(false)}
+        />
       )}
 
       {/* Error banner */}

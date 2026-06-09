@@ -9,7 +9,7 @@ import SftpToolbar, { PathBar } from "./SftpToolbar";
 import LocalFileBrowser from "./LocalFileBrowser";
 import { ConnectingOverlay, ErrorOverlay } from "../shared/ConnectionOverlay";
 import InlineCreateInput from "./InlineCreateInput";
-import DeleteConfirmBanner from "./DeleteConfirmBanner";
+import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import ErrorBanner from "./ErrorBanner";
 import ChmodDialog from "./ChmodDialog";
 import { useRemotePane } from "./useRemotePane";
@@ -425,8 +425,9 @@ export default function SftpBrowser({ sessionId }: Props) {
                   ) : (
                     <>
                       {peerPane.confirmingDelete && (
-                        <DeleteConfirmBanner
-                          count={peerPane.selected.length}
+                        <ConfirmDeleteModal
+                          title={`Delete ${peerPane.selected.length} item${peerPane.selected.length !== 1 ? "s" : ""}?`}
+                          description="These files will be permanently deleted. This cannot be undone."
                           onConfirm={peerPane.commitDelete}
                           onCancel={() => { peerPane.setConfirmingDelete(false); }}
                         />
@@ -590,9 +591,13 @@ export default function SftpBrowser({ sessionId }: Props) {
         </div>
       )}
 
-      {/* Inline delete confirmation */}
       {confirmingDelete && (
-        <DeleteConfirmBanner count={selected.length} onConfirm={commitDelete} onCancel={() => setConfirmingDelete(false)} />
+        <ConfirmDeleteModal
+          title={`Delete ${selected.length} item${selected.length !== 1 ? "s" : ""}?`}
+          description="These files will be permanently deleted. This cannot be undone."
+          onConfirm={commitDelete}
+          onCancel={() => setConfirmingDelete(false)}
+        />
       )}
 
       {/* New folder input */}
