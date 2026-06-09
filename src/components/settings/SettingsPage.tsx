@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Input from "../shared/Input";
 import Button from "../shared/Button";
+import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import { useVaultStore } from "../../store/vaultStore";
 import { useUiStore } from "../../store/uiStore";
 import { useTerminalSettings, TERMINAL_FONTS, TERMINAL_THEMES, fontCss } from "../../lib/terminalSettings";
@@ -135,6 +136,7 @@ export default function SettingsPage() {
   const [assistantChangeKey, setAssistantChangeKey] = useState("");
   const [assistantError, setAssistantError] = useState<string | null>(null);
   const [assistantLoading, setAssistantLoading] = useState(false);
+  const [confirmForget, setConfirmForget] = useState(false);
   useEffect(() => {
     assistantCommands.getStatus().then(setAssistantStatus).catch(() => {});
   }, []);
@@ -371,7 +373,7 @@ export default function SettingsPage() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl px-10 py-8">
+        <div className="px-8 py-8">
 
           {/* ── Appearance ── */}
           {activeSection === "appearance" && (
@@ -700,6 +702,7 @@ export default function SettingsPage() {
                         setAssistantChangeProvider((assistantStatus.provider as "openai" | "anthropic") ?? "openai");
                         setAssistantChangeKey("");
                         setAssistantError(null);
+                        setConfirmForget(false);
                       }}
                       className="w-full text-left py-3 text-sm text-secondary hover:text-white transition-colors flex items-center justify-between border-b border-stroke-subtle"
                     >
@@ -735,12 +738,22 @@ export default function SettingsPage() {
                       </div>
                     )}
                     <button
-                      onClick={() => { void forgetAssistantKey(); }}
+                      onClick={() => setConfirmForget(true)}
                       disabled={assistantLoading}
                       className="w-full text-left py-3 text-sm text-secondary hover:text-red-400 transition-colors disabled:opacity-40 border-b border-stroke-subtle"
                     >
-                      {assistantLoading ? "Removing…" : "Forget API key"}
+                      Forget API key
                     </button>
+                    {confirmForget && (
+                      <ConfirmDeleteModal
+                        title="Forget API key?"
+                        description="The stored API key will be permanently removed. The assistant will be disabled."
+                        confirmLabel="Forget key"
+                        busy={assistantLoading}
+                        onConfirm={() => { setConfirmForget(false); void forgetAssistantKey(); }}
+                        onCancel={() => setConfirmForget(false)}
+                      />
+                    )}
                     {assistantError && !assistantChangeOpen && <p className="text-xs text-red-400 mt-1">{assistantError}</p>}
                   </div>
                 </>

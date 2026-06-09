@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import Input from "../shared/Input";
 import Button from "../shared/Button";
+import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import EmptyState from "../shared/EmptyState";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import type { LogEntry, LogOutcome } from "../../types/log";
@@ -413,36 +414,14 @@ export default function LogView() {
       )}
 
       {showClearConfirm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 animate-backdrop-in"
-          onClick={() => setShowClearConfirm(false)}
-        >
-          <div
-            className="bg-surface-2 border border-stroke rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm mx-4 p-6 flex flex-col gap-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex flex-col gap-1">
-              <h2 className="text-title text-white">Clear all logs?</h2>
-              <p className="text-muted text-sm">All connection history will be permanently deleted. This cannot be undone.</p>
-            </div>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setShowClearConfirm(false)}
-                disabled={clearing}
-                className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors disabled:opacity-40"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => { void handleClear(); }}
-                disabled={clearing}
-                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-500 rounded transition-colors disabled:opacity-40"
-              >
-                {clearing ? "Clearing…" : "Clear Logs"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDeleteModal
+          title="Clear all logs?"
+          description="All connection history will be permanently deleted. This cannot be undone."
+          confirmLabel="Clear Logs"
+          busy={clearing}
+          onConfirm={() => { void handleClear(); }}
+          onCancel={() => setShowClearConfirm(false)}
+        />
       )}
     </div>
   );

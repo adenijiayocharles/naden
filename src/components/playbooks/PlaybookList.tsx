@@ -4,6 +4,7 @@ import { formatError } from "../../lib/errors";
 import Button from "../shared/Button";
 import Input from "../shared/Input";
 import EmptyState from "../shared/EmptyState";
+import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import type { Playbook, StepInput } from "../../types/playbook";
 
 const VARIABLE_HINTS = ["{{host}}", "{{username}}", "{{port}}", "{{displayName}}"];
@@ -229,54 +230,6 @@ function PlaybookFormModal({
 }
 
 // ── Delete confirm ─────────────────────────────────────────────────────────────
-function DeleteConfirmModal({
-  playbook,
-  onClose,
-}: {
-  playbook: Playbook;
-  onClose: () => void;
-}) {
-  const deletePlaybook = usePlaybookStore((s) => s.deletePlaybook);
-  const [busy, setBusy] = useState(false);
-
-  const handleDelete = async () => {
-    setBusy(true);
-    await deletePlaybook(playbook.id);
-    onClose();
-  };
-
-  return (
-    <div
-      className="fixed inset-0 bg-black/85 animate-backdrop-in flex items-center justify-center z-50 p-4"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm p-5 flex flex-col gap-4">
-        <div>
-          <h3 className="text-title text-white mb-1">Delete playbook?</h3>
-          <p className="text-sm text-muted">
-            "{playbook.title}" and its {playbook.steps.length} step{playbook.steps.length === 1 ? "" : "s"} will be permanently deleted.
-          </p>
-        </div>
-        <div className="flex items-center justify-end gap-2">
-          <Button size="sm" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            size="sm"
-            variant="delete"
-            onClick={() => void handleDelete()}
-            disabled={busy}
-          >
-            {busy ? "Deleting…" : "Delete"}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Playbook card ──────────────────────────────────────────────────────────────
 function PlaybookCard({
   playbook,
@@ -337,10 +290,20 @@ export default function PlaybookList() {
   const playbooks = usePlaybookStore((s) => s.playbooks);
   const isLoading = usePlaybookStore((s) => s.isLoading);
 
+  const deletePlaybook = usePlaybookStore((s) => s.deletePlaybook);
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Playbook | null>(null);
   const [deleting, setDeleting] = useState<Playbook | null>(null);
+  const [deletingBusy, setDeletingBusy] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!deleting) return;
+    setDeletingBusy(true);
+    await deletePlaybook(deleting.id);
+    setDeleting(null);
+    setDeletingBusy(false);
+  };
 
   const filtered = useMemo(() => {
     if (!query.trim()) return playbooks;
@@ -415,7 +378,15 @@ export default function PlaybookList() {
 
       {creating && <PlaybookFormModal onClose={() => setCreating(false)} />}
       {editing && <PlaybookFormModal playbook={editing} onClose={() => setEditing(null)} />}
-      {deleting && <DeleteConfirmModal playbook={deleting} onClose={() => setDeleting(null)} />}
+      {deleting && (
+        <ConfirmDeleteModal
+          title="Delete playbook?"
+          description={`"${deleting.title}" and its ${deleting.steps.length} step${deleting.steps.length === 1 ? "" : "s"} will be permanently deleted.`}
+          busy={deletingBusy}
+          onConfirm={() => { void handleConfirmDelete(); }}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
     </div>
   );
 }

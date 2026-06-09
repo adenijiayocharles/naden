@@ -5,6 +5,7 @@ import { usePlaybookStore } from "../../store/playbookStore";
 import { useUiStore } from "../../store/uiStore";
 import Input from "../shared/Input";
 import Button from "../shared/Button";
+import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
 import { useTunnelStore } from "../../store/tunnelStore";
@@ -80,34 +81,18 @@ function GroupCreateModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function GroupEditModal({ group, onClose, initialDelete = false }: { group: Group; onClose: () => void; initialDelete?: boolean }) {
+function GroupEditModal({ group, onClose, onDelete }: { group: Group; onClose: () => void; onDelete: () => void }) {
   const updateGroup = useServerStore((s) => s.updateGroup);
-  const deleteGroup = useServerStore((s) => s.deleteGroup);
-  const setFilterGroup = useUiStore((s) => s.setFilterGroup);
-  const filterGroupId = useUiStore((s) => s.filterGroupId);
   const [name, setName] = useState(group.name);
   const [color, setColor] = useState(group.color ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(initialDelete);
 
   const handleSave = async () => {
     setBusy(true);
     setError(null);
     try {
       await updateGroup(group.id, name.trim(), color || undefined);
-      onClose();
-    } catch (e) {
-      setError(formatError(e));
-      setBusy(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setBusy(true);
-    try {
-      await deleteGroup(group.id);
-      if (filterGroupId === group.id) setFilterGroup(null);
       onClose();
     } catch (e) {
       setError(formatError(e));
@@ -130,21 +115,11 @@ function GroupEditModal({ group, onClose, initialDelete = false }: { group: Grou
           {error && <p className="text-xs text-red-400">{error}</p>}
         </div>
         <div className="flex items-center gap-2 mt-5">
-          {confirmDelete ? (
-            <>
-              <span className="text-xs text-red-400 flex-1">Delete group and ungroup servers?</span>
-              <Button size="sm" variant="danger" onClick={() => { void handleDelete(); }} disabled={busy} className="bg-red-600 hover:bg-red-500 text-white border-0">Confirm</Button>
-              <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(false)}>Cancel</Button>
-            </>
-          ) : (
-            <>
-              <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(true)} disabled={busy} className="text-red-500 hover:text-red-400 mr-auto px-0">Delete</Button>
-              <Button size="sm" onClick={onClose}>Cancel</Button>
-              <Button size="sm" variant="primary" onClick={() => { void handleSave(); }} disabled={busy || !name.trim()}>
-                {busy ? "Saving…" : "Save"}
-              </Button>
-            </>
-          )}
+          <Button size="sm" variant="ghost" onClick={onDelete} disabled={busy} className="text-red-500 hover:text-red-400 mr-auto px-0">Delete</Button>
+          <Button size="sm" onClick={onClose}>Cancel</Button>
+          <Button size="sm" variant="primary" onClick={() => { void handleSave(); }} disabled={busy || !name.trim()}>
+            {busy ? "Saving…" : "Save"}
+          </Button>
         </div>
       </div>
     </div>
@@ -422,6 +397,7 @@ export default function Sidebar() {
   const groups = useServerStore((s) => s.groups);
   const tags = useServerStore((s) => s.tags);
   const deleteTag = useServerStore((s) => s.deleteTag);
+  const deleteGroup = useServerStore((s) => s.deleteGroup);
   const {
     filterGroupId, filterTagId, filterFavourites,
     setFilterGroup, setFilterTag, setFilterFavourites,
@@ -441,7 +417,11 @@ export default function Sidebar() {
   const tunnelStatuses = useTunnelStore((s) => s.statuses);
   const activeTunnels = Object.values(tunnelStatuses).filter((s) => s === "active").length;
 
-  const [editingGroup, setEditingGroup] = useState<{ group: Group; initialDelete: boolean } | null>(null);
+  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
+  const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<Group | null>(null);
+  const [confirmDeleteTag, setConfirmDeleteTag] = useState<Tag | null>(null);
+  const [deletingGroup, setDeletingGroup] = useState(false);
+  const [deletingTag, setDeletingTag] = useState(false);
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [renamingTag, setRenamingTag] = useState<Tag | null>(null);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
@@ -458,6 +438,30 @@ export default function Sidebar() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [addMenuOpen]);
+
+  const handleConfirmDeleteGroup = async () => {
+    if (!confirmDeleteGroup) return;
+    setDeletingGroup(true);
+    try {
+      await deleteGroup(confirmDeleteGroup.id);
+      if (filterGroupId === confirmDeleteGroup.id) setFilterGroup(null);
+      setConfirmDeleteGroup(null);
+    } finally {
+      setDeletingGroup(false);
+    }
+  };
+
+  const handleConfirmDeleteTag = async () => {
+    if (!confirmDeleteTag) return;
+    setDeletingTag(true);
+    try {
+      await deleteTag(confirmDeleteTag.id);
+      if (filterTagId === confirmDeleteTag.id) setFilterTag(null);
+      setConfirmDeleteTag(null);
+    } finally {
+      setDeletingTag(false);
+    }
+  };
 
   const selectFilter = (fn: () => void) => () => {
     if (activeView === "logs" || activeView === "snippets" || activeView === "playbooks" || activeView === "tunnels" || activeView === "settings") closeForm();
@@ -590,8 +594,8 @@ export default function Sidebar() {
               active={filterGroupId === g.id && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels"}
               count={countByGroup[g.id] ?? 0}
               onClick={selectFilter(() => setFilterGroup(g.id))}
-              onEdit={() => setEditingGroup({ group: g, initialDelete: false })}
-              onDelete={() => setEditingGroup({ group: g, initialDelete: true })}
+              onEdit={() => setEditingGroup(g)}
+              onDelete={() => setConfirmDeleteGroup(g)}
             />
           ))}
         </div>
@@ -620,10 +624,7 @@ export default function Sidebar() {
                 count={countByTag[t.id] ?? 0}
                 onClick={selectFilter(() => setFilterTag(t.id))}
                 onRename={() => setRenamingTag(t)}
-                onDelete={() => {
-                  void deleteTag(t.id);
-                  if (filterTagId === t.id) setFilterTag(null);
-                }}
+                onDelete={() => setConfirmDeleteTag(t)}
               />
             ))}
           </div>
@@ -686,7 +687,31 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {editingGroup && <GroupEditModal group={editingGroup.group} initialDelete={editingGroup.initialDelete} onClose={() => setEditingGroup(null)} />}
+      {editingGroup && (
+        <GroupEditModal
+          group={editingGroup}
+          onClose={() => setEditingGroup(null)}
+          onDelete={() => { setEditingGroup(null); setConfirmDeleteGroup(editingGroup); }}
+        />
+      )}
+      {confirmDeleteGroup && (
+        <ConfirmDeleteModal
+          title="Delete group?"
+          description="Servers in this group will be ungrouped. This cannot be undone."
+          busy={deletingGroup}
+          onConfirm={() => { void handleConfirmDeleteGroup(); }}
+          onCancel={() => setConfirmDeleteGroup(null)}
+        />
+      )}
+      {confirmDeleteTag && (
+        <ConfirmDeleteModal
+          title={`Delete tag "#${confirmDeleteTag.name}"?`}
+          description="This tag will be removed from all servers. This cannot be undone."
+          busy={deletingTag}
+          onConfirm={() => { void handleConfirmDeleteTag(); }}
+          onCancel={() => setConfirmDeleteTag(null)}
+        />
+      )}
       {creatingGroup && <GroupCreateModal onClose={() => setCreatingGroup(false)} />}
       {renamingTag && <TagRenameModal tag={renamingTag} onClose={() => setRenamingTag(null)} />}
     </aside>
