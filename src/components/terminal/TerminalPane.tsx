@@ -597,6 +597,7 @@ export default function TerminalPane({ sessionId }: Props) {
           connectionStatus={session?.status ?? "connecting"}
           connectionError={session?.errorMessage}
           getRecentOutput={getRecentTerminalText}
+          onRunCommand={(cmd) => terminalCommands.sendTerminalInput(sessionId, cmd + "\n").catch(() => {})}
         />
       )}
 
