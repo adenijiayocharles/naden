@@ -1,4 +1,5 @@
 pub mod assistant_commands;
+pub mod key_commands;
 pub mod local_commands;
 pub mod log_commands;
 pub mod playbook_commands;

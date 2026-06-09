@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { Server } from "../types/server";
 
-type ActiveView = "list" | "add" | "edit" | "logs" | "snippets" | "playbooks" | "tunnels" | "settings";
+type ActiveView = "list" | "add" | "edit" | "logs" | "snippets" | "playbooks" | "tunnels" | "settings" | "keys";
 export type ViewMode = "card" | "row";
 export type SortMode = "default" | "name_asc" | "name_desc" | "host" | "last_connected";
 interface UiStore {
@@ -32,6 +32,7 @@ interface UiStore {
   openSnippets: () => void;
   openPlaybooks: () => void;
   openTunnels: () => void;
+  openKeys: () => void;
   closeForm: () => void;
   openSettings: () => void;
   openImportSshConfig: () => void;
@@ -86,6 +87,7 @@ export const useUiStore = create<UiStore>((set) => ({
   openSnippets: () => set({ activeView: "snippets", editingServerId: null }),
   openPlaybooks: () => set({ activeView: "playbooks", editingServerId: null }),
   openTunnels: () => set({ activeView: "tunnels", editingServerId: null }),
+  openKeys: () => set({ activeView: "keys", editingServerId: null }),
   closeForm: () => set({ activeView: "list", editingServerId: null }),
   openSettings: () => set({ activeView: "settings", editingServerId: null }),
   openImportSshConfig: () => set({ importSshConfigOpen: true }),

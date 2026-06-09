@@ -6,6 +6,7 @@ import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import { serverCommands, vaultCommands } from "../../lib/tauriCommands";
 import { useVaultStore } from "../../store/vaultStore";
+import { useSshKeyStore } from "../../store/sshKeyStore";
 import { formatError } from "../../lib/errors";
 import Input from "../shared/Input";
 import Button from "../shared/Button";
@@ -53,6 +54,10 @@ export default function ServerForm() {
   const isVaultUnlocked = useVaultStore((s) => s.isUnlocked);
   const isPasswordRequired = useVaultStore((s) => s.isPasswordRequired);
   const vaultAvailable = !isPasswordRequired || isVaultUnlocked;
+
+  const managedKeys = useSshKeyStore((s) => s.keys);
+  const loadKeys = useSshKeyStore((s) => s.load);
+  useEffect(() => { void loadKeys(); }, [loadKeys]);
 
   const [form, setForm] = useState<FormData>(DEFAULT_FORM);
   const [password, setPassword] = useState("");
@@ -360,6 +365,22 @@ export default function ServerForm() {
           {/* Identity File */}
           {form.authMethod === "key" && (
             <Field label="Identity File">
+              {managedKeys.length > 0 && (
+                <select
+                  className="w-full h-10 bg-surface-3 border border-white/5 rounded px-3 text-sm text-white mb-2 focus:outline-none focus:border-accent/30 transition-[border-color] duration-200"
+                  value={managedKeys.some((k) => k.keyPath === form.identityFilePath) ? form.identityFilePath : ""}
+                  onChange={(e) => {
+                    if (e.target.value) setForm((f) => ({ ...f, identityFilePath: e.target.value }));
+                  }}
+                >
+                  <option value="">— pick a managed key —</option>
+                  {managedKeys.map((k) => (
+                    <option key={k.id} value={k.keyPath}>
+                      {k.name} ({k.keyType.toUpperCase()})
+                    </option>
+                  ))}
+                </select>
+              )}
               <div className="flex gap-2">
                 <Input
                   id="identityFilePath"

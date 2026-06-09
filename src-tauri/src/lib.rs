@@ -151,6 +151,13 @@ pub fn run() {
             commands::vault_commands::store_credential,
             commands::vault_commands::retrieve_credential,
             commands::vault_commands::delete_credential,
+            // SSH Key vault
+            commands::key_commands::list_ssh_keys,
+            commands::key_commands::add_ssh_key,
+            commands::key_commands::remove_ssh_key,
+            commands::key_commands::generate_ssh_key,
+            commands::key_commands::get_public_key,
+            commands::key_commands::rename_ssh_key,
             // Port forwards
             commands::tunnel_commands::list_port_forwards,
             commands::tunnel_commands::create_port_forward,

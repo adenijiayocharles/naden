@@ -279,7 +279,7 @@ pub fn authenticate_session(
 /// Handles both traditional PEM (looks for the specific header lines that
 /// OpenSSL/OpenSSH write for encrypted keys) and the modern OpenSSH binary format
 /// (parses the cipher field — "none" means unencrypted, anything else means encrypted).
-fn key_is_encrypted(pem: &str) -> bool {
+pub(crate) fn key_is_encrypted(pem: &str) -> bool {
     // Traditional encrypted PEM keys include this header line.
     // Checking for the full "Proc-Type: 4,ENCRYPTED" header avoids false positives
     // from the word "ENCRYPTED" appearing coincidentally in the base64-encoded key body.

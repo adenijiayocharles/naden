@@ -402,7 +402,7 @@ export default function Sidebar() {
     filterGroupId, filterTagId, filterFavourites,
     setFilterGroup, setFilterTag, setFilterFavourites,
     activeView, openAdd, closeForm, expandServerList, openImportSshConfig, openSnippets,
-    openPlaybooks, openTunnels, openSettings,
+    openPlaybooks, openTunnels, openKeys, openSettings,
   } = useUiStore();
 
   const snippetCount = useSnippetStore((s) => s.snippets.length);
@@ -464,7 +464,7 @@ export default function Sidebar() {
   };
 
   const selectFilter = (fn: () => void) => () => {
-    if (activeView === "logs" || activeView === "snippets" || activeView === "playbooks" || activeView === "tunnels" || activeView === "settings") closeForm();
+    if (activeView === "logs" || activeView === "snippets" || activeView === "playbooks" || activeView === "tunnels" || activeView === "settings" || activeView === "keys") closeForm();
     expandServerList();
     fn();
   };
@@ -489,7 +489,7 @@ export default function Sidebar() {
       <nav className="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
         {/* All Servers */}
         <NavRow
-          active={!filterGroupId && !filterTagId && !filterFavourites && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings"}
+          active={!filterGroupId && !filterTagId && !filterFavourites && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings" && activeView !== "keys"}
           onClick={selectFilter(() => { setFilterGroup(null); setFilterTag(null); setFilterFavourites(false); })}
           label={
             <span className="flex items-center gap-2">
@@ -557,9 +557,24 @@ export default function Sidebar() {
           }
         />
 
+        {/* SSH Keys */}
+        <NavRow
+          active={activeView === "keys"}
+          onClick={() => openKeys()}
+          label={
+            <span className="flex items-center gap-2">
+              <svg className="w-3.5 h-3.5 shrink-0 text-muted" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 2a4 4 0 100 8 4 4 0 000-8zM6.5 7.5L2 12" />
+                <path d="M3.5 13.5l1-1M5.5 13.5l1-1" />
+              </svg>
+              SSH Keys
+            </span>
+          }
+        />
+
         {/* Favourites */}
         <NavRow
-          active={filterFavourites && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings"}
+          active={filterFavourites && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings" && activeView !== "keys"}
           onClick={selectFilter(() => setFilterFavourites(!filterFavourites))}
           label={
             <span className="flex items-center gap-2">
@@ -591,7 +606,7 @@ export default function Sidebar() {
             <GroupRow
               key={g.id}
               group={g}
-              active={filterGroupId === g.id && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings"}
+              active={filterGroupId === g.id && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings" && activeView !== "keys"}
               count={countByGroup[g.id] ?? 0}
               onClick={selectFilter(() => setFilterGroup(g.id))}
               onEdit={() => setEditingGroup(g)}
@@ -620,7 +635,7 @@ export default function Sidebar() {
               <TagRow
                 key={t.id}
                 tag={t}
-                active={filterTagId === t.id && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings"}
+                active={filterTagId === t.id && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings" && activeView !== "keys"}
                 count={countByTag[t.id] ?? 0}
                 onClick={selectFilter(() => setFilterTag(t.id))}
                 onRename={() => setRenamingTag(t)}

@@ -31,6 +31,7 @@ import BulkActionBar from "../servers/BulkActionBar";
 import SnippetList from "../snippets/SnippetList";
 import PlaybookList from "../playbooks/PlaybookList";
 import TunnelPanel from "../tunnels/TunnelPanel";
+import KeysView from "../keys/KeysView";
 import ClipboardClearBanner from "./ClipboardClearBanner";
 import { useSnippetStore } from "../../store/snippetStore";
 import { usePlaybookStore } from "../../store/playbookStore";
@@ -307,7 +308,7 @@ export default function AppShell() {
             className={`shrink-0 transition-[width,padding] duration-200 ${
               activeBroadcastGroupId
                 ? "w-0 p-0 overflow-hidden"
-                : activeView === "logs" || activeView === "snippets" || activeView === "playbooks" || activeView === "tunnels" || activeView === "settings"
+                : activeView === "logs" || activeView === "snippets" || activeView === "playbooks" || activeView === "tunnels" || activeView === "settings" || activeView === "keys"
                   ? "flex-1 overflow-hidden flex flex-col"
                   : hasPanel
                     ? serverListCollapsed
@@ -318,6 +319,8 @@ export default function AppShell() {
           >
             {activeView === "settings" ? (
               <SettingsPage />
+            ) : activeView === "keys" ? (
+              <KeysView />
             ) : activeView === "snippets" ? (
               <SnippetList />
             ) : activeView === "playbooks" ? (
@@ -408,7 +411,7 @@ export default function AppShell() {
           </main>
 
           {/* Collapse / expand handle */}
-          {!activeBroadcastGroupId && hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings" && (
+          {!activeBroadcastGroupId && hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings" && activeView !== "keys" && (
             <button
               onClick={toggleServerList}
               aria-label={serverListCollapsed ? "Expand server list" : "Collapse server list"}
@@ -433,7 +436,7 @@ export default function AppShell() {
           )}
 
           {/* Unified panel: terminals + SFTP browsers */}
-          {hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings" && (
+          {hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings" && activeView !== "keys" && (
             <div className="flex flex-col flex-1 min-w-0">
               {/* Unified tab bar */}
               <div
