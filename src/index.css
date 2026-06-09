@@ -3,7 +3,7 @@
 html,
 body,
 #root {
-  background: #0d0d0d;
+  background: var(--color-surface-0);
 }
 
 html,
@@ -50,6 +50,17 @@ body {
   /* Motion — ease-out-expo-style deceleration reads as "premium" vs. linear/ease.
      Pair with Tailwind's numeric duration-* utilities (e.g. duration-200). */
   --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Semantic status colours — override in [data-theme="light"] for contrast */
+  --color-error: #f87171;
+  --color-error-bg: rgba(239, 68, 68, 0.12);
+  --color-error-border: rgba(239, 68, 68, 0.3);
+  --color-success: #4ade80;
+  --color-success-bg: rgba(34, 197, 94, 0.1);
+  --color-success-border: rgba(34, 197, 94, 0.25);
+  --color-warning: #facc15;
+  --color-warning-bg: rgba(234, 179, 8, 0.1);
+  --color-warning-border: rgba(234, 179, 8, 0.3);
 
   /* Section/modal heading — bundles size, tracking and weight so markup says
      `text-title` instead of repeating `text-sm font-semibold` everywhere.
@@ -163,28 +174,43 @@ body {
        VaultLockScreen remain dark, which is correct behaviour. */
     --color-white: #18181b;
 
-    /* Surfaces — 0 = sidebar/recessed, 4 = most elevated */
-    --color-surface-base: #e4e4e7;
-    --color-surface-0: #e8e8eb;
-    --color-surface-1: #f0f0f2;
-    --color-surface-2: #f4f4f6;
-    --color-surface-3: #f8f8fa;
+    /* Surfaces — 0 = sidebar/recessed (intentionally darker for clear separation), 4 = most elevated */
+    --color-surface-base: #d4d4d8;
+    --color-surface-0: #dcdce0;
+    --color-surface-1: #e8e8ec;
+    --color-surface-2: #f0f0f4;
+    --color-surface-3: #f6f6f9;
     --color-surface-4: #ffffff;
 
-    /* Borders */
-    --color-stroke: #d0d0d4;
-    --color-stroke-subtle: #e0e0e3;
+    /* Borders — visible enough to delineate panels and form inputs */
+    --color-stroke: #c4c4c8;
+    --color-stroke-subtle: #d4d4d8;
 
     /* Text scale — dark on light */
     --color-secondary: #27272a;
     --color-muted: #52525b;
     --color-faint: #71717a;
-    /* #6b6b6b on #f8f8fa = 4.6:1, passes WCAG AA for all text sizes */
     --color-dim: #6b6b6b;
+
+    /* Shadows — soft, appropriate for light surfaces; no white inset highlights */
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    --shadow-card-hover: 0 8px 24px -6px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+    --shadow-overlay: 0 16px 48px -8px rgba(0, 0, 0, 0.15), 0 4px 16px -4px rgba(0, 0, 0, 0.10);
 
     /* Accent foreground text — mix accent with black so neon colours stay
        readable on light surfaces regardless of which accent the user picked. */
     --color-accent-fg: color-mix(in srgb, var(--color-accent) 60%, #000000);
+
+    /* Status colours — full-contrast values for light backgrounds */
+    --color-error: #dc2626;
+    --color-error-bg: #fef2f2;
+    --color-error-border: #fecaca;
+    --color-success: #16a34a;
+    --color-success-bg: #f0fdf4;
+    --color-success-border: #bbf7d0;
+    --color-warning: #ca8a04;
+    --color-warning-bg: #fffbeb;
+    --color-warning-border: #fde68a;
   }
 }
 
@@ -227,6 +253,10 @@ body {
   border-radius: 2px;
 }
 
+[data-theme="light"] .xterm-viewport::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.25);
+}
+
 /* Inline command-suggestion ghost text. Positioned in JS against .xterm-screen
    (which xterm itself sets to position:relative) at the cursor cell. */
 .terminal-suggestion-ghost {
@@ -241,7 +271,7 @@ body {
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent-fg) 30%, transparent);
 }
 
 button:not(:disabled),
@@ -268,4 +298,18 @@ button:focus-visible {
     left: 100%;
     width: 45%;
   }
+}
+
+@layer utilities {
+  .text-error   { color: var(--color-error); }
+  .text-success { color: var(--color-success); }
+  .text-warning { color: var(--color-warning); }
+
+  .bg-error-subtle   { background-color: var(--color-error-bg); }
+  .bg-success-subtle { background-color: var(--color-success-bg); }
+  .bg-warning-subtle { background-color: var(--color-warning-bg); }
+
+  .border-error-subtle   { border-color: var(--color-error-border); }
+  .border-success-subtle { border-color: var(--color-success-border); }
+  .border-warning-subtle { border-color: var(--color-warning-border); }
 }
