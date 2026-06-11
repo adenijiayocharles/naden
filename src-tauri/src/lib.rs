@@ -392,7 +392,7 @@ fn build_app_menu(
             &MenuItem::with_id(app, "show_snippets", "Show Snippets", true, None::<&str>)?,
             &MenuItem::with_id(app, "show_playbooks", "Show Playbooks", true, None::<&str>)?,
             &MenuItem::with_id(app, "show_tunnels", "Show Tunnels", true, None::<&str>)?,
-            &MenuItem::with_id(app, "show_keys", "Show Keys", true, None::<&str>)?,
+            &MenuItem::with_id(app, "show_keys", "Show Vault", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(
                 app,
