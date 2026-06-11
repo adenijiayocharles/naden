@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { writeText as clipboardWriteText } from "@tauri-apps/plugin-clipboard-manager";
+import { check as checkForUpdate } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
 import type { LogEntry } from "../types/log";
 import type {
   Server,
@@ -352,4 +354,28 @@ export const tunnelCommands = {
 
   listActiveTunnelIds: () =>
     invoke<string[]>("list_active_tunnel_ids"),
+};
+
+export interface UpdateInfo {
+  version: string;
+  date?: string;
+  body?: string;
+  download: () => Promise<void>;
+}
+
+export const updaterCommands = {
+  checkForUpdate: async (): Promise<UpdateInfo | null> => {
+    const update = await checkForUpdate();
+    if (!update) return null;
+    return {
+      version: update.version,
+      date: update.date,
+      body: update.body,
+      download: async () => {
+        await update.downloadAndInstall();
+      },
+    };
+  },
+
+  relaunch: () => relaunch(),
 };

@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import Input from "../shared/Input";
 import Button from "../shared/Button";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import { useVaultStore } from "../../store/vaultStore";
 import { useUiStore } from "../../store/uiStore";
 import { useTerminalSettings, TERMINAL_FONTS, TERMINAL_THEMES, fontCss } from "../../lib/terminalSettings";
-import { settingsCommands, assistantCommands, type AssistantStatus } from "../../lib/tauriCommands";
+import { settingsCommands, assistantCommands, updaterCommands, type AssistantStatus, type UpdateInfo } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import { passwordStrength } from "../../lib/passwordStrength";
 
-type Section = "appearance" | "security" | "terminal" | "assistant";
+type Section = "appearance" | "security" | "terminal" | "assistant" | "about";
 
 type ActiveForm = "none" | "disable" | "enable" | "change";
 
@@ -99,6 +100,16 @@ const NAV_ITEMS: { id: Section; label: string; icon: React.ReactNode }[] = [
       </svg>
     ),
   },
+  {
+    id: "about",
+    label: "About",
+    icon: (
+      <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
+      </svg>
+    ),
+  },
 ];
 
 export default function SettingsPage() {
@@ -125,6 +136,46 @@ export default function SettingsPage() {
     if (savedTimer.current) clearTimeout(savedTimer.current);
     savedTimer.current = setTimeout(() => setSavedFlash(false), 2000);
   }, []);
+
+  // About / Updates
+  const [appVersion, setAppVersion] = useState("");
+  const [updateState, setUpdateState] = useState<"idle" | "checking" | "up-to-date" | "available" | "downloading" | "ready" | "error">("idle");
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getVersion().then(setAppVersion).catch(() => {});
+  }, []);
+
+  const checkForUpdates = useCallback(async () => {
+    setUpdateState("checking");
+    setUpdateError(null);
+    try {
+      const update = await updaterCommands.checkForUpdate();
+      if (update) {
+        setUpdateInfo(update);
+        setUpdateState("available");
+      } else {
+        setUpdateState("up-to-date");
+      }
+    } catch (e) {
+      setUpdateError(formatError(e));
+      setUpdateState("error");
+    }
+  }, []);
+
+  const installUpdate = useCallback(async () => {
+    if (!updateInfo) return;
+    setUpdateState("downloading");
+    setUpdateError(null);
+    try {
+      await updateInfo.download();
+      setUpdateState("ready");
+    } catch (e) {
+      setUpdateError(formatError(e));
+      setUpdateState("error");
+    }
+  }, [updateInfo]);
 
   // AI Assistant
   const [assistantStatus, setAssistantStatus] = useState<AssistantStatus | null>(null);
@@ -774,6 +825,49 @@ export default function SettingsPage() {
                   onCancel={() => setConfirmForgetProvider(null)}
                 />
               )}
+            </div>
+          )}
+
+          {/* ── About ── */}
+          {activeSection === "about" && (
+            <div>
+              <SectionHeader title="About" />
+
+              <Row>
+                <RowLabel title="Version" description={`SSHelter ${appVersion}`} />
+              </Row>
+
+              <Row>
+                <RowLabel
+                  title="Software updates"
+                  description={
+                    updateState === "checking" ? "Checking for updates…"
+                    : updateState === "up-to-date" ? "You're up to date."
+                    : updateState === "available" ? `Version ${updateInfo?.version} is available.`
+                    : updateState === "downloading" ? "Downloading update…"
+                    : updateState === "ready" ? "Update installed — restart to apply."
+                    : updateState === "error" ? (updateError ?? "Update check failed.")
+                    : "Check for a newer version of SSHelter."
+                  }
+                />
+                {updateState === "ready" ? (
+                  <Button size="sm" variant="primary" onClick={() => { void updaterCommands.relaunch(); }}>
+                    Restart now
+                  </Button>
+                ) : updateState === "available" ? (
+                  <Button size="sm" variant="primary" onClick={() => { void installUpdate(); }}>
+                    Download &amp; install
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => { void checkForUpdates(); }}
+                    disabled={updateState === "checking" || updateState === "downloading"}
+                  >
+                    Check for updates
+                  </Button>
+                )}
+              </Row>
             </div>
           )}
 
