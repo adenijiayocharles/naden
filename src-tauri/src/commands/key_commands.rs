@@ -27,6 +27,9 @@ struct KeyMeta {
     is_encrypted: bool,
 }
 
+/// Row shape for `ssh_keys` SELECTs: (id, name, key_path, key_type, fingerprint, comment, is_encrypted, created_at, updated_at).
+type SshKeyRow = (String, String, String, String, String, String, i64, String, String);
+
 /// Deletes a temporary file on drop, ensuring askpass script cleanup on all code paths.
 struct ScriptGuard(Option<std::path::PathBuf>);
 impl Drop for ScriptGuard {
@@ -146,7 +149,7 @@ fn inspect_key(priv_path: &std::path::Path, home: &std::path::Path) -> Result<Ke
             Ok(out) if out.status.success() => {
                 let line = String::from_utf8_lossy(&out.stdout);
                 // Format: "256 SHA256:xxx...= comment (ED25519)"
-                let parts: Vec<&str> = line.trim().split_whitespace().collect();
+                let parts: Vec<&str> = line.split_whitespace().collect();
                 let fp = parts.get(1).copied().unwrap_or("").to_string();
                 let kt = parts
                     .last()
@@ -203,7 +206,7 @@ fn inspect_key(priv_path: &std::path::Path, home: &std::path::Path) -> Result<Ke
 
 #[tauri::command]
 pub async fn list_ssh_keys(state: tauri::State<'_, AppState>) -> Result<Vec<SshKey>, AppError> {
-    let rows: Vec<(String, String, String, String, String, String, i64, String, String)> =
+    let rows: Vec<SshKeyRow> =
         sqlx::query_as(
             "SELECT id, name, key_path, key_type, fingerprint, comment, is_encrypted, \
              created_at, updated_at FROM ssh_keys ORDER BY created_at ASC",
