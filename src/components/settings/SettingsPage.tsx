@@ -4,13 +4,13 @@ import Input from "../shared/Input";
 import Button from "../shared/Button";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import { useVaultStore } from "../../store/vaultStore";
-import { useUiStore } from "../../store/uiStore";
+import { useUiStore, type SettingsSection } from "../../store/uiStore";
 import { useTerminalSettings, TERMINAL_FONTS, TERMINAL_THEMES, fontCss } from "../../lib/terminalSettings";
 import { settingsCommands, assistantCommands, updaterCommands, type AssistantStatus, type UpdateInfo } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import { passwordStrength } from "../../lib/passwordStrength";
 
-type Section = "appearance" | "security" | "terminal" | "assistant" | "about";
+type Section = SettingsSection;
 
 type ActiveForm = "none" | "disable" | "enable" | "change";
 
@@ -113,7 +113,12 @@ const NAV_ITEMS: { id: Section; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function SettingsPage() {
-  const [activeSection, setActiveSection] = useState<Section>("appearance");
+  const settingsSection = useUiStore((s) => s.settingsSection);
+  const [activeSection, setActiveSection] = useState<Section>(settingsSection);
+
+  useEffect(() => {
+    setActiveSection(settingsSection);
+  }, [settingsSection]);
 
   const {
     isPasswordRequired,

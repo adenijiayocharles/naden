@@ -326,6 +326,13 @@ fn build_app_menu(
         true,
         &[
             &PredefinedMenuItem::about(app, None, None)?,
+            &MenuItem::with_id(
+                app,
+                "check_for_updates",
+                "Check for Updates…",
+                true,
+                None::<&str>,
+            )?,
             &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::hide(app, None)?,
             &PredefinedMenuItem::hide_others(app, None)?,
@@ -355,6 +362,8 @@ fn build_app_menu(
                 None::<&str>,
             )?,
             &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "lock_vault", "Lock Vault", true, Some("CmdOrCtrl+L"))?,
+            &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "settings", "Settings…", true, Some("CmdOrCtrl+,"))?,
         ],
     )?;
@@ -380,6 +389,10 @@ fn build_app_menu(
         true,
         &[
             &MenuItem::with_id(app, "show_logs", "Show Logs", true, None::<&str>)?,
+            &MenuItem::with_id(app, "show_snippets", "Show Snippets", true, None::<&str>)?,
+            &MenuItem::with_id(app, "show_playbooks", "Show Playbooks", true, None::<&str>)?,
+            &MenuItem::with_id(app, "show_tunnels", "Show Tunnels", true, None::<&str>)?,
+            &MenuItem::with_id(app, "show_keys", "Show Keys", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(
                 app,
@@ -398,6 +411,8 @@ fn build_app_menu(
         &[
             &PredefinedMenuItem::minimize(app, None)?,
             &PredefinedMenuItem::maximize(app, None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::close_window(app, None)?,
         ],
     )?;
 

@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Server } from "../types/server";
 
 type ActiveView = "list" | "add" | "edit" | "logs" | "snippets" | "playbooks" | "tunnels" | "settings" | "keys";
+export type SettingsSection = "appearance" | "security" | "terminal" | "assistant" | "about";
 export type ViewMode = "card" | "row";
 export type SortMode = "default" | "name_asc" | "name_desc" | "host" | "last_connected";
 interface UiStore {
@@ -25,6 +26,7 @@ interface UiStore {
   bulkMode: boolean;
   bulkSelected: string[];
   vaultTimeoutMins: number;
+  settingsSection: SettingsSection;
 
   openAdd: () => void;
   openEdit: (serverId: string) => void;
@@ -34,7 +36,7 @@ interface UiStore {
   openTunnels: () => void;
   openKeys: () => void;
   closeForm: () => void;
-  openSettings: () => void;
+  openSettings: (section?: SettingsSection) => void;
   openImportSshConfig: () => void;
   closeImportSshConfig: () => void;
   setOnboardingComplete: (v: boolean) => void;
@@ -80,6 +82,7 @@ export const useUiStore = create<UiStore>((set) => ({
   bulkMode: false,
   bulkSelected: [],
   vaultTimeoutMins: 0,
+  settingsSection: "appearance",
 
   openAdd: () => set({ activeView: "add", editingServerId: null }),
   openEdit: (serverId) => set({ activeView: "edit", editingServerId: serverId }),
@@ -89,7 +92,7 @@ export const useUiStore = create<UiStore>((set) => ({
   openTunnels: () => set({ activeView: "tunnels", editingServerId: null }),
   openKeys: () => set({ activeView: "keys", editingServerId: null }),
   closeForm: () => set({ activeView: "list", editingServerId: null }),
-  openSettings: () => set({ activeView: "settings", editingServerId: null }),
+  openSettings: (section) => set({ activeView: "settings", editingServerId: null, ...(section ? { settingsSection: section } : {}) }),
   openImportSshConfig: () => set({ importSshConfigOpen: true }),
   closeImportSshConfig: () => set({ importSshConfigOpen: false }),
   setOnboardingComplete: (v) => set({ onboardingComplete: v }),

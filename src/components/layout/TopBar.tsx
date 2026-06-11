@@ -53,7 +53,7 @@ export default function TopBar() {
           </button>
 
           <button
-            onClick={openSettings}
+            onClick={() => openSettings()}
             aria-label="Settings"
             className="p-1.5 rounded text-dim hover:text-white hover:bg-surface-3 transition-colors ml-1"
           >
