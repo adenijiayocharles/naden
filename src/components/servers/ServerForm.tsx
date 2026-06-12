@@ -286,6 +286,7 @@ export default function ServerForm() {
               onBlur={(e) => validateField("displayName", e.target.value)}
               placeholder="Production Web Server"
               error={!!errors.displayName}
+              autoComplete="off"
             />
           </Field>
 
@@ -298,6 +299,7 @@ export default function ServerForm() {
               onBlur={(e) => validateField("hostname", e.target.value)}
               placeholder="web.example.com"
               error={!!errors.hostname}
+              autoComplete="off"
             />
           </Field>
 
@@ -313,6 +315,7 @@ export default function ServerForm() {
                 onChange={set("port")}
                 onBlur={(e) => validateField("port", e.target.value)}
                 error={!!errors.port}
+                autoComplete="off"
               />
             </Field>
             <Field label="Username">
@@ -321,6 +324,7 @@ export default function ServerForm() {
                 value={form.username}
                 onChange={set("username")}
                 placeholder="ubuntu"
+                autoComplete="off"
               />
             </Field>
           </div>
@@ -388,6 +392,7 @@ export default function ServerForm() {
                   onChange={set("identityFilePath")}
                   placeholder="~/.ssh/id_ed25519"
                   className="flex-1"
+                  autoComplete="off"
                 />
                 <Button
                   type="button"
@@ -426,6 +431,7 @@ export default function ServerForm() {
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void handleCreateGroup(); } }}
                   placeholder="Group name"
                   className="flex-1"
+                  autoComplete="off"
                 />
                 <Button
                   type="button"
@@ -474,6 +480,7 @@ export default function ServerForm() {
                 onBlur={() => setTimeout(() => setTagDropdownOpen(false), 150)}
                 onKeyDown={handleTagKeyDown}
                 placeholder="Type a tag and press Enter"
+                autoComplete="off"
               />
               {tagDropdownOpen && tagSuggestions.length > 0 && (
                 <div className="absolute z-20 top-full mt-1 w-full bg-surface-2 border border-stroke rounded-lg shadow-overlay max-h-40 overflow-y-auto">
