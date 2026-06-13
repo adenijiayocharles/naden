@@ -1,10 +1,8 @@
 import { useCallback, useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { ask, message } from "@tauri-apps/plugin-dialog";
 import { useUiStore } from "../store/uiStore";
 import { useVaultStore } from "../store/vaultStore";
-import { updaterCommands } from "../lib/tauriCommands";
-import { formatError } from "../lib/errors";
+import { promptForUpdate } from "../lib/checkForUpdates";
 
 export function useMenuEvents() {
   const openAdd = useUiStore((s) => s.openAdd);
@@ -18,29 +16,7 @@ export function useMenuEvents() {
   const openImportSshConfig = useUiStore((s) => s.openImportSshConfig);
   const lockVault = useVaultStore((s) => s.lock);
 
-  const checkForUpdates = useCallback(async () => {
-    try {
-      const update = await updaterCommands.checkForUpdate();
-      if (!update) {
-        await message("You're on the latest version.", { title: "SSHelter", kind: "info" });
-        return;
-      }
-      const shouldInstall = await ask(
-        `Version ${update.version} is available. Download and install now?`,
-        { title: "Update Available", kind: "info" },
-      );
-      if (!shouldInstall) return;
-
-      await update.download();
-      const shouldRestart = await ask(
-        "Update installed. Restart SSHelter now to apply it?",
-        { title: "Update Ready", kind: "info" },
-      );
-      if (shouldRestart) await updaterCommands.relaunch();
-    } catch (e) {
-      await message(formatError(e), { title: "Update Check Failed", kind: "error" });
-    }
-  }, []);
+  const checkForUpdates = useCallback(() => promptForUpdate(), []);
 
   useEffect(() => {
     const unlisteners = [

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import serverIcon from "../../assets/server.png";
 import { useVaultStore } from "../../store/vaultStore";
 import { formatError } from "../../lib/errors";
@@ -12,6 +13,11 @@ export default function VaultLockScreen() {
   const [loading, setLoading] = useState(false);
   const [recovering, setRecovering] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [appVersion, setAppVersion] = useState("");
+
+  useEffect(() => {
+    getVersion().then(setAppVersion).catch(() => {});
+  }, []);
 
   const vaultNotSetUp = error?.toLowerCase().includes("vault not set up") ?? false;
 
@@ -90,6 +96,10 @@ export default function VaultLockScreen() {
             {loading ? "Unlocking…" : "Unlock"}
           </button>
         </form>
+
+        {appVersion && (
+          <p className="mt-4 text-center text-meta text-muted">Version: {appVersion}</p>
+        )}
 
         {vaultNotSetUp && (
           <div className="mt-6 p-4 bg-surface-1 border border-stroke rounded-lg text-center">

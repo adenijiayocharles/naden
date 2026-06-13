@@ -5,6 +5,11 @@ import { useUiStore } from "../store/uiStore";
 import { useTunnelStore } from "../store/tunnelStore";
 import { useTerminalSettings } from "../lib/terminalSettings";
 import { settingsCommands } from "../lib/tauriCommands";
+import { promptForUpdate } from "../lib/checkForUpdates";
+
+// Delay the startup update check so it doesn't compete with initial data
+// loading, and to give the network a moment to come up after launch.
+const UPDATE_CHECK_DELAY_MS = 3000;
 
 const ACCENTS: Record<string, [string, string, string]> = {
   lime:   ["#CDFF00", "#d8ff33", "#a8cc00"],
@@ -59,5 +64,11 @@ export function useAppInit() {
       .catch(() => {
         setOnboardingChecked();
       });
+
+    const updateCheckTimer = setTimeout(() => {
+      void promptForUpdate({ silent: true });
+    }, UPDATE_CHECK_DELAY_MS);
+
+    return () => clearTimeout(updateCheckTimer);
   }, [fetchAll, check, loadTerminalSettings, loadTunnels, setOnboardingComplete, setOnboardingChecked]);
 }
