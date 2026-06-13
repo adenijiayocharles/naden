@@ -330,12 +330,24 @@ pub async fn vault_change_password(
     }
 }
 
-/// Deletes a credential from the DB. Vault must be unlocked.
+/// Decrypts and returns a server's stored credential. Vault must be unlocked.
+///
+/// Requires `server_id` and verifies the server actually owns
+/// `vault_credential_id` before decrypting — without this check, any webview
+/// JS could decrypt an arbitrary credential by guessing/observing its id.
 #[tauri::command]
 pub async fn retrieve_credential(
+    server_id: String,
     vault_credential_id: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<String, AppError> {
+    let server = crate::db::queries::get_server_db(&state.db, &server_id).await?;
+    if server.server.vault_credential_id.as_deref() != Some(vault_credential_id.as_str()) {
+        return Err(AppError::Validation(
+            "vault_credential_id does not belong to server_id".into(),
+        ));
+    }
+
     let key: [u8; 32] = {
         let guard = state.vault_key.lock().await;
         match guard.as_ref() {

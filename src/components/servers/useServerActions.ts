@@ -78,7 +78,7 @@ export function useServerActions(server: Server) {
     setMenuOpen(false);
     if (!server.vaultCredentialId) return;
     try {
-      const password = await vaultCommands.retrieveCredential(server.vaultCredentialId);
+      const password = await vaultCommands.retrieveCredential(server.id, server.vaultCredentialId);
       copyWithAutoClear(password);
     } catch (e) {
       setError(formatError(e));

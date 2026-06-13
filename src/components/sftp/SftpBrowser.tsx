@@ -699,7 +699,7 @@ export default function SftpBrowser({ sessionId }: Props) {
           onRemoveKnownHost={() => {
             const server = allServers.find((sv) => sv.id === session.serverId);
             if (!server) return;
-            void terminalCommands.removeKnownHostEntry(server.hostname, server.port)
+            void terminalCommands.removeKnownHostEntry(server.id)
               .then(() => reconnectSession(sessionId));
           }}
         />

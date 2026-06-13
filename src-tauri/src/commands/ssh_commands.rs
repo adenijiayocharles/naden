@@ -483,7 +483,15 @@ pub async fn resize_terminal(
 
 /// Remove a server's entry from ~/.ssh/known_hosts, e.g. to recover from a
 /// host-key mismatch after the server was reinstalled and its key changed.
+///
+/// Takes a `server_id` rather than a raw host/port — the hostname and port
+/// are looked up from the app's own server record so a compromised webview
+/// can't strip known_hosts entries for arbitrary hosts (e.g. github.com).
 #[tauri::command]
-pub async fn remove_known_host_entry(host: String, port: u16) -> Result<usize, AppError> {
-    crate::ssh::connection::remove_known_host(&host, port)
+pub async fn remove_known_host_entry(
+    server_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<usize, AppError> {
+    let server = queries::get_server_db(&state.db, &server_id).await?;
+    crate::ssh::connection::remove_known_host(&server.server.hostname, server.server.port as u16)
 }

@@ -104,8 +104,8 @@ export const terminalCommands = {
   resizeTerminal: (sessionId: string, cols: number, rows: number) =>
     invoke<void>("resize_terminal", { sessionId, cols, rows }),
 
-  removeKnownHostEntry: (host: string, port: number) =>
-    invoke<number>("remove_known_host_entry", { host, port }),
+  removeKnownHostEntry: (serverId: string) =>
+    invoke<number>("remove_known_host_entry", { serverId }),
 };
 
 export const settingsCommands = {
@@ -123,8 +123,8 @@ export const vaultCommands = {
   storeCredential: (secret: string) =>
     invoke<string>("store_credential", { secret }),
 
-  retrieveCredential: (vaultCredentialId: string) =>
-    invoke<string>("retrieve_credential", { vaultCredentialId }),
+  retrieveCredential: (serverId: string, vaultCredentialId: string) =>
+    invoke<string>("retrieve_credential", { serverId, vaultCredentialId }),
 
   deleteCredential: (vaultCredentialId: string) =>
     invoke<void>("delete_credential", { vaultCredentialId }),

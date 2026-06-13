@@ -183,6 +183,20 @@ export default function TerminalPane({ sessionId }: Props) {
       fitAddon.fit();
       term.focus();
 
+      // Cached cell metrics for the suggestion ghost — recomputed on resize
+      // rather than on every cursor move, since clientWidth/clientHeight
+      // reads force a synchronous layout reflow.
+      let rowsEl: HTMLElement | null = null;
+      let cellWidth = 0;
+      let cellHeight = 0;
+      const updateCellMetrics = () => {
+        rowsEl = rowsEl ?? term.element?.querySelector<HTMLElement>(".xterm-rows") ?? null;
+        if (!rowsEl || term.cols === 0 || term.rows === 0) return;
+        cellWidth = rowsEl.clientWidth / term.cols;
+        cellHeight = rowsEl.clientHeight / term.rows;
+      };
+      updateCellMetrics();
+
       // Two-frame post-open correction for WKWebView production builds:
       //
       // Frame 1 — force xterm to re-measure char sizes and re-inject CSS:
@@ -204,6 +218,7 @@ export default function TerminalPane({ sessionId }: Props) {
         requestAnimationFrame(() => {
           if (cancelled) return;
           fitAddon.fit();
+          updateCellMetrics();
         });
       });
 
@@ -340,10 +355,7 @@ export default function TerminalPane({ sessionId }: Props) {
           return;
         }
 
-        const rowsEl = term.element?.querySelector<HTMLElement>(".xterm-rows");
-        if (!rowsEl || term.cols === 0 || term.rows === 0) return;
-        const cellWidth = rowsEl.clientWidth / term.cols;
-        const cellHeight = rowsEl.clientHeight / term.rows;
+        if (cellWidth === 0 || cellHeight === 0) return;
         const { cursorX, cursorY } = term.buffer.active;
 
         suggestionGhost.textContent = suggestion.slice(line.length);
@@ -366,6 +378,7 @@ export default function TerminalPane({ sessionId }: Props) {
         if (resizeTimer.current) clearTimeout(resizeTimer.current);
         resizeTimer.current = setTimeout(() => {
           fitAddon.fit();
+          updateCellMetrics();
           const dims = fitAddon.proposeDimensions();
           if (dims) terminalCommands.resizeTerminal(sessionId, dims.cols, dims.rows).catch(() => {});
         }, 100);
@@ -496,7 +509,8 @@ export default function TerminalPane({ sessionId }: Props) {
   }, [snippetPickerOpen, snippets.length, fetchSnippets]);
 
   const runSnippet = useCallback((body: string) => {
-    terminalCommands.sendTerminalInput(sessionId, body + "\n").catch(() => {});
+    terminalCommands.sendTerminalInput(sessionId, body + "\n")
+      .catch((e) => console.error("[terminal] sendTerminalInput failed:", e));
     closeTool();
     setSnippetQuery("");
   }, [sessionId, closeTool]);
@@ -566,7 +580,8 @@ export default function TerminalPane({ sessionId }: Props) {
           connectionStatus={session?.status ?? "connecting"}
           connectionError={session?.errorMessage}
           getRecentOutput={getRecentTerminalText}
-          onRunCommand={(cmd) => terminalCommands.sendTerminalInput(sessionId, cmd + "\n").catch(() => {})}
+          onRunCommand={(cmd) => terminalCommands.sendTerminalInput(sessionId, cmd + "\n")
+            .catch((e) => console.error("[terminal] sendTerminalInput failed:", e))}
         />
       )}
 
@@ -715,7 +730,7 @@ export default function TerminalPane({ sessionId }: Props) {
           onRemoveKnownHost={() => {
             const server = useServerStore.getState().servers.find((sv) => sv.id === session?.serverId);
             if (!server) return;
-            void terminalCommands.removeKnownHostEntry(server.hostname, server.port)
+            void terminalCommands.removeKnownHostEntry(server.id)
               .then(() => reconnectSession(sessionId));
           }}
         />
