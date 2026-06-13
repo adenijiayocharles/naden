@@ -132,6 +132,12 @@ export default function AppShell() {
   const fetchPlaybooks = usePlaybookStore((s) => s.fetchAll);
 
   const [activePanelType, setActivePanelType] = useState<PanelType>("terminal");
+
+  const activeTerminalSession = terminalSessions.find((t) => t.id === terminalActiveId);
+  const linkedSftpSession = activeTerminalSession
+    ? sftpSessions.find((x) => x.serverId === activeTerminalSession.serverId)
+    : undefined;
+  const isSftpActive = activePanelType === "sftp" && linkedSftpSession?.id === sftpActiveId;
   const [showNewTabPicker, setShowNewTabPicker] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
   const [pickerError, setPickerError] = useState<string | null>(null);
@@ -536,9 +542,11 @@ export default function AppShell() {
                     }}
                     title="New terminal session"
                     aria-label="New terminal session"
-                    className="w-7 h-7 flex items-center justify-center rounded text-faint hover:text-white hover:bg-surface-3 transition-colors text-lg leading-none"
+                    className="w-7 h-7 flex items-center justify-center rounded text-faint hover:text-white hover:bg-surface-3 transition-colors"
                   >
-                    +
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M8 3v10M3 8h10" />
+                    </svg>
                   </button>
                   {showNewTabPicker && (
                     <div
@@ -655,22 +663,24 @@ export default function AppShell() {
                   <div className="px-1.5 shrink-0 border-l border-stroke-subtle">
                     <button
                       onClick={() => {
-                        const s = terminalSessions.find((t) => t.id === terminalActiveId);
-                        if (!s) return;
-                        const existing = sftpSessions.find((x) => x.serverId === s.serverId);
-                        if (existing) {
-                          sftpSetActive(existing.id);
+                        if (!activeTerminalSession) return;
+                        if (linkedSftpSession) {
+                          sftpSetActive(linkedSftpSession.id);
                           setActivePanelType("sftp");
                         } else {
-                          void sftpOpenSession(s.serverId, s.serverName);
+                          void sftpOpenSession(activeTerminalSession.serverId, activeTerminalSession.serverName);
                         }
                       }}
                       title="Open SFTP browser"
                       aria-label="Open SFTP browser for this session"
-                      className="w-7 h-7 flex items-center justify-center rounded text-faint hover:text-accent hover:bg-surface-3 transition-colors"
+                      className={`w-7 h-7 flex items-center justify-center rounded transition-colors ${
+                        isSftpActive
+                          ? "bg-accent/20 text-accent-fg"
+                          : "text-faint hover:text-white hover:bg-surface-3"
+                      }`}
                     >
-                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 4.5a1 1 0 0 1 1-1h2.5l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z" />
                       </svg>
                     </button>
                   </div>
