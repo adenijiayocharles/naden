@@ -21,6 +21,14 @@ export function fontCss(id: TerminalFontId): string {
   return TERMINAL_FONTS.find((f) => f.id === id)?.css ?? "'JetBrains Mono Variable', monospace";
 }
 
+/**
+ * xterm's lineHeight option is a multiplier of fontSize, but the setting is
+ * stored and shown to users in pixels — convert at the point of use.
+ */
+export function lineHeightMultiplier(lineHeightPx: number, fontSize: number): number {
+  return lineHeightPx / fontSize;
+}
+
 // ── Colour themes ─────────────────────────────────────────────────────────────
 
 export const TERMINAL_THEMES = [
@@ -160,12 +168,14 @@ export function resolveTermTheme(id: TerminalThemeId): ITheme {
 
 interface TerminalSettingsStore {
   fontSize: number;
+  lineHeight: number;
   scrollback: number;
   copyOnSelect: boolean;
   fontFamily: TerminalFontId;
   termTheme: TerminalThemeId;
   load: () => Promise<void>;
   setFontSize: (n: number) => void;
+  setLineHeight: (n: number) => void;
   setScrollback: (n: number) => void;
   setCopyOnSelect: (v: boolean) => void;
   setFontFamily: (id: TerminalFontId) => void;
@@ -174,14 +184,16 @@ interface TerminalSettingsStore {
 
 export const useTerminalSettings = create<TerminalSettingsStore>((set) => ({
   fontSize: 14,
+  lineHeight: 14,
   scrollback: 1000,
   copyOnSelect: true,
   fontFamily: "jetbrains-mono",
   termTheme: "system",
 
   load: async () => {
-    const [fs, sb, cos, ff, tt] = await Promise.all([
+    const [fs, lh, sb, cos, ff, tt] = await Promise.all([
       settingsCommands.getSetting("terminal_font_size"),
+      settingsCommands.getSetting("terminal_line_height"),
       settingsCommands.getSetting("terminal_scrollback"),
       settingsCommands.getSetting("terminal_copy_on_select"),
       settingsCommands.getSetting("terminal_font_family"),
@@ -189,6 +201,7 @@ export const useTerminalSettings = create<TerminalSettingsStore>((set) => ({
     ]);
     set({
       fontSize: fs ? Number(fs) : 14,
+      lineHeight: lh ? Number(lh) : 14,
       scrollback: sb ? Number(sb) : 1000,
       copyOnSelect: cos !== null ? cos === "true" : true,
       fontFamily: (ff as TerminalFontId | null) ?? "jetbrains-mono",
@@ -199,6 +212,11 @@ export const useTerminalSettings = create<TerminalSettingsStore>((set) => ({
   setFontSize: (n) => {
     set({ fontSize: n });
     void settingsCommands.setSetting("terminal_font_size", String(n));
+  },
+
+  setLineHeight: (n) => {
+    set({ lineHeight: n });
+    void settingsCommands.setSetting("terminal_line_height", String(n));
   },
 
   setScrollback: (n) => {

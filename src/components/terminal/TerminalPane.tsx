@@ -8,7 +8,7 @@ import { shadowInputBuffer } from "../../lib/shadowInputBuffer";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useCommandHistoryStore } from "../../store/commandHistoryStore";
 import { useBroadcastStore } from "../../store/broadcastStore";
-import { useTerminalSettings, fontCss, resolveTermTheme } from "../../lib/terminalSettings";
+import { useTerminalSettings, fontCss, resolveTermTheme, lineHeightMultiplier } from "../../lib/terminalSettings";
 import { ensureCanvasFonts, ensureFont } from "../../lib/canvasFonts";
 import { ConnectingOverlay, ErrorOverlay, ReconnectingOverlay } from "../shared/ConnectionOverlay";
 import { useSnippetStore } from "../../store/snippetStore";
@@ -144,7 +144,7 @@ export default function TerminalPane({ sessionId }: Props) {
 
       // Read settings after the await — load() may have finished during the wait,
       // giving us the user's saved font rather than the store default.
-      const { fontSize, scrollback, copyOnSelect, fontFamily, termTheme } =
+      const { fontSize, lineHeight, scrollback, copyOnSelect, fontFamily, termTheme } =
         useTerminalSettings.getState();
       const css = fontCss(fontFamily);
 
@@ -162,6 +162,7 @@ export default function TerminalPane({ sessionId }: Props) {
         cursorBlink: true,
         fontFamily: css,
         fontSize,
+        lineHeight: lineHeightMultiplier(lineHeight, fontSize),
         scrollback,
         theme: resolveTermTheme(termTheme),
       });
@@ -438,8 +439,9 @@ export default function TerminalPane({ sessionId }: Props) {
     };
   }, [sessionId]); // settings read via getState() intentionally — avoids recreating live sessions
 
-  // Live-reload font size, family, and colour theme into open tabs whenever any setting changes.
+  // Live-reload font size, line height, family, and colour theme into open tabs whenever any setting changes.
   const fontSize = useTerminalSettings((s) => s.fontSize);
+  const lineHeight = useTerminalSettings((s) => s.lineHeight);
   const fontFamily = useTerminalSettings((s) => s.fontFamily);
   const termTheme = useTerminalSettings((s) => s.termTheme);
   useEffect(() => {
@@ -452,6 +454,7 @@ export default function TerminalPane({ sessionId }: Props) {
     void ensureFont(fontFamily).then(() => {
       if (!termRef.current || !fitAddonRef.current) return;
       term.options.fontSize = fontSize;
+      term.options.lineHeight = lineHeightMultiplier(lineHeight, fontSize);
       term.options.fontFamily = css;
       const resolvedTheme = resolveTermTheme(termTheme);
       term.options.theme = resolvedTheme;
@@ -461,7 +464,7 @@ export default function TerminalPane({ sessionId }: Props) {
         term.refresh(0, term.rows - 1);
       });
     });
-  }, [fontSize, fontFamily, termTheme]);
+  }, [fontSize, lineHeight, fontFamily, termTheme]);
 
   // Reads clean text (no escape sequences) from xterm's parsed buffer rather
   // than the raw byte scrollback in sessionBuffer — the buffer already holds
