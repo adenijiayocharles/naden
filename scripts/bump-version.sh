@@ -39,7 +39,7 @@ node -e "
   fs.writeFileSync(path, JSON.stringify(conf, null, 2) + '\n');
 "
 
-sed -i '' "0,/^version = /s/^version = \".*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
+sed -i '' "1,/^version = /s/^version = \".*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
 
 sed -i '' "/^name = \"sshelter\"\$/{n;s/^version = \".*\"/version = \"$VERSION\"/;}" src-tauri/Cargo.lock
 
