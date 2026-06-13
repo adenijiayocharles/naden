@@ -7,9 +7,12 @@ const ALLOWED_SETTINGS: &[&str] = &[
     "accent",
     "onboarding_complete",
     "terminal_font_size",
+    "terminal_line_height",
     "terminal_scrollback",
     "terminal_copy_on_select",
     "terminal_font_family",
+    "terminal_theme",
+    "terminal_cursor_style",
 ];
 
 #[tauri::command]

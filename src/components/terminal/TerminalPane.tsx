@@ -145,7 +145,7 @@ export default function TerminalPane({ sessionId }: Props) {
 
       // Read settings after the await — load() may have finished during the wait,
       // giving us the user's saved font rather than the store default.
-      const { fontSize, lineHeight, scrollback, copyOnSelect, fontFamily, termTheme } =
+      const { fontSize, lineHeight, scrollback, copyOnSelect, fontFamily, termTheme, cursorStyle } =
         useTerminalSettings.getState();
       const css = fontCss(fontFamily);
 
@@ -161,6 +161,7 @@ export default function TerminalPane({ sessionId }: Props) {
 
       const term = new Terminal({
         cursorBlink: true,
+        cursorStyle,
         fontFamily: css,
         fontSize,
         lineHeight: lineHeightMultiplier(lineHeight, fontSize),
@@ -458,6 +459,7 @@ export default function TerminalPane({ sessionId }: Props) {
   const lineHeight = useTerminalSettings((s) => s.lineHeight);
   const fontFamily = useTerminalSettings((s) => s.fontFamily);
   const termTheme = useTerminalSettings((s) => s.termTheme);
+  const cursorStyle = useTerminalSettings((s) => s.cursorStyle);
   useEffect(() => {
     const term = termRef.current;
     const fitAddon = fitAddonRef.current;
@@ -470,6 +472,7 @@ export default function TerminalPane({ sessionId }: Props) {
       term.options.fontSize = fontSize;
       term.options.lineHeight = lineHeightMultiplier(lineHeight, fontSize);
       term.options.fontFamily = css;
+      term.options.cursorStyle = cursorStyle;
       const resolvedTheme = resolveTermTheme(termTheme);
       term.options.theme = resolvedTheme;
       if (term.element) term.element.style.backgroundColor = resolvedTheme.background ?? "";
@@ -478,7 +481,7 @@ export default function TerminalPane({ sessionId }: Props) {
         term.refresh(0, term.rows - 1);
       });
     });
-  }, [fontSize, lineHeight, fontFamily, termTheme]);
+  }, [fontSize, lineHeight, fontFamily, termTheme, cursorStyle]);
 
   // Reads clean text (no escape sequences) from xterm's parsed buffer rather
   // than the raw byte scrollback in sessionBuffer — the buffer already holds

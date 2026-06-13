@@ -5,7 +5,7 @@ import Button from "../shared/Button";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import { useVaultStore } from "../../store/vaultStore";
 import { useUiStore, type SettingsSection } from "../../store/uiStore";
-import { useTerminalSettings, TERMINAL_FONTS, TERMINAL_THEMES, fontCss } from "../../lib/terminalSettings";
+import { useTerminalSettings, TERMINAL_FONTS, TERMINAL_THEMES, CURSOR_STYLES, fontCss } from "../../lib/terminalSettings";
 import { settingsCommands, assistantCommands, updaterCommands, type AssistantStatus, type UpdateInfo } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import { passwordStrength } from "../../lib/passwordStrength";
@@ -127,7 +127,7 @@ export default function SettingsPage() {
     changePassword,
   } = useVaultStore();
   const setVaultTimeoutMins = useUiStore((s) => s.setVaultTimeoutMins);
-  const { fontSize, lineHeight, scrollback, copyOnSelect, fontFamily, termTheme, setFontSize, setLineHeight, setScrollback, setCopyOnSelect, setFontFamily, setTermTheme } =
+  const { fontSize, lineHeight, scrollback, copyOnSelect, fontFamily, termTheme, cursorStyle, setFontSize, setLineHeight, setScrollback, setCopyOnSelect, setFontFamily, setTermTheme, setCursorStyle } =
     useTerminalSettings();
 
   const [activeForm, setActiveForm] = useState<ActiveForm>("none");
@@ -662,6 +662,19 @@ export default function SettingsPage() {
                 >
                   {Array.from({ length: 30 }, (_, i) => i + 1).map((n) => (
                     <option key={n} value={n}>{n}px</option>
+                  ))}
+                </select>
+              </Row>
+
+              <Row>
+                <RowLabel title="Cursor style" />
+                <select
+                  value={cursorStyle}
+                  onChange={(e) => { setCursorStyle(e.target.value as typeof cursorStyle); flashSaved(); }}
+                  className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+                >
+                  {CURSOR_STYLES.map(({ id, label }) => (
+                    <option key={id} value={id}>{label}</option>
                   ))}
                 </select>
               </Row>

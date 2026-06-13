@@ -166,6 +166,14 @@ export function resolveTermTheme(id: TerminalThemeId): ITheme {
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 
+export const CURSOR_STYLES = [
+  { id: "block",     label: "Block" },
+  { id: "underline", label: "Underline" },
+  { id: "bar",       label: "Bar" },
+] as const;
+
+export type CursorStyleId = typeof CURSOR_STYLES[number]["id"];
+
 interface TerminalSettingsStore {
   fontSize: number;
   lineHeight: number;
@@ -173,6 +181,7 @@ interface TerminalSettingsStore {
   copyOnSelect: boolean;
   fontFamily: TerminalFontId;
   termTheme: TerminalThemeId;
+  cursorStyle: CursorStyleId;
   load: () => Promise<void>;
   setFontSize: (n: number) => void;
   setLineHeight: (n: number) => void;
@@ -180,6 +189,7 @@ interface TerminalSettingsStore {
   setCopyOnSelect: (v: boolean) => void;
   setFontFamily: (id: TerminalFontId) => void;
   setTermTheme: (id: TerminalThemeId) => void;
+  setCursorStyle: (id: CursorStyleId) => void;
 }
 
 export const useTerminalSettings = create<TerminalSettingsStore>((set) => ({
@@ -189,15 +199,17 @@ export const useTerminalSettings = create<TerminalSettingsStore>((set) => ({
   copyOnSelect: true,
   fontFamily: "jetbrains-mono",
   termTheme: "system",
+  cursorStyle: "block",
 
   load: async () => {
-    const [fs, lh, sb, cos, ff, tt] = await Promise.all([
+    const [fs, lh, sb, cos, ff, tt, cs] = await Promise.all([
       settingsCommands.getSetting("terminal_font_size"),
       settingsCommands.getSetting("terminal_line_height"),
       settingsCommands.getSetting("terminal_scrollback"),
       settingsCommands.getSetting("terminal_copy_on_select"),
       settingsCommands.getSetting("terminal_font_family"),
       settingsCommands.getSetting("terminal_theme"),
+      settingsCommands.getSetting("terminal_cursor_style"),
     ]);
     set({
       fontSize: fs ? Number(fs) : 14,
@@ -206,6 +218,7 @@ export const useTerminalSettings = create<TerminalSettingsStore>((set) => ({
       copyOnSelect: cos !== null ? cos === "true" : true,
       fontFamily: (ff as TerminalFontId | null) ?? "jetbrains-mono",
       termTheme: (tt as TerminalThemeId | null) ?? "system",
+      cursorStyle: (cs as CursorStyleId | null) ?? "block",
     });
   },
 
@@ -237,5 +250,10 @@ export const useTerminalSettings = create<TerminalSettingsStore>((set) => ({
   setTermTheme: (id) => {
     set({ termTheme: id });
     void settingsCommands.setSetting("terminal_theme", id);
+  },
+
+  setCursorStyle: (id) => {
+    set({ cursorStyle: id });
+    void settingsCommands.setSetting("terminal_cursor_style", id);
   },
 }));
