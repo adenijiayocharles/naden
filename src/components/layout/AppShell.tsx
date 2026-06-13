@@ -532,7 +532,7 @@ export default function AppShell() {
                 </div>
 
                 {/* New terminal session */}
-                <div className="px-1.5 shrink-0 relative border-l border-stroke-subtle">
+                <div className="px-1.5 shrink-0 relative">
                   <button
                     ref={newTabButtonRef}
                     onClick={() => {
