@@ -588,7 +588,7 @@ export default function Sidebar() {
         />
 
         {/* Groups */}
-        <div className="pt-3">
+        <div className="mt-6">
           <div className="flex items-center justify-between px-3 pb-2">
             <span className="text-xs font-semibold text-faint uppercase tracking-wider">Groups</span>
             <button
@@ -617,7 +617,7 @@ export default function Sidebar() {
 
         {/* Tags */}
         {tags.length > 0 && (
-          <div className="pt-3">
+          <div className="mt-6">
             <button
               onClick={() => setTagsCollapsed((v) => !v)}
               className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-1 w-full text-left px-3 select-none text-faint hover:text-muted transition-colors"
