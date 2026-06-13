@@ -4,6 +4,7 @@ import Input from "../shared/Input";
 import { useVaultStore } from "../../store/vaultStore";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useBroadcastStore } from "../../store/broadcastStore";
+import { useTerminalToolsStore } from "../../store/terminalToolsStore";
 import { useSftpStore } from "../../store/sftpStore";
 import { useServerStore } from "../../store/serverStore";
 import { useAppInit } from "../../hooks/useAppInit";
@@ -110,6 +111,9 @@ export default function AppShell() {
   const terminalReorder = useTerminalStore((s) => s.reorderSessions);
 
   const activeBroadcastGroupId = useBroadcastStore((s) => s.activeGroupId);
+
+  const openTerminalTool = useTerminalToolsStore((s) => s.openTool);
+  const toggleTerminalTool = useTerminalToolsStore((s) => s.toggleTool);
 
   const allSftpSessions = useSftpStore((s) => s.sessions);
   const sftpSessions = useMemo(
@@ -591,6 +595,60 @@ export default function AppShell() {
                     </div>
                   )}
                 </div>
+
+                {/* AI assistant, playbook, and snippet picker triggers for the active terminal session */}
+                {activePanelType === "terminal" && terminalActiveId && (
+                  <div className="px-1.5 shrink-0 border-l border-stroke-subtle flex items-center gap-0.5">
+                    <button
+                      data-terminal-tool-trigger
+                      onClick={() => toggleTerminalTool("assistant")}
+                      title="AI assistant"
+                      aria-label="Open AI assistant"
+                      className={`w-7 h-7 flex items-center justify-center rounded transition-colors ${
+                        openTerminalTool === "assistant"
+                          ? "bg-accent/20 text-accent-fg"
+                          : "text-faint hover:text-white hover:bg-surface-3"
+                      }`}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 3h10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H7l-3 3v-3H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+                      </svg>
+                    </button>
+                    <button
+                      data-terminal-tool-trigger
+                      onClick={() => toggleTerminalTool("playbooks")}
+                      title="Run a playbook"
+                      aria-label="Open playbook picker"
+                      className={`w-7 h-7 flex items-center justify-center rounded transition-colors ${
+                        openTerminalTool === "playbooks"
+                          ? "bg-accent/20 text-accent-fg"
+                          : "text-faint hover:text-white hover:bg-surface-3"
+                      }`}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="6,4 12,8 6,12" />
+                      </svg>
+                    </button>
+                    <button
+                      data-terminal-tool-trigger
+                      onClick={() => toggleTerminalTool("snippets")}
+                      title="Run a snippet"
+                      aria-label="Open snippet picker"
+                      className={`w-7 h-7 flex items-center justify-center rounded transition-colors ${
+                        openTerminalTool === "snippets"
+                          ? "bg-accent/20 text-accent-fg"
+                          : "text-faint hover:text-white hover:bg-surface-3"
+                      }`}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="2" width="12" height="12" rx="2" />
+                        <line x1="5" y1="5.5" x2="11" y2="5.5" />
+                        <line x1="5" y1="8" x2="11" y2="8" />
+                        <line x1="5" y1="10.5" x2="8" y2="10.5" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
 
                 {/* Open SFTP browser for the active terminal session */}
                 {activePanelType === "terminal" && terminalActiveId && (

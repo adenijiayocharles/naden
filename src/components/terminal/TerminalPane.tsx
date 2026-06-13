@@ -8,6 +8,7 @@ import { shadowInputBuffer } from "../../lib/shadowInputBuffer";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useCommandHistoryStore } from "../../store/commandHistoryStore";
 import { useBroadcastStore } from "../../store/broadcastStore";
+import { useTerminalToolsStore } from "../../store/terminalToolsStore";
 import { useTerminalSettings, fontCss, resolveTermTheme, lineHeightMultiplier } from "../../lib/terminalSettings";
 import { ensureCanvasFonts, ensureFont } from "../../lib/canvasFonts";
 import { ConnectingOverlay, ErrorOverlay, ReconnectingOverlay } from "../shared/ConnectionOverlay";
@@ -51,17 +52,17 @@ export default function TerminalPane({ sessionId }: Props) {
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<{ index: number | undefined; count: number } | null>(null);
-  const [snippetPickerOpen, setSnippetPickerOpen] = useState(false);
   const [snippetQuery, setSnippetQuery] = useState("");
   const snippetPickerRef = useRef<HTMLDivElement>(null);
-  const snippetButtonRef = useRef<HTMLButtonElement>(null);
 
-  const [playbookPickerOpen, setPlaybookPickerOpen] = useState(false);
   const [playbookQuery, setPlaybookQuery] = useState("");
   const playbookPickerRef = useRef<HTMLDivElement>(null);
-  const playbookButtonRef = useRef<HTMLButtonElement>(null);
 
-  const [assistantPanelOpen, setAssistantPanelOpen] = useState(false);
+  const openTool = useTerminalToolsStore((s) => s.openTool);
+  const closeTool = useTerminalToolsStore((s) => s.closeTool);
+  const assistantPanelOpen = openTool === "assistant";
+  const playbookPickerOpen = openTool === "playbooks";
+  const snippetPickerOpen = openTool === "snippets";
 
   const snippets = useSnippetStore((s) => s.snippets);
   const fetchSnippets = useSnippetStore((s) => s.fetchAll);
@@ -490,37 +491,28 @@ export default function TerminalPane({ sessionId }: Props) {
     );
   }, [snippets, snippetQuery]);
 
-  const openSnippetPicker = useCallback(() => {
-    if (snippetPickerOpen) {
-      setSnippetPickerOpen(false);
-      setSnippetQuery("");
-      return;
-    }
-    if (snippets.length === 0) void fetchSnippets();
-    setSnippetPickerOpen(true);
-    setSnippetQuery("");
+  useEffect(() => {
+    if (snippetPickerOpen && snippets.length === 0) void fetchSnippets();
   }, [snippetPickerOpen, snippets.length, fetchSnippets]);
 
   const runSnippet = useCallback((body: string) => {
     terminalCommands.sendTerminalInput(sessionId, body + "\n").catch(() => {});
-    setSnippetPickerOpen(false);
+    closeTool();
     setSnippetQuery("");
-  }, [sessionId]);
+  }, [sessionId, closeTool]);
 
   useEffect(() => {
     if (!snippetPickerOpen) return;
     const handler = (e: MouseEvent) => {
-      if (
-        !snippetPickerRef.current?.contains(e.target as Node) &&
-        !snippetButtonRef.current?.contains(e.target as Node)
-      ) {
-        setSnippetPickerOpen(false);
+      const target = e.target as HTMLElement;
+      if (!snippetPickerRef.current?.contains(target) && !target.closest("[data-terminal-tool-trigger]")) {
+        closeTool();
         setSnippetQuery("");
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [snippetPickerOpen]);
+  }, [snippetPickerOpen, closeTool]);
 
   const filteredPlaybooks = useMemo(() => {
     if (!playbookQuery.trim()) return playbooks;
@@ -530,15 +522,8 @@ export default function TerminalPane({ sessionId }: Props) {
     );
   }, [playbooks, playbookQuery]);
 
-  const openPlaybookPicker = useCallback(() => {
-    if (playbookPickerOpen) {
-      setPlaybookPickerOpen(false);
-      setPlaybookQuery("");
-      return;
-    }
-    if (playbooks.length === 0) void fetchPlaybooks();
-    setPlaybookPickerOpen(true);
-    setPlaybookQuery("");
+  useEffect(() => {
+    if (playbookPickerOpen && playbooks.length === 0) void fetchPlaybooks();
   }, [playbookPickerOpen, playbooks.length, fetchPlaybooks]);
 
   const startPlaybook = useCallback((playbook: Playbook) => {
@@ -550,24 +535,22 @@ export default function TerminalPane({ sessionId }: Props) {
       (raw) => resolvePlaybookStep(raw, server),
       (resolved) => terminalCommands.sendTerminalInput(sessionId, resolved + "\n"),
     );
-    setPlaybookPickerOpen(false);
+    closeTool();
     setPlaybookQuery("");
-  }, [session?.serverId, sessionId, startPlaybookRun]);
+  }, [session?.serverId, sessionId, startPlaybookRun, closeTool]);
 
   useEffect(() => {
     if (!playbookPickerOpen) return;
     const handler = (e: MouseEvent) => {
-      if (
-        !playbookPickerRef.current?.contains(e.target as Node) &&
-        !playbookButtonRef.current?.contains(e.target as Node)
-      ) {
-        setPlaybookPickerOpen(false);
+      const target = e.target as HTMLElement;
+      if (!playbookPickerRef.current?.contains(target) && !target.closest("[data-terminal-tool-trigger]")) {
+        closeTool();
         setPlaybookQuery("");
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [playbookPickerOpen]);
+  }, [playbookPickerOpen, closeTool]);
 
   return (
     <div className="relative h-full w-full bg-surface-1 flex flex-col">
@@ -575,26 +558,9 @@ export default function TerminalPane({ sessionId }: Props) {
       <div className="relative flex-1 min-h-0">
       <div ref={containerRef} className="absolute inset-0 overflow-hidden" />
 
-      {/* AI assistant toggle — floats over terminal at bottom-right, above the playbook picker.
-          Hidden while the panel is open since it would sit underneath it; the panel has its own close button. */}
-      {!assistantPanelOpen && (
-        <div className="absolute bottom-[6.25rem] right-4 z-30">
-          <button
-            onClick={() => setAssistantPanelOpen(true)}
-            title="AI assistant"
-            aria-label="Open AI assistant"
-            className="w-7 h-7 flex items-center justify-center rounded transition-colors bg-surface-3/70 text-dim hover:text-muted hover:bg-surface-3"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 3h10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H7l-3 3v-3H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
-            </svg>
-          </button>
-        </div>
-      )}
-
       {assistantPanelOpen && (
         <AssistantPanel
-          onClose={() => setAssistantPanelOpen(false)}
+          onClose={closeTool}
           serverId={session?.serverId ?? ""}
           serverName={session?.serverName ?? ""}
           connectionStatus={session?.status ?? "connecting"}
@@ -604,127 +570,90 @@ export default function TerminalPane({ sessionId }: Props) {
         />
       )}
 
-      {/* Playbook picker — floats over terminal at bottom-right, above the snippet picker */}
-      <div className="absolute bottom-14 right-4 z-30 flex flex-col items-end gap-1">
-        {playbookPickerOpen && (
-          <div
-            ref={playbookPickerRef}
-            className="mb-1 w-64 bg-surface-2 border border-stroke rounded-lg shadow-overlay overflow-hidden flex flex-col"
-          >
-            <div className="p-2 border-b border-stroke-subtle shrink-0">
-              <input
-                autoFocus
-                type="text"
-                value={playbookQuery}
-                onChange={(e) => setPlaybookQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") { setPlaybookPickerOpen(false); setPlaybookQuery(""); }
-                  if (e.key === "Enter" && filteredPlaybooks.length === 1) startPlaybook(filteredPlaybooks[0]);
-                }}
-                placeholder="Search playbooks…"
-                className="w-full bg-surface-3 border border-stroke rounded px-2.5 py-1.5 text-sm text-white placeholder-faint outline-none focus:border-accent transition-colors"
-              />
-            </div>
-            <div className="overflow-y-auto h-[134px] p-2 flex flex-col gap-1.5">
-              {filteredPlaybooks.length > 0 ? (
-                filteredPlaybooks.map((pb) => (
-                  <button
-                    key={pb.id}
-                    onClick={() => startPlaybook(pb)}
-                    className="w-full text-left bg-surface-1 border border-stroke-subtle rounded-lg px-3 py-2.5 hover:border-stroke hover:bg-surface-2 transition-colors group"
-                  >
-                    <p className="text-sm font-medium text-white truncate">{pb.title}</p>
-                    <p className="text-meta text-dim font-mono truncate mt-1 group-hover:text-muted">
-                      {pb.steps.length} step{pb.steps.length === 1 ? "" : "s"}
-                      {pb.description ? ` — ${pb.description}` : ""}
-                    </p>
-                  </button>
-                ))
-              ) : (
-                <p className="py-4 text-center text-sm text-dim">
-                  {playbooks.length === 0 ? "No playbooks saved" : "No matches"}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-        <button
-          ref={playbookButtonRef}
-          onClick={openPlaybookPicker}
-          title="Run a playbook"
-          aria-label="Open playbook picker"
-          className={`w-7 h-7 flex items-center justify-center rounded transition-colors ${
-            playbookPickerOpen
-              ? "bg-accent/20 text-accent-fg"
-              : "bg-surface-3/70 text-dim hover:text-muted hover:bg-surface-3"
-          }`}
+      {/* Playbook picker — drops down from the playbook trigger in the tab bar */}
+      {playbookPickerOpen && (
+        <div
+          ref={playbookPickerRef}
+          className="absolute top-3 right-4 z-30 w-64 bg-surface-2 border border-stroke rounded-lg shadow-overlay overflow-hidden flex flex-col"
         >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="6,4 12,8 6,12" />
-          </svg>
-        </button>
-      </div>
+          <div className="p-2 border-b border-stroke-subtle shrink-0">
+            <input
+              autoFocus
+              type="text"
+              value={playbookQuery}
+              onChange={(e) => setPlaybookQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") { closeTool(); setPlaybookQuery(""); }
+                if (e.key === "Enter" && filteredPlaybooks.length === 1) startPlaybook(filteredPlaybooks[0]);
+              }}
+              placeholder="Search playbooks…"
+              className="w-full bg-surface-3 border border-stroke rounded px-2.5 py-1.5 text-sm text-white placeholder-faint outline-none focus:border-accent transition-colors"
+            />
+          </div>
+          <div className="overflow-y-auto h-[134px] p-2 flex flex-col gap-1.5">
+            {filteredPlaybooks.length > 0 ? (
+              filteredPlaybooks.map((pb) => (
+                <button
+                  key={pb.id}
+                  onClick={() => startPlaybook(pb)}
+                  className="w-full text-left bg-surface-1 border border-stroke-subtle rounded-lg px-3 py-2.5 hover:border-stroke hover:bg-surface-2 transition-colors group"
+                >
+                  <p className="text-sm font-medium text-white truncate">{pb.title}</p>
+                  <p className="text-meta text-dim font-mono truncate mt-1 group-hover:text-muted">
+                    {pb.steps.length} step{pb.steps.length === 1 ? "" : "s"}
+                    {pb.description ? ` — ${pb.description}` : ""}
+                  </p>
+                </button>
+              ))
+            ) : (
+              <p className="py-4 text-center text-sm text-dim">
+                {playbooks.length === 0 ? "No playbooks saved" : "No matches"}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
-      {/* Snippet picker — floats over terminal at bottom-right */}
-      <div className="absolute bottom-3 right-4 z-30 flex flex-col items-end gap-1">
-        {snippetPickerOpen && (
-          <div
-            ref={snippetPickerRef}
-            className="mb-1 w-64 bg-surface-2 border border-stroke rounded-lg shadow-overlay overflow-hidden flex flex-col"
-          >
-            <div className="p-2 border-b border-stroke-subtle shrink-0">
-              <input
-                autoFocus
-                type="text"
-                value={snippetQuery}
-                onChange={(e) => setSnippetQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") { setSnippetPickerOpen(false); setSnippetQuery(""); }
-                  if (e.key === "Enter" && filteredSnippets.length === 1) runSnippet(filteredSnippets[0].body);
-                }}
-                placeholder="Search snippets…"
-                className="w-full bg-surface-3 border border-stroke rounded px-2.5 py-1.5 text-sm text-white placeholder-faint outline-none focus:border-accent transition-colors"
-              />
-            </div>
-            <div className="overflow-y-auto h-[134px] p-2 flex flex-col gap-1.5">
-              {filteredSnippets.length > 0 ? (
-                filteredSnippets.map((sn) => (
-                  <button
-                    key={sn.id}
-                    onClick={() => runSnippet(sn.body)}
-                    className="w-full text-left bg-surface-1 border border-stroke-subtle rounded-lg px-3 py-2.5 hover:border-stroke hover:bg-surface-2 transition-colors group"
-                  >
-                    <p className="text-sm font-medium text-white truncate">{sn.title}</p>
-                    <p className="text-meta text-dim font-mono truncate mt-1 group-hover:text-muted">{sn.body}</p>
-                  </button>
-                ))
-              ) : (
-                <p className="py-4 text-center text-sm text-dim">
-                  {snippets.length === 0 ? "No snippets saved" : "No matches"}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-        <button
-          ref={snippetButtonRef}
-          onClick={openSnippetPicker}
-          title="Run a snippet"
-          aria-label="Open snippet picker"
-          className={`w-7 h-7 flex items-center justify-center rounded transition-colors ${
-            snippetPickerOpen
-              ? "bg-accent/20 text-accent-fg"
-              : "bg-surface-3/70 text-dim hover:text-muted hover:bg-surface-3"
-          }`}
+      {/* Snippet picker — drops down from the snippet trigger in the tab bar */}
+      {snippetPickerOpen && (
+        <div
+          ref={snippetPickerRef}
+          className="absolute top-3 right-4 z-30 w-64 bg-surface-2 border border-stroke rounded-lg shadow-overlay overflow-hidden flex flex-col"
         >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="2" width="12" height="12" rx="2" />
-            <line x1="5" y1="5.5" x2="11" y2="5.5" />
-            <line x1="5" y1="8" x2="11" y2="8" />
-            <line x1="5" y1="10.5" x2="8" y2="10.5" />
-          </svg>
-        </button>
-      </div>
+          <div className="p-2 border-b border-stroke-subtle shrink-0">
+            <input
+              autoFocus
+              type="text"
+              value={snippetQuery}
+              onChange={(e) => setSnippetQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") { closeTool(); setSnippetQuery(""); }
+                if (e.key === "Enter" && filteredSnippets.length === 1) runSnippet(filteredSnippets[0].body);
+              }}
+              placeholder="Search snippets…"
+              className="w-full bg-surface-3 border border-stroke rounded px-2.5 py-1.5 text-sm text-white placeholder-faint outline-none focus:border-accent transition-colors"
+            />
+          </div>
+          <div className="overflow-y-auto h-[134px] p-2 flex flex-col gap-1.5">
+            {filteredSnippets.length > 0 ? (
+              filteredSnippets.map((sn) => (
+                <button
+                  key={sn.id}
+                  onClick={() => runSnippet(sn.body)}
+                  className="w-full text-left bg-surface-1 border border-stroke-subtle rounded-lg px-3 py-2.5 hover:border-stroke hover:bg-surface-2 transition-colors group"
+                >
+                  <p className="text-sm font-medium text-white truncate">{sn.title}</p>
+                  <p className="text-meta text-dim font-mono truncate mt-1 group-hover:text-muted">{sn.body}</p>
+                </button>
+              ))
+            ) : (
+              <p className="py-4 text-center text-sm text-dim">
+                {snippets.length === 0 ? "No snippets saved" : "No matches"}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Search bar — floats over terminal at top-right */}
       {searchVisible && (
