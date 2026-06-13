@@ -114,6 +114,7 @@ export default function AppShell() {
 
   const openTerminalTool = useTerminalToolsStore((s) => s.openTool);
   const toggleTerminalTool = useTerminalToolsStore((s) => s.toggleTool);
+  const closeTerminalTool = useTerminalToolsStore((s) => s.closeTool);
 
   const allSftpSessions = useSftpStore((s) => s.sessions);
   const sftpSessions = useMemo(
@@ -283,6 +284,10 @@ export default function AppShell() {
   useEffect(() => {
     requestAnimationFrame(updateTabFade);
   }, [terminalSessions.length, sftpSessions.length, updateTabFade]);
+
+  useEffect(() => {
+    closeTerminalTool();
+  }, [terminalActiveId, sftpActiveId, activePanelType, closeTerminalTool]);
 
   useEffect(() => {
     const el = tabBarRef.current;
