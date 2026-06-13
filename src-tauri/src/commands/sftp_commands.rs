@@ -40,7 +40,7 @@ pub async fn open_sftp_session(
     let server = queries::get_server_db(&state.db, &server_id).await?;
     let auth = auth_for_server(&server, &state, &app_handle).await?;
 
-    let jump_chain = build_jump_chain(&state.db, &server, &state, &app_handle).await?;
+    let jump_chain = build_jump_chain(&server, &state, &app_handle).await?;
 
     let s = &server.server;
     state.sftp_manager.open_session(

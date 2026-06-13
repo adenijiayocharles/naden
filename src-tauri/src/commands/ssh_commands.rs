@@ -22,10 +22,28 @@ fn expand_path(path: &str, app: &tauri::AppHandle) -> std::path::PathBuf {
     std::path::PathBuf::from(path)
 }
 
+/// Look up a server by id, preferring the in-memory `server_cache` (kept in sync with
+/// every create/update/delete) over a fresh SQLite round trip for the server row + tags.
+pub(crate) async fn get_server_cached(
+    state: &AppState,
+    id: &str,
+) -> Result<ServerWithTags, AppError> {
+    if let Some(s) = state
+        .server_cache
+        .read()
+        .await
+        .iter()
+        .find(|s| s.server.id == id)
+    {
+        return Ok(s.clone());
+    }
+    queries::get_server_db(&state.db, id).await
+}
+
 /// Walk the jump_host_id chain and return hops ordered first→last.
 /// Detects cycles (returns an error) and caps depth at 10.
 pub(crate) async fn resolve_jump_chain(
-    db: &sqlx::SqlitePool,
+    state: &AppState,
     server: &ServerWithTags,
 ) -> Result<Vec<ServerWithTags>, AppError> {
     let mut chain: Vec<ServerWithTags> = Vec::new();
@@ -44,7 +62,7 @@ pub(crate) async fn resolve_jump_chain(
                 "jump-host chain exceeds maximum depth of 10".into(),
             ));
         }
-        let hop = queries::get_server_db(db, &id).await?;
+        let hop = get_server_cached(state, &id).await?;
         next_id = hop.server.jump_host_id.clone();
         chain.push(hop);
     }
@@ -56,12 +74,11 @@ pub(crate) async fn resolve_jump_chain(
 
 /// Resolve the jump chain for `server` and build `JumpInfo` (with credentials) for each hop.
 pub(crate) async fn build_jump_chain(
-    db: &sqlx::SqlitePool,
     server: &ServerWithTags,
     state: &AppState,
     app: &tauri::AppHandle,
 ) -> Result<Vec<JumpInfo>, AppError> {
-    let hop_servers = resolve_jump_chain(db, server).await?;
+    let hop_servers = resolve_jump_chain(state, server).await?;
     let mut chain = Vec::with_capacity(hop_servers.len());
     for hop in &hop_servers {
         let hop_auth = auth_for_server(hop, state, app).await?;
@@ -73,6 +90,19 @@ pub(crate) async fn build_jump_chain(
         });
     }
     Ok(chain)
+}
+
+/// Read the configured SSH keepalive interval (seconds), defaulting to 0 (disabled).
+async fn keepalive_interval_setting(db: &sqlx::SqlitePool) -> Result<u32, AppError> {
+    Ok(sqlx::query_scalar::<_, String>(
+        "SELECT value FROM settings WHERE key = 'ssh_keepalive_interval'",
+    )
+    .fetch_optional(db)
+    .await
+    .ok()
+    .flatten()
+    .and_then(|v| v.parse().ok())
+    .unwrap_or(0))
 }
 
 /// Build `AuthInfo` for `server`, reading credentials from the vault when needed.
@@ -161,8 +191,8 @@ pub async fn launch_in_terminal(
     server_id: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    let server = queries::get_server_db(&state.db, &server_id).await?;
-    let jump_chain = resolve_jump_chain(&state.db, &server).await?;
+    let server = get_server_cached(&state, &server_id).await?;
+    let jump_chain = resolve_jump_chain(&state, &server).await?;
 
     let s = &server.server;
     // Insert with outcome = "success" immediately — we can't detect system terminal close
@@ -359,26 +389,26 @@ pub async fn open_terminal_session(
     state: tauri::State<'_, AppState>,
     app_handle: tauri::AppHandle,
 ) -> Result<(), AppError> {
-    let server = queries::get_server_db(&state.db, &server_id).await?;
-    let auth = auth_for_server(&server, &state, &app_handle).await?;
-
-    let jump_chain = build_jump_chain(&state.db, &server, &state, &app_handle).await?;
-
+    let server = get_server_cached(&state, &server_id).await?;
     let s = &server.server;
 
-    // Insert log entry and pass a close callback so the session thread can
-    // update the outcome and duration when the session ends.
-    let log_id = log_commands::insert_log_entry(
-        &state.db,
-        &NewLogEntry {
-            server_id: Some(&server_id),
-            server_display_name: &s.display_name,
-            hostname: &s.hostname,
-            port: s.port,
-            username: &s.username,
-        },
-    )
-    .await?;
+    // Auth, jump-chain resolution, the log-entry insert, and the keepalive
+    // setting lookup are all independent of each other — run them concurrently
+    // rather than awaiting one at a time.
+    let new_log_entry = NewLogEntry {
+        server_id: Some(&server_id),
+        server_display_name: &s.display_name,
+        hostname: &s.hostname,
+        port: s.port,
+        username: &s.username,
+    };
+    let (auth, jump_chain, log_id, keepalive_interval) = tokio::try_join!(
+        auth_for_server(&server, &state, &app_handle),
+        build_jump_chain(&server, &state, &app_handle),
+        log_commands::insert_log_entry(&state.db, &new_log_entry),
+        keepalive_interval_setting(&state.db),
+    )?;
+
     let db = state.db.clone();
     let on_close = Box::new(move |outcome: String, error_msg: Option<String>| {
         let session_end = chrono::Utc::now().to_rfc3339();
@@ -390,16 +420,6 @@ pub async fn open_terminal_session(
                 .ok();
         });
     });
-
-    let keepalive_interval: u32 = sqlx::query_scalar::<_, String>(
-        "SELECT value FROM settings WHERE key = 'ssh_keepalive_interval'",
-    )
-    .fetch_optional(&state.db)
-    .await
-    .ok()
-    .flatten()
-    .and_then(|v| v.parse().ok())
-    .unwrap_or(0);
 
     state.session_manager.open_session(
         session_id,
@@ -413,40 +433,51 @@ pub async fn open_terminal_session(
         keepalive_interval,
     )?;
 
-    // Auto-start any port forwards configured for this server.
-    let auto_fwds: Vec<_> = queries::list_port_forwards_db(&state.db, Some(&server_id))
-        .await
-        .unwrap_or_default()
-        .into_iter()
-        .filter(|f| f.auto_start && !state.tunnel_manager.is_active(&f.id))
-        .collect();
+    // Auto-start any port forwards configured for this server in the background —
+    // their auth/jump-chain setup is unrelated to the interactive shell and
+    // shouldn't delay the terminal becoming usable.
+    let server = server.clone();
+    let server_id = server_id.clone();
+    let app_handle = app_handle.clone();
+    tauri::async_runtime::spawn(async move {
+        use tauri::Manager;
+        let state = app_handle.state::<AppState>();
+        let s = &server.server;
 
-    for fwd in auto_fwds {
-        let fwd_auth = match auth_for_server(&server, &state, &app_handle).await {
-            Ok(a) => a,
-            Err(e) => {
-                log::warn!(
-                    "[auto-start] could not get auth for tunnel {}: {e}",
-                    fwd.id
-                );
-                continue;
-            }
-        };
-        let fwd_jumps = build_jump_chain(&state.db, &server, &state, &app_handle)
+        let auto_fwds: Vec<_> = queries::list_port_forwards_db(&state.db, Some(&server_id))
             .await
-            .unwrap_or_default();
-        let _ = state.tunnel_manager.start(
-            fwd,
-            crate::tunnel::TunnelTarget {
-                host: s.hostname.clone(),
-                port: u16::try_from(s.port).unwrap_or(22),
-                username: s.username.clone(),
-                auth: fwd_auth,
-                jump_chain: fwd_jumps,
-            },
-            app_handle.clone(),
-        );
-    }
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|f| f.auto_start && !state.tunnel_manager.is_active(&f.id))
+            .collect();
+
+        for fwd in auto_fwds {
+            let fwd_auth = match auth_for_server(&server, &state, &app_handle).await {
+                Ok(a) => a,
+                Err(e) => {
+                    log::warn!(
+                        "[auto-start] could not get auth for tunnel {}: {e}",
+                        fwd.id
+                    );
+                    continue;
+                }
+            };
+            let fwd_jumps = build_jump_chain(&server, &state, &app_handle)
+                .await
+                .unwrap_or_default();
+            let _ = state.tunnel_manager.start(
+                fwd,
+                crate::tunnel::TunnelTarget {
+                    host: s.hostname.clone(),
+                    port: u16::try_from(s.port).unwrap_or(22),
+                    username: s.username.clone(),
+                    auth: fwd_auth,
+                    jump_chain: fwd_jumps,
+                },
+                app_handle.clone(),
+            );
+        }
+    });
 
     Ok(())
 }

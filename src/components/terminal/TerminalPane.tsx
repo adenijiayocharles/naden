@@ -149,11 +149,11 @@ export default function TerminalPane({ sessionId }: Props) {
         useTerminalSettings.getState();
       const css = fontCss(fontFamily);
 
-      // Ensure the default font is loaded, then the selected font, before
-      // creating the terminal so xterm measures Canvas metrics against the real
-      // font from the start — not the system fallback.
-      await ensureCanvasFonts();
-      await ensureFont(fontFamily);
+      // Ensure the default font and the selected font are loaded before creating
+      // the terminal so xterm measures Canvas metrics against the real font from
+      // the start — not the system fallback. Both loads are memoized by font id
+      // and independent, so request them concurrently rather than sequentially.
+      await Promise.all([ensureCanvasFonts(), ensureFont(fontFamily)]);
 
       if (cancelled || !containerRef.current) return;
 

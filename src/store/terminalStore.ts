@@ -76,9 +76,11 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     // leaving the tab stuck on "connecting" forever.
     const sessionId = crypto.randomUUID();
 
-    await sessionBuffer.attach(sessionId);
-
-    const unlisteners = await Promise.all([
+    // Register the output-buffer listener alongside the status/closed/error
+    // listeners below — all four are independent `listen()` IPC round trips,
+    // so run them concurrently rather than awaiting the buffer attach first.
+    const [, ...unlisteners] = await Promise.all([
+      sessionBuffer.attach(sessionId),
       listen<string>(`terminal:status:${sessionId}`, ({ payload }) => {
         if (payload === "connected") {
           // Mark as successfully connected. If it drops later, terminal:closed

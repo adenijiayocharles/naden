@@ -56,6 +56,48 @@ fn known_hosts_path() -> std::path::PathBuf {
     std::path::Path::new(&home).join(".ssh").join("known_hosts")
 }
 
+/// In-memory cache of ~/.ssh/known_hosts contents, keyed by the file's mtime.
+/// Every SSH connection (including each jump-host hop) calls `verify_host_key`,
+/// which otherwise re-reads and re-parses this file from disk every time.
+static KNOWN_HOSTS_CACHE: Mutex<Option<(std::time::SystemTime, String)>> = Mutex::new(None);
+
+/// Invalidate the known_hosts cache so the next `verify_host_key` call re-reads
+/// the file from disk. Called after any write to known_hosts (TOFU add, removal).
+fn invalidate_known_hosts_cache() {
+    *recover_lock(KNOWN_HOSTS_CACHE.lock()) = None;
+}
+
+/// Load known_hosts entries into `known_hosts`, using the in-memory cache when
+/// the file's mtime matches, and refreshing the cache on a cache miss.
+fn load_known_hosts_cached(known_hosts: &mut ssh2::KnownHosts, path: &std::path::Path) {
+    let mtime = std::fs::metadata(path).and_then(|m| m.modified()).ok();
+
+    let cached = mtime.and_then(|mtime| {
+        recover_lock(KNOWN_HOSTS_CACHE.lock())
+            .as_ref()
+            .filter(|(cached_mtime, _)| *cached_mtime == mtime)
+            .map(|(_, content)| content.clone())
+    });
+
+    let content = match cached {
+        Some(content) => content,
+        None => {
+            let Ok(content) = std::fs::read_to_string(path) else {
+                return;
+            };
+            if let Some(mtime) = mtime {
+                *recover_lock(KNOWN_HOSTS_CACHE.lock()) = Some((mtime, content.clone()));
+            }
+            content
+        }
+    };
+
+    // `read_str` (libssh2_knownhost_readline) parses a single line per call.
+    for line in content.lines().filter(|l| !l.trim().is_empty()) {
+        let _ = known_hosts.read_str(line, ssh2::KnownHostFileKind::OpenSSH);
+    }
+}
+
 /// Check the server's host key against ~/.ssh/known_hosts.
 /// On first contact (NotFound) the key is added (TOFU). Mismatches are rejected.
 pub(crate) fn verify_host_key(
@@ -69,7 +111,7 @@ pub(crate) fn verify_host_key(
 
     let path = known_hosts_path();
     if path.exists() {
-        let _ = known_hosts.read_file(&path, ssh2::KnownHostFileKind::OpenSSH);
+        load_known_hosts_cached(&mut known_hosts, &path);
     }
 
     let (key, key_type) = session
@@ -92,6 +134,7 @@ pub(crate) fn verify_host_key(
                 let _ = std::fs::create_dir_all(parent);
             }
             let _ = known_hosts.write_file(&path, ssh2::KnownHostFileKind::OpenSSH);
+            invalidate_known_hosts_cache();
         }
         ssh2::CheckResult::Mismatch => {
             return Err(AppError::Ssh(format!(
@@ -151,6 +194,7 @@ pub fn remove_known_host(host: &str, port: u16) -> Result<usize, AppError> {
         known_hosts
             .write_file(&path, ssh2::KnownHostFileKind::OpenSSH)
             .map_err(|e| AppError::Ssh(format!("known_hosts write failed: {e}")))?;
+        invalidate_known_hosts_cache();
     }
 
     Ok(matches.len())
@@ -542,4 +586,66 @@ fn run_session(
 
     // Payload: true = clean exit (user typed `exit`), false = unexpected drop.
     let _ = app_handle.emit(&closed_event, result.is_ok());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fresh_known_hosts() -> ssh2::KnownHosts {
+        ssh2::Session::new().unwrap().known_hosts().unwrap()
+    }
+
+    // Real, publicly-published ed25519 host keys (github.com / bitbucket.org) —
+    // used so ssh2's known_hosts parser accepts and counts the entries.
+    const HOST_KEY_1: &str =
+        "first.example ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl\n";
+    const HOST_KEY_2: &str =
+        "second.example ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIazEu89wgQZ4bqs3d63QSMzYVa0MuJ2e2gKTKqu+UUO\n";
+
+    /// Covers the cache's read/serve/invalidate behavior in a single test —
+    /// the cache is a process-wide static, so separate tests touching it
+    /// would race under cargo's parallel test runner.
+    #[test]
+    fn known_hosts_cache_reads_serves_and_invalidates() {
+        invalidate_known_hosts_cache();
+        let path = std::env::temp_dir().join(format!(
+            "sshelter_known_hosts_test_{}",
+            uuid::Uuid::new_v4()
+        ));
+        let cleanup = || {
+            let _ = std::fs::remove_file(&path);
+        };
+
+        std::fs::write(&path, HOST_KEY_1).unwrap();
+
+        // First read goes to disk and populates the cache.
+        let mut first = fresh_known_hosts();
+        load_known_hosts_cached(&mut first, &path);
+        assert_eq!(first.hosts().unwrap().len(), 1);
+        assert!(recover_lock(KNOWN_HOSTS_CACHE.lock()).is_some());
+
+        // Overwrite with different content but restore the original mtime — a
+        // cache hit (mtime unchanged) must serve the originally-read content
+        // rather than re-parsing the file.
+        let mtime = std::fs::metadata(&path).unwrap().modified().unwrap();
+        std::fs::write(&path, format!("{HOST_KEY_1}{HOST_KEY_2}")).unwrap();
+        std::fs::File::open(&path)
+            .unwrap()
+            .set_modified(mtime)
+            .unwrap();
+
+        let mut cached = fresh_known_hosts();
+        load_known_hosts_cached(&mut cached, &path);
+        assert_eq!(cached.hosts().unwrap().len(), 1);
+
+        // After invalidation, the on-disk content (now 2 entries) is picked up.
+        invalidate_known_hosts_cache();
+        let mut refreshed = fresh_known_hosts();
+        load_known_hosts_cached(&mut refreshed, &path);
+        assert_eq!(refreshed.hosts().unwrap().len(), 2);
+
+        cleanup();
+        invalidate_known_hosts_cache();
+    }
 }
