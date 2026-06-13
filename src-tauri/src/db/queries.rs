@@ -327,8 +327,19 @@ pub async fn create_group_db(
     name: &str,
     color: Option<&str>,
 ) -> Result<Group, AppError> {
-    if name.trim().is_empty() {
+    let name = name.trim();
+    if name.is_empty() {
         return Err(AppError::Validation("group name is required".into()));
+    }
+    if sqlx::query("SELECT 1 FROM groups WHERE name = ?")
+        .bind(name)
+        .fetch_optional(db)
+        .await?
+        .is_some()
+    {
+        return Err(AppError::Validation(format!(
+            "A group named \"{name}\" already exists"
+        )));
     }
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
@@ -356,8 +367,20 @@ pub async fn update_group_db(
     name: &str,
     color: Option<&str>,
 ) -> Result<Group, AppError> {
-    if name.trim().is_empty() {
+    let name = name.trim();
+    if name.is_empty() {
         return Err(AppError::Validation("group name is required".into()));
+    }
+    if sqlx::query("SELECT 1 FROM groups WHERE name = ? AND id != ?")
+        .bind(name)
+        .bind(group_id)
+        .fetch_optional(db)
+        .await?
+        .is_some()
+    {
+        return Err(AppError::Validation(format!(
+            "A group named \"{name}\" already exists"
+        )));
     }
     let now = Utc::now().to_rfc3339();
     sqlx::query("UPDATE groups SET name = ?, color = ?, updated_at = ? WHERE id = ?")
@@ -395,11 +418,23 @@ pub async fn list_tags_db(db: &SqlitePool) -> Result<Vec<Tag>, AppError> {
 }
 
 pub async fn update_tag_db(db: &SqlitePool, id: &str, name: &str) -> Result<Tag, AppError> {
-    if name.trim().is_empty() {
+    let name = name.trim();
+    if name.is_empty() {
         return Err(AppError::Validation("tag name is required".into()));
     }
+    if sqlx::query("SELECT 1 FROM tags WHERE name = ? AND id != ?")
+        .bind(name)
+        .bind(id)
+        .fetch_optional(db)
+        .await?
+        .is_some()
+    {
+        return Err(AppError::Validation(format!(
+            "A tag named \"{name}\" already exists"
+        )));
+    }
     let rows = sqlx::query("UPDATE tags SET name = ? WHERE id = ?")
-        .bind(name.trim())
+        .bind(name)
         .bind(id)
         .execute(db)
         .await?
@@ -752,6 +787,37 @@ mod tests {
         let groups = list_groups_db(&db).await.unwrap();
         assert_eq!(groups.len(), 1);
         assert_eq!(groups[0].id, g.id);
+    }
+
+    #[tokio::test]
+    async fn create_group_rejects_duplicate_name() {
+        let db = make_pool().await;
+        create_group_db(&db, "Production", None).await.unwrap();
+
+        let err = create_group_db(&db, "Production", None).await.unwrap_err();
+        assert!(matches!(err, AppError::Validation(ref m) if m.contains("already exists")));
+    }
+
+    #[tokio::test]
+    async fn update_group_rejects_duplicate_name() {
+        let db = make_pool().await;
+        create_group_db(&db, "Production", None).await.unwrap();
+        let staging = create_group_db(&db, "Staging", None).await.unwrap();
+
+        let err = update_group_db(&db, &staging.id, "Production", None)
+            .await
+            .unwrap_err();
+        assert!(matches!(err, AppError::Validation(ref m) if m.contains("already exists")));
+    }
+
+    #[tokio::test]
+    async fn update_tag_rejects_duplicate_name() {
+        let db = make_pool().await;
+        create_tag_db(&db, "prod").await.unwrap();
+        let staging = create_tag_db(&db, "staging").await.unwrap();
+
+        let err = update_tag_db(&db, &staging.id, "prod").await.unwrap_err();
+        assert!(matches!(err, AppError::Validation(ref m) if m.contains("already exists")));
     }
 
     #[tokio::test]
