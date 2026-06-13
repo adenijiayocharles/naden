@@ -137,6 +137,7 @@ pub fn run() {
             commands::ssh_commands::close_terminal_session,
             commands::ssh_commands::send_terminal_input,
             commands::ssh_commands::resize_terminal,
+            commands::ssh_commands::remove_known_host_entry,
             // Tray
             update_tray_menu,
             // Vault

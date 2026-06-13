@@ -43,6 +43,7 @@ interface ErrorProps {
   errorMessage?: string;
   onClose: () => void;
   onReconnect?: () => void;
+  onRemoveKnownHost?: () => void;
 }
 
 export function ConnectingOverlay({ serverName, onCancel }: ConnectingProps) {
@@ -74,7 +75,9 @@ export function ConnectingOverlay({ serverName, onCancel }: ConnectingProps) {
   );
 }
 
-export function ErrorOverlay({ errorMessage, onClose, onReconnect }: ErrorProps) {
+export function ErrorOverlay({ errorMessage, onClose, onReconnect, onRemoveKnownHost }: ErrorProps) {
+  const isHostKeyMismatch = !!errorMessage?.toLowerCase().includes("host key mismatch");
+
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-0/95 gap-4">
       <p className="text-error text-sm font-medium">Connection failed</p>
@@ -88,6 +91,14 @@ export function ErrorOverlay({ errorMessage, onClose, onReconnect }: ErrorProps)
             className="px-4 py-2 text-sm text-black bg-accent hover:bg-accent-hover rounded font-semibold transition-colors"
           >
             Reconnect
+          </button>
+        )}
+        {isHostKeyMismatch && onRemoveKnownHost && (
+          <button
+            onClick={onRemoveKnownHost}
+            className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-500 rounded font-semibold transition-colors"
+          >
+            Remove from known hosts
           </button>
         )}
         <button

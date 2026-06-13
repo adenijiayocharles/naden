@@ -109,6 +109,53 @@ pub(crate) fn verify_host_key(
     Ok(())
 }
 
+/// Remove all known_hosts entries matching `host`/`port`, as added by
+/// `verify_host_key`'s TOFU path. Used to recover from a host-key mismatch
+/// after confirming the new key out-of-band (e.g. the server was reinstalled).
+/// Returns the number of entries removed.
+pub fn remove_known_host(host: &str, port: u16) -> Result<usize, AppError> {
+    let session =
+        ssh2::Session::new().map_err(|e| AppError::Ssh(format!("session init failed: {e}")))?;
+    let mut known_hosts = session
+        .known_hosts()
+        .map_err(|e| AppError::Ssh(format!("known_hosts init failed: {e}")))?;
+
+    let path = known_hosts_path();
+    if !path.exists() {
+        return Ok(0);
+    }
+    known_hosts
+        .read_file(&path, ssh2::KnownHostFileKind::OpenSSH)
+        .map_err(|e| AppError::Ssh(format!("known_hosts read failed: {e}")))?;
+
+    let entry = if port == 22 {
+        host.to_string()
+    } else {
+        format!("[{host}]:{port}")
+    };
+
+    let matches: Vec<_> = known_hosts
+        .hosts()
+        .map_err(|e| AppError::Ssh(format!("known_hosts read failed: {e}")))?
+        .into_iter()
+        .filter(|h| h.name() == Some(entry.as_str()))
+        .collect();
+
+    for h in &matches {
+        known_hosts
+            .remove(h)
+            .map_err(|e| AppError::Ssh(format!("known_hosts remove failed: {e}")))?;
+    }
+
+    if !matches.is_empty() {
+        known_hosts
+            .write_file(&path, ssh2::KnownHostFileKind::OpenSSH)
+            .map_err(|e| AppError::Ssh(format!("known_hosts write failed: {e}")))?;
+    }
+
+    Ok(matches.len())
+}
+
 enum SessionMessage {
     Input(Vec<u8>),
     Resize(u16, u16),

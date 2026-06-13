@@ -103,6 +103,9 @@ export const terminalCommands = {
 
   resizeTerminal: (sessionId: string, cols: number, rows: number) =>
     invoke<void>("resize_terminal", { sessionId, cols, rows }),
+
+  removeKnownHostEntry: (host: string, port: number) =>
+    invoke<number>("remove_known_host_entry", { host, port }),
 };
 
 export const settingsCommands = {

@@ -480,3 +480,10 @@ pub async fn resize_terminal(
 ) -> Result<(), AppError> {
     state.session_manager.resize(&session_id, cols, rows)
 }
+
+/// Remove a server's entry from ~/.ssh/known_hosts, e.g. to recover from a
+/// host-key mismatch after the server was reinstalled and its key changed.
+#[tauri::command]
+pub async fn remove_known_host_entry(host: String, port: u16) -> Result<usize, AppError> {
+    crate::ssh::connection::remove_known_host(&host, port)
+}

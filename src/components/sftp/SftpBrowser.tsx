@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSftpStore } from "../../store/sftpStore";
 import { useServerStore } from "../../store/serverStore";
-import { sftpCommands } from "../../lib/tauriCommands";
+import { sftpCommands, terminalCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import type { SortKey, SortDir } from "./SftpFileList";
 import SftpFileList from "./SftpFileList";
@@ -696,6 +696,12 @@ export default function SftpBrowser({ sessionId }: Props) {
           errorMessage={session.errorMessage}
           onReconnect={() => { void reconnectSession(sessionId); }}
           onClose={() => { void closeSession(sessionId); }}
+          onRemoveKnownHost={() => {
+            const server = allServers.find((sv) => sv.id === session.serverId);
+            if (!server) return;
+            void terminalCommands.removeKnownHostEntry(server.hostname, server.port)
+              .then(() => reconnectSession(sessionId));
+          }}
         />
       )}
     </div>
