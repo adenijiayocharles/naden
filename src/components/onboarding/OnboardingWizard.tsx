@@ -6,6 +6,9 @@ import { settingsCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import SshConfigImport from "../servers/SshConfigImport";
 import Input from "../shared/Input";
+import { Button } from "../ui/button";
+import { Progress } from "../ui/progress";
+import { Checkbox } from "../ui/checkbox";
 
 interface Props {
   onComplete: () => void;
@@ -76,12 +79,10 @@ export default function OnboardingWizard({ onComplete }: Props) {
     <div className="fixed inset-0 bg-black/80 animate-backdrop-in flex items-center justify-center z-50 p-4">
       <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-md flex flex-col">
         {/* Progress bar */}
-        <div className="h-1 bg-surface-4 rounded-t-xl overflow-hidden">
-          <div
-            className="h-full bg-accent transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
+        <Progress
+          value={progress}
+          className="gap-0 [&>[data-slot=progress-track]]:h-1 [&>[data-slot=progress-track]]:rounded-none [&>[data-slot=progress-track]]:rounded-t-xl [&>[data-slot=progress-track]]:bg-surface-4 [&_[data-slot=progress-indicator]]:duration-300"
+        />
 
         <div className="px-8 py-7 flex-1">
           {/* ── Welcome ────────────────────────────────────────────── */}
@@ -95,12 +96,9 @@ export default function OnboardingWizard({ onComplete }: Props) {
                 A fast, secure desktop app for managing all your SSH connections.
                 Let's get you set up in a minute.
               </p>
-              <button
-                onClick={advance}
-                className="w-full mt-4 py-2.5 bg-accent hover:bg-accent-hover text-black font-semibold rounded transition-colors"
-              >
+              <Button onClick={advance} className="w-full mt-4 h-10">
                 Get started
-              </button>
+              </Button>
             </div>
           )}
 
@@ -148,27 +146,25 @@ export default function OnboardingWizard({ onComplete }: Props) {
 
               {!isSetup && (
                 <label className="flex items-center gap-2 cursor-pointer text-sm text-muted">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={skipVault}
-                    onChange={(e) => setSkipVault(e.target.checked)}
-                    className="rounded border-stroke"
+                    onCheckedChange={(checked) => setSkipVault(checked === true)}
                   />
                   Skip for now
                 </label>
               )}
 
               <div className="flex gap-2 pt-2">
-                <button onClick={() => setStep("welcome")} className="px-4 py-2 text-sm text-faint hover:text-white transition-colors">
+                <Button variant="ghost" onClick={() => setStep("welcome")} className="text-faint">
                   Back
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => { void handleVaultNext(); }}
                   disabled={vaultLoading || (!skipVault && !isSetup && (password.length < 8 || password !== confirm))}
-                  className="flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-40 text-black font-semibold rounded transition-colors text-sm"
+                  className="flex-1 h-9"
                 >
                   {vaultLoading ? "Setting up…" : "Continue"}
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -181,21 +177,15 @@ export default function OnboardingWizard({ onComplete }: Props) {
                 If you have servers configured in <code className="text-accent-fg">~/.ssh/config</code>, you can import them now. You can also do this later from the toolbar.
               </p>
               <div className="flex gap-2 pt-2">
-                <button onClick={() => setStep("vault")} className="px-4 py-2 text-sm text-faint hover:text-white transition-colors">
+                <Button variant="ghost" onClick={() => setStep("vault")} className="text-faint">
                   Back
-                </button>
-                <button
-                  onClick={() => setShowImport(true)}
-                  className="flex-1 py-2 bg-accent hover:bg-accent-hover text-black font-semibold rounded transition-colors text-sm"
-                >
+                </Button>
+                <Button onClick={() => setShowImport(true)} className="flex-1 h-9">
                   Import SSH config
-                </button>
-                <button
-                  onClick={advance}
-                  className="flex-1 py-2 bg-surface-3 hover:bg-surface-4 border border-stroke text-secondary text-sm rounded transition-colors"
-                >
+                </Button>
+                <Button variant="secondary" onClick={advance} className="flex-1 h-9 border border-stroke">
                   Skip
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -211,18 +201,16 @@ export default function OnboardingWizard({ onComplete }: Props) {
                 Click a card to open a terminal, or use the <span className="text-white">+ Add Server</span> button to add your first server.
               </p>
               <div className="flex gap-2 pt-2">
-                <button
+                <Button
+                  variant="secondary"
                   onClick={() => { void handleFinish(); openAdd(); }}
-                  className="flex-1 py-2 bg-surface-3 hover:bg-surface-4 border border-stroke text-secondary text-sm rounded transition-colors"
+                  className="flex-1 h-9 border border-stroke"
                 >
                   Add first server
-                </button>
-                <button
-                  onClick={() => { void handleFinish(); }}
-                  className="flex-1 py-2 bg-accent hover:bg-accent-hover text-black font-semibold rounded transition-colors text-sm"
-                >
+                </Button>
+                <Button onClick={() => { void handleFinish(); }} className="flex-1 h-9">
                   Go to app
-                </button>
+                </Button>
               </div>
             </div>
           )}
