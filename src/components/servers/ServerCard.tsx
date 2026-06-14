@@ -199,6 +199,7 @@ export default function ServerCard({ server, groupColor, lastConnected }: Server
         serverName={server.displayName}
         message={actions.connectionError || undefined}
         onRetry={() => { actions.setConnectionError(null); void actions.handleConnect(); }}
+        onEdit={() => { actions.setConnectionError(null); actions.editServer(); }}
         onClose={() => actions.setConnectionError(null)}
       />
     )}

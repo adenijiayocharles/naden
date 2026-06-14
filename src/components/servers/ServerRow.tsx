@@ -180,6 +180,7 @@ export default function ServerRow({ server, groupColor, lastConnected, narrow }:
         serverName={server.displayName}
         message={actions.connectionError || undefined}
         onRetry={() => { actions.setConnectionError(null); void actions.handleConnect(); }}
+        onEdit={() => { actions.setConnectionError(null); actions.editServer(); }}
         onClose={() => actions.setConnectionError(null)}
       />
     )}

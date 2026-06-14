@@ -2,10 +2,11 @@ interface Props {
   serverName: string;
   message?: string;
   onRetry: () => void;
+  onEdit: () => void;
   onClose: () => void;
 }
 
-export default function ConnectionErrorModal({ serverName, message, onRetry, onClose }: Props) {
+export default function ConnectionErrorModal({ serverName, message, onRetry, onEdit, onClose }: Props) {
   return (
     <div
       className="fixed inset-0 bg-black/85 animate-backdrop-in flex items-center justify-center z-50 p-4"
@@ -37,6 +38,12 @@ export default function ConnectionErrorModal({ serverName, message, onRetry, onC
             className="flex-1 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
           >
             Dismiss
+          </button>
+          <button
+            onClick={onEdit}
+            className="flex-1 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
+          >
+            Edit
           </button>
           <button
             onClick={onRetry}

@@ -61,11 +61,14 @@ export default function ServerForm() {
 
   const [form, setForm] = useState<FormData>(DEFAULT_FORM);
   const [password, setPassword] = useState("");
+  const [passphrase, setPassphrase] = useState("");
   const [tags, setTags] = useState<Tag[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [showNewGroup, setShowNewGroup] = useState(false);
+  const [showGroupTags, setShowGroupTags] = useState(false);
+  const [showJumpHost, setShowJumpHost] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [, setTouched] = useState<Set<keyof FormData>>(new Set());
   const [submitting, setSubmitting] = useState(false);
@@ -89,9 +92,13 @@ export default function ServerForm() {
         jumpHostId: existingServer.jumpHostId ?? "",
       });
       setTags(existingServer.tags);
+      setShowGroupTags(!!existingServer.groupId || existingServer.tags.length > 0);
+      setShowJumpHost(existingServer.isJumpHost || !!existingServer.jumpHostId);
     } else {
       setForm(DEFAULT_FORM);
       setTags([]);
+      setShowGroupTags(false);
+      setShowJumpHost(false);
     }
     setErrors({});
     setTouched(new Set());
@@ -220,6 +227,9 @@ export default function ServerForm() {
         : undefined;
       if (form.authMethod === "password" && password.trim()) {
         freshCredentialId = await vaultCommands.storeCredential(password.trim());
+        vaultCredentialId = freshCredentialId;
+      } else if (form.authMethod === "key" && passphrase.trim()) {
+        freshCredentialId = await vaultCommands.storeCredential(passphrase.trim());
         vaultCredentialId = freshCredentialId;
       }
 
@@ -405,7 +415,37 @@ export default function ServerForm() {
             </Field>
           )}
 
+          {/* Key Passphrase */}
+          {form.authMethod === "key" && (
+            <Field label={isEdit && existingServer?.vaultCredentialId ? "New Passphrase (leave blank to keep existing)" : "Passphrase (optional)"}>
+              {!vaultAvailable ? (
+                <p className="text-xs text-yellow-500">Unlock the vault to store a passphrase.</p>
+              ) : (
+                <Input
+                  type="password"
+                  value={passphrase}
+                  onChange={(e) => setPassphrase(e.target.value)}
+                  placeholder={isEdit && existingServer?.vaultCredentialId ? "Enter new passphrase to change…" : "Leave empty if the key has no passphrase"}
+                  autoComplete="new-password"
+                />
+              )}
+            </Field>
+          )}
+
+          {/* Group & Tags toggle */}
+          {!showGroupTags && (
+            <button
+              type="button"
+              onClick={() => setShowGroupTags(true)}
+              className="block text-sm text-faint hover:text-white transition-colors"
+            >
+              + Add group / tags
+            </button>
+          )}
+
           {/* Group */}
+          {showGroupTags && (
+          <>
           <Field label="Group" error={errors.group}>
             {!showNewGroup ? (
               <SelectWrapper>
@@ -499,7 +539,30 @@ export default function ServerForm() {
             </div>
           </Field>
 
+          <button
+            type="button"
+            onClick={() => setShowGroupTags(false)}
+            className="text-sm text-faint hover:text-white transition-colors"
+          >
+            − Hide group / tags
+          </button>
+          </>
+          )}
+
+          {/* Jump Host toggle */}
+          {!showJumpHost && (
+            <button
+              type="button"
+              onClick={() => setShowJumpHost(true)}
+              className="block text-sm text-faint hover:text-white transition-colors"
+            >
+              + Add jump host
+            </button>
+          )}
+
           {/* Jump Host */}
+          {showJumpHost && (
+          <>
           <Field label="">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -563,6 +626,15 @@ export default function ServerForm() {
             </Field>
           )}
 
+          <button
+            type="button"
+            onClick={() => setShowJumpHost(false)}
+            className="text-sm text-faint hover:text-white transition-colors"
+          >
+            − Hide jump host
+          </button>
+          </>
+          )}
 
           {/* Port Forwards */}
           {isEdit && editingServerId && (
