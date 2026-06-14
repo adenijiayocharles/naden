@@ -88,9 +88,9 @@ export default function OnboardingWizard({ onComplete }: Props) {
           {step === "welcome" && (
             <div className="text-center space-y-4">
               <div className="flex justify-center mb-2">
-                <img src={serverIcon} alt="SSHelter" className="w-12 h-12" />
+                <img src={serverIcon} alt="Naden" className="w-12 h-12" />
               </div>
-              <h1 className="text-2xl font-bold text-white">Welcome to SSHelter</h1>
+              <h1 className="text-2xl font-bold text-white">Welcome to Naden</h1>
               <p className="text-muted text-sm leading-relaxed">
                 A fast, secure desktop app for managing all your SSH connections.
                 Let's get you set up in a minute.
@@ -204,7 +204,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
           {step === "done" && (
             <div className="text-center space-y-4">
               <div className="flex justify-center mb-2">
-                <img src={serverIcon} alt="SSHelter" className="w-12 h-12" />
+                <img src={serverIcon} alt="Naden" className="w-12 h-12" />
               </div>
               <h2 className="text-xl font-bold text-white">You're all set!</h2>
               <p className="text-sm text-muted">

@@ -32,7 +32,7 @@ export default function TopBar() {
       >
         <div className="flex-1 flex items-center justify-center pointer-events-none">
           <span className="text-sm text-secondary select-none">
-            SSHelter
+            Naden
             {appVersion && <span className="text-dim"> v{appVersion}</span>}
             {activeSession ? ` — ${activeSession.serverName}` : ""}
           </span>

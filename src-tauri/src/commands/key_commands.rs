@@ -100,7 +100,7 @@ fn write_askpass_script(passphrase: &str) -> Result<std::path::PathBuf, AppError
     use std::io::Write as _;
     use std::os::unix::fs::OpenOptionsExt as _;
 
-    let path = std::env::temp_dir().join(format!(".sshelter_{}", Uuid::new_v4()));
+    let path = std::env::temp_dir().join(format!(".naden_{}", Uuid::new_v4()));
     let mut f = std::fs::OpenOptions::new()
         .write(true)
         .create_new(true)

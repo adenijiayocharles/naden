@@ -609,10 +609,8 @@ mod tests {
     #[test]
     fn known_hosts_cache_reads_serves_and_invalidates() {
         invalidate_known_hosts_cache();
-        let path = std::env::temp_dir().join(format!(
-            "sshelter_known_hosts_test_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let path =
+            std::env::temp_dir().join(format!("naden_known_hosts_test_{}", uuid::Uuid::new_v4()));
         let cleanup = || {
             let _ = std::fs::remove_file(&path);
         };

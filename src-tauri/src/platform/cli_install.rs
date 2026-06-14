@@ -1,5 +1,5 @@
-// Self-registers a `sshelter` symlink in ~/.local/bin so the app can be
-// launched from a terminal (`sshelter`), regardless of where it was installed.
+// Self-registers a `naden` symlink in ~/.local/bin so the app can be
+// launched from a terminal (`naden`), regardless of where it was installed.
 // Runs once per launch as a cheap idempotent check — no admin privileges
 // needed since ~/.local/bin is user-writable.
 
@@ -7,12 +7,12 @@ use std::io;
 use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
 
-const LINK_NAME: &str = "sshelter";
+const LINK_NAME: &str = "naden";
 const RC_CANDIDATES: &[&str] = &[".zshrc", ".zprofile", ".bash_profile", ".profile"];
 
 pub fn ensure_installed() {
     if let Err(e) = try_install() {
-        log::warn!("[cli_install] failed to register `sshelter` command: {e}");
+        log::warn!("[cli_install] failed to register `naden` command: {e}");
     }
 }
 
@@ -59,7 +59,7 @@ fn ensure_path_export(home: &Path, bin_dir: &Path) {
         ".bash_profile"
     };
     let line = format!(
-        "\n# Added by SSHelter so the `sshelter` command is available in your terminal\nexport PATH=\"{bin_dir_str}:$PATH\"\n"
+        "\n# Added by Naden so the `naden` command is available in your terminal\nexport PATH=\"{bin_dir_str}:$PATH\"\n"
     );
 
     use std::io::Write;

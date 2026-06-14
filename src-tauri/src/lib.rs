@@ -227,7 +227,7 @@ pub fn run() {
             // Spawn the sleep-watcher thread that emits `system:wake` on resume.
             power::start_sleep_watcher(app.handle().clone());
 
-            // Register the `sshelter` CLI command in ~/.local/bin so the app
+            // Register the `naden` CLI command in ~/.local/bin so the app
             // can be launched from a terminal regardless of install location.
             #[cfg(unix)]
             std::thread::spawn(platform::cli_install::ensure_installed);
@@ -241,7 +241,7 @@ pub fn run() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("error while building SSHelter")
+        .expect("error while building Naden")
         .run(|app, event| {
             // On macOS, clicking the Dock icon fires Reopen regardless of
             // whether the window is hidden or miniaturized. A miniaturized
@@ -326,7 +326,7 @@ fn build_app_menu(
 
     let app_menu = Submenu::with_items(
         app,
-        "SSHelter",
+        "Naden",
         true,
         &[
             &PredefinedMenuItem::about(app, None, None)?,

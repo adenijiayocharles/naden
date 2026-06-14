@@ -2642,6 +2642,50 @@ dependencies = [
 ]
 
 [[package]]
+name = "naden"
+version = "0.1.8"
+dependencies = [
+ "aes-gcm",
+ "anyhow",
+ "async-trait",
+ "base64 0.22.1",
+ "block2",
+ "bytes",
+ "chrono",
+ "futures-util",
+ "getrandom 0.2.17",
+ "if-addrs",
+ "libssh2-sys",
+ "log",
+ "nucleo",
+ "nucleo-matcher",
+ "objc2",
+ "objc2-foundation",
+ "pbkdf2",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sqlx",
+ "ssh2",
+ "ssh2-config",
+ "subtle",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-clipboard-manager",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-log",
+ "tauri-plugin-process",
+ "tauri-plugin-shell",
+ "tauri-plugin-updater",
+ "thiserror 1.0.69",
+ "tokio",
+ "uuid",
+ "zeroize",
+]
+
+[[package]]
 name = "ndk"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4900,50 +4944,6 @@ dependencies = [
  "log",
  "thiserror 2.0.18",
  "wildmatch",
-]
-
-[[package]]
-name = "sshelter"
-version = "0.1.8"
-dependencies = [
- "aes-gcm",
- "anyhow",
- "async-trait",
- "base64 0.22.1",
- "block2",
- "bytes",
- "chrono",
- "futures-util",
- "getrandom 0.2.17",
- "if-addrs",
- "libssh2-sys",
- "log",
- "nucleo",
- "nucleo-matcher",
- "objc2",
- "objc2-foundation",
- "pbkdf2",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "sha2",
- "sqlx",
- "ssh2",
- "ssh2-config",
- "subtle",
- "tauri",
- "tauri-build",
- "tauri-plugin-clipboard-manager",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-log",
- "tauri-plugin-process",
- "tauri-plugin-shell",
- "tauri-plugin-updater",
- "thiserror 1.0.69",
- "tokio",
- "uuid",
- "zeroize",
 ]
 
 [[package]]

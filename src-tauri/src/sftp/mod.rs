@@ -367,7 +367,7 @@ fn run_sftp_session(
         for (_, wf) in watched.drain() {
             let _ = std::fs::remove_file(&wf.temp_path);
         }
-        let _ = std::fs::remove_dir(std::env::temp_dir().join("sshelter").join(&session_id));
+        let _ = std::fs::remove_dir(std::env::temp_dir().join("naden").join(&session_id));
 
         Ok(())
     })();
@@ -538,7 +538,7 @@ fn handle_message(
                     uuid::Uuid::new_v4().simple(),
                     base.to_string_lossy()
                 );
-                let tmp = std::env::temp_dir().join("sshelter-copy").join(unique_name);
+                let tmp = std::env::temp_dir().join("naden-copy").join(unique_name);
                 let _ = std::fs::create_dir_all(tmp.parent().unwrap_or(&std::env::temp_dir()));
                 let tmp_str = tmp.to_string_lossy().into_owned();
                 let result = download_file(
@@ -805,8 +805,8 @@ fn open_edit(
         _ => {} // None (no extension) is permitted as plain text
     }
 
-    // Build temp dir: <os_tmp>/sshelter/<session_id>/
-    let temp_dir = std::env::temp_dir().join("sshelter").join(session_id);
+    // Build temp dir: <os_tmp>/naden/<session_id>/
+    let temp_dir = std::env::temp_dir().join("naden").join(session_id);
     std::fs::create_dir_all(&temp_dir)
         .map_err(|e| AppError::Io(format!("cannot create temp dir: {e}")))?;
 

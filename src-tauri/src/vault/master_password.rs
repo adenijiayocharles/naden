@@ -32,7 +32,7 @@ pub fn derive_key(password: &str, salt: &[u8]) -> Zeroizing<[u8; KEY_LEN]> {
 fn verification_hash(key: &[u8; KEY_LEN]) -> [u8; 32] {
     let mut h = Sha256::new();
     h.update(key);
-    h.update(b"sshelter-vault-verify-v1");
+    h.update(b"naden-vault-verify-v1");
     h.finalize().into()
 }
 

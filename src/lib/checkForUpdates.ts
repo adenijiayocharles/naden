@@ -14,7 +14,7 @@ export async function promptForUpdate(options: PromptForUpdateOptions = {}): Pro
     const update = await updaterCommands.checkForUpdate();
     if (!update) {
       if (!options.silent) {
-        await message("You're on the latest version.", { title: "SSHelter", kind: "info" });
+        await message("You're on the latest version.", { title: "Naden", kind: "info" });
       }
       return;
     }
@@ -27,7 +27,7 @@ export async function promptForUpdate(options: PromptForUpdateOptions = {}): Pro
 
     await update.download();
     const shouldRestart = await ask(
-      "Update installed. Restart SSHelter now to apply it?",
+      "Update installed. Restart Naden now to apply it?",
       { title: "Update Ready", kind: "info" },
     );
     if (shouldRestart) await updaterCommands.relaunch();

@@ -865,7 +865,7 @@ export default function SettingsPage() {
               <SectionHeader title="About" />
 
               <Row>
-                <RowLabel title="Version" description={`SSHelter ${appVersion}`} />
+                <RowLabel title="Version" description={`Naden ${appVersion}`} />
               </Row>
 
               <Row>
@@ -878,7 +878,7 @@ export default function SettingsPage() {
                     : updateState === "downloading" ? "Downloading update…"
                     : updateState === "ready" ? "Update installed — restart to apply."
                     : updateState === "error" ? (updateError ?? "Update check failed.")
-                    : "Check for a newer version of SSHelter."
+                    : "Check for a newer version of Naden."
                   }
                 />
                 {updateState === "ready" ? (

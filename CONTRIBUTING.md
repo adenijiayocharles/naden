@@ -1,4 +1,4 @@
-# Contributing to SSHelter
+# Contributing to Naden
 
 Thanks for your interest in contributing! This guide covers how to get set up and what we expect from pull requests.
 
@@ -35,7 +35,7 @@ Thanks for your interest in contributing! This guide covers how to get set up an
 
 ## Reporting Bugs / Requesting Features
 
-Open a [GitHub issue](https://github.com/adenijiayocharles/sshelter/issues) with:
+Open a [GitHub issue](https://github.com/adenijiayocharles/naden/issues) with:
 - For bugs: steps to reproduce, expected vs. actual behavior, OS version
 - For features: the problem you're trying to solve, not just the desired solution
 
