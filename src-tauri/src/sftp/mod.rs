@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::Emitter;
 
@@ -83,16 +84,19 @@ pub(crate) enum SftpMessage {
     Rename {
         from: String,
         to: String,
+        overwrite: bool,
         reply: tokio::sync::oneshot::Sender<Result<(), AppError>>,
     },
     UploadFile {
         local_path: String,
         remote_path: String,
+        overwrite: bool,
         reply: tokio::sync::oneshot::Sender<Result<(), AppError>>,
     },
     DownloadFile {
         remote_path: String,
         local_path: String,
+        overwrite: bool,
         reply: tokio::sync::oneshot::Sender<Result<(), AppError>>,
     },
     TouchFile {
@@ -115,6 +119,7 @@ pub(crate) enum SftpMessage {
     CopyFile {
         src: String,
         dest: String,
+        overwrite: bool,
         reply: tokio::sync::oneshot::Sender<Result<(), AppError>>,
     },
     Close,
@@ -130,6 +135,7 @@ struct WatchedFile {
 
 struct SftpSessionHandle {
     tx: std::sync::mpsc::SyncSender<SftpMessage>,
+    cancel_flag: Arc<AtomicBool>,
 }
 
 pub struct SftpManager {
@@ -155,22 +161,52 @@ impl SftpManager {
         app_handle: tauri::AppHandle,
     ) -> Result<(), AppError> {
         let (tx, rx) = std::sync::mpsc::sync_channel(64);
+        let cancel_flag = Arc::new(AtomicBool::new(false));
 
         self.sessions
             .lock()
             .unwrap_or_else(|e| e.into_inner())
-            .insert(session_id.clone(), SftpSessionHandle { tx });
+            .insert(
+                session_id.clone(),
+                SftpSessionHandle {
+                    tx,
+                    cancel_flag: Arc::clone(&cancel_flag),
+                },
+            );
 
         let sessions = Arc::clone(&self.sessions);
         let sid = session_id;
 
         std::thread::spawn(move || {
             run_sftp_session(
-                host, port, username, auth, jump_chain, sid, rx, app_handle, sessions,
+                host,
+                port,
+                username,
+                auth,
+                jump_chain,
+                sid,
+                rx,
+                app_handle,
+                sessions,
+                cancel_flag,
             );
         });
 
         Ok(())
+    }
+
+    /// Signals the session's in-progress transfer (if any) to abort. The
+    /// flag is reset at the start of each transfer, so this has no effect
+    /// when no transfer is running.
+    pub fn cancel_transfer(&self, session_id: &str) {
+        if let Some(handle) = self
+            .sessions
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(session_id)
+        {
+            handle.cancel_flag.store(true, Ordering::Relaxed);
+        }
     }
 
     pub(crate) fn send(&self, session_id: &str, msg: SftpMessage) -> Result<(), AppError> {
@@ -227,6 +263,7 @@ fn run_sftp_session(
     rx: std::sync::mpsc::Receiver<SftpMessage>,
     app_handle: tauri::AppHandle,
     sessions: Arc<Mutex<HashMap<String, SftpSessionHandle>>>,
+    cancel_flag: Arc<AtomicBool>,
 ) {
     // Guarantees removal from the sessions map on exit, including panics.
     let _guard = SessionGuard {
@@ -300,6 +337,8 @@ fn run_sftp_session(
                                     remote_path,
                                     &session_id,
                                     &app_handle,
+                                    true,
+                                    &cancel_flag,
                                 )
                                 .is_ok()
                                 {
@@ -312,14 +351,23 @@ fn run_sftp_session(
                         }
                     }
                 }
-                Ok(msg) => handle_message(msg, &sftp, &session_id, &app_handle, &mut watched),
+                Ok(msg) => handle_message(
+                    msg,
+                    &sftp,
+                    &session_id,
+                    &app_handle,
+                    &mut watched,
+                    &cancel_flag,
+                ),
             }
         }
 
-        // Cleanup: remove all temp files for this session.
+        // Cleanup: remove all temp files for this session, then the now-empty
+        // per-session temp directory itself.
         for (_, wf) in watched.drain() {
             let _ = std::fs::remove_file(&wf.temp_path);
         }
+        let _ = std::fs::remove_dir(std::env::temp_dir().join("sshelter").join(&session_id));
 
         Ok(())
     })();
@@ -351,6 +399,7 @@ fn handle_message(
     session_id: &str,
     app_handle: &tauri::AppHandle,
     watched: &mut HashMap<String, WatchedFile>,
+    cancel_flag: &Arc<AtomicBool>,
 ) {
     match msg {
         SftpMessage::ListDir { path, reply } => {
@@ -365,26 +414,56 @@ fn handle_message(
         SftpMessage::Delete { path, reply } => {
             let _ = reply.send(delete_entry(sftp, &path));
         }
-        SftpMessage::Rename { from, to, reply } => {
-            let result = sftp
-                .rename(Path::new(&from), Path::new(&to), None)
-                .map_err(|e| sftp_err("rename this item", e));
+        SftpMessage::Rename {
+            from,
+            to,
+            overwrite,
+            reply,
+        } => {
+            let result = (|| {
+                if !overwrite && sftp.stat(Path::new(&to)).is_ok() {
+                    return Err(AppError::AlreadyExists(to.clone()));
+                }
+                if overwrite {
+                    let _ = sftp.unlink(Path::new(&to));
+                }
+                sftp.rename(Path::new(&from), Path::new(&to), None)
+                    .map_err(|e| sftp_err("rename this item", e))
+            })();
             let _ = reply.send(result);
         }
         SftpMessage::UploadFile {
             local_path,
             remote_path,
+            overwrite,
             reply,
         } => {
-            let result = upload_file(sftp, &local_path, &remote_path, session_id, app_handle);
+            let result = upload_path(
+                sftp,
+                &local_path,
+                &remote_path,
+                session_id,
+                app_handle,
+                overwrite,
+                cancel_flag,
+            );
             let _ = reply.send(result);
         }
         SftpMessage::DownloadFile {
             remote_path,
             local_path,
+            overwrite,
             reply,
         } => {
-            let result = download_file(sftp, &remote_path, &local_path, session_id, app_handle);
+            let result = download_path(
+                sftp,
+                &remote_path,
+                &local_path,
+                session_id,
+                app_handle,
+                overwrite,
+                cancel_flag,
+            );
             let _ = reply.send(result);
         }
         SftpMessage::TouchFile { path, reply } => {
@@ -409,7 +488,14 @@ fn handle_message(
             let _ = reply.send(result);
         }
         SftpMessage::OpenEdit { path, reply } => {
-            let _ = reply.send(open_edit(sftp, &path, session_id, app_handle, watched));
+            let _ = reply.send(open_edit(
+                sftp,
+                &path,
+                session_id,
+                app_handle,
+                watched,
+                cancel_flag,
+            ));
         }
         SftpMessage::CloseEdit { remote_path, reply } => {
             let result = if let Some(wf) = watched.remove(&remote_path) {
@@ -420,21 +506,64 @@ fn handle_message(
             };
             let _ = reply.send(result);
         }
-        SftpMessage::CopyFile { src, dest, reply } => {
-            // SFTP has no native copy — download to a temp file then re-upload.
-            // UUID prefix prevents collisions when two files share the same base name.
-            let base = std::path::Path::new(&src).file_name().unwrap_or_default();
-            let unique_name = format!(
-                "{}-{}",
-                uuid::Uuid::new_v4().simple(),
-                base.to_string_lossy()
-            );
-            let tmp = std::env::temp_dir().join("sshelter-copy").join(unique_name);
-            let _ = std::fs::create_dir_all(tmp.parent().unwrap_or(&std::env::temp_dir()));
-            let tmp_str = tmp.to_string_lossy().into_owned();
-            let result = download_file(sftp, &src, &tmp_str, session_id, app_handle)
-                .and_then(|_| upload_file(sftp, &tmp_str, &dest, session_id, app_handle));
-            let _ = std::fs::remove_file(&tmp);
+        SftpMessage::CopyFile {
+            src,
+            dest,
+            overwrite,
+            reply,
+        } => {
+            let result = (|| {
+                if !overwrite && sftp.stat(Path::new(&dest)).is_ok() {
+                    return Err(AppError::AlreadyExists(dest.clone()));
+                }
+                // Preserve symlinks: recreate the link itself rather than copying
+                // the file it points at (which could be arbitrarily large).
+                if sftp
+                    .lstat(Path::new(&src))
+                    .is_ok_and(|stat| stat.file_type().is_symlink())
+                {
+                    let target = sftp
+                        .readlink(Path::new(&src))
+                        .map_err(|e| sftp_err("read this symlink", e))?;
+                    return sftp
+                        .symlink(Path::new(&dest), &target)
+                        .map_err(|e| sftp_err("create symlink", e));
+                }
+
+                // SFTP has no native copy — download to a temp file then re-upload.
+                // UUID prefix prevents collisions when two files share the same base name.
+                let base = std::path::Path::new(&src).file_name().unwrap_or_default();
+                let unique_name = format!(
+                    "{}-{}",
+                    uuid::Uuid::new_v4().simple(),
+                    base.to_string_lossy()
+                );
+                let tmp = std::env::temp_dir().join("sshelter-copy").join(unique_name);
+                let _ = std::fs::create_dir_all(tmp.parent().unwrap_or(&std::env::temp_dir()));
+                let tmp_str = tmp.to_string_lossy().into_owned();
+                let result = download_file(
+                    sftp,
+                    &src,
+                    &tmp_str,
+                    session_id,
+                    app_handle,
+                    true,
+                    cancel_flag,
+                )
+                .and_then(|_| {
+                    upload_file(
+                        sftp,
+                        &tmp_str,
+                        &dest,
+                        session_id,
+                        app_handle,
+                        true,
+                        cancel_flag,
+                    )
+                });
+                let _ = std::fs::remove_file(&tmp);
+                result
+            })();
             let _ = reply.send(result);
         }
         SftpMessage::Close => {}
@@ -498,13 +627,91 @@ fn delete_entry(sftp: &ssh2::Sftp, path: &str) -> Result<(), AppError> {
 
 const MAX_UPLOAD_BYTES: u64 = 2 * 1024 * 1024 * 1024; // 2 GB
 
+/// Uploads a local file or, recursively, a local directory tree.
+fn upload_path(
+    sftp: &ssh2::Sftp,
+    local_path: &str,
+    remote_path: &str,
+    session_id: &str,
+    app_handle: &tauri::AppHandle,
+    overwrite: bool,
+    cancel_flag: &Arc<AtomicBool>,
+) -> Result<(), AppError> {
+    let meta = std::fs::metadata(local_path)
+        .map_err(|e| AppError::Io(format!("cannot read local path: {e}")))?;
+    if meta.is_dir() {
+        upload_directory(
+            sftp,
+            local_path,
+            remote_path,
+            session_id,
+            app_handle,
+            overwrite,
+            cancel_flag,
+        )
+    } else {
+        upload_file(
+            sftp,
+            local_path,
+            remote_path,
+            session_id,
+            app_handle,
+            overwrite,
+            cancel_flag,
+        )
+    }
+}
+
+fn upload_directory(
+    sftp: &ssh2::Sftp,
+    local_path: &str,
+    remote_path: &str,
+    session_id: &str,
+    app_handle: &tauri::AppHandle,
+    overwrite: bool,
+    cancel_flag: &Arc<AtomicBool>,
+) -> Result<(), AppError> {
+    if !overwrite && sftp.stat(Path::new(remote_path)).is_ok() {
+        return Err(AppError::AlreadyExists(remote_path.to_string()));
+    }
+    if sftp.stat(Path::new(remote_path)).is_err() {
+        sftp.mkdir(Path::new(remote_path), 0o755)
+            .map_err(|e| sftp_err("create this directory", e))?;
+    }
+
+    let entries = std::fs::read_dir(local_path)
+        .map_err(|e| AppError::Io(format!("cannot read local directory: {e}")))?;
+    for entry in entries {
+        let entry = entry.map_err(|e| AppError::Io(format!("cannot read directory entry: {e}")))?;
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let child_local = entry.path().to_string_lossy().into_owned();
+        let child_remote = format!("{}/{}", remote_path.trim_end_matches('/'), name);
+        upload_path(
+            sftp,
+            &child_local,
+            &child_remote,
+            session_id,
+            app_handle,
+            overwrite,
+            cancel_flag,
+        )?;
+    }
+    Ok(())
+}
+
 fn upload_file(
     sftp: &ssh2::Sftp,
     local_path: &str,
     remote_path: &str,
     session_id: &str,
     app_handle: &tauri::AppHandle,
+    overwrite: bool,
+    cancel_flag: &Arc<AtomicBool>,
 ) -> Result<(), AppError> {
+    if !overwrite && sftp.stat(Path::new(remote_path)).is_ok() {
+        return Err(AppError::AlreadyExists(remote_path.to_string()));
+    }
+
     let mut local_file = std::fs::File::open(local_path)
         .map_err(|e| AppError::Io(format!("cannot open local file: {e}")))?;
     let total = local_file.metadata().map(|m| m.len()).unwrap_or(0);
@@ -520,6 +727,10 @@ fn upload_file(
         .create(Path::new(remote_path))
         .map_err(|e| sftp_err("write to this directory", e))?;
 
+    // Reset before starting so a stale cancellation from a previous transfer
+    // doesn't immediately abort this one.
+    cancel_flag.store(false, Ordering::Relaxed);
+
     let result = (|| {
         let mut buf = vec![0u8; 65536];
         let mut written: u64 = 0;
@@ -527,6 +738,9 @@ fn upload_file(
         let mut last_emit = std::time::Instant::now();
 
         loop {
+            if cancel_flag.load(Ordering::Relaxed) {
+                return Err(AppError::Cancelled(remote_path.to_string()));
+            }
             let n = local_file
                 .read(&mut buf)
                 .map_err(|e| AppError::Io(format!("read error: {e}")))?;
@@ -546,13 +760,12 @@ fn upload_file(
                 );
             }
         }
-        // Always emit a final event so the frontend reaches 100%.
-        if total > 0 {
-            let _ = app_handle.emit(
-                &format!("sftp:upload_progress:{session_id}"),
-                serde_json::json!({ "written": written, "total": total }),
-            );
-        }
+        // Always emit a final event so the frontend reaches 100%, even for
+        // zero-byte files where the loop above never runs.
+        let _ = app_handle.emit(
+            &format!("sftp:upload_progress:{session_id}"),
+            serde_json::json!({ "written": written, "total": total }),
+        );
         Ok(())
     })();
 
@@ -571,6 +784,7 @@ fn open_edit(
     session_id: &str,
     app_handle: &tauri::AppHandle,
     watched: &mut HashMap<String, WatchedFile>,
+    cancel_flag: &Arc<AtomicBool>,
 ) -> Result<String, AppError> {
     let filename = Path::new(remote_path)
         .file_name()
@@ -604,7 +818,15 @@ fn open_edit(
     let temp_path_str = temp_path.to_string_lossy().into_owned();
 
     // Download the file to temp location.
-    download_file(sftp, remote_path, &temp_path_str, session_id, app_handle)?;
+    download_file(
+        sftp,
+        remote_path,
+        &temp_path_str,
+        session_id,
+        app_handle,
+        true,
+        cancel_flag,
+    )?;
 
     // Read initial mtime.
     let last_mtime = std::fs::metadata(&temp_path)
@@ -640,13 +862,98 @@ fn open_edit(
     Ok(temp_path_str)
 }
 
+/// Downloads a remote file or, recursively, a remote directory tree.
+fn download_path(
+    sftp: &ssh2::Sftp,
+    remote_path: &str,
+    local_path: &str,
+    session_id: &str,
+    app_handle: &tauri::AppHandle,
+    overwrite: bool,
+    cancel_flag: &Arc<AtomicBool>,
+) -> Result<(), AppError> {
+    let stat = sftp
+        .stat(Path::new(remote_path))
+        .map_err(|e| sftp_err("read this item", e))?;
+    if stat.is_dir() {
+        download_directory(
+            sftp,
+            remote_path,
+            local_path,
+            session_id,
+            app_handle,
+            overwrite,
+            cancel_flag,
+        )
+    } else {
+        download_file(
+            sftp,
+            remote_path,
+            local_path,
+            session_id,
+            app_handle,
+            overwrite,
+            cancel_flag,
+        )
+    }
+}
+
+fn download_directory(
+    sftp: &ssh2::Sftp,
+    remote_path: &str,
+    local_path: &str,
+    session_id: &str,
+    app_handle: &tauri::AppHandle,
+    overwrite: bool,
+    cancel_flag: &Arc<AtomicBool>,
+) -> Result<(), AppError> {
+    if !overwrite && Path::new(local_path).exists() {
+        return Err(AppError::AlreadyExists(local_path.to_string()));
+    }
+    if !Path::new(local_path).exists() {
+        std::fs::create_dir_all(local_path)
+            .map_err(|e| AppError::Io(format!("cannot create local directory: {e}")))?;
+    }
+
+    let entries = sftp
+        .readdir(Path::new(remote_path))
+        .map_err(|e| sftp_err("read this directory", e))?;
+    for (path_buf, _) in entries {
+        let name = match path_buf.file_name() {
+            Some(n) => n.to_string_lossy().into_owned(),
+            None => continue,
+        };
+        if name == "." || name == ".." {
+            continue;
+        }
+        let child_remote = path_buf.to_string_lossy().into_owned();
+        let child_local = format!("{}/{}", local_path.trim_end_matches('/'), name);
+        download_path(
+            sftp,
+            &child_remote,
+            &child_local,
+            session_id,
+            app_handle,
+            overwrite,
+            cancel_flag,
+        )?;
+    }
+    Ok(())
+}
+
 fn download_file(
     sftp: &ssh2::Sftp,
     remote_path: &str,
     local_path: &str,
     session_id: &str,
     app_handle: &tauri::AppHandle,
+    overwrite: bool,
+    cancel_flag: &Arc<AtomicBool>,
 ) -> Result<(), AppError> {
+    if !overwrite && Path::new(local_path).exists() {
+        return Err(AppError::AlreadyExists(local_path.to_string()));
+    }
+
     let stat = sftp
         .stat(Path::new(remote_path))
         .map_err(|e| sftp_err("read this file", e))?;
@@ -659,6 +966,10 @@ fn download_file(
     let mut local_file = std::fs::File::create(local_path)
         .map_err(|e| AppError::Io(format!("create local file failed: {e}")))?;
 
+    // Reset before starting so a stale cancellation from a previous transfer
+    // doesn't immediately abort this one.
+    cancel_flag.store(false, Ordering::Relaxed);
+
     let result = (|| {
         let mut buf = vec![0u8; 65536];
         let mut read_bytes: u64 = 0;
@@ -666,6 +977,9 @@ fn download_file(
         let mut last_emit = std::time::Instant::now();
 
         loop {
+            if cancel_flag.load(Ordering::Relaxed) {
+                return Err(AppError::Cancelled(remote_path.to_string()));
+            }
             let n = remote_file
                 .read(&mut buf)
                 .map_err(|e| AppError::Ssh(format!("Download failed: {e}")))?;
@@ -685,13 +999,12 @@ fn download_file(
                 );
             }
         }
-        // Always emit a final event so the frontend reaches 100%.
-        if total > 0 {
-            let _ = app_handle.emit(
-                &format!("sftp:download_progress:{session_id}"),
-                serde_json::json!({ "read": read_bytes, "total": total }),
-            );
-        }
+        // Always emit a final event so the frontend reaches 100%, even for
+        // zero-byte files where the loop above never runs.
+        let _ = app_handle.emit(
+            &format!("sftp:download_progress:{session_id}"),
+            serde_json::json!({ "read": read_bytes, "total": total }),
+        );
         Ok(())
     })();
 
