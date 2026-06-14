@@ -1,6 +1,6 @@
 [package]
 name = "sshelter"
-version = "0.1.7"
+version = "0.1.8"
 description = "SSH connection manager desktop app"
 authors = []
 license = "MIT"
