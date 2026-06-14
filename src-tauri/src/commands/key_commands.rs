@@ -28,7 +28,17 @@ struct KeyMeta {
 }
 
 /// Row shape for `ssh_keys` SELECTs: (id, name, key_path, key_type, fingerprint, comment, is_encrypted, created_at, updated_at).
-type SshKeyRow = (String, String, String, String, String, String, i64, String, String);
+type SshKeyRow = (
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    i64,
+    String,
+    String,
+);
 
 /// Deletes a temporary file on drop, ensuring askpass script cleanup on all code paths.
 struct ScriptGuard(Option<std::path::PathBuf>);
@@ -141,44 +151,43 @@ fn inspect_key(priv_path: &std::path::Path, home: &std::path::Path) -> Result<Ke
         priv_path.to_path_buf()
     };
 
-    let (fingerprint, key_type) =
-        match std::process::Command::new("ssh-keygen")
-            .args(["-l", "-f", &keygen_source.to_string_lossy()])
-            .output()
-        {
-            Ok(out) if out.status.success() => {
-                let line = String::from_utf8_lossy(&out.stdout);
-                // Format: "256 SHA256:xxx...= comment (ED25519)"
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                let fp = parts.get(1).copied().unwrap_or("").to_string();
-                let kt = parts
-                    .last()
-                    .map(|s| s.trim_matches(|c| c == '(' || c == ')'))
-                    .map(|s| match s.to_lowercase().as_str() {
-                        "ed25519" => "ed25519",
-                        "ecdsa" => "ecdsa",
-                        "rsa" => "rsa",
-                        "dsa" | "dss" => "dsa",
-                        _ => "unknown",
-                    })
-                    .unwrap_or("unknown")
-                    .to_string();
-                (fp, kt)
-            }
-            _ => {
-                let kt = if priv_data.contains("BEGIN EC PRIVATE KEY") {
-                    "ecdsa"
-                } else if priv_data.contains("BEGIN RSA PRIVATE KEY") {
-                    "rsa"
-                } else if priv_data.contains("BEGIN DSA PRIVATE KEY") {
-                    "dsa"
-                } else {
-                    "unknown"
-                }
+    let (fingerprint, key_type) = match std::process::Command::new("ssh-keygen")
+        .args(["-l", "-f", &keygen_source.to_string_lossy()])
+        .output()
+    {
+        Ok(out) if out.status.success() => {
+            let line = String::from_utf8_lossy(&out.stdout);
+            // Format: "256 SHA256:xxx...= comment (ED25519)"
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            let fp = parts.get(1).copied().unwrap_or("").to_string();
+            let kt = parts
+                .last()
+                .map(|s| s.trim_matches(|c| c == '(' || c == ')'))
+                .map(|s| match s.to_lowercase().as_str() {
+                    "ed25519" => "ed25519",
+                    "ecdsa" => "ecdsa",
+                    "rsa" => "rsa",
+                    "dsa" | "dss" => "dsa",
+                    _ => "unknown",
+                })
+                .unwrap_or("unknown")
                 .to_string();
-                ("".to_string(), kt)
+            (fp, kt)
+        }
+        _ => {
+            let kt = if priv_data.contains("BEGIN EC PRIVATE KEY") {
+                "ecdsa"
+            } else if priv_data.contains("BEGIN RSA PRIVATE KEY") {
+                "rsa"
+            } else if priv_data.contains("BEGIN DSA PRIVATE KEY") {
+                "dsa"
+            } else {
+                "unknown"
             }
-        };
+            .to_string();
+            ("".to_string(), kt)
+        }
+    };
 
     // Canonicalize the .pub path to catch symlinks that escape the home directory
     // before reading it for the comment field.
@@ -206,18 +215,27 @@ fn inspect_key(priv_path: &std::path::Path, home: &std::path::Path) -> Result<Ke
 
 #[tauri::command]
 pub async fn list_ssh_keys(state: tauri::State<'_, AppState>) -> Result<Vec<SshKey>, AppError> {
-    let rows: Vec<SshKeyRow> =
-        sqlx::query_as(
-            "SELECT id, name, key_path, key_type, fingerprint, comment, is_encrypted, \
+    let rows: Vec<SshKeyRow> = sqlx::query_as(
+        "SELECT id, name, key_path, key_type, fingerprint, comment, is_encrypted, \
              created_at, updated_at FROM ssh_keys ORDER BY created_at ASC",
-        )
-        .fetch_all(&state.db)
-        .await?;
+    )
+    .fetch_all(&state.db)
+    .await?;
 
     Ok(rows
         .into_iter()
         .map(
-            |(id, name, key_path, key_type, fingerprint, comment, is_encrypted, created_at, updated_at)| {
+            |(
+                id,
+                name,
+                key_path,
+                key_type,
+                fingerprint,
+                comment,
+                is_encrypted,
+                created_at,
+                updated_at,
+            )| {
                 SshKey {
                     id,
                     name,
@@ -252,17 +270,14 @@ pub async fn add_ssh_key(
     let home_owned = home.clone();
     let meta = tokio::task::spawn_blocking(move || inspect_key(&expanded, &home_owned))
         .await
-        .map_err(|e| AppError::Ssh(format!("background task failed: {e}")))?
-        ?;
+        .map_err(|e| AppError::Ssh(format!("background task failed: {e}")))??;
 
-    let key_name = name
-        .filter(|n| !n.trim().is_empty())
-        .unwrap_or_else(|| {
-            expand_path(&path, &app)
-                .file_name()
-                .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_else(|| "Unnamed Key".into())
-        });
+    let key_name = name.filter(|n| !n.trim().is_empty()).unwrap_or_else(|| {
+        expand_path(&path, &app)
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| "Unnamed Key".into())
+    });
     validate_name(key_name.trim())?;
 
     let id = Uuid::new_v4().to_string();
@@ -305,10 +320,7 @@ pub async fn add_ssh_key(
 }
 
 #[tauri::command]
-pub async fn remove_ssh_key(
-    state: tauri::State<'_, AppState>,
-    id: String,
-) -> Result<(), AppError> {
+pub async fn remove_ssh_key(state: tauri::State<'_, AppState>, id: String) -> Result<(), AppError> {
     let result = sqlx::query("DELETE FROM ssh_keys WHERE id = ?")
         .bind(&id)
         .execute(&state.db)
@@ -363,7 +375,14 @@ pub async fn generate_ssh_key(
         };
 
         let mut cmd = std::process::Command::new("ssh-keygen");
-        cmd.args(["-t", t_arg, "-C", &name_c, "-f", &expanded.to_string_lossy()]);
+        cmd.args([
+            "-t",
+            t_arg,
+            "-C",
+            &name_c,
+            "-f",
+            &expanded.to_string_lossy(),
+        ]);
         if let Some(b) = bits {
             cmd.args(["-b", b]);
         }
@@ -390,15 +409,17 @@ pub async fn generate_ssh_key(
             .map_err(|e| AppError::Ssh(format!("ssh-keygen not available: {e}")))?;
 
         if !out.status.success() {
-            log::error!("ssh-keygen failed: {}", String::from_utf8_lossy(&out.stderr));
+            log::error!(
+                "ssh-keygen failed: {}",
+                String::from_utf8_lossy(&out.stderr)
+            );
             return Err(AppError::Ssh("key generation failed".into()));
         }
 
         inspect_key(&expanded, &home)
     })
     .await
-    .map_err(|e| AppError::Ssh(format!("background task failed: {e}")))?
-    ?;
+    .map_err(|e| AppError::Ssh(format!("background task failed: {e}")))??;
 
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
@@ -440,11 +461,10 @@ pub async fn get_public_key(
     state: tauri::State<'_, AppState>,
     id: String,
 ) -> Result<String, AppError> {
-    let key_path: Option<String> =
-        sqlx::query_scalar("SELECT key_path FROM ssh_keys WHERE id = ?")
-            .bind(&id)
-            .fetch_optional(&state.db)
-            .await?;
+    let key_path: Option<String> = sqlx::query_scalar("SELECT key_path FROM ssh_keys WHERE id = ?")
+        .bind(&id)
+        .fetch_optional(&state.db)
+        .await?;
 
     let path = key_path.ok_or_else(|| AppError::NotFound(format!("key '{id}' not found")))?;
 
@@ -487,21 +507,30 @@ pub async fn rename_ssh_key(
 
     // RETURNING eliminates the separate SELECT round-trip and makes the
     // update+fetch atomic — RowNotFound if the id doesn't exist.
-    let row: (String, String, String, String, String, String, i64, String, String) =
-        sqlx::query_as(
-            "UPDATE ssh_keys SET name = ?, updated_at = ? WHERE id = ? \
+    let row: (
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        i64,
+        String,
+        String,
+    ) = sqlx::query_as(
+        "UPDATE ssh_keys SET name = ?, updated_at = ? WHERE id = ? \
              RETURNING id, name, key_path, key_type, fingerprint, comment, \
              is_encrypted, created_at, updated_at",
-        )
-        .bind(name.trim())
-        .bind(&now)
-        .bind(&id)
-        .fetch_one(&state.db)
-        .await
-        .map_err(|e| match e {
-            sqlx::Error::RowNotFound => AppError::NotFound(format!("key '{id}' not found")),
-            _ => AppError::from(e),
-        })?;
+    )
+    .bind(name.trim())
+    .bind(&now)
+    .bind(&id)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => AppError::NotFound(format!("key '{id}' not found")),
+        _ => AppError::from(e),
+    })?;
 
     let (id, name, key_path, key_type, fingerprint, comment, is_encrypted, created_at, updated_at) =
         row;

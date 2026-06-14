@@ -12,14 +12,18 @@ use crate::error::AppError;
 
 /// Encrypts `secret` with `key` (AES-256-GCM) and stores the result in
 /// `vault_credentials`. Returns a UUID to persist in `servers.vault_credential_id`.
-pub async fn store_credential(db: &SqlitePool, key: &[u8], secret: &str) -> Result<String, AppError> {
+pub async fn store_credential(
+    db: &SqlitePool,
+    key: &[u8],
+    secret: &str,
+) -> Result<String, AppError> {
     let id = Uuid::new_v4().to_string();
 
     let mut nonce_bytes = [0u8; 12];
     getrandom::getrandom(&mut nonce_bytes).map_err(|e| AppError::Vault(e.to_string()))?;
 
-    let cipher = Aes256Gcm::new_from_slice(key)
-        .map_err(|_| AppError::Vault("invalid key length".into()))?;
+    let cipher =
+        Aes256Gcm::new_from_slice(key).map_err(|_| AppError::Vault("invalid key length".into()))?;
     let ciphertext = cipher
         .encrypt(Nonce::from_slice(&nonce_bytes), secret.as_bytes())
         .map_err(|_| AppError::Vault("encryption failed".into()))?;
@@ -36,7 +40,11 @@ pub async fn store_credential(db: &SqlitePool, key: &[u8], secret: &str) -> Resu
 }
 
 /// Decrypts and returns the secret stored under `id`.
-pub async fn retrieve_credential(db: &SqlitePool, key: &[u8], id: &str) -> Result<String, AppError> {
+pub async fn retrieve_credential(
+    db: &SqlitePool,
+    key: &[u8],
+    id: &str,
+) -> Result<String, AppError> {
     let row: Option<(Vec<u8>, Vec<u8>)> =
         sqlx::query_as("SELECT nonce, ciphertext FROM vault_credentials WHERE id = ?")
             .bind(id)
@@ -48,15 +56,19 @@ pub async fn retrieve_credential(db: &SqlitePool, key: &[u8], id: &str) -> Resul
         row.ok_or_else(|| AppError::Vault("credential not found".into()))?;
 
     if nonce_bytes.len() != 12 {
-        return Err(AppError::Vault("corrupt credential: unexpected nonce length".into()));
+        return Err(AppError::Vault(
+            "corrupt credential: unexpected nonce length".into(),
+        ));
     }
 
-    let cipher = Aes256Gcm::new_from_slice(key)
-        .map_err(|_| AppError::Vault("invalid key length".into()))?;
+    let cipher =
+        Aes256Gcm::new_from_slice(key).map_err(|_| AppError::Vault("invalid key length".into()))?;
     let plaintext = Zeroizing::new(
         cipher
             .decrypt(Nonce::from_slice(&nonce_bytes), ciphertext.as_ref())
-            .map_err(|_| AppError::Vault("decryption failed — wrong vault key or corrupt data".into()))?,
+            .map_err(|_| {
+                AppError::Vault("decryption failed — wrong vault key or corrupt data".into())
+            })?,
     );
 
     String::from_utf8(plaintext.to_vec()).map_err(|e| AppError::Vault(e.to_string()))
@@ -74,8 +86,8 @@ pub async fn update_credential(
     let mut nonce_bytes = [0u8; 12];
     getrandom::getrandom(&mut nonce_bytes).map_err(|e| AppError::Vault(e.to_string()))?;
 
-    let cipher = Aes256Gcm::new_from_slice(key)
-        .map_err(|_| AppError::Vault("invalid key length".into()))?;
+    let cipher =
+        Aes256Gcm::new_from_slice(key).map_err(|_| AppError::Vault("invalid key length".into()))?;
     let ciphertext = cipher
         .encrypt(Nonce::from_slice(&nonce_bytes), secret.as_bytes())
         .map_err(|_| AppError::Vault("encryption failed".into()))?;
@@ -103,7 +115,11 @@ pub async fn delete_credential(db: &SqlitePool, id: &str) -> Result<(), AppError
 /// Re-encrypts every stored credential from `old_key` to `new_key` inside a
 /// single transaction. Called whenever the master password changes so existing
 /// credentials remain accessible under the new key.
-pub async fn reencrypt_all(db: &SqlitePool, old_key: &[u8], new_key: &[u8]) -> Result<(), AppError> {
+pub async fn reencrypt_all(
+    db: &SqlitePool,
+    old_key: &[u8],
+    new_key: &[u8],
+) -> Result<(), AppError> {
     let rows: Vec<(String, Vec<u8>, Vec<u8>)> =
         sqlx::query_as("SELECT id, nonce, ciphertext FROM vault_credentials")
             .fetch_all(db)
@@ -135,7 +151,9 @@ pub async fn reencrypt_all(db: &SqlitePool, old_key: &[u8], new_key: &[u8]) -> R
             old_cipher
                 .decrypt(Nonce::from_slice(&nonce_bytes), ciphertext.as_ref())
                 .map_err(|_| {
-                    AppError::Vault(format!("re-encryption aborted: cannot decrypt credential {id}"))
+                    AppError::Vault(format!(
+                        "re-encryption aborted: cannot decrypt credential {id}"
+                    ))
                 })?,
         );
 

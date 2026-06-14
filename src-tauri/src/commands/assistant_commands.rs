@@ -66,7 +66,9 @@ fn key_id_setting(provider: &str) -> Result<&'static str, AppError> {
     match provider {
         "openai" => Ok(OPENAI_KEY_ID_KEY),
         "anthropic" => Ok(ANTHROPIC_KEY_ID_KEY),
-        other => Err(AppError::Validation(format!("unknown assistant provider: {other}"))),
+        other => Err(AppError::Validation(format!(
+            "unknown assistant provider: {other}"
+        ))),
     }
 }
 
@@ -98,12 +100,11 @@ async fn migrate_legacy_key(db: &SqlitePool) -> Result<(), AppError> {
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
 
-        let has_active: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM settings WHERE key = ?")
-                .bind(ACTIVE_PROVIDER_KEY)
-                .fetch_one(&mut *tx)
-                .await
-                .map_err(|e| AppError::Database(e.to_string()))?;
+        let has_active: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM settings WHERE key = ?")
+            .bind(ACTIVE_PROVIDER_KEY)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
         if has_active == 0 {
             sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
                 .bind(ACTIVE_PROVIDER_KEY)
@@ -165,7 +166,10 @@ pub async fn set_assistant_api_key(
     write_setting(&state.db, key_id_key, &id).await?;
 
     // First key added becomes the default active provider.
-    if read_setting(&state.db, ACTIVE_PROVIDER_KEY).await?.is_none() {
+    if read_setting(&state.db, ACTIVE_PROVIDER_KEY)
+        .await?
+        .is_none()
+    {
         write_setting(&state.db, ACTIVE_PROVIDER_KEY, &provider).await?;
     }
     Ok(())
@@ -188,7 +192,11 @@ pub async fn clear_assistant_provider_key(
     let active = read_setting(&state.db, ACTIVE_PROVIDER_KEY).await?;
     if active.as_deref() == Some(provider.as_str()) {
         // Attempt to fall back to the other provider.
-        let other = if provider == "openai" { "anthropic" } else { "openai" };
+        let other = if provider == "openai" {
+            "anthropic"
+        } else {
+            "openai"
+        };
         let other_key_id = key_id_setting(other)?;
         if read_setting(&state.db, other_key_id).await?.is_some() {
             write_setting(&state.db, ACTIVE_PROVIDER_KEY, other).await?;
@@ -237,7 +245,12 @@ pub async fn set_assistant_enabled(
     enabled: bool,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    write_setting(&state.db, ENABLED_KEY, if enabled { "true" } else { "false" }).await
+    write_setting(
+        &state.db,
+        ENABLED_KEY,
+        if enabled { "true" } else { "false" },
+    )
+    .await
 }
 
 /// Reports configuration state for the settings UI — never exposes the keys.
@@ -248,7 +261,9 @@ pub async fn get_assistant_status(
     migrate_legacy_key(&state.db).await?;
 
     let openai_configured = read_setting(&state.db, OPENAI_KEY_ID_KEY).await?.is_some();
-    let anthropic_configured = read_setting(&state.db, ANTHROPIC_KEY_ID_KEY).await?.is_some();
+    let anthropic_configured = read_setting(&state.db, ANTHROPIC_KEY_ID_KEY)
+        .await?
+        .is_some();
     let active_provider = read_setting(&state.db, ACTIVE_PROVIDER_KEY).await?;
     let enabled = read_setting(&state.db, ENABLED_KEY)
         .await?
@@ -296,7 +311,12 @@ pub async fn set_assistant_persist_history(
     if !enabled {
         purge_chat_archive(&state.db).await?;
     }
-    write_setting(&state.db, PERSIST_HISTORY_KEY, if enabled { "true" } else { "false" }).await
+    write_setting(
+        &state.db,
+        PERSIST_HISTORY_KEY,
+        if enabled { "true" } else { "false" },
+    )
+    .await
 }
 
 /// Encrypts `payload` (the JSON-serialised per-server transcript) and saves it
@@ -347,17 +367,14 @@ pub async fn save_assistant_chat_history(
     if let Some(credential_id) = existing {
         // Update ciphertext in place — same ID, new nonce, zero orphan risk.
         vault::update_credential(&state.db, &vault_key, &credential_id, &payload).await?;
-        sqlx::query(
-            "UPDATE assistant_chat_archive SET updated_at = ? WHERE server_id = ?",
-        )
-        .bind(chrono::Utc::now().timestamp())
-        .bind(&server_id)
-        .execute(&state.db)
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
+        sqlx::query("UPDATE assistant_chat_archive SET updated_at = ? WHERE server_id = ?")
+            .bind(chrono::Utc::now().timestamp())
+            .bind(&server_id)
+            .execute(&state.db)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
     } else {
-        let credential_id =
-            vault::store_credential(&state.db, &vault_key, &payload).await?;
+        let credential_id = vault::store_credential(&state.db, &vault_key, &payload).await?;
         sqlx::query(
             "INSERT INTO assistant_chat_archive (server_id, credential_id, updated_at) VALUES (?, ?, ?)",
         )
@@ -480,7 +497,10 @@ pub async fn send_assistant_message(
                 "user" => Ok(Role::User),
                 other => Err(AppError::Validation(format!("invalid role: {other}"))),
             }?;
-            Ok(ChatMessage { role, content: m.content })
+            Ok(ChatMessage {
+                role,
+                content: m.content,
+            })
         })
         .collect::<Result<Vec<_>, AppError>>()?;
 

@@ -124,8 +124,7 @@ async fn launch_macos(argv: Vec<String>) -> Result<(), AppError> {
 /// a shell string passed to cmd.exe.
 #[cfg(target_os = "windows")]
 async fn launch_windows(argv: Vec<String>) -> Result<(), AppError> {
-    let script_path =
-        std::env::temp_dir().join(format!("sshelter-{}.bat", uuid::Uuid::new_v4()));
+    let script_path = std::env::temp_dir().join(format!("sshelter-{}.bat", uuid::Uuid::new_v4()));
 
     // Batch double-quote each argument; double any internal double-quotes and
     // escape % as %% so cmd.exe does not expand environment variables inside

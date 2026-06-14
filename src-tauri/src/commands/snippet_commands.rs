@@ -6,11 +6,11 @@ use uuid::Uuid;
 
 #[tauri::command]
 pub async fn list_snippets(state: tauri::State<'_, AppState>) -> Result<Vec<Snippet>, AppError> {
-    Ok(
-        sqlx::query_as("SELECT id, title, body, created_at, updated_at FROM snippets ORDER BY title ASC")
-            .fetch_all(&state.db)
-            .await?,
+    Ok(sqlx::query_as(
+        "SELECT id, title, body, created_at, updated_at FROM snippets ORDER BY title ASC",
     )
+    .fetch_all(&state.db)
+    .await?)
 }
 
 #[tauri::command]
@@ -33,10 +33,12 @@ pub async fn create_snippet(
     .bind(&now)
     .execute(&state.db)
     .await?;
-    Ok(sqlx::query_as("SELECT id, title, body, created_at, updated_at FROM snippets WHERE id = ?")
-        .bind(&id)
-        .fetch_one(&state.db)
-        .await?)
+    Ok(
+        sqlx::query_as("SELECT id, title, body, created_at, updated_at FROM snippets WHERE id = ?")
+            .bind(&id)
+            .fetch_one(&state.db)
+            .await?,
+    )
 }
 
 #[tauri::command]
@@ -56,10 +58,12 @@ pub async fn update_snippet(
         .bind(&id)
         .execute(&state.db)
         .await?;
-    Ok(sqlx::query_as("SELECT id, title, body, created_at, updated_at FROM snippets WHERE id = ?")
-        .bind(&id)
-        .fetch_one(&state.db)
-        .await?)
+    Ok(
+        sqlx::query_as("SELECT id, title, body, created_at, updated_at FROM snippets WHERE id = ?")
+            .bind(&id)
+            .fetch_one(&state.db)
+            .await?,
+    )
 }
 
 #[tauri::command]

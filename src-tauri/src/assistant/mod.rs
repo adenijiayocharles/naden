@@ -37,7 +37,9 @@ pub fn provider_for(id: &str) -> Result<Box<dyn AssistantProvider>, AppError> {
     match id {
         "openai" => Ok(Box::new(openai::OpenAiProvider)),
         "anthropic" => Ok(Box::new(anthropic::AnthropicProvider)),
-        other => Err(AppError::Validation(format!("unknown assistant provider: {other}"))),
+        other => Err(AppError::Validation(format!(
+            "unknown assistant provider: {other}"
+        ))),
     }
 }
 

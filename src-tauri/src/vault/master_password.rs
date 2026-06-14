@@ -285,5 +285,4 @@ mod tests {
         // Both derived from the same password + stored salt — must be equal
         assert_eq!(key1.as_slice(), key2.as_slice());
     }
-
 }

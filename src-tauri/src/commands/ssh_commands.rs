@@ -229,8 +229,9 @@ pub async fn import_ssh_config(
         Some(p) => {
             // Caller-supplied paths must stay within the home directory to
             // prevent the frontend from reading arbitrary filesystem paths.
-            crate::commands::local_commands::check_home_boundary(&p)
-                .map_err(|_| AppError::Ssh("SSH config path must be within home directory".into()))?
+            crate::commands::local_commands::check_home_boundary(&p).map_err(|_| {
+                AppError::Ssh("SSH config path must be within home directory".into())
+            })?
         }
         None => app
             .path()
@@ -288,10 +289,7 @@ pub async fn confirm_ssh_config_import(
 ) -> Result<Vec<ServerWithTags>, AppError> {
     // Validate all entries before inserting any.
     for preview in &previews {
-        let hostname = preview
-            .hostname
-            .as_deref()
-            .unwrap_or(&preview.pattern);
+        let hostname = preview.hostname.as_deref().unwrap_or(&preview.pattern);
         validate_import_hostname(hostname)?;
         if let Some(ref key_path) = preview.identity_file_path {
             validate_import_identity_path(key_path, &app)?;
@@ -344,31 +342,28 @@ pub async fn confirm_ssh_config_import(
         // Mark the jump host as a jump host — targeted update so other fields
         // (identity_file_path, auth_method, etc.) set during import are not wiped.
         let now = chrono::Utc::now().to_rfc3339();
-        sqlx::query(
-            "UPDATE servers SET is_jump_host = 1, updated_at = ? WHERE id = ?",
-        )
-        .bind(&now)
-        .bind(jump_id)
-        .execute(&state.db)
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
+        sqlx::query("UPDATE servers SET is_jump_host = 1, updated_at = ? WHERE id = ?")
+            .bind(&now)
+            .bind(jump_id)
+            .execute(&state.db)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
 
         // Link the dependent server to its jump host.
-        sqlx::query(
-            "UPDATE servers SET jump_host_id = ?, updated_at = ? WHERE id = ?",
-        )
-        .bind(jump_id)
-        .bind(&now)
-        .bind(&dependent_id)
-        .execute(&state.db)
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
+        sqlx::query("UPDATE servers SET jump_host_id = ?, updated_at = ? WHERE id = ?")
+            .bind(jump_id)
+            .bind(&now)
+            .bind(&dependent_id)
+            .execute(&state.db)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
     }
 
     // Flush the in-memory cache so list_servers returns the newly imported entries.
     if let Ok(fresh) = queries::list_servers_db(&state.db).await {
         // Rebuild `created` from the refreshed list so callers see updated jump fields.
-        let ids: std::collections::HashSet<&str> = pattern_to_id.values().map(String::as_str).collect();
+        let ids: std::collections::HashSet<&str> =
+            pattern_to_id.values().map(String::as_str).collect();
         created = fresh
             .iter()
             .filter(|s| ids.contains(s.server.id.as_str()))
@@ -455,10 +450,7 @@ pub async fn open_terminal_session(
             let fwd_auth = match auth_for_server(&server, &state, &app_handle).await {
                 Ok(a) => a,
                 Err(e) => {
-                    log::warn!(
-                        "[auto-start] could not get auth for tunnel {}: {e}",
-                        fwd.id
-                    );
+                    log::warn!("[auto-start] could not get auth for tunnel {}: {e}", fwd.id);
                     continue;
                 }
             };

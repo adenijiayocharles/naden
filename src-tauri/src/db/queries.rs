@@ -284,13 +284,12 @@ pub async fn toggle_favourite_db(
     db: &SqlitePool,
     server_id: &str,
 ) -> Result<ServerWithTags, AppError> {
-    let current: Option<bool> =
-        sqlx::query_scalar("SELECT is_favourite FROM servers WHERE id = ?")
-            .bind(server_id)
-            .fetch_optional(db)
-            .await?;
-    let current = current
-        .ok_or_else(|| AppError::NotFound(format!("server '{server_id}' not found")))?;
+    let current: Option<bool> = sqlx::query_scalar("SELECT is_favourite FROM servers WHERE id = ?")
+        .bind(server_id)
+        .fetch_optional(db)
+        .await?;
+    let current =
+        current.ok_or_else(|| AppError::NotFound(format!("server '{server_id}' not found")))?;
     let now = Utc::now().to_rfc3339();
     sqlx::query("UPDATE servers SET is_favourite = ?, updated_at = ? WHERE id = ?")
         .bind(!current)
@@ -476,7 +475,9 @@ pub async fn create_tag_db(db: &SqlitePool, name: &str) -> Result<Tag, AppError>
 
 // ── port forward queries ──────────────────────────────────────────────────────
 
-use crate::models::port_forward::{self, CreatePortForwardPayload, PortForward, UpdatePortForwardPayload};
+use crate::models::port_forward::{
+    self, CreatePortForwardPayload, PortForward, UpdatePortForwardPayload,
+};
 
 pub async fn get_port_forward_db(db: &SqlitePool, id: &str) -> Result<PortForward, AppError> {
     sqlx::query_as("SELECT * FROM port_forwards WHERE id = ?")
@@ -491,15 +492,17 @@ pub async fn list_port_forwards_db(
     server_id: Option<&str>,
 ) -> Result<Vec<PortForward>, AppError> {
     Ok(match server_id {
-        Some(id) => sqlx::query_as(
-            "SELECT * FROM port_forwards WHERE server_id = ? ORDER BY created_at",
-        )
-        .bind(id)
-        .fetch_all(db)
-        .await?,
-        None => sqlx::query_as("SELECT * FROM port_forwards ORDER BY server_id, created_at")
-            .fetch_all(db)
-            .await?,
+        Some(id) => {
+            sqlx::query_as("SELECT * FROM port_forwards WHERE server_id = ? ORDER BY created_at")
+                .bind(id)
+                .fetch_all(db)
+                .await?
+        }
+        None => {
+            sqlx::query_as("SELECT * FROM port_forwards ORDER BY server_id, created_at")
+                .fetch_all(db)
+                .await?
+        }
     })
 }
 
@@ -858,7 +861,9 @@ mod tests {
     async fn create_and_list_port_forward() {
         let db = make_pool().await;
         let sid = make_server(&db).await;
-        let fwd = create_port_forward_db(&db, &fwd_payload(&sid)).await.unwrap();
+        let fwd = create_port_forward_db(&db, &fwd_payload(&sid))
+            .await
+            .unwrap();
 
         assert_eq!(fwd.server_id, sid);
         assert_eq!(fwd.forward_type, "local");
@@ -880,8 +885,12 @@ mod tests {
             .unwrap()
             .server
             .id;
-        create_port_forward_db(&db, &fwd_payload(&sid1)).await.unwrap();
-        create_port_forward_db(&db, &fwd_payload(&sid2)).await.unwrap();
+        create_port_forward_db(&db, &fwd_payload(&sid1))
+            .await
+            .unwrap();
+        create_port_forward_db(&db, &fwd_payload(&sid2))
+            .await
+            .unwrap();
 
         let all = list_port_forwards_db(&db, None).await.unwrap();
         assert_eq!(all.len(), 2);
@@ -891,7 +900,9 @@ mod tests {
     async fn update_port_forward_persists_changes() {
         let db = make_pool().await;
         let sid = make_server(&db).await;
-        let fwd = create_port_forward_db(&db, &fwd_payload(&sid)).await.unwrap();
+        let fwd = create_port_forward_db(&db, &fwd_payload(&sid))
+            .await
+            .unwrap();
 
         let updated = update_port_forward_db(
             &db,
@@ -917,7 +928,9 @@ mod tests {
     async fn delete_port_forward_removes_row() {
         let db = make_pool().await;
         let sid = make_server(&db).await;
-        let fwd = create_port_forward_db(&db, &fwd_payload(&sid)).await.unwrap();
+        let fwd = create_port_forward_db(&db, &fwd_payload(&sid))
+            .await
+            .unwrap();
         delete_port_forward_db(&db, &fwd.id).await.unwrap();
 
         let list = list_port_forwards_db(&db, Some(&sid)).await.unwrap();
@@ -928,7 +941,9 @@ mod tests {
     async fn delete_server_cascades_to_port_forwards() {
         let db = make_pool().await;
         let sid = make_server(&db).await;
-        create_port_forward_db(&db, &fwd_payload(&sid)).await.unwrap();
+        create_port_forward_db(&db, &fwd_payload(&sid))
+            .await
+            .unwrap();
 
         delete_server_db(&db, &sid).await.unwrap();
 

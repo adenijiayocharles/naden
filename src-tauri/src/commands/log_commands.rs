@@ -68,8 +68,7 @@ pub async fn close_log_entry(
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-const LOG_FILTER_SQL: &str =
-    "SELECT * FROM audit_log
+const LOG_FILTER_SQL: &str = "SELECT * FROM audit_log
      WHERE (? IS NULL OR server_id = ?)
        AND (? IS NULL OR session_start >= ?)
        AND (? IS NULL OR session_start <= ?)
@@ -83,17 +82,19 @@ async fn query_log_entries(
     limit_offset: Option<(i64, i64)>,
 ) -> Result<Vec<LogEntry>, AppError> {
     if let Some((limit, offset)) = limit_offset {
-        Ok(sqlx::query_as::<_, LogEntry>(&format!("{LOG_FILTER_SQL} LIMIT ? OFFSET ?"))
-            .bind(server_id)
-            .bind(server_id)
-            .bind(start_date)
-            .bind(start_date)
-            .bind(end_ts)
-            .bind(end_ts)
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(db)
-            .await?)
+        Ok(
+            sqlx::query_as::<_, LogEntry>(&format!("{LOG_FILTER_SQL} LIMIT ? OFFSET ?"))
+                .bind(server_id)
+                .bind(server_id)
+                .bind(start_date)
+                .bind(start_date)
+                .bind(end_ts)
+                .bind(end_ts)
+                .bind(limit)
+                .bind(offset)
+                .fetch_all(db)
+                .await?,
+        )
     } else {
         Ok(sqlx::query_as::<_, LogEntry>(LOG_FILTER_SQL)
             .bind(server_id)
@@ -119,7 +120,14 @@ pub async fn list_logs(
     state: tauri::State<'_, AppState>,
 ) -> Result<Vec<LogEntry>, AppError> {
     let end_ts = end_date.as_deref().map(|d| format!("{d}T23:59:59"));
-    query_log_entries(&state.db, &server_id, &start_date, &end_ts, Some((limit, offset))).await
+    query_log_entries(
+        &state.db,
+        &server_id,
+        &start_date,
+        &end_ts,
+        Some((limit, offset)),
+    )
+    .await
 }
 
 #[tauri::command]
@@ -164,9 +172,7 @@ pub async fn export_logs_csv(
 }
 
 #[tauri::command]
-pub async fn clear_logs(
-    state: tauri::State<'_, AppState>,
-) -> Result<(), AppError> {
+pub async fn clear_logs(state: tauri::State<'_, AppState>) -> Result<(), AppError> {
     sqlx::query("DELETE FROM audit_log")
         .execute(&state.db)
         .await?;

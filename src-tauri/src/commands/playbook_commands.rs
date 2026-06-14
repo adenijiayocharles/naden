@@ -7,18 +7,30 @@ use chrono::Utc;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
-async fn assemble_playbooks(db: &SqlitePool, rows: Vec<PlaybookRow>) -> Result<Vec<Playbook>, AppError> {
-    let steps: Vec<(String, PlaybookStep)> = sqlx::query_as::<_, (String, String, i64, String, i64)>(
-        "SELECT playbook_id, id, position, command, delay_ms
+async fn assemble_playbooks(
+    db: &SqlitePool,
+    rows: Vec<PlaybookRow>,
+) -> Result<Vec<Playbook>, AppError> {
+    let steps: Vec<(String, PlaybookStep)> =
+        sqlx::query_as::<_, (String, String, i64, String, i64)>(
+            "SELECT playbook_id, id, position, command, delay_ms
          FROM playbook_steps ORDER BY playbook_id ASC, position ASC",
-    )
-    .fetch_all(db)
-    .await?
-    .into_iter()
-    .map(|(playbook_id, id, position, command, delay_ms)| {
-        (playbook_id, PlaybookStep { id, position, command, delay_ms })
-    })
-    .collect();
+        )
+        .fetch_all(db)
+        .await?
+        .into_iter()
+        .map(|(playbook_id, id, position, command, delay_ms)| {
+            (
+                playbook_id,
+                PlaybookStep {
+                    id,
+                    position,
+                    command,
+                    delay_ms,
+                },
+            )
+        })
+        .collect();
 
     Ok(rows
         .into_iter()
@@ -62,24 +74,29 @@ async fn insert_steps(
 }
 
 async fn get_playbook_db(db: &SqlitePool, id: &str) -> Result<Playbook, AppError> {
-    let row: PlaybookRow =
-        sqlx::query_as("SELECT id, title, description, created_at, updated_at FROM playbooks WHERE id = ?")
-            .bind(id)
-            .fetch_one(db)
-            .await?;
+    let row: PlaybookRow = sqlx::query_as(
+        "SELECT id, title, description, created_at, updated_at FROM playbooks WHERE id = ?",
+    )
+    .bind(id)
+    .fetch_one(db)
+    .await?;
     let mut playbooks = assemble_playbooks(db, vec![row]).await?;
     Ok(playbooks.remove(0))
 }
 
 async fn list_playbooks_db(db: &SqlitePool) -> Result<Vec<Playbook>, AppError> {
-    let rows: Vec<PlaybookRow> =
-        sqlx::query_as("SELECT id, title, description, created_at, updated_at FROM playbooks ORDER BY title ASC")
-            .fetch_all(db)
-            .await?;
+    let rows: Vec<PlaybookRow> = sqlx::query_as(
+        "SELECT id, title, description, created_at, updated_at FROM playbooks ORDER BY title ASC",
+    )
+    .fetch_all(db)
+    .await?;
     assemble_playbooks(db, rows).await
 }
 
-async fn create_playbook_db(db: &SqlitePool, payload: &CreatePlaybookPayload) -> Result<Playbook, AppError> {
+async fn create_playbook_db(
+    db: &SqlitePool,
+    payload: &CreatePlaybookPayload,
+) -> Result<Playbook, AppError> {
     if payload.title.trim().is_empty() {
         return Err(AppError::Validation("title is required".into()));
     }
@@ -168,7 +185,10 @@ pub async fn update_playbook(
 }
 
 #[tauri::command]
-pub async fn delete_playbook(id: String, state: tauri::State<'_, AppState>) -> Result<(), AppError> {
+pub async fn delete_playbook(
+    id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
     delete_playbook_db(&state.db, &id).await
 }
 
@@ -183,14 +203,23 @@ mod tests {
             .await
             .expect("failed to open in-memory db");
 
-        sqlx::query("PRAGMA foreign_keys = ON").execute(&pool).await.unwrap();
-        sqlx::migrate!("src/db/migrations").run(&pool).await.expect("migrations failed");
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::migrate!("src/db/migrations")
+            .run(&pool)
+            .await
+            .expect("migrations failed");
 
         pool
     }
 
     fn step(command: &str, delay_ms: i64) -> StepInput {
-        StepInput { command: command.to_string(), delay_ms }
+        StepInput {
+            command: command.to_string(),
+            delay_ms,
+        }
     }
 
     #[tokio::test]
@@ -199,13 +228,20 @@ mod tests {
         let payload = CreatePlaybookPayload {
             title: "Restart nginx".into(),
             description: None,
-            steps: vec![step("sudo systemctl stop nginx", 200), step("sudo systemctl start nginx", 500)],
+            steps: vec![
+                step("sudo systemctl stop nginx", 200),
+                step("sudo systemctl start nginx", 500),
+            ],
         };
 
         let created = create_playbook_db(&db, &payload).await.unwrap();
 
         assert_eq!(
-            created.steps.iter().map(|s| s.command.as_str()).collect::<Vec<_>>(),
+            created
+                .steps
+                .iter()
+                .map(|s| s.command.as_str())
+                .collect::<Vec<_>>(),
             vec!["sudo systemctl stop nginx", "sudo systemctl start nginx"]
         );
     }
@@ -218,7 +254,11 @@ mod tests {
             &CreatePlaybookPayload {
                 title: "Deploy".into(),
                 description: Some("Pulls and restarts".into()),
-                steps: vec![step("git pull", 100), step("make build", 100), step("make restart", 100)],
+                steps: vec![
+                    step("git pull", 100),
+                    step("make build", 100),
+                    step("make restart", 100),
+                ],
             },
         )
         .await
@@ -227,7 +267,11 @@ mod tests {
         let playbooks = list_playbooks_db(&db).await.unwrap();
 
         assert_eq!(
-            playbooks[0].steps.iter().map(|s| s.command.as_str()).collect::<Vec<_>>(),
+            playbooks[0]
+                .steps
+                .iter()
+                .map(|s| s.command.as_str())
+                .collect::<Vec<_>>(),
             vec!["git pull", "make build", "make restart"]
         );
     }
@@ -252,15 +296,25 @@ mod tests {
             &UpdatePlaybookPayload {
                 title: "Tail logs".into(),
                 description: None,
-                steps: vec![step("tail -f /var/log/nginx/access.log", 0), step("tail -f /var/log/nginx/error.log", 0)],
+                steps: vec![
+                    step("tail -f /var/log/nginx/access.log", 0),
+                    step("tail -f /var/log/nginx/error.log", 0),
+                ],
             },
         )
         .await
         .unwrap();
 
         assert_eq!(
-            updated.steps.iter().map(|s| s.command.as_str()).collect::<Vec<_>>(),
-            vec!["tail -f /var/log/nginx/access.log", "tail -f /var/log/nginx/error.log"]
+            updated
+                .steps
+                .iter()
+                .map(|s| s.command.as_str())
+                .collect::<Vec<_>>(),
+            vec![
+                "tail -f /var/log/nginx/access.log",
+                "tail -f /var/log/nginx/error.log"
+            ]
         );
     }
 
@@ -280,11 +334,12 @@ mod tests {
 
         delete_playbook_db(&db, &created.id).await.unwrap();
 
-        let remaining_steps: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM playbook_steps WHERE playbook_id = ?")
-            .bind(&created.id)
-            .fetch_one(&db)
-            .await
-            .unwrap();
+        let remaining_steps: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM playbook_steps WHERE playbook_id = ?")
+                .bind(&created.id)
+                .fetch_one(&db)
+                .await
+                .unwrap();
         assert_eq!(remaining_steps, 0);
     }
 }
