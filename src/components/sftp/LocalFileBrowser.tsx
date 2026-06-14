@@ -17,9 +17,11 @@ interface Props {
   onSelectedChange: (paths: string[]) => void;
   onPathChange: (path: string) => void;
   onActivate: () => void;
+  isActive: boolean;
   showHidden?: boolean;
   newFolderTrigger?: number;
   newFileTrigger?: number;
+  refreshTrigger?: number;
   onDropRemotePaths?: (remotePaths: string[]) => void;
 }
 
@@ -93,7 +95,7 @@ const Row = ({ index, style, entries, selectedSet, renaming, renameValue, onRowC
   );
 };
 
-export default function LocalFileBrowser({ onSelectedChange, onPathChange, onActivate, showHidden = true, newFolderTrigger = 0, newFileTrigger = 0, onDropRemotePaths }: Props) {
+export default function LocalFileBrowser({ onSelectedChange, onPathChange, onActivate, isActive, showHidden = true, newFolderTrigger = 0, newFileTrigger = 0, refreshTrigger = 0, onDropRemotePaths }: Props) {
   const [currentPath, setCurrentPath] = useState("");
   const [entries, setEntries] = useState<LocalFileEntry[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
@@ -148,6 +150,11 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
     setCreatingFile(true);
   }, [newFileTrigger]);
 
+  useEffect(() => {
+    if (refreshTrigger === 0) return;
+    void navigateTo(currentPath);
+  }, [refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps -- only re-run on refreshTrigger changes
+
   const commitNewFolder = async (name: string) => {
     if (!name) { setCreatingFolder(false); return; }
     setError(null);
@@ -182,6 +189,23 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
     [entries, showHidden],
   );
   const isDragOver = dropCount > 0;
+
+  // Ref keeps the handler current without re-registering the listener on every render.
+  const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  keyHandlerRef.current = (e: KeyboardEvent) => {
+    if (!isActive) return;
+    if (document.activeElement?.tagName === "INPUT") return;
+    if ((e.metaKey || e.ctrlKey) && e.key === "a") {
+      e.preventDefault();
+      setSelected(visibleEntries.map((entry) => entry.path));
+    }
+  };
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => keyHandlerRef.current(e);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []); // stable: ref always holds the latest handler
 
   const handleDragStart = useCallback((entry: LocalFileEntry, e: React.DragEvent) => {
     if (renaming === entry.path) { e.preventDefault(); return; }

@@ -3,7 +3,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
 import { useSftpStore, type SftpSession } from "../../store/sftpStore";
 import { sftpCommands } from "../../lib/tauriCommands";
-import { formatError } from "../../lib/errors";
+import { formatError, isAlreadyExistsError, isCancelledError } from "../../lib/errors";
 import { joinPath, parentPath } from "../../lib/path";
 import type { SortKey, SortDir } from "./SftpFileList";
 import type { FileEntry } from "../../types/sftp";
@@ -23,6 +23,10 @@ interface RemotePaneInput {
   localSelected: string[];
   activePane: "local" | "remote";
   showLocalPane: boolean;
+  /** Whether this pane is the one currently focused — gates global shortcuts like Cmd/Ctrl+A. */
+  isActive: boolean;
+  /** Called after a download to the local pane completes, so the local file list can refresh. */
+  refreshLocalPane?: () => void;
 }
 
 interface RemotePaneOutput {
@@ -40,6 +44,8 @@ interface RemotePaneOutput {
   creatingFile: boolean;
   error: string | null;
   confirmingDelete: boolean;
+  overwriteConfirm: { message: string; onConfirm: () => void } | null;
+  cancelOverwriteConfirm: () => void;
   transferProgress: string | null;
   transferByteProgress: { bytes: number; total: number } | null;
   chmodTarget: { path: string; mode: number } | null;
@@ -52,6 +58,7 @@ interface RemotePaneOutput {
   handleRefresh: () => void;
   handleUpload: () => void;
   handleDownload: () => void;
+  handleCancelTransfer: () => void;
   handleNewFolder: () => void;
   handleNewFile: () => void;
   handleDelete: () => void;
@@ -83,7 +90,7 @@ interface RemotePaneOutput {
 }
 
 export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
-  const { sessionId, showHidden, sortKey, sortDir, localCurrentPath, localSelected, activePane, showLocalPane } = input;
+  const { sessionId, showHidden, sortKey, sortDir, localCurrentPath, localSelected, activePane, showLocalPane, isActive, refreshLocalPane } = input;
 
   const session = useSftpStore((s) => s.sessions.find((t) => t.id === sessionId));
   const navigateTo = useSftpStore((s) => s.navigateTo);
@@ -105,6 +112,7 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [overwriteConfirm, setOverwriteConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [transferProgress, setTransferProgress] = useState<string | null>(null);
   const [transferByteProgress, setTransferByteProgress] = useState<{ bytes: number; total: number } | null>(null);
 
@@ -196,121 +204,161 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
 
   // ── Upload / Download ──────────────────────────────────────────────────────
 
-  const handleUploadFromLocal = async () => {
+  const handleCancelTransfer = () => {
+    void sftpCommands.cancelSftpTransfer(sessionId);
+  };
+
+  const handleUploadFromLocal = async (overwrite = false, startIndex = 0) => {
     if (localSelected.length === 0 || !session) return;
     setBusy(true);
     setError(null);
-    try {
-      for (let i = 0; i < localSelected.length; i++) {
-        const localPath = localSelected[i];
-        const name = localPath.split("/").pop() ?? localPath;
-        setTransferProgress(localSelected.length > 1 ? `Uploading ${name} (${i + 1}/${localSelected.length})…` : `Uploading ${name}…`);
-        await sftpCommands.uploadSftpFile(sessionId, localPath, joinPath(session.currentPath, name));
+    for (let i = startIndex; i < localSelected.length; i++) {
+      const localPath = localSelected[i];
+      const name = localPath.split("/").pop() ?? localPath;
+      setTransferProgress(localSelected.length > 1 ? `Uploading ${name} (${i + 1}/${localSelected.length})…` : `Uploading ${name}…`);
+      try {
+        await sftpCommands.uploadSftpFile(sessionId, localPath, joinPath(session.currentPath, name), overwrite);
+      } catch (e) {
+        setTransferProgress(null);
+        setBusy(false);
+        if (isCancelledError(e)) return;
+        if (isAlreadyExistsError(e) && !overwrite) {
+          setOverwriteConfirm({ message: formatError(e), onConfirm: () => { setOverwriteConfirm(null); void handleUploadFromLocal(true, i); } });
+          return;
+        }
+        setError(formatError(e));
+        return;
       }
-      setTransferProgress(null);
-      await navigate(session.currentPath);
-    } catch (e) {
-      setError(formatError(e));
-      setTransferProgress(null);
-    } finally {
-      setBusy(false);
     }
+    setTransferProgress(null);
+    await navigate(session.currentPath);
+    setBusy(false);
   };
 
-  const handleDownloadToLocal = async () => {
+  const handleDownloadToLocal = async (overwrite = false, startIndex = 0) => {
     if (!session) return;
-    const selectedEntries = session.entries.filter((e) => selected.includes(e.path));
-    const files = selectedEntries.filter((e) => !e.isDir);
-    if (files.length === 0 || !localCurrentPath) return;
+    const items = session.entries.filter((e) => selected.includes(e.path));
+    if (items.length === 0 || !localCurrentPath) return;
     setBusy(true);
     setError(null);
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const entry = files[i];
-        const name = entry.path.split("/").pop() ?? entry.path;
-        setTransferProgress(files.length > 1 ? `Downloading ${name} (${i + 1}/${files.length})…` : `Downloading ${name}…`);
-        await sftpCommands.downloadSftpFile(sessionId, entry.path, joinPath(localCurrentPath, name));
+    for (let i = startIndex; i < items.length; i++) {
+      const entry = items[i];
+      const name = entry.path.split("/").pop() ?? entry.path;
+      setTransferProgress(items.length > 1 ? `Downloading ${name} (${i + 1}/${items.length})…` : `Downloading ${name}…`);
+      try {
+        await sftpCommands.downloadSftpFile(sessionId, entry.path, joinPath(localCurrentPath, name), overwrite);
+      } catch (e) {
+        setTransferProgress(null);
+        setBusy(false);
+        if (isCancelledError(e)) return;
+        if (isAlreadyExistsError(e) && !overwrite) {
+          setOverwriteConfirm({ message: formatError(e), onConfirm: () => { setOverwriteConfirm(null); void handleDownloadToLocal(true, i); } });
+          return;
+        }
+        setError(formatError(e));
+        return;
       }
-      setTransferProgress(null);
-    } catch (e) {
-      setError(formatError(e));
-      setTransferProgress(null);
-    } finally {
-      setBusy(false);
     }
+    setTransferProgress(null);
+    setBusy(false);
+    refreshLocalPane?.();
   };
 
-  const handleUploadPaths = async (localPaths: string[]) => {
+  const handleUploadPaths = async (localPaths: string[], overwrite = false, startIndex = 0) => {
     if (!session || localPaths.length === 0) return;
     setBusy(true);
     setError(null);
-    try {
-      for (let i = 0; i < localPaths.length; i++) {
-        const localPath = localPaths[i];
-        const name = localPath.split("/").pop() ?? localPath;
-        setTransferProgress(localPaths.length > 1 ? `Uploading ${name} (${i + 1}/${localPaths.length})…` : `Uploading ${name}…`);
-        await sftpCommands.uploadSftpFile(sessionId, localPath, joinPath(session.currentPath, name));
+    for (let i = startIndex; i < localPaths.length; i++) {
+      const localPath = localPaths[i];
+      const name = localPath.split("/").pop() ?? localPath;
+      setTransferProgress(localPaths.length > 1 ? `Uploading ${name} (${i + 1}/${localPaths.length})…` : `Uploading ${name}…`);
+      try {
+        await sftpCommands.uploadSftpFile(sessionId, localPath, joinPath(session.currentPath, name), overwrite);
+      } catch (e) {
+        setTransferProgress(null);
+        setBusy(false);
+        if (isCancelledError(e)) return;
+        if (isAlreadyExistsError(e) && !overwrite) {
+          setOverwriteConfirm({ message: formatError(e), onConfirm: () => { setOverwriteConfirm(null); void handleUploadPaths(localPaths, true, i); } });
+          return;
+        }
+        setError(formatError(e));
+        return;
       }
-      setTransferProgress(null);
-      await navigate(session.currentPath);
-    } catch (e) {
-      setError(formatError(e));
-      setTransferProgress(null);
-    } finally {
-      setBusy(false);
     }
+    setTransferProgress(null);
+    await navigate(session.currentPath);
+    setBusy(false);
   };
 
-  const handleDownloadPaths = async (remotePaths: string[]) => {
+  const handleDownloadPaths = async (remotePaths: string[], overwrite = false, startIndex = 0) => {
     if (!session || remotePaths.length === 0 || !localCurrentPath) return;
-    const files = session.entries.filter((e) => remotePaths.includes(e.path) && !e.isDir);
-    if (files.length === 0) return;
+    const items = session.entries.filter((e) => remotePaths.includes(e.path));
+    if (items.length === 0) return;
     setBusy(true);
     setError(null);
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const entry = files[i];
-        const name = entry.path.split("/").pop() ?? entry.path;
-        setTransferProgress(files.length > 1 ? `Downloading ${name} (${i + 1}/${files.length})…` : `Downloading ${name}…`);
-        await sftpCommands.downloadSftpFile(sessionId, entry.path, joinPath(localCurrentPath, name));
+    for (let i = startIndex; i < items.length; i++) {
+      const entry = items[i];
+      const name = entry.path.split("/").pop() ?? entry.path;
+      setTransferProgress(items.length > 1 ? `Downloading ${name} (${i + 1}/${items.length})…` : `Downloading ${name}…`);
+      try {
+        await sftpCommands.downloadSftpFile(sessionId, entry.path, joinPath(localCurrentPath, name), overwrite);
+      } catch (e) {
+        setTransferProgress(null);
+        setBusy(false);
+        if (isCancelledError(e)) return;
+        if (isAlreadyExistsError(e) && !overwrite) {
+          setOverwriteConfirm({ message: formatError(e), onConfirm: () => { setOverwriteConfirm(null); void handleDownloadPaths(remotePaths, true, i); } });
+          return;
+        }
+        setError(formatError(e));
+        return;
       }
-      setTransferProgress(null);
-    } catch (e) {
-      setError(formatError(e));
-      setTransferProgress(null);
-    } finally {
-      setBusy(false);
     }
+    setTransferProgress(null);
+    setBusy(false);
+    refreshLocalPane?.();
   };
 
-  const handleUpload = async () => {
-    if (showLocalPane && activePane === "local") {
+  const handleUpload = async (overwrite = false, localPath?: string, remotePath?: string, remoteName?: string) => {
+    if (!localPath && showLocalPane && activePane === "local") {
       await handleUploadFromLocal();
       return;
     }
     if (!session) return;
-    const result = await open({ multiple: false, title: "Choose file to upload" });
-    if (typeof result !== "string") return;
-    const localPath = result;
-    const remoteName = localPath.split("/").pop() ?? "upload";
-    const remotePath = joinPath(session.currentPath, remoteName);
+    let lp = localPath;
+    let rp = remotePath;
+    let name = remoteName;
+    if (!lp || !rp || !name) {
+      const result = await open({ multiple: false, title: "Choose file to upload" });
+      if (typeof result !== "string") return;
+      lp = result;
+      name = lp.split("/").pop() ?? "upload";
+      rp = joinPath(session.currentPath, name);
+    }
     setBusy(true);
-    setTransferProgress(`Uploading ${remoteName}…`);
+    setTransferProgress(`Uploading ${name}…`);
     setError(null);
     try {
-      await sftpCommands.uploadSftpFile(sessionId, localPath, remotePath);
+      await sftpCommands.uploadSftpFile(sessionId, lp, rp, overwrite);
       setTransferProgress(null);
       await navigate(session.currentPath);
     } catch (e) {
-      setError(formatError(e));
       setTransferProgress(null);
+      if (isCancelledError(e)) return;
+      if (isAlreadyExistsError(e) && !overwrite) {
+        setBusy(false);
+        setOverwriteConfirm({ message: formatError(e), onConfirm: () => { setOverwriteConfirm(null); void handleUpload(true, lp, rp, name); } });
+        return;
+      }
+      setError(formatError(e));
     } finally {
       setBusy(false);
     }
   };
 
-  const handleDownload = async () => {
-    if (showLocalPane && activePane === "local") {
+  const handleDownload = async (overwrite = false, startIndex = 0, folderOverride?: string) => {
+    if (!folderOverride && showLocalPane && activePane === "local") {
       await handleDownloadToLocal();
       return;
     }
@@ -319,7 +367,7 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
     const files = selectedEntries.filter((e) => !e.isDir);
     if (files.length === 0) return;
 
-    if (files.length === 1) {
+    if (files.length === 1 && !folderOverride) {
       const file = files[0];
       const localPath = await save({ defaultPath: file.name, title: "Save file as" });
       if (!localPath) return;
@@ -327,11 +375,12 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
       setTransferProgress(`Downloading ${file.name}…`);
       setError(null);
       try {
-        await sftpCommands.downloadSftpFile(sessionId, file.path, localPath);
+        // The save dialog already confirms overwrite with the OS.
+        await sftpCommands.downloadSftpFile(sessionId, file.path, localPath, true);
         setTransferProgress(null);
       } catch (e) {
-        setError(formatError(e));
         setTransferProgress(null);
+        if (!isCancelledError(e)) setError(formatError(e));
       } finally {
         setBusy(false);
       }
@@ -339,16 +388,28 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
     }
 
     // Multi-file download: prompt for a folder, then download each file into it
-    const folder = await open({ directory: true, title: "Choose destination folder" });
-    if (typeof folder !== "string") return;
+    let folder = folderOverride;
+    if (!folder) {
+      const picked = await open({ directory: true, title: "Choose destination folder" });
+      if (typeof picked !== "string") return;
+      folder = picked;
+    }
+    const folderPath = folder;
     setBusy(true);
     setError(null);
-    for (let i = 0; i < files.length; i++) {
+    for (let i = startIndex; i < files.length; i++) {
       const file = files[i];
       setTransferProgress(`Downloading ${file.name} (${i + 1}/${files.length})…`);
       try {
-        await sftpCommands.downloadSftpFile(sessionId, file.path, joinPath(folder, file.name));
+        await sftpCommands.downloadSftpFile(sessionId, file.path, joinPath(folderPath, file.name), overwrite);
       } catch (e) {
+        setTransferProgress(null);
+        if (isCancelledError(e)) break;
+        if (isAlreadyExistsError(e) && !overwrite) {
+          setBusy(false);
+          setOverwriteConfirm({ message: formatError(e), onConfirm: () => { setOverwriteConfirm(null); void handleDownload(true, i, folderPath); } });
+          return;
+        }
         setError(formatError(e));
         break;
       }
@@ -433,7 +494,7 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
     setSelected([path]);
   };
 
-  const commitRename = async () => {
+  const commitRename = async (overwrite = false) => {
     if (!renaming || !renameValue.trim()) { setRenaming(null); return; }
     const dir = renaming.split("/").slice(0, -1).join("/");
     const newPath = `${dir}/${renameValue.trim()}`;
@@ -441,11 +502,15 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
     setBusy(true);
     setError(null);
     try {
-      await sftpCommands.renameSftp(sessionId, renaming, newPath);
+      await sftpCommands.renameSftp(sessionId, renaming, newPath, overwrite);
       setRenaming(null);
       setSelected([]);
       if (session) await navigate(session.currentPath);
     } catch (e) {
+      if (isAlreadyExistsError(e) && !overwrite) {
+        setOverwriteConfirm({ message: formatError(e), onConfirm: () => { setOverwriteConfirm(null); void commitRename(true); } });
+        return;
+      }
       setError(formatError(e));
     } finally {
       setBusy(false);
@@ -464,24 +529,30 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
     setClipboard({ paths: selected, sourceDir: session.currentPath, mode: "copy" });
   };
 
-  const handlePaste = async () => {
+  const handlePaste = async (overwrite = false, startIndex = 0) => {
     if (!clipboard || !session) return;
     setBusy(true);
     setError(null);
     let failed = 0;
     let firstError: string | null = null;
-    for (const srcPath of clipboard.paths) {
+    for (let i = startIndex; i < clipboard.paths.length; i++) {
+      const srcPath = clipboard.paths[i];
       const name = srcPath.split("/").pop() ?? srcPath;
       const destPath = joinPath(session.currentPath, name);
       // Skip if source and destination are identical (pasting into same folder with cut)
       if (srcPath === destPath) continue;
       try {
         if (clipboard.mode === "cut") {
-          await sftpCommands.renameSftp(sessionId, srcPath, destPath);
+          await sftpCommands.renameSftp(sessionId, srcPath, destPath, overwrite);
         } else {
-          await sftpCommands.copySftpFile(sessionId, srcPath, destPath);
+          await sftpCommands.copySftpFile(sessionId, srcPath, destPath, overwrite);
         }
       } catch (e) {
+        if (isAlreadyExistsError(e) && !overwrite) {
+          setBusy(false);
+          setOverwriteConfirm({ message: formatError(e), onConfirm: () => { setOverwriteConfirm(null); void handlePaste(true, i); } });
+          return;
+        }
         failed++;
         if (!firstError) firstError = formatError(e);
       }
@@ -556,10 +627,16 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
       setConfirmingDelete(false);
       setClipboard(null);
       setError(null);
+      setOverwriteConfirm(null);
       return;
     }
     if (!session) return;
     if (mod && e.key === "r") { e.preventDefault(); handleRefresh(); }
+    if (mod && e.key === "a") {
+      if (!isActive) return;
+      e.preventDefault();
+      setSelected(visibleEntries.map((entry) => entry.path));
+    }
   };
 
   useEffect(() => {
@@ -606,6 +683,8 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
     creatingFile,
     error,
     confirmingDelete,
+    overwriteConfirm,
+    cancelOverwriteConfirm: () => setOverwriteConfirm(null),
     transferProgress,
     transferByteProgress,
     chmodTarget,
@@ -618,6 +697,7 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
     handleRefresh,
     handleUpload: () => { void handleUpload(); },
     handleDownload: () => { void handleDownload(); },
+    handleCancelTransfer,
     handleNewFolder,
     handleNewFile,
     handleDelete,

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSftpStore } from "../../store/sftpStore";
 import { useServerStore } from "../../store/serverStore";
 import { sftpCommands, terminalCommands } from "../../lib/tauriCommands";
-import { formatError } from "../../lib/errors";
+import { formatError, isAlreadyExistsError, isCancelledError } from "../../lib/errors";
 import type { SortKey, SortDir } from "./SftpFileList";
 import SftpFileList from "./SftpFileList";
 import SftpToolbar, { PathBar } from "./SftpToolbar";
@@ -28,6 +28,7 @@ export default function SftpBrowser({ sessionId }: Props) {
   const [showHidden, setShowHidden] = useState(false);
   const [localNewFolderTrigger, setLocalNewFolderTrigger] = useState(0);
   const [localNewFileTrigger, setLocalNewFileTrigger] = useState(0);
+  const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [sortKeyPeer, setSortKeyPeer] = useState<SortKey>("name");
@@ -54,6 +55,7 @@ export default function SftpBrowser({ sessionId }: Props) {
   // Cross-session transfer state
   const [crossTransferBusy, setCrossTransferBusy] = useState(false);
   const [crossTransferProgress, setCrossTransferProgress] = useState<string | null>(null);
+  const [crossOverwriteConfirm, setCrossOverwriteConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   // Reset to local if the peer session is removed from the store externally
   useEffect(() => {
@@ -138,6 +140,8 @@ export default function SftpBrowser({ sessionId }: Props) {
     creatingFile,
     error,
     confirmingDelete,
+    overwriteConfirm,
+    cancelOverwriteConfirm,
     transferProgress,
     transferByteProgress,
     chmodTarget,
@@ -150,6 +154,7 @@ export default function SftpBrowser({ sessionId }: Props) {
     handleRefresh,
     handleUpload,
     handleDownload,
+    handleCancelTransfer,
     handleNewFolder: handleRemoteNewFolder,
     handleNewFile: handleRemoteNewFile,
     handleDelete,
@@ -187,6 +192,8 @@ export default function SftpBrowser({ sessionId }: Props) {
     localSelected,
     activePane,
     showLocalPane,
+    isActive: activePane === "remote",
+    refreshLocalPane: () => setLocalRefreshTrigger((n) => n + 1),
   });
 
   // Peer remote pane — always instantiated (hooks can't be conditional).
@@ -201,6 +208,7 @@ export default function SftpBrowser({ sessionId }: Props) {
     localSelected: [],
     activePane: "remote",
     showLocalPane: false,
+    isActive: !leftPaneIsLocal && activePane === "local",
   });
 
   if (!session) return null;
@@ -213,7 +221,7 @@ export default function SftpBrowser({ sessionId }: Props) {
   const canUploadFromLocal =
     leftPaneIsLocal && activePane === "local" && localSelected.length > 0 && !isBusy;
   const canDownloadToLocal =
-    leftPaneIsLocal && activePane === "remote" && selectedEntries.some((e) => !e.isDir) && !!localCurrentPath && !isBusy;
+    leftPaneIsLocal && activePane === "remote" && selectedEntries.length > 0 && !!localCurrentPath && !isBusy;
 
   const canCopyPeerToRemote =
     validPeer && peerPane.selectedEntries.some((e) => !e.isDir) && !crossTransferBusy && !isBusy;
@@ -222,7 +230,12 @@ export default function SftpBrowser({ sessionId }: Props) {
 
   // ── Cross-session transfer handlers ───────────────────────────────────────
 
-  const handleCopyPeerToRemote = async () => {
+  const handleCancelCrossTransfer = () => {
+    void sftpCommands.cancelSftpTransfer(sessionId);
+    if (peerSessionId) void sftpCommands.cancelSftpTransfer(peerSessionId);
+  };
+
+  const handleCopyPeerToRemote = async (overwrite = false, startIndex = 0) => {
     // Guard on peerSessionId directly — effectivePeerId may be "__none__" if
     // called via a stale closure after the peer is cleared.
     if (!session || !peerPane.session || !peerSessionId) return;
@@ -230,46 +243,58 @@ export default function SftpBrowser({ sessionId }: Props) {
     if (files.length === 0) return;
     setCrossTransferBusy(true);
     setCrossTransferProgress(null);
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        setCrossTransferProgress(
-          files.length > 1 ? `Copying ${file.name} (${i + 1}/${files.length})…` : `Copying ${file.name}…`,
-        );
-        await sftpCommands.crossCopySftpFiles(peerSessionId, [file.path], sessionId, session.currentPath);
+    for (let i = startIndex; i < files.length; i++) {
+      const file = files[i];
+      setCrossTransferProgress(
+        files.length > 1 ? `Copying ${file.name} (${i + 1}/${files.length})…` : `Copying ${file.name}…`,
+      );
+      try {
+        await sftpCommands.crossCopySftpFiles(peerSessionId, [file.path], sessionId, session.currentPath, overwrite);
+      } catch (e) {
+        setCrossTransferProgress(null);
+        setCrossTransferBusy(false);
+        if (isCancelledError(e)) return;
+        if (isAlreadyExistsError(e) && !overwrite) {
+          setCrossOverwriteConfirm({ message: formatError(e), onConfirm: () => { setCrossOverwriteConfirm(null); void handleCopyPeerToRemote(true, i); } });
+          return;
+        }
+        setError(formatError(e));
+        return;
       }
-      setCrossTransferProgress(null);
-      handleRefresh();
-    } catch (e) {
-      setError(formatError(e));
-      setCrossTransferProgress(null);
-    } finally {
-      setCrossTransferBusy(false);
     }
+    setCrossTransferProgress(null);
+    setCrossTransferBusy(false);
+    handleRefresh();
   };
 
-  const handleCopyRemoteToPeer = async () => {
+  const handleCopyRemoteToPeer = async (overwrite = false, startIndex = 0) => {
     if (!session || !peerPane.session || !peerSessionId) return;
     const files = selectedEntries.filter((e) => !e.isDir);
     if (files.length === 0) return;
     setCrossTransferBusy(true);
     setCrossTransferProgress(null);
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        setCrossTransferProgress(
-          files.length > 1 ? `Copying ${file.name} (${i + 1}/${files.length})…` : `Copying ${file.name}…`,
-        );
-        await sftpCommands.crossCopySftpFiles(sessionId, [file.path], peerSessionId, peerPane.session.currentPath);
+    for (let i = startIndex; i < files.length; i++) {
+      const file = files[i];
+      setCrossTransferProgress(
+        files.length > 1 ? `Copying ${file.name} (${i + 1}/${files.length})…` : `Copying ${file.name}…`,
+      );
+      try {
+        await sftpCommands.crossCopySftpFiles(sessionId, [file.path], peerSessionId, peerPane.session.currentPath, overwrite);
+      } catch (e) {
+        setCrossTransferProgress(null);
+        setCrossTransferBusy(false);
+        if (isCancelledError(e)) return;
+        if (isAlreadyExistsError(e) && !overwrite) {
+          setCrossOverwriteConfirm({ message: formatError(e), onConfirm: () => { setCrossOverwriteConfirm(null); void handleCopyRemoteToPeer(true, i); } });
+          return;
+        }
+        setError(formatError(e));
+        return;
       }
-      setCrossTransferProgress(null);
-      peerPane.handleRefresh();
-    } catch (e) {
-      setError(formatError(e));
-      setCrossTransferProgress(null);
-    } finally {
-      setCrossTransferBusy(false);
     }
+    setCrossTransferProgress(null);
+    setCrossTransferBusy(false);
+    peerPane.handleRefresh();
   };
 
   // ── Toolbar handler wrappers ───────────────────────────────────────────────
@@ -359,6 +384,14 @@ export default function SftpBrowser({ sessionId }: Props) {
               <div className="h-full w-full bg-accent-fg/40 animate-pulse rounded-full" />
             )}
           </div>
+          {(isBusy || crossTransferBusy) && (
+            <button
+              onClick={crossTransferBusy ? handleCancelCrossTransfer : handleCancelTransfer}
+              className="text-meta text-muted hover:text-white shrink-0 px-2 py-0.5 rounded hover:bg-surface-3 transition-colors"
+            >
+              Cancel
+            </button>
+          )}
         </div>
       )}
 
@@ -366,7 +399,7 @@ export default function SftpBrowser({ sessionId }: Props) {
         {/* Left pane */}
         {showLocalPane && (
           <>
-            <div className="flex-1 min-w-0 border-r border-stroke-subtle flex flex-col">
+            <div className="flex-1 min-w-0 border-r border-stroke-subtle flex flex-col" onClick={() => setActivePane("local")}>
               {/* Peer navigation header — only shown when a remote session is active */}
               {!leftPaneIsLocal && validPeer && (
                 <div className="flex items-center gap-2 px-3 py-2 border-b border-stroke-subtle bg-surface-1 shrink-0">
@@ -405,13 +438,15 @@ export default function SftpBrowser({ sessionId }: Props) {
                   onSelectedChange={setLocalSelected}
                   onPathChange={setLocalCurrentPath}
                   onActivate={() => setActivePane("local")}
+                  isActive={activePane === "local"}
                   showHidden={showHidden}
                   newFolderTrigger={localNewFolderTrigger}
                   newFileTrigger={localNewFileTrigger}
+                  refreshTrigger={localRefreshTrigger}
                   onDropRemotePaths={handleDownloadPaths}
                 />
               ) : (
-                <div className="flex flex-col flex-1 min-h-0" onClick={() => setActivePane("local")}>
+                <div className="flex flex-col flex-1 min-h-0">
                   {!validPeer ? (
                     <div className="flex-1 flex items-center justify-center text-muted text-sm px-6 text-center">
                       {!peerSessionId
@@ -535,6 +570,7 @@ export default function SftpBrowser({ sessionId }: Props) {
         {/* Remote pane */}
         <div
           className={`flex-1 min-w-0 flex flex-col transition-colors ${showLocalPane && remoteDragCount > 0 ? "ring-2 ring-inset ring-accent/60 bg-accent/5" : ""}`}
+          onClick={() => setActivePane("remote")}
           onDragEnter={() => { if (showLocalPane) setRemoteDragCount((c) => c + 1); }}
           onDragLeave={() => { if (showLocalPane) setRemoteDragCount((c) => Math.max(0, c - 1)); }}
           onDragOver={(e) => { if (showLocalPane) e.preventDefault(); }}
@@ -597,6 +633,36 @@ export default function SftpBrowser({ sessionId }: Props) {
           description="These files will be permanently deleted. This cannot be undone."
           onConfirm={commitDelete}
           onCancel={() => setConfirmingDelete(false)}
+        />
+      )}
+
+      {overwriteConfirm && (
+        <ConfirmDeleteModal
+          title="Replace existing item?"
+          description={`${overwriteConfirm.message}. Replacing it cannot be undone.`}
+          confirmLabel="Replace"
+          onConfirm={overwriteConfirm.onConfirm}
+          onCancel={cancelOverwriteConfirm}
+        />
+      )}
+
+      {peerPane.overwriteConfirm && (
+        <ConfirmDeleteModal
+          title="Replace existing item?"
+          description={`${peerPane.overwriteConfirm.message}. Replacing it cannot be undone.`}
+          confirmLabel="Replace"
+          onConfirm={peerPane.overwriteConfirm.onConfirm}
+          onCancel={peerPane.cancelOverwriteConfirm}
+        />
+      )}
+
+      {crossOverwriteConfirm && (
+        <ConfirmDeleteModal
+          title="Replace existing item?"
+          description={`${crossOverwriteConfirm.message}. Replacing it cannot be undone.`}
+          confirmLabel="Replace"
+          onConfirm={crossOverwriteConfirm.onConfirm}
+          onCancel={() => setCrossOverwriteConfirm(null)}
         />
       )}
 
