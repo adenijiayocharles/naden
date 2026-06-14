@@ -3,6 +3,7 @@ use tauri::{Emitter, Manager};
 mod assistant;
 mod commands;
 mod db;
+mod discovery;
 pub mod error;
 mod models;
 mod platform;
@@ -37,10 +38,7 @@ pub struct AppState {
 }
 
 #[tauri::command]
-fn update_tray_menu(
-    app: tauri::AppHandle,
-    servers: Vec<tray::TrayServer>,
-) -> Result<(), String> {
+fn update_tray_menu(app: tauri::AppHandle, servers: Vec<tray::TrayServer>) -> Result<(), String> {
     tray::rebuild(&app, &servers).map_err(|e| e.to_string())
 }
 
@@ -139,6 +137,9 @@ pub fn run() {
             commands::ssh_commands::send_terminal_input,
             commands::ssh_commands::resize_terminal,
             commands::ssh_commands::remove_known_host_entry,
+            // Discovery
+            commands::discovery_commands::scan_lan_hosts,
+            commands::discovery_commands::import_known_hosts,
             // Tray
             update_tray_menu,
             // Vault
@@ -213,7 +214,8 @@ pub fn run() {
             });
 
             // Menubar tray icon — starts empty; frontend populates on first server load.
-            tray::setup_tray(app.handle()).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+            tray::setup_tray(app.handle())
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
             // Spawn vault auto-lock background task using Tauri's runtime,
             // which is already active during setup (unlike tokio::spawn).

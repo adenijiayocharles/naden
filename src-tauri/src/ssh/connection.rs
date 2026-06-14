@@ -51,7 +51,7 @@ pub enum AuthInfo {
     },
 }
 
-fn known_hosts_path() -> std::path::PathBuf {
+pub(crate) fn known_hosts_path() -> std::path::PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
     std::path::Path::new(&home).join(".ssh").join("known_hosts")
 }

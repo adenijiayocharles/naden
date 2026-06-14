@@ -72,7 +72,10 @@ fn parse_ssh_config_inner(
     Ok(previews)
 }
 
-fn expand_tilde(path: &std::path::Path, home_dir: Option<&std::path::PathBuf>) -> String {
+pub(crate) fn expand_tilde(
+    path: &std::path::Path,
+    home_dir: Option<&std::path::PathBuf>,
+) -> String {
     let s = path.to_string_lossy();
     if let Some(rest) = s.strip_prefix("~/") {
         if let Some(home) = home_dir {

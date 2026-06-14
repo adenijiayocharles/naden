@@ -401,7 +401,7 @@ export default function Sidebar() {
   const {
     filterGroupId, filterTagId, filterFavourites,
     setFilterGroup, setFilterTag, setFilterFavourites,
-    activeView, openAdd, closeForm, expandServerList, openImportSshConfig, openSnippets,
+    activeView, openAdd, closeForm, expandServerList, openImportSshConfig, openDiscoverHosts, openSnippets,
     openPlaybooks, openTunnels, openKeys, openSettings,
   } = useUiStore();
 
@@ -696,6 +696,12 @@ export default function Sidebar() {
                 className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-surface-4 transition-colors"
               >
                 SSH Config
+              </button>
+              <button
+                onClick={() => { openDiscoverHosts(); setAddMenuOpen(false); }}
+                className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-surface-4 transition-colors"
+              >
+                Discover Hosts
               </button>
             </div>
           )}

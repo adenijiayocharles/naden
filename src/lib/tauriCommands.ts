@@ -21,6 +21,7 @@ import type {
   UpdatePortForwardPayload,
 } from "../types/portForward";
 import type { SshKey } from "../types/sshKey";
+import type { DiscoveredHost } from "../types/discovery";
 
 export interface ReachabilityResult {
   reachable: boolean;
@@ -89,6 +90,14 @@ export const sshCommands = {
 
   confirmSshConfigImport: (previews: ImportPreview[]) =>
     invoke<Server[]>("confirm_ssh_config_import", { previews }),
+};
+
+export const discoveryCommands = {
+  scanLan: () =>
+    invoke<DiscoveredHost[]>("scan_lan_hosts"),
+
+  importKnownHosts: () =>
+    invoke<DiscoveredHost[]>("import_known_hosts"),
 };
 
 export const terminalCommands = {

@@ -15,6 +15,7 @@ import { useMenuEvents } from "../../hooks/useMenuEvents";
 import { useTrayEvents } from "../../hooks/useTrayEvents";
 import { trayCommands } from "../../lib/tauriCommands";
 import SshConfigImport from "../servers/SshConfigImport";
+import DiscoverHosts from "../servers/DiscoverHosts";
 import SettingsPage from "../settings/SettingsPage";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
@@ -99,6 +100,8 @@ export default function AppShell() {
   const setOnboardingComplete = useUiStore((s) => s.setOnboardingComplete);
   const importSshConfigOpen = useUiStore((s) => s.importSshConfigOpen);
   const closeImportSshConfig = useUiStore((s) => s.closeImportSshConfig);
+  const discoverHostsOpen = useUiStore((s) => s.discoverHostsOpen);
+  const closeDiscoverHosts = useUiStore((s) => s.closeDiscoverHosts);
   const isSetup = useVaultStore((s) => s.isSetup);
   const isUnlocked = useVaultStore((s) => s.isUnlocked);
   const isChecking = useVaultStore((s) => s.isChecking);
@@ -719,6 +722,7 @@ export default function AppShell() {
         <OnboardingWizard onComplete={() => setOnboardingComplete(true)} />
       )}
       {importSshConfigOpen && <SshConfigImport onClose={closeImportSshConfig} />}
+      {discoverHostsOpen && <DiscoverHosts onClose={closeDiscoverHosts} />}
     </div>
   );
 }

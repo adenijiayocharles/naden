@@ -14,6 +14,7 @@ interface UiStore {
   sidebarCollapsed: boolean;
   serverListCollapsed: boolean;
   importSshConfigOpen: boolean;
+  discoverHostsOpen: boolean;
   onboardingComplete: boolean;
   onboardingChecked: boolean;
   editingServerId: string | null;
@@ -39,6 +40,8 @@ interface UiStore {
   openSettings: (section?: SettingsSection) => void;
   openImportSshConfig: () => void;
   closeImportSshConfig: () => void;
+  openDiscoverHosts: () => void;
+  closeDiscoverHosts: () => void;
   setOnboardingComplete: (v: boolean) => void;
   setOnboardingChecked: () => void;
   setFilterGroup: (groupId: string | null) => void;
@@ -70,6 +73,7 @@ export const useUiStore = create<UiStore>((set) => ({
   sidebarCollapsed: false,
   serverListCollapsed: false,
   importSshConfigOpen: false,
+  discoverHostsOpen: false,
   onboardingComplete: true, // assume complete until checked
   onboardingChecked: false,
   editingServerId: null,
@@ -95,6 +99,8 @@ export const useUiStore = create<UiStore>((set) => ({
   openSettings: (section) => set({ activeView: "settings", editingServerId: null, ...(section ? { settingsSection: section } : {}) }),
   openImportSshConfig: () => set({ importSshConfigOpen: true }),
   closeImportSshConfig: () => set({ importSshConfigOpen: false }),
+  openDiscoverHosts: () => set({ discoverHostsOpen: true }),
+  closeDiscoverHosts: () => set({ discoverHostsOpen: false }),
   setOnboardingComplete: (v) => set({ onboardingComplete: v }),
   setOnboardingChecked: () => set({ onboardingChecked: true }),
   setFilterGroup: (groupId) => set({ filterGroupId: groupId, filterTagId: null, filterFavourites: false }),

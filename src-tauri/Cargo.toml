@@ -36,6 +36,7 @@ ssh2 = { version = "0.9", features = ["vendored-openssl"] }
 # and modern RSA keys in "-----BEGIN OPENSSH PRIVATE KEY-----" format).
 libssh2-sys = { version = "0.3", features = ["vendored-openssl"] }
 ssh2-config = "0"
+if-addrs = "0.13"
 nucleo = "0"
 nucleo-matcher = "0.3"
 pbkdf2 = "0.12"
