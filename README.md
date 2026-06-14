@@ -17,6 +17,9 @@ A fast, secure desktop application for managing SSH connections. Built for engin
 - **Audit log** — local log of every connection attempt with timestamp, host, username, duration, and outcome; exportable to CSV
 - **System tray** — quick-connect to any server or open an SFTP session directly from the menu bar
 - **Wake reconnect** — automatically reconnects sessions that drop when the machine sleeps
+- **Broadcast** — fan out terminal input to multiple sessions at once, with a confirmation guard for destructive commands
+- **Playbooks** — save multi-step command sequences with per-step delays and run them against one or more sessions
+- **AI assistant** — bring-your-own-key chat panel (OpenAI or Anthropic) with optional terminal context for troubleshooting
 
 ## Tech Stack
 
@@ -28,11 +31,10 @@ A fast, secure desktop application for managing SSH connections. Built for engin
 | Terminal emulator | xterm.js + xterm-addon-fit |
 | Backend | Rust |
 | SSH | `ssh2` crate (libssh2 + vendored OpenSSL) |
-| Credential vault | `keyring` crate → OS keychain |
+| Credential vault | `aes-gcm` (AES-256-GCM), key derived via `pbkdf2`/`sha2` from the master password |
 | Fuzzy search | `nucleo` crate |
 | SSH config parsing | `ssh2-config` crate |
 | Local database | SQLite via `sqlx` |
-| Backup encryption | `aes-gcm` crate |
 
 ## Prerequisites
 
@@ -88,26 +90,27 @@ src/
   components/
     layout/       # AppShell, Sidebar, TopBar, tab bar, vault countdown
     servers/      # Server list, card, row, form, bulk actions, port forwards section
-    terminal/     # Terminal pane and tab management
+    terminal/     # Terminal pane and tab management, broadcast grid, playbook run bar, AI assistant panel
     sftp/         # SFTP browser, file list, toolbar, chmod dialog
     tunnels/      # Port forward management panel
     snippets/     # Command snippet list and form
+    playbooks/    # Playbook list and editor
     vault/        # Lock screen and setup modal
     settings/     # Settings modal
     log/          # Audit log view
     onboarding/   # First-run wizard
     shared/       # Error boundary, connection overlay, shared inputs
   hooks/          # useAppInit, useWakeReconnect, useKeyboardShortcuts, useVaultHeartbeat, useMenuEvents, useTrayEvents
-  store/          # Zustand stores (server, terminal, sftp, tunnel, snippet, ui, vault)
+  store/          # Zustand stores (server, terminal, sftp, tunnel, snippet, playbook, broadcast, assistant, ui, vault)
   lib/            # Tauri command wrappers, session buffer, vault activity, clipboard clear
   types/          # Shared TypeScript types
 
 src-tauri/src/
-  commands/       # Tauri command handlers (ssh, sftp, vault, server, settings, log, tunnel, snippet)
+  commands/       # Tauri command handlers (ssh, sftp, vault, server, settings, log, tunnel, snippet, assistant)
   ssh/            # Connection manager, jump host tunnelling, SSH config parser, launcher
   sftp/           # SFTP session manager
   tunnel/         # Local, remote, and dynamic port-forward engine
-  vault/          # AES-256 credential vault, master password
+  vault/          # AES-256-GCM credential vault, master password
   db/             # SQLite queries and migrations
   search/         # nucleo-based fuzzy search
   platform/       # macOS-specific native integrations
@@ -124,7 +127,5 @@ src-tauri/src/
 
 ## Security Notes
 
-- Credentials (SSH keys, passwords) are stored in the OS keychain and never written to disk in plaintext
-- The vault is locked automatically after a configurable inactivity period
-- Backup exports are AES-256 encrypted with a user-supplied password
-- Server list backups never include raw credentials — only vault credential IDs
+- Credentials (SSH keys, passwords) are stored AES-256-GCM encrypted in the local SQLite database, keyed by a PBKDF2-derived master password
+- The vault is locked automatically after a period of inactivity
