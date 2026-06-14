@@ -222,14 +222,17 @@ export const sftpCommands = {
   deleteSftp: (sessionId: string, path: string) =>
     invoke<void>("delete_sftp", { sessionId, path }),
 
-  renameSftp: (sessionId: string, from: string, to: string) =>
-    invoke<void>("rename_sftp", { sessionId, from, to }),
+  renameSftp: (sessionId: string, from: string, to: string, overwrite = false) =>
+    invoke<void>("rename_sftp", { sessionId, from, to, overwrite }),
 
-  uploadSftpFile: (sessionId: string, localPath: string, remotePath: string) =>
-    invoke<void>("upload_sftp_file", { sessionId, localPath, remotePath }),
+  uploadSftpFile: (sessionId: string, localPath: string, remotePath: string, overwrite = false) =>
+    invoke<void>("upload_sftp_file", { sessionId, localPath, remotePath, overwrite }),
 
-  downloadSftpFile: (sessionId: string, remotePath: string, localPath: string) =>
-    invoke<void>("download_sftp_file", { sessionId, remotePath, localPath }),
+  downloadSftpFile: (sessionId: string, remotePath: string, localPath: string, overwrite = false) =>
+    invoke<void>("download_sftp_file", { sessionId, remotePath, localPath, overwrite }),
+
+  cancelSftpTransfer: (sessionId: string) =>
+    invoke<void>("cancel_sftp_transfer", { sessionId }),
 
   touchSftpFile: (sessionId: string, path: string) =>
     invoke<void>("touch_sftp_file", { sessionId, path }),
@@ -243,11 +246,11 @@ export const sftpCommands = {
   closeSftpEdit: (sessionId: string, remotePath: string) =>
     invoke<void>("close_sftp_edit", { sessionId, remotePath }),
 
-  copySftpFile: (sessionId: string, src: string, dest: string) =>
-    invoke<void>("copy_sftp_file", { sessionId, src, dest }),
+  copySftpFile: (sessionId: string, src: string, dest: string, overwrite = false) =>
+    invoke<void>("copy_sftp_file", { sessionId, src, dest, overwrite }),
 
-  crossCopySftpFiles: (srcSessionId: string, srcPaths: string[], dstSessionId: string, dstDir: string) =>
-    invoke<void>("cross_copy_sftp_file", { srcSessionId, srcPaths, dstSessionId, dstDir }),
+  crossCopySftpFiles: (srcSessionId: string, srcPaths: string[], dstSessionId: string, dstDir: string, overwrite = false) =>
+    invoke<void>("cross_copy_sftp_file", { srcSessionId, srcPaths, dstSessionId, dstDir, overwrite }),
 };
 
 export const clipboardCommands = {

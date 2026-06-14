@@ -114,6 +114,7 @@ pub fn run() {
             commands::sftp_commands::rename_sftp,
             commands::sftp_commands::upload_sftp_file,
             commands::sftp_commands::download_sftp_file,
+            commands::sftp_commands::cancel_sftp_transfer,
             commands::sftp_commands::touch_sftp_file,
             commands::sftp_commands::chmod_sftp,
             commands::sftp_commands::open_sftp_edit,

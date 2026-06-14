@@ -104,11 +104,13 @@ pub async fn rename_sftp(
     session_id: String,
     from: String,
     to: String,
+    overwrite: bool,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
     sftp_call!(state, session_id, |reply| SftpMessage::Rename {
         from,
         to,
+        overwrite,
         reply,
     })
 }
@@ -118,12 +120,14 @@ pub async fn upload_sftp_file(
     session_id: String,
     local_path: String,
     remote_path: String,
+    overwrite: bool,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
     check_home_boundary(&local_path)?;
     sftp_call!(state, session_id, |reply| SftpMessage::UploadFile {
         local_path,
         remote_path,
+        overwrite,
         reply,
     })
 }
@@ -133,14 +137,23 @@ pub async fn download_sftp_file(
     session_id: String,
     remote_path: String,
     local_path: String,
+    overwrite: bool,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
     check_parent_home_boundary(&local_path)?;
     sftp_call!(state, session_id, |reply| SftpMessage::DownloadFile {
         remote_path,
         local_path,
+        overwrite,
         reply,
     })
+}
+
+/// Signals the session's in-progress upload/download to abort. The transfer
+/// surfaces this as `AppError::Cancelled` once it next checks the flag.
+#[tauri::command]
+pub fn cancel_sftp_transfer(session_id: String, state: tauri::State<'_, AppState>) {
+    state.sftp_manager.cancel_transfer(&session_id);
 }
 
 #[tauri::command]
@@ -186,11 +199,13 @@ pub async fn copy_sftp_file(
     session_id: String,
     src: String,
     dest: String,
+    overwrite: bool,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
     sftp_call!(state, session_id, |reply| SftpMessage::CopyFile {
         src,
         dest,
+        overwrite,
         reply,
     })
 }
@@ -205,6 +220,7 @@ pub async fn cross_copy_sftp_file(
     src_paths: Vec<String>,
     dst_session_id: String,
     dst_dir: String,
+    overwrite: bool,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
     for src_path in src_paths {
@@ -232,6 +248,7 @@ pub async fn cross_copy_sftp_file(
             SftpMessage::DownloadFile {
                 remote_path: src_path,
                 local_path: tmp_str.clone(),
+                overwrite: true,
                 reply: dl_tx,
             },
         )?;
@@ -250,6 +267,7 @@ pub async fn cross_copy_sftp_file(
             SftpMessage::UploadFile {
                 local_path: tmp_str.clone(),
                 remote_path: dst_path,
+                overwrite,
                 reply: ul_tx,
             },
         )?;

@@ -15,6 +15,10 @@ pub enum AppError {
     Validation(String),
     #[error("IO error: {0}")]
     Io(String),
+    #[error("{0} already exists")]
+    AlreadyExists(String),
+    #[error("Transfer of {0} cancelled")]
+    Cancelled(String),
 }
 
 impl From<sqlx::Error> for AppError {
