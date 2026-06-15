@@ -331,6 +331,20 @@ export default function SettingsPage() {
     flashSaved();
   };
 
+  // Default terminal for "Open in Terminal"
+  const [defaultTerminal, setDefaultTerminal] = useState("Terminal");
+  useEffect(() => {
+    settingsCommands.getSetting("default_terminal")
+      .then((v) => { if (v !== null) setDefaultTerminal(v); })
+      .catch(() => {});
+  }, []);
+  const saveDefaultTerminal = (v: string | null) => {
+    if (v === null) return;
+    setDefaultTerminal(v);
+    settingsCommands.setSetting("default_terminal", v).catch(() => {});
+    flashSaved();
+  };
+
   // Vault forms
   const [disablePwd, setDisablePwd] = useState("");
   const [enablePwd, setEnablePwd] = useState("");
@@ -757,6 +771,19 @@ export default function SettingsPage() {
                     <SelectItem value="60">60 s</SelectItem>
                     <SelectItem value="120">2 min</SelectItem>
                     <SelectItem value="300">5 min</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Row>
+
+              <Row>
+                <RowLabel title="Default terminal" description="App used by 'Open in Terminal' for external SSH sessions" />
+                <Select value={defaultTerminal} onValueChange={saveDefaultTerminal}>
+                  <SelectTrigger className="h-10 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Terminal">Terminal</SelectItem>
+                    <SelectItem value="iTerm">iTerm2</SelectItem>
                   </SelectContent>
                 </Select>
               </Row>

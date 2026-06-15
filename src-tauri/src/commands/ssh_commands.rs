@@ -1,4 +1,5 @@
 use crate::commands::log_commands::{self, NewLogEntry};
+use crate::commands::settings_commands;
 use crate::db::queries;
 use crate::error::AppError;
 use crate::models::server::{CreateServerPayload, ServerWithTags};
@@ -215,7 +216,11 @@ pub async fn launch_in_terminal(
             .ok();
     });
 
-    launcher::launch_in_system_terminal(&server, &jump_chain).await
+    let terminal = settings_commands::get_setting_value(&state.db, "default_terminal")
+        .await?
+        .unwrap_or_else(|| "Terminal".to_string());
+
+    launcher::launch_in_system_terminal(&server, &jump_chain, &terminal).await
 }
 
 #[tauri::command]
