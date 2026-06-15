@@ -1,25 +1,35 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn(),
-}));
-
 vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn().mockResolvedValue(() => {}),
 }));
 
 vi.mock("../lib/tauriCommands", () => ({
   vaultCommands: {
-    storeCredential: vi.fn(),
-    retrieveCredential: vi.fn(),
-    deleteCredential: vi.fn(),
+    isSetup: vi.fn(),
+    isUnlocked: vi.fn(),
+    isPasswordRequired: vi.fn(),
+    setup: vi.fn(),
+    skipSetup: vi.fn(),
+    unlock: vi.fn(),
+    lock: vi.fn(),
+    disablePassword: vi.fn(),
+    enablePassword: vi.fn(),
+    changePassword: vi.fn(),
   },
 }));
 
-import { invoke } from "@tauri-apps/api/core";
+import { vaultCommands } from "../lib/tauriCommands";
 import { useVaultStore } from "../store/vaultStore";
 
-const mockInvoke = vi.mocked(invoke);
+const mockIsSetup = vi.mocked(vaultCommands.isSetup);
+const mockIsUnlocked = vi.mocked(vaultCommands.isUnlocked);
+const mockIsPasswordRequired = vi.mocked(vaultCommands.isPasswordRequired);
+const mockSetup = vi.mocked(vaultCommands.setup);
+const mockSkipSetup = vi.mocked(vaultCommands.skipSetup);
+const mockUnlock = vi.mocked(vaultCommands.unlock);
+const mockLock = vi.mocked(vaultCommands.lock);
+const mockDisablePassword = vi.mocked(vaultCommands.disablePassword);
 
 const RESET_STATE = {
   isChecking: false,
@@ -35,10 +45,9 @@ beforeEach(() => {
 
 describe("check()", () => {
   it("populates all state fields from the backend", async () => {
-    mockInvoke
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(false);
+    mockIsSetup.mockResolvedValueOnce(true);
+    mockIsUnlocked.mockResolvedValueOnce(true);
+    mockIsPasswordRequired.mockResolvedValueOnce(false);
 
     await useVaultStore.getState().check();
 
@@ -50,10 +59,9 @@ describe("check()", () => {
   });
 
   it("sets isChecking=false after successful completion", async () => {
-    mockInvoke
-      .mockResolvedValueOnce(false)
-      .mockResolvedValueOnce(false)
-      .mockResolvedValueOnce(true);
+    mockIsSetup.mockResolvedValueOnce(false);
+    mockIsUnlocked.mockResolvedValueOnce(false);
+    mockIsPasswordRequired.mockResolvedValueOnce(true);
 
     await useVaultStore.getState().check();
 
@@ -61,7 +69,9 @@ describe("check()", () => {
   });
 
   it("sets isChecking=false even when an invoke rejects", async () => {
-    mockInvoke.mockRejectedValueOnce(new Error("DB error"));
+    mockIsSetup.mockRejectedValueOnce(new Error("DB error"));
+    mockIsUnlocked.mockResolvedValueOnce(false);
+    mockIsPasswordRequired.mockResolvedValueOnce(true);
 
     await expect(useVaultStore.getState().check()).rejects.toThrow();
 
@@ -71,7 +81,7 @@ describe("check()", () => {
 
 describe("unlock()", () => {
   it("returns true and sets isUnlocked=true when backend returns true", async () => {
-    mockInvoke.mockResolvedValueOnce(true);
+    mockUnlock.mockResolvedValueOnce(true);
 
     const result = await useVaultStore.getState().unlock("correct");
 
@@ -80,7 +90,7 @@ describe("unlock()", () => {
   });
 
   it("returns false and leaves isUnlocked=false when backend returns false", async () => {
-    mockInvoke.mockResolvedValueOnce(false);
+    mockUnlock.mockResolvedValueOnce(false);
 
     const result = await useVaultStore.getState().unlock("wrong");
 
@@ -89,7 +99,7 @@ describe("unlock()", () => {
   });
 
   it("propagates lockout errors thrown by the backend", async () => {
-    mockInvoke.mockRejectedValueOnce(
+    mockUnlock.mockRejectedValueOnce(
       new Error("too many failed attempts — please wait before trying again"),
     );
 
@@ -102,7 +112,7 @@ describe("unlock()", () => {
 describe("disablePassword()", () => {
   it("clears isPasswordRequired", async () => {
     useVaultStore.setState({ isPasswordRequired: true });
-    mockInvoke.mockResolvedValueOnce(undefined);
+    mockDisablePassword.mockResolvedValueOnce(undefined);
 
     await useVaultStore.getState().disablePassword("correct");
 
@@ -111,7 +121,7 @@ describe("disablePassword()", () => {
 
   it("sets isUnlocked=true after disabling", async () => {
     useVaultStore.setState({ isUnlocked: false });
-    mockInvoke.mockResolvedValueOnce(undefined);
+    mockDisablePassword.mockResolvedValueOnce(undefined);
 
     await useVaultStore.getState().disablePassword("correct");
 
@@ -122,7 +132,7 @@ describe("disablePassword()", () => {
 describe("lock()", () => {
   it("sets isUnlocked=false regardless of prior state", async () => {
     useVaultStore.setState({ isUnlocked: true });
-    mockInvoke.mockResolvedValueOnce(undefined);
+    mockLock.mockResolvedValueOnce(undefined);
 
     await useVaultStore.getState().lock();
 
@@ -132,7 +142,7 @@ describe("lock()", () => {
 
 describe("setup()", () => {
   it("sets isSetup=true and isUnlocked=true", async () => {
-    mockInvoke.mockResolvedValueOnce(undefined);
+    mockSetup.mockResolvedValueOnce(undefined);
 
     await useVaultStore.getState().setup("newpassword");
 
@@ -142,7 +152,7 @@ describe("setup()", () => {
 
 describe("skipSetup()", () => {
   it("sets isPasswordRequired=false", async () => {
-    mockInvoke.mockResolvedValueOnce(undefined);
+    mockSkipSetup.mockResolvedValueOnce(undefined);
 
     await useVaultStore.getState().skipSetup();
 
