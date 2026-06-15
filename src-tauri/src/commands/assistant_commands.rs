@@ -520,7 +520,7 @@ pub async fn send_assistant_message(
             Err(e) => {
                 // Log the full error internally; never forward raw provider errors
                 // to the frontend as they may contain truncated API key hints.
-                eprintln!("[assistant] stream error for {request_id}: {e}");
+                log::error!("[assistant] stream error for {request_id}: {e}");
                 let _ = app_handle.emit(
                     &format!("assistant:error:{request_id}"),
                     "provider request failed",

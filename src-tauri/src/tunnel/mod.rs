@@ -24,7 +24,7 @@ use tauri::Emitter;
 use crate::error::AppError;
 use crate::models::port_forward::PortForward;
 use crate::ssh::{
-    connection::{authenticate_session, tcp_connect, verify_host_key, AuthInfo},
+    connection::{authenticate_session, recover_lock, tcp_connect, verify_host_key, AuthInfo},
     jump_host::{self, JumpInfo},
 };
 
@@ -89,7 +89,7 @@ impl TunnelManager {
         let sd = Arc::clone(&shutdown);
 
         {
-            let mut map = tunnels.lock().unwrap();
+            let mut map = recover_lock(tunnels.lock());
             if map.contains_key(&fid) {
                 return Err(AppError::Validation(format!(
                     "tunnel '{fid}' is already active"
@@ -103,7 +103,7 @@ impl TunnelManager {
 
             let result = run_session(fwd, target, sd, &app, &fid);
 
-            tunnels.lock().unwrap().remove(&fid);
+            recover_lock(tunnels.lock()).remove(&fid);
 
             match result {
                 Ok(()) => emit_status(&app, &fid, "stopped", None),
@@ -117,7 +117,7 @@ impl TunnelManager {
     /// Signals the worker to stop. The thread will finish the current client
     /// interaction, then exit on the next accept-loop iteration.
     pub fn stop(&self, forward_id: &str) -> Result<(), AppError> {
-        match self.tunnels.lock().unwrap().get(forward_id) {
+        match recover_lock(self.tunnels.lock()).get(forward_id) {
             Some(t) => {
                 t.shutdown.store(true, Ordering::Relaxed);
                 Ok(())
@@ -129,11 +129,11 @@ impl TunnelManager {
     }
 
     pub fn active_ids(&self) -> Vec<String> {
-        self.tunnels.lock().unwrap().keys().cloned().collect()
+        recover_lock(self.tunnels.lock()).keys().cloned().collect()
     }
 
     pub fn is_active(&self, forward_id: &str) -> bool {
-        self.tunnels.lock().unwrap().contains_key(forward_id)
+        recover_lock(self.tunnels.lock()).contains_key(forward_id)
     }
 }
 

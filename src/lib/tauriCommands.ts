@@ -81,6 +81,11 @@ export const serverCommands = {
     invoke<void>("delete_tag", { id }),
 };
 
+export const searchCommands = {
+  fuzzySearch: (query: string) =>
+    invoke<Server[]>("fuzzy_search", { query }),
+};
+
 export const sshCommands = {
   launchInTerminal: (serverId: string) =>
     invoke<void>("launch_in_terminal", { serverId }),
@@ -138,6 +143,35 @@ export const vaultCommands = {
   deleteCredential: (vaultCredentialId: string) =>
     invoke<void>("delete_credential", { vaultCredentialId }),
 
+  isSetup: () =>
+    invoke<boolean>("vault_is_setup"),
+
+  isUnlocked: () =>
+    invoke<boolean>("vault_is_unlocked"),
+
+  isPasswordRequired: () =>
+    invoke<boolean>("vault_is_password_required"),
+
+  setup: (masterPassword: string) =>
+    invoke<void>("vault_setup", { masterPassword }),
+
+  skipSetup: () =>
+    invoke<void>("vault_skip_setup"),
+
+  unlock: (masterPassword: string) =>
+    invoke<boolean>("vault_unlock", { masterPassword }),
+
+  lock: () =>
+    invoke<void>("vault_lock"),
+
+  disablePassword: (currentPassword: string) =>
+    invoke<void>("vault_disable_password", { currentPassword }),
+
+  enablePassword: (newPassword: string) =>
+    invoke<void>("vault_enable_password", { newPassword }),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    invoke<void>("vault_change_password", { currentPassword, newPassword }),
 };
 
 export interface AssistantStatus {

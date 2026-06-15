@@ -214,11 +214,11 @@ pub struct SessionManager {
     sessions: Arc<Mutex<HashMap<String, ActiveSession>>>,
 }
 
-fn recover_lock<T>(
+pub(crate) fn recover_lock<T>(
     result: std::sync::LockResult<std::sync::MutexGuard<'_, T>>,
 ) -> std::sync::MutexGuard<'_, T> {
     result.unwrap_or_else(|e| {
-        eprintln!("[warn] session map mutex was poisoned; recovering state");
+        log::warn!("mutex was poisoned; recovering state");
         e.into_inner()
     })
 }

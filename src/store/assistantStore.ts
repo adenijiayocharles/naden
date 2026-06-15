@@ -123,7 +123,8 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
         activeChatId: s.activeChatId,
         activeProvider: s.activeProvider,
       };
-      void assistantCommands.saveChatHistory(serverId, JSON.stringify(payload)).catch(() => {});
+      void assistantCommands.saveChatHistory(serverId, JSON.stringify(payload))
+        .catch((e) => { console.error("[assistant] failed to persist chat history:", e); });
     }, 500));
   };
 

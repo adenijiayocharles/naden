@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { invoke } from "@tauri-apps/api/core";
+import { searchCommands } from "../lib/tauriCommands";
 import type { Server } from "../types/server";
 
 type ActiveView = "list" | "add" | "edit" | "logs" | "snippets" | "playbooks" | "tunnels" | "settings" | "keys";
@@ -139,7 +139,7 @@ export const useUiStore = create<UiStore>((set) => ({
     }
 
     searchTimer = setTimeout(() => {
-      invoke<Server[]>("fuzzy_search", { query })
+      searchCommands.fuzzySearch(query)
         .then((results) => set({ searchResults: results }))
         .catch((e) => { console.error("[search] fuzzy_search failed:", e); });
     }, 50);

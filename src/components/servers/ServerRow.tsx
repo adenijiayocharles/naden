@@ -6,7 +6,8 @@ import { useTunnelStore } from "../../store/tunnelStore";
 import ServerKebabMenu from "./ServerKebabMenu";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import ConnectionErrorModal from "./ConnectionErrorModal";
-import { FavouriteButton, ReachabilityDot } from "./ServerCard";
+import { FavouriteButton } from "./FavouriteButton";
+import { ReachabilityDot } from "./ReachabilityDot";
 import { timeAgo } from "../../lib/format";
 
 interface ServerRowProps {

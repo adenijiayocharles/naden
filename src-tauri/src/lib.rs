@@ -283,7 +283,7 @@ async fn auto_lock_task(app: tauri::AppHandle) {
             Ok(Some(v)) => v.parse().unwrap_or(0),
             Ok(None) => 0,
             Err(e) => {
-                eprintln!("[auto-lock] failed to read vault_timeout_minutes: {e}");
+                log::error!("[auto-lock] failed to read vault_timeout_minutes: {e}");
                 // Sleep briefly then retry rather than silently disabling auto-lock.
                 tokio::time::sleep(std::time::Duration::from_secs(30)).await;
                 continue;

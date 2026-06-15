@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { vaultCommands } from "../lib/tauriCommands";
 
 interface VaultStore {
   isSetup: boolean;
@@ -28,9 +28,9 @@ export const useVaultStore = create<VaultStore>((set) => ({
     set({ isChecking: true });
     try {
       const [isSetup, isUnlocked, isPasswordRequired] = await Promise.all([
-        invoke<boolean>("vault_is_setup"),
-        invoke<boolean>("vault_is_unlocked"),
-        invoke<boolean>("vault_is_password_required"),
+        vaultCommands.isSetup(),
+        vaultCommands.isUnlocked(),
+        vaultCommands.isPasswordRequired(),
       ]);
       set({ isSetup, isUnlocked, isPasswordRequired });
     } finally {
@@ -39,38 +39,38 @@ export const useVaultStore = create<VaultStore>((set) => ({
   },
 
   setup: async (password) => {
-    await invoke("vault_setup", { masterPassword: password });
+    await vaultCommands.setup(password);
     set({ isSetup: true, isUnlocked: true });
   },
 
   skipSetup: async () => {
-    await invoke("vault_skip_setup");
+    await vaultCommands.skipSetup();
     set({ isSetup: true, isUnlocked: true, isPasswordRequired: false });
   },
 
   unlock: async (password) => {
-    const ok = await invoke<boolean>("vault_unlock", { masterPassword: password });
+    const ok = await vaultCommands.unlock(password);
     if (ok) set({ isUnlocked: true });
     return ok;
   },
 
   lock: async () => {
-    await invoke("vault_lock");
+    await vaultCommands.lock();
     set({ isUnlocked: false });
   },
 
   disablePassword: async (currentPassword) => {
-    await invoke("vault_disable_password", { currentPassword });
+    await vaultCommands.disablePassword(currentPassword);
     set({ isPasswordRequired: false, isSetup: true, isUnlocked: true });
   },
 
   enablePassword: async (newPassword) => {
-    await invoke("vault_enable_password", { newPassword });
+    await vaultCommands.enablePassword(newPassword);
     set({ isPasswordRequired: true, isSetup: true, isUnlocked: true });
   },
 
   changePassword: async (currentPassword, newPassword) => {
-    await invoke("vault_change_password", { currentPassword, newPassword });
+    await vaultCommands.changePassword(currentPassword, newPassword);
   },
 }));
 
