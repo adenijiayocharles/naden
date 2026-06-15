@@ -181,25 +181,30 @@ pub fn run() {
 
             let data_dir = app.path().app_local_data_dir()?;
 
-            let rt = tokio::runtime::Runtime::new()?;
-            let pool = rt
-                .block_on(db::init_db(data_dir))
+            // Reuse Tauri's own async runtime instead of spinning up a separate
+            // tokio::runtime::Runtime (and its full worker thread pool) just for
+            // these startup queries.
+            let pool = tauri::async_runtime::block_on(db::init_db(data_dir))
                 .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
-            let initial_cache = rt
-                .block_on(db::queries::list_servers_db(&pool))
-                .unwrap_or_default();
+            // These reads are independent of each other — run them concurrently
+            // rather than as three sequential round trips.
+            let (cache_result, password_required_result, initial_failures) =
+                tauri::async_runtime::block_on(async {
+                    tokio::join!(
+                        db::queries::list_servers_db(&pool),
+                        vault::master_password::is_password_required(&pool),
+                        commands::vault_commands::load_lockout(&pool),
+                    )
+                });
 
-            let password_required = rt
-                .block_on(vault::master_password::is_password_required(&pool))
-                .unwrap_or(true);
+            let initial_cache = cache_result.unwrap_or_default();
+            let password_required = password_required_result.unwrap_or(true);
             let initial_vault_key = if !password_required {
                 Some(zeroize::Zeroizing::new([0u8; 32]))
             } else {
                 None
             };
-
-            let initial_failures = rt.block_on(commands::vault_commands::load_lockout(&pool));
 
             app.manage(AppState {
                 db: pool,

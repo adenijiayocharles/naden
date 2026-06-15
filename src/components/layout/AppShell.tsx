@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState, useRef, useMemo } from "react";
+import { useEffect, useCallback, useState, useRef, useMemo, lazy, Suspense } from "react";
 import { useUiStore, type ViewMode, type SortMode } from "../../store/uiStore";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
@@ -22,31 +22,34 @@ import { useVaultHeartbeat } from "../../hooks/useVaultHeartbeat";
 import { useMenuEvents } from "../../hooks/useMenuEvents";
 import { useTrayEvents } from "../../hooks/useTrayEvents";
 import { trayCommands } from "../../lib/tauriCommands";
-import SshConfigImport from "../servers/SshConfigImport";
-import DiscoverHosts from "../servers/DiscoverHosts";
-import SettingsPage from "../settings/SettingsPage";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import TabItem from "./TabItem";
 import ServerList from "../servers/ServerList";
 import ServerForm from "../servers/ServerForm";
 import VaultLockScreen from "../vault/VaultLockScreen";
-import VaultSetupModal from "../vault/VaultSetupModal";
-import TerminalPane from "../terminal/TerminalPane";
-import BroadcastGrid from "../terminal/BroadcastGrid";
-import LogView from "../log/LogView";
-import OnboardingWizard from "../onboarding/OnboardingWizard";
-import SftpBrowser from "../sftp/SftpBrowser";
 import BulkActionBar from "../servers/BulkActionBar";
-import SnippetList from "../snippets/SnippetList";
-import PlaybookList from "../playbooks/PlaybookList";
-import TunnelPanel from "../tunnels/TunnelPanel";
-import KeysView from "../keys/KeysView";
 import ClipboardClearBanner from "./ClipboardClearBanner";
 import { useSnippetStore } from "../../store/snippetStore";
 import { usePlaybookStore } from "../../store/playbookStore";
 import type { SessionStatus } from "../../store/terminalStore";
 import type { SftpStatus } from "../../store/sftpStore";
+
+// Lazy-loaded: these views/modals aren't needed for the initial paint, so
+// keeping them out of the main bundle cuts startup parse/exec time.
+const SshConfigImport = lazy(() => import("../servers/SshConfigImport"));
+const DiscoverHosts = lazy(() => import("../servers/DiscoverHosts"));
+const SettingsPage = lazy(() => import("../settings/SettingsPage"));
+const VaultSetupModal = lazy(() => import("../vault/VaultSetupModal"));
+const TerminalPane = lazy(() => import("../terminal/TerminalPane"));
+const BroadcastGrid = lazy(() => import("../terminal/BroadcastGrid"));
+const LogView = lazy(() => import("../log/LogView"));
+const OnboardingWizard = lazy(() => import("../onboarding/OnboardingWizard"));
+const SftpBrowser = lazy(() => import("../sftp/SftpBrowser"));
+const SnippetList = lazy(() => import("../snippets/SnippetList"));
+const PlaybookList = lazy(() => import("../playbooks/PlaybookList"));
+const TunnelPanel = lazy(() => import("../tunnels/TunnelPanel"));
+const KeysView = lazy(() => import("../keys/KeysView"));
 
 type PanelType = "terminal" | "sftp";
 
@@ -317,7 +320,13 @@ export default function AppShell() {
     );
   }
 
-  if (!isSetup && isPasswordRequired) return <VaultSetupModal />;
+  if (!isSetup && isPasswordRequired) {
+    return (
+      <Suspense fallback={null}>
+        <VaultSetupModal />
+      </Suspense>
+    );
+  }
   if (isSetup && !isUnlocked && isPasswordRequired) return <VaultLockScreen />;
 
   return (
@@ -344,15 +353,25 @@ export default function AppShell() {
             }`}
           >
             {activeView === "settings" ? (
-              <SettingsPage />
+              <Suspense fallback={null}>
+                <SettingsPage />
+              </Suspense>
             ) : activeView === "keys" ? (
-              <KeysView />
+              <Suspense fallback={null}>
+                <KeysView />
+              </Suspense>
             ) : activeView === "snippets" ? (
-              <SnippetList />
+              <Suspense fallback={null}>
+                <SnippetList />
+              </Suspense>
             ) : activeView === "playbooks" ? (
-              <PlaybookList />
+              <Suspense fallback={null}>
+                <PlaybookList />
+              </Suspense>
             ) : activeView === "tunnels" ? (
-              <TunnelPanel />
+              <Suspense fallback={null}>
+                <TunnelPanel />
+              </Suspense>
             ) : activeView === "logs" ? (
               <>
                 <div className="px-4 py-2 border-b border-stroke-subtle shrink-0">
@@ -362,7 +381,9 @@ export default function AppShell() {
                     placeholder="Search logs…"
                   />
                 </div>
-                <LogView />
+                <Suspense fallback={null}>
+                  <LogView />
+                </Suspense>
               </>
             ) : (
               <>
@@ -727,14 +748,16 @@ export default function AppShell() {
 
               {/* Panel content */}
               <div className="flex-1 min-h-0">
-                {activeBroadcastGroupId ? (
-                  <BroadcastGrid key={activeBroadcastGroupId} groupId={activeBroadcastGroupId} />
-                ) : activePanelType === "terminal" && terminalActiveId && (
-                  <TerminalPane key={terminalActiveId} sessionId={terminalActiveId} />
-                )}
-                {activePanelType === "sftp" && sftpActiveId && (
-                  <SftpBrowser key={sftpActiveId} sessionId={sftpActiveId} />
-                )}
+                <Suspense fallback={null}>
+                  {activeBroadcastGroupId ? (
+                    <BroadcastGrid key={activeBroadcastGroupId} groupId={activeBroadcastGroupId} />
+                  ) : activePanelType === "terminal" && terminalActiveId && (
+                    <TerminalPane key={terminalActiveId} sessionId={terminalActiveId} />
+                  )}
+                  {activePanelType === "sftp" && sftpActiveId && (
+                    <SftpBrowser key={sftpActiveId} sessionId={sftpActiveId} />
+                  )}
+                </Suspense>
               </div>
             </div>
           )}
@@ -744,11 +767,13 @@ export default function AppShell() {
 
 <ClipboardClearBanner />
       {(activeView === "add" || activeView === "edit") && <ServerForm />}
-      {onboardingChecked && !onboardingComplete && (
-        <OnboardingWizard onComplete={() => setOnboardingComplete(true)} />
-      )}
-      {importSshConfigOpen && <SshConfigImport onClose={closeImportSshConfig} />}
-      {discoverHostsOpen && <DiscoverHosts onClose={closeDiscoverHosts} />}
+      <Suspense fallback={null}>
+        {onboardingChecked && !onboardingComplete && (
+          <OnboardingWizard onComplete={() => setOnboardingComplete(true)} />
+        )}
+        {importSshConfigOpen && <SshConfigImport onClose={closeImportSshConfig} />}
+        {discoverHostsOpen && <DiscoverHosts onClose={closeDiscoverHosts} />}
+      </Suspense>
     </div>
   );
 }
