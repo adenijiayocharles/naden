@@ -330,13 +330,6 @@ fn build_app_menu(
         true,
         &[
             &PredefinedMenuItem::about(app, None, None)?,
-            &MenuItem::with_id(
-                app,
-                "check_for_updates",
-                "Check for Updates…",
-                true,
-                None::<&str>,
-            )?,
             &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::hide(app, None)?,
             &PredefinedMenuItem::hide_others(app, None)?,

@@ -7,9 +7,16 @@ import { useTerminalSettings } from "../lib/terminalSettings";
 import { settingsCommands } from "../lib/tauriCommands";
 import { promptForUpdate } from "../lib/checkForUpdates";
 
-// Delay the startup update check so it doesn't compete with initial data
-// loading, and to give the network a moment to come up after launch.
-const UPDATE_CHECK_DELAY_MS = 3000;
+// Delay the startup update check, measured from when the vault unlocks, so
+// it doesn't compete with initial data loading right after launch/unlock.
+const UPDATE_CHECK_DELAY_MS = 10 * 60 * 1000;
+
+// Shorter delay when no master password is set, since there's no unlock
+// step gating access to the app.
+const UPDATE_CHECK_DELAY_NO_PASSWORD_MS = 5 * 60 * 1000;
+
+// Re-check periodically for as long as the app stays open.
+const UPDATE_CHECK_INTERVAL_MS = 2 * 60 * 60 * 1000;
 
 const ACCENTS: Record<string, [string, string, string]> = {
   lime:   ["#CDFF00", "#d8ff33", "#a8cc00"],
@@ -64,11 +71,46 @@ export function useAppInit() {
       .catch(() => {
         setOnboardingChecked();
       });
-
-    const updateCheckTimer = setTimeout(() => {
-      void promptForUpdate({ silent: true });
-    }, UPDATE_CHECK_DELAY_MS);
-
-    return () => clearTimeout(updateCheckTimer);
   }, [fetchAll, check, loadTerminalSettings, loadTunnels, setOnboardingComplete, setOnboardingChecked]);
+
+  // Schedule the startup update check once the vault is unlocked (or
+  // immediately if no master password is set), then recheck periodically.
+  useEffect(() => {
+    let updateCheckTimer: ReturnType<typeof setTimeout> | undefined;
+    let updateCheckInterval: ReturnType<typeof setInterval> | undefined;
+
+    const scheduleUpdateChecks = () => {
+      const delay = useVaultStore.getState().isPasswordRequired
+        ? UPDATE_CHECK_DELAY_MS
+        : UPDATE_CHECK_DELAY_NO_PASSWORD_MS;
+
+      updateCheckTimer = setTimeout(() => {
+        void promptForUpdate({ silent: true });
+      }, delay);
+
+      updateCheckInterval = setInterval(() => {
+        void promptForUpdate({ silent: true });
+      }, UPDATE_CHECK_INTERVAL_MS);
+    };
+
+    if (useVaultStore.getState().isUnlocked) {
+      scheduleUpdateChecks();
+      return () => {
+        clearTimeout(updateCheckTimer);
+        clearInterval(updateCheckInterval);
+      };
+    }
+
+    const unsubscribe = useVaultStore.subscribe((state) => {
+      if (!state.isUnlocked) return;
+      unsubscribe();
+      scheduleUpdateChecks();
+    });
+
+    return () => {
+      unsubscribe();
+      clearTimeout(updateCheckTimer);
+      clearInterval(updateCheckInterval);
+    };
+  }, []);
 }

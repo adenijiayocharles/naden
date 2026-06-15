@@ -1,8 +1,7 @@
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useUiStore } from "../store/uiStore";
 import { useVaultStore } from "../store/vaultStore";
-import { promptForUpdate } from "../lib/checkForUpdates";
 
 export function useMenuEvents() {
   const openAdd = useUiStore((s) => s.openAdd);
@@ -16,15 +15,12 @@ export function useMenuEvents() {
   const openImportSshConfig = useUiStore((s) => s.openImportSshConfig);
   const lockVault = useVaultStore((s) => s.lock);
 
-  const checkForUpdates = useCallback(() => promptForUpdate(), []);
-
   useEffect(() => {
     const unlisteners = [
       listen("menu:new_connection", () => openAdd()),
       listen("menu:import_ssh_config", () => openImportSshConfig()),
       listen("menu:lock_vault", () => void lockVault()),
       listen("menu:settings", () => openSettings()),
-      listen("menu:check_for_updates", () => void checkForUpdates()),
       listen("menu:show_logs", () => openLogs()),
       listen("menu:show_snippets", () => openSnippets()),
       listen("menu:show_playbooks", () => openPlaybooks()),
@@ -46,6 +42,5 @@ export function useMenuEvents() {
     openTunnels,
     openKeys,
     toggleSidebar,
-    checkForUpdates,
   ]);
 }
