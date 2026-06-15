@@ -1,4 +1,4 @@
-# Contributing to Naden
+# Contributing to naden
 
 Thanks for your interest in contributing! This guide covers how to get set up and what we expect from pull requests.
 

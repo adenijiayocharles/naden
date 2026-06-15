@@ -26,5 +26,5 @@ What actually happened. Include error messages or screenshots if relevant.
 ## Environment
 
 - OS and version:
-- Naden version:
+- naden version:
 - Install method (DMG / Homebrew / built from source):

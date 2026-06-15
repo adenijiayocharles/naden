@@ -246,7 +246,7 @@ pub fn run() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("error while building Naden")
+        .expect("error while building naden")
         .run(|app, event| {
             // On macOS, clicking the Dock icon fires Reopen regardless of
             // whether the window is hidden or miniaturized. A miniaturized
@@ -331,7 +331,7 @@ fn build_app_menu(
 
     let app_menu = Submenu::with_items(
         app,
-        "Naden",
+        "naden",
         true,
         &[
             &PredefinedMenuItem::about(app, None, None)?,

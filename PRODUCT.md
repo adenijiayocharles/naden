@@ -10,7 +10,7 @@ Solo engineers and sysadmins who manage multiple servers daily. They work in foc
 
 ## Product Purpose
 
-Naden is a fast, credential-safe desktop client for engineers who manage many servers. It replaces scattered `~/.ssh/config` files and terminal history with an organized, searchable inventory, a built-in multi-tab terminal, SFTP access, and an AES-256 vault for credentials — all without ever syncing secrets remotely. Success looks like: open the app, connect to the right server in under five seconds, never worry about credential security.
+naden is a fast, credential-safe desktop client for engineers who manage many servers. It replaces scattered `~/.ssh/config` files and terminal history with an organized, searchable inventory, a built-in multi-tab terminal, SFTP access, and an AES-256 vault for credentials — all without ever syncing secrets remotely. Success looks like: open the app, connect to the right server in under five seconds, never worry about credential security.
 
 ## Brand Personality
 
@@ -29,7 +29,7 @@ Powerful, polished, confident. The tool that respects your workflow — not a pr
 2. **Confidence through clarity** — unambiguous state at a glance. Connected, loading, failed, locked — never a mystery. Information hierarchy earns trust.
 3. **Power without ceremony** — advanced features (jump hosts, bulk actions, audit log) are reachable without polluting the primary workflow. Depth hides behind affordances, not buried in settings.
 4. **Tool, not toy** — beauty comes from precision and restraint, not decoration. Every visual decision must pull weight. If removing it doesn't hurt, it shouldn't be there.
-5. **Identity without cliché** — looks unmistakably like Naden, not "a developer tool in dark mode." The neon-on-near-black palette is a committed choice, not a default.
+5. **Identity without cliché** — looks unmistakably like naden, not "a developer tool in dark mode." The neon-on-near-black palette is a committed choice, not a default.
 
 ## Accessibility & Inclusion
 

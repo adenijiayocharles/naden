@@ -59,7 +59,7 @@ fn ensure_path_export(home: &Path, bin_dir: &Path) {
         ".bash_profile"
     };
     let line = format!(
-        "\n# Added by Naden so the `naden` command is available in your terminal\nexport PATH=\"{bin_dir_str}:$PATH\"\n"
+        "\n# Added by naden so the `naden` command is available in your terminal\nexport PATH=\"{bin_dir_str}:$PATH\"\n"
     );
 
     use std::io::Write;

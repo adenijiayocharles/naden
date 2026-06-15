@@ -45,7 +45,7 @@ export default function VaultSetupModal() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-1">
-            <img src={serverIcon} alt="Naden" className="w-10 h-10" />
+            <img src={serverIcon} alt="naden" className="w-10 h-10" />
             <h1 className="text-2xl font-bold text-white">
               <span className="text-accent">naden</span>
             </h1>

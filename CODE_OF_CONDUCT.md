@@ -3,7 +3,7 @@
 ## Our Pledge
 
 We as members, contributors, and maintainers pledge to make participation in
-the Naden project a harassment-free experience for everyone, regardless of
+the naden project a harassment-free experience for everyone, regardless of
 age, body size, visible or invisible disability, ethnicity, sex
 characteristics, gender identity and expression, level of experience,
 education, socio-economic status, nationality, personal appearance, race,

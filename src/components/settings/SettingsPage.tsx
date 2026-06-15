@@ -917,7 +917,7 @@ export default function SettingsPage() {
               <SectionHeader title="About" />
 
               <Row>
-                <RowLabel title="Version" description={`Naden ${appVersion}`} />
+                <RowLabel title="Version" description={`naden ${appVersion}`} />
               </Row>
 
               <Row>
@@ -930,7 +930,7 @@ export default function SettingsPage() {
                     : updateState === "downloading" ? "Downloading update…"
                     : updateState === "ready" ? "Update installed — restart to apply."
                     : updateState === "error" ? (updateError ?? "Update check failed.")
-                    : "Check for a newer version of Naden."
+                    : "Check for a newer version of naden."
                   }
                 />
                 {updateState === "ready" ? (

@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Naden",
+  "productName": "naden",
   "version": "0.1.8",
   "identifier": "com.naden.desktop",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Naden",
+        "title": "naden",
         "width": 1200,
         "height": 750,
         "minWidth": 900,

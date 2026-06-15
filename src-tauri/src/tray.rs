@@ -27,7 +27,7 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
         .icon_as_template(true)
         .menu(&menu)
         .show_menu_on_left_click(true)
-        .tooltip("Naden")
+        .tooltip("naden")
         .on_menu_event(|app, event| handle_menu_event(app, event.id().as_ref()))
         .build(app)?;
 
@@ -47,17 +47,17 @@ pub fn rebuild(app: &AppHandle, servers: &[TrayServer]) -> tauri::Result<()> {
 // ── Menu builders ─────────────────────────────────────────────────────────────
 
 fn empty_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
-    let show = MenuItem::with_id(app, "tray_show", "Open Naden", true, None::<&str>)?;
+    let show = MenuItem::with_id(app, "tray_show", "Open naden", true, None::<&str>)?;
     let no_servers = MenuItem::with_id(app, "tray_empty", "No servers yet", false, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
-    let quit = PredefinedMenuItem::quit(app, Some("Quit Naden"))?;
+    let quit = PredefinedMenuItem::quit(app, Some("Quit naden"))?;
     Menu::with_items(app, &[&show, &no_servers, &sep, &quit])
 }
 
 fn server_menu(app: &AppHandle, servers: &[TrayServer]) -> tauri::Result<Menu<tauri::Wry>> {
-    let show = MenuItem::with_id(app, "tray_show", "Open Naden", true, None::<&str>)?;
+    let show = MenuItem::with_id(app, "tray_show", "Open naden", true, None::<&str>)?;
     let sep_bottom = PredefinedMenuItem::separator(app)?;
-    let quit = PredefinedMenuItem::quit(app, Some("Quit Naden"))?;
+    let quit = PredefinedMenuItem::quit(app, Some("Quit naden"))?;
 
     if servers.is_empty() {
         let no_servers =
