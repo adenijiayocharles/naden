@@ -279,11 +279,10 @@ export default function DiscoverHosts({ onClose }: Props) {
                                 selected.has(key) ? "bg-accent/5" : "hover:bg-surface-2"
                               }`}
                             >
-                              <td className="px-3 py-2 text-center">
+                              <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
                                 <Checkbox
                                   checked={selected.has(key)}
                                   onCheckedChange={() => toggle(key)}
-                                  onClick={(e) => e.stopPropagation()}
                                 />
                               </td>
                               <td className="px-3 py-2 font-mono text-white">{host.ip}</td>
