@@ -8,6 +8,7 @@
 export type ShadowBufferListener = (line: string) => void;
 
 const PRINTABLE_PATTERN = /^[\x20-\x7e]$/;
+// eslint-disable-next-line no-control-regex -- \x1b matches the ESC byte that starts terminal escape sequences
 const ESCAPE_SEQUENCE_PATTERN = /^\x1b(\[[0-9;?]*[a-zA-Z~]|O[A-Za-z]|.)/;
 
 class ShadowInputBuffer {

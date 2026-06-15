@@ -164,7 +164,6 @@ export default function LogView() {
         setLoading(false);
       }
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterServer, filterStart, filterEnd]);
 
   // ── Infinite scroll ────────────────────────────────────────────────────────

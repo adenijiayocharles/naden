@@ -19,7 +19,6 @@ export function setDragImage(e: DragEvent | React.DragEvent, name: string, count
   const icon = document.createElement("span");
   icon.setAttribute("aria-hidden", "true");
   // SVG literals are hardcoded constants — not user-controlled.
-  // eslint-disable-next-line no-unsanitized/property
   icon.innerHTML = multi ? MULTI_ICON : FILE_ICON;
   const text = document.createElement("span");
   text.textContent = label;

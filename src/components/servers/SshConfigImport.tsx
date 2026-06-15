@@ -68,7 +68,8 @@ export default function SshConfigImport({ onClose }: Props) {
   const toggle = (pattern: string) => {
     setSelected((s) => {
       const next = new Set(s);
-      next.has(pattern) ? next.delete(pattern) : next.add(pattern);
+      if (next.has(pattern)) next.delete(pattern);
+      else next.add(pattern);
       return next;
     });
   };

@@ -25,6 +25,7 @@ import { Input } from "../ui/input";
 
 // Matches xterm's auto-reply to a Device Status Report / cursor-position query
 // (ESC[6n -> ESC[<row>;<col>R) — a per-session PTY reply, never user input.
+// eslint-disable-next-line no-control-regex -- \x1b matches the ESC byte that starts terminal escape sequences
 const TERMINAL_REPLY_PATTERN = /^\x1b\[\d+;\d+R$/;
 
 // Matches an interactive password/passphrase prompt at the end of incoming PTY
@@ -32,6 +33,7 @@ const TERMINAL_REPLY_PATTERN = /^\x1b\[\d+;\d+R$/;
 // key '...':"). Used to stop fanning out keystrokes mid-broadcast — typing a
 // secret into one server's prompt must never replay it into every other pane.
 const PASSWORD_PROMPT_PATTERN = /(password|passphrase)[^:\n]*:\s*$/i;
+// eslint-disable-next-line no-control-regex -- \x1b matches the ESC byte that starts ANSI escape sequences
 const ANSI_ESCAPE_PATTERN = /\x1b\[[0-9;]*[a-zA-Z]/g;
 const textDecoder = new TextDecoder();
 
@@ -230,7 +232,7 @@ export default function TerminalPane({ sessionId }: Props) {
       // enable mouse tracking, but when mouse tracking is inactive the sequences go
       // to the PTY unhandled and the shell echoes them as literal text. Suppress the
       // conversion in that case — apps that need wheel input enable mouse tracking.
-      term.attachCustomWheelEventHandler((_e) => {
+      term.attachCustomWheelEventHandler(() => {
         if (term.buffer.active.type === "alternate" && !term.element?.classList.contains("enable-mouse-events")) {
           return false;
         }
@@ -696,7 +698,11 @@ export default function TerminalPane({ sessionId }: Props) {
               }
             }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === "ArrowDown") { e.preventDefault(); e.shiftKey ? findPrevious() : findNext(); }
+              if (e.key === "Enter" || e.key === "ArrowDown") {
+                e.preventDefault();
+                if (e.shiftKey) findPrevious();
+                else findNext();
+              }
               else if (e.key === "ArrowUp") { e.preventDefault(); findPrevious(); }
               else if (e.key === "Escape") { closeSearch(); }
             }}
