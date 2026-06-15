@@ -145,7 +145,7 @@ export default function ServerKebabMenu({
             disabled={openingTerminal}
             className="w-full text-left px-3 py-2 text-sm text-secondary hover:bg-surface-4 hover:text-white transition-colors disabled:opacity-40"
           >
-            {openingTerminal ? "Opening…" : "System Terminal"}
+            {openingTerminal ? "Opening…" : "Open in Terminal"}
           </button>
           <button
             onClick={onBrowseFiles}
