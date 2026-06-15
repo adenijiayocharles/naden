@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { XIcon } from "lucide-react";
 import serverIcon from "../../assets/server.png";
 import { useVaultStore } from "../../store/vaultStore";
 import { useUiStore } from "../../store/uiStore";
@@ -83,7 +84,17 @@ export default function OnboardingWizard({ onComplete }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/80 animate-backdrop-in flex items-center justify-center z-50 p-4">
-      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-md flex flex-col">
+      <div className="relative bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-md flex flex-col">
+        {step === "import" && (
+          <button
+            type="button"
+            onClick={advance}
+            aria-label="Close"
+            className="absolute top-4 right-4 rounded text-muted opacity-70 transition-opacity hover:opacity-100 hover:text-white"
+          >
+            <XIcon className="size-4" />
+          </button>
+        )}
         {/* Progress bar */}
         <Progress
           value={progress}
@@ -97,7 +108,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
               <div className="flex justify-center mb-2">
                 <img src={serverIcon} alt="Naden" className="w-12 h-12" />
               </div>
-              <h1 className="text-2xl font-bold text-white">Welcome to Naden</h1>
+              <h1 className="text-2xl font-bold text-white">Welcome to naden</h1>
               <p className="text-muted text-sm leading-relaxed">
                 A fast, secure desktop app for managing all your SSH connections.
                 Let's get you set up in a minute.
@@ -194,12 +205,9 @@ export default function OnboardingWizard({ onComplete }: Props) {
                     Discover hosts
                   </Button>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex justify-center">
                   <Button variant="ghost" onClick={() => setStep("vault")} className="text-faint">
                     Back
-                  </Button>
-                  <Button variant="secondary" onClick={advance} className="flex-1 h-9 border border-stroke">
-                    Skip
                   </Button>
                 </div>
               </div>

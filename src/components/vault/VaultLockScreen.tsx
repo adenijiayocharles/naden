@@ -51,10 +51,12 @@ export default function VaultLockScreen() {
     <div className="fixed inset-0 bg-black flex flex-col items-center justify-center z-50">
       <div className="relative w-full max-w-sm px-6">
         <div className="text-center mb-8">
-          <img src={serverIcon} alt="Naden" className="w-12 h-12 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-white mb-1">
-            <span className="text-accent">naden</span>
-          </h1>
+          <div className="flex items-center justify-center gap-3 mb-1">
+            <img src={serverIcon} alt="Naden" className="w-10 h-10" />
+            <h1 className="text-2xl font-bold text-white">
+              <span className="text-accent">naden</span>
+            </h1>
+          </div>
           <p className="text-muted text-sm">Enter your master password to continue</p>
         </div>
 
