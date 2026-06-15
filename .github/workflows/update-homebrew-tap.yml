@@ -22,12 +22,12 @@ jobs:
         run: |
           gh release download "$TAG" \
             --repo "$REPO" \
-            --pattern "SSHelter_*_aarch64.dmg" \
-            --output sshelter.dmg
+            --pattern "naden_*_aarch64.dmg" \
+            --output naden.dmg
 
       - name: Compute sha256
         id: sha
-        run: echo "sha256=$(shasum -a 256 sshelter.dmg | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+        run: echo "sha256=$(shasum -a 256 naden.dmg | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Update tap cask
         env:
@@ -35,18 +35,18 @@ jobs:
           VERSION: ${{ steps.vars.outputs.version }}
           SHA256: ${{ steps.sha.outputs.sha256 }}
         run: |
-          git clone "https://x-access-token:${GH_TOKEN}@github.com/adenijiayocharles/homebrew-sshelter.git" tap
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/adenijiayocharles/homebrew-naden.git" tap
           cd tap
           sed -i \
             -e "s/version \".*\"/version \"${VERSION}\"/" \
             -e "s/sha256 \".*\"/sha256 \"${SHA256}\"/" \
-            Casks/sshelter.rb
+            Casks/naden.rb
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Casks/sshelter.rb
+          git add Casks/naden.rb
           if git diff --cached --quiet; then
             echo "No changes to cask, skipping commit"
             exit 0
           fi
-          git commit -m "sshelter ${VERSION}"
+          git commit -m "naden ${VERSION}"
           git push origin main

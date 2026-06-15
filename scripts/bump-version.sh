@@ -41,7 +41,7 @@ node -e "
 
 sed -i '' "1,/^version = /s/^version = \".*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
 
-sed -i '' "/^name = \"sshelter\"\$/{n;s/^version = \".*\"/version = \"$VERSION\"/;}" src-tauri/Cargo.lock
+sed -i '' "/^name = \"naden\"\$/{n;s/^version = \".*\"/version = \"$VERSION\"/;}" src-tauri/Cargo.lock
 
 echo "Bumped version to $VERSION in:"
 echo "  package.json"

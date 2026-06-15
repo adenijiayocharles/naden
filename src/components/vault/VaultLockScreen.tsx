@@ -53,7 +53,7 @@ export default function VaultLockScreen() {
         <div className="text-center mb-8">
           <img src={serverIcon} alt="Naden" className="w-12 h-12 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white mb-1">
-            SSH<span className="text-accent">elter</span>
+            <span className="text-accent">naden</span>
           </h1>
           <p className="text-muted text-sm">Enter your master password to continue</p>
         </div>
