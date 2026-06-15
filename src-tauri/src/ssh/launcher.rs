@@ -50,11 +50,12 @@ fn build_ssh_argv(server: &ServerWithTags, jump_chain: &[ServerWithTags]) -> Vec
 pub async fn launch_in_system_terminal(
     server: &ServerWithTags,
     jump_chain: &[ServerWithTags],
+    terminal: &str,
 ) -> Result<(), AppError> {
     let argv = build_ssh_argv(server, jump_chain);
 
     #[cfg(target_os = "macos")]
-    launch_macos(argv).await?;
+    launch_macos(argv, terminal).await?;
 
     #[cfg(target_os = "windows")]
     launch_windows(argv).await?;
@@ -68,7 +69,7 @@ pub async fn launch_in_system_terminal(
 /// macOS: write user-supplied data into a temp shell script; the AppleScript string
 /// contains only the UUID-based file path (which we control), not the SSH arguments.
 #[cfg(target_os = "macos")]
-async fn launch_macos(argv: Vec<String>) -> Result<(), AppError> {
+async fn launch_macos(argv: Vec<String>, terminal: &str) -> Result<(), AppError> {
     use std::io::Write as _;
     use std::os::unix::fs::OpenOptionsExt as _;
 
@@ -91,7 +92,18 @@ async fn launch_macos(argv: Vec<String>) -> Result<(), AppError> {
 
     // Only our UUID-based temp path enters the AppleScript string — no user data.
     let path_str = script_path.display().to_string();
-    let applescript = format!(r#"tell application "Terminal" to do script "{path_str}""#);
+    let (app_name, applescript) = match terminal {
+        "iTerm" => (
+            "iTerm",
+            format!(
+                r#"tell application "iTerm" to create window with default profile command "{path_str}""#
+            ),
+        ),
+        _ => (
+            "Terminal",
+            format!(r#"tell application "Terminal" to do script "{path_str}""#),
+        ),
+    };
 
     let out = tokio::process::Command::new("osascript")
         .arg("-e")
@@ -104,7 +116,7 @@ async fn launch_macos(argv: Vec<String>) -> Result<(), AppError> {
         let _ = std::fs::remove_file(&script_path);
         let msg = String::from_utf8_lossy(&out.stderr);
         return Err(AppError::Ssh(format!(
-            "Terminal.app did not open — {}. \
+            "{app_name} did not open — {}. \
              Grant Automation permission in System Settings → Privacy & Security → Automation.",
             msg.trim()
         )));

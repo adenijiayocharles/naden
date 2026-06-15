@@ -13,7 +13,21 @@ const ALLOWED_SETTINGS: &[&str] = &[
     "terminal_font_family",
     "terminal_theme",
     "terminal_cursor_style",
+    "default_terminal",
 ];
+
+/// Reads a setting value directly from the db — used by commands that need
+/// settings outside the `get_setting`/`set_setting` IPC boundary.
+pub async fn get_setting_value(
+    db: &sqlx::SqlitePool,
+    key: &str,
+) -> Result<Option<String>, AppError> {
+    let val: Option<String> = sqlx::query_scalar("SELECT value FROM settings WHERE key = ?")
+        .bind(key)
+        .fetch_optional(db)
+        .await?;
+    Ok(val)
+}
 
 #[tauri::command]
 pub async fn get_setting(
@@ -23,11 +37,7 @@ pub async fn get_setting(
     if !ALLOWED_SETTINGS.contains(&key.as_str()) {
         return Err(AppError::Validation(format!("unknown setting key: {key}")));
     }
-    let val: Option<String> = sqlx::query_scalar("SELECT value FROM settings WHERE key = ?")
-        .bind(&key)
-        .fetch_optional(&state.db)
-        .await?;
-    Ok(val)
+    get_setting_value(&state.db, &key).await
 }
 
 #[tauri::command]
