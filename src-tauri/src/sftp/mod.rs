@@ -32,7 +32,7 @@ const EDIT_ALLOWED_EXTENSIONS: &[&str] = &[
     "sql",
     "html",
     "css",
-    'php',
+    "php",
     "xml",
     "log",
     "csv",
