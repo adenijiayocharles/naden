@@ -46,6 +46,17 @@ const EDIT_ALLOWED_EXTENSIONS: &[&str] = &[
     "gitignore",
 ];
 
+/// True if `filename`'s extension is on [`EDIT_ALLOWED_EXTENSIONS`], or it has
+/// no extension (treated as plain text).
+fn is_edit_allowed(filename: &str) -> bool {
+    match Path::new(filename).extension() {
+        Some(ext) => {
+            EDIT_ALLOWED_EXTENSIONS.contains(&ext.to_string_lossy().to_lowercase().as_str())
+        }
+        None => true,
+    }
+}
+
 use crate::error::AppError;
 use crate::ssh::connection::{authenticate_session, verify_host_key, AuthInfo};
 use crate::ssh::jump_host::{self, JumpInfo};
@@ -571,6 +582,16 @@ fn handle_message(
     }
 }
 
+/// Sorts directory entries: directories before files, then case-insensitive
+/// alphabetical order within each group.
+fn sort_entries(entries: &mut [FileEntry]) {
+    entries.sort_by(|a, b| {
+        b.is_dir
+            .cmp(&a.is_dir)
+            .then(a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+    });
+}
+
 fn list_dir(sftp: &ssh2::Sftp, path: &str) -> Result<DirListing, AppError> {
     let resolved = sftp
         .realpath(Path::new(if path.is_empty() { "." } else { path }))
@@ -600,11 +621,7 @@ fn list_dir(sftp: &ssh2::Sftp, path: &str) -> Result<DirListing, AppError> {
         })
         .collect();
 
-    entries.sort_by(|a, b| {
-        b.is_dir
-            .cmp(&a.is_dir)
-            .then(a.name.to_lowercase().cmp(&b.name.to_lowercase()))
-    });
+    sort_entries(&mut entries);
 
     Ok(DirListing {
         path: resolved.to_string_lossy().into_owned(),
@@ -627,6 +644,16 @@ fn delete_entry(sftp: &ssh2::Sftp, path: &str) -> Result<(), AppError> {
 }
 
 const MAX_UPLOAD_BYTES: u64 = 2 * 1024 * 1024 * 1024; // 2 GB
+
+fn check_upload_size(total: u64) -> Result<(), AppError> {
+    if total > MAX_UPLOAD_BYTES {
+        return Err(AppError::Io(format!(
+            "File too large to upload ({:.1} GB). Maximum is 2 GB.",
+            total as f64 / 1_073_741_824.0
+        )));
+    }
+    Ok(())
+}
 
 /// Uploads a local file or, recursively, a local directory tree.
 fn upload_path(
@@ -717,12 +744,7 @@ fn upload_file(
         .map_err(|e| AppError::Io(format!("cannot open local file: {e}")))?;
     let total = local_file.metadata().map(|m| m.len()).unwrap_or(0);
 
-    if total > MAX_UPLOAD_BYTES {
-        return Err(AppError::Io(format!(
-            "File too large to upload ({:.1} GB). Maximum is 2 GB.",
-            total as f64 / 1_073_741_824.0
-        )));
-    }
+    check_upload_size(total)?;
 
     let mut remote_file = sftp
         .create(Path::new(remote_path))
@@ -794,16 +816,10 @@ fn open_edit(
 
     // Reject file types not on the safe-to-edit allowlist to prevent accidentally
     // opening executables, binaries, or other dangerous file types.
-    let ext = Path::new(&filename)
-        .extension()
-        .map(|e| e.to_string_lossy().to_lowercase());
-    match &ext {
-        Some(e) if !EDIT_ALLOWED_EXTENSIONS.contains(&e.as_str()) => {
-            return Err(AppError::Io(
-                "File type not supported for editing: use Download instead".into(),
-            ));
-        }
-        _ => {} // None (no extension) is permitted as plain text
+    if !is_edit_allowed(&filename) {
+        return Err(AppError::Io(
+            "File type not supported for editing: use Download instead".into(),
+        ));
     }
 
     // Build temp dir: <os_tmp>/naden/<session_id>/
@@ -1016,3 +1032,6 @@ fn download_file(
 
     result
 }
+
+#[cfg(test)]
+mod tests;
