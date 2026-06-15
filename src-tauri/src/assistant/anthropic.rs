@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde_json::json;
 
-use super::{for_each_sse_event, role_str, AssistantProvider, ChatMessage};
+use super::{for_each_sse_event, provider_error, role_str, AssistantProvider, ChatMessage};
 use crate::error::AppError;
 
 const ENDPOINT: &str = "https://api.anthropic.com/v1/messages";
@@ -36,9 +36,11 @@ impl AssistantProvider for AnthropicProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| AppError::Io(e.to_string()))?
-            .error_for_status()
-            .map_err(|e| AppError::Validation(format!("Anthropic request failed: {e}")))?;
+            .map_err(|e| AppError::Io(e.to_string()))?;
+
+        if !response.status().is_success() {
+            return Err(provider_error("Anthropic", response.status()));
+        }
 
         // Streamed events look like:
         //   {"type":"content_block_delta","delta":{"type":"text_delta","text":"Hel"}}

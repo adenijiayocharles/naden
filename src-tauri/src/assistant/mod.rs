@@ -43,6 +43,19 @@ pub fn provider_for(id: &str) -> Result<Box<dyn AssistantProvider>, AppError> {
     }
 }
 
+/// Maps a non-2xx HTTP status from a provider into a user-facing message that
+/// is specific enough to act on but never echoes response body content (which
+/// may include truncated API key hints).
+fn provider_error(provider_name: &str, status: reqwest::StatusCode) -> AppError {
+    let message = match status.as_u16() {
+        401 | 403 => format!("Invalid {provider_name} API key — check Settings → AI Assistant"),
+        429 => format!("{provider_name} rate limit exceeded — try again in a moment"),
+        500..=599 => format!("{provider_name} is temporarily unavailable — try again later"),
+        _ => format!("{provider_name} request failed (HTTP {status})"),
+    };
+    AppError::Validation(message)
+}
+
 /// Both OpenAI and Anthropic stream replies as Server-Sent Events: lines of
 /// `data: <json>` separated by blank lines. OpenAI terminates with a literal
 /// `data: [DONE]`; Anthropic sends a `message_stop` event whose JSON shape

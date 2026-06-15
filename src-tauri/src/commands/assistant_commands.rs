@@ -517,9 +517,16 @@ pub async fn send_assistant_message(
             Ok(()) => {
                 let _ = app_handle.emit(&format!("assistant:done:{request_id}"), ());
             }
+            // `Validation` messages here are ones we constructed ourselves
+            // from HTTP status codes (see `provider_error`) and are safe to
+            // show verbatim. Other variants may wrap raw provider/network
+            // errors, so they're logged only and replaced with a generic
+            // message before reaching the frontend.
+            Err(AppError::Validation(message)) => {
+                log::error!("[assistant] stream error for {request_id}: {message}");
+                let _ = app_handle.emit(&format!("assistant:error:{request_id}"), message);
+            }
             Err(e) => {
-                // Log the full error internally; never forward raw provider errors
-                // to the frontend as they may contain truncated API key hints.
                 log::error!("[assistant] stream error for {request_id}: {e}");
                 let _ = app_handle.emit(
                     &format!("assistant:error:{request_id}"),
