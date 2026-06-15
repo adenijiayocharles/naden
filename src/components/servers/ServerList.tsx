@@ -6,6 +6,7 @@ import { useSftpStore } from "../../store/sftpStore";
 import ServerCard from "./ServerCard";
 import ServerRow from "./ServerRow";
 import EmptyState from "../shared/EmptyState";
+import { Button } from "../ui/button";
 import type { Server, Group } from "../../types/server";
 
 function sortServers(list: Server[], mode: SortMode, lastConnectedMap: Record<string, string>): Server[] {
@@ -208,16 +209,18 @@ export default function ServerList() {
                   <h2 className="text-white font-semibold text-base">Add a server</h2>
                   <p className="text-muted text-sm">How would you like to add it?</p>
                 </div>
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={() => setShowAddPicker(false)}
-                  className="text-muted hover:text-white p-1 rounded transition-colors shrink-0"
+                  className="text-muted hover:text-white shrink-0"
                   aria-label="Close"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
                     <line x1="3" y1="3" x2="13" y2="13" />
                     <line x1="13" y1="3" x2="3" y2="13" />
                   </svg>
-                </button>
+                </Button>
               </div>
               <div className="flex flex-col gap-2">
                 <button

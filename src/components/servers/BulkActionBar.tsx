@@ -4,7 +4,7 @@ import { useServerStore } from "../../store/serverStore";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useBroadcastStore } from "../../store/broadcastStore";
 import { formatError } from "../../lib/errors";
-import Button from "../shared/Button";
+import { Button } from "../ui/button";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 
 const MAX_BROADCAST_HOSTS = 9;
@@ -113,11 +113,11 @@ export default function BulkActionBar() {
         {count > 0 ? `${count} selected` : "Click servers to select"}
       </span>
 
-      <Button size="sm" variant="ghost" onClick={handleSelectAll} disabled={busy}>
+      <Button variant="ghost" onClick={handleSelectAll} disabled={busy} className="h-8">
         Select all
       </Button>
 
-      <Button size="sm" variant="ghost" onClick={clearSelected} disabled={busy || count === 0}>
+      <Button variant="ghost" onClick={clearSelected} disabled={busy || count === 0} className="h-8">
         Clear
       </Button>
 
@@ -126,11 +126,11 @@ export default function BulkActionBar() {
 
         {/* Connect as broadcast group */}
         <Button
-          size="sm"
           variant="ghost"
           onClick={() => { void handleConnectAsGroup(); }}
           disabled={busy || count === 0}
           title={count > MAX_BROADCAST_HOSTS ? `Opens the first ${MAX_BROADCAST_HOSTS} selected servers` : undefined}
+          className="h-8"
         >
           {connectingGroup ? "Connecting…" : `Connect as group${count > 0 ? ` (${Math.min(count, MAX_BROADCAST_HOSTS)})` : ""}`}
         </Button>
@@ -138,10 +138,9 @@ export default function BulkActionBar() {
         {/* Move to group */}
         <div className="relative">
           <Button
-            size="sm"
-            variant="primary"
             onClick={() => setShowGroupPicker((v) => !v)}
             disabled={busy || count === 0}
+            className="h-8"
           >
             Add to Group
           </Button>
@@ -172,10 +171,10 @@ export default function BulkActionBar() {
 
         {/* Delete */}
         <Button
-          size="sm"
           variant="delete"
           onClick={() => setConfirmDelete(true)}
           disabled={busy || count === 0}
+          className="h-8"
         >
           Delete {count > 0 ? count : ""}
         </Button>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { FolderOpen } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { homeDir, join } from "@tauri-apps/api/path";
 import type { AuthMethod, Tag } from "../../types/server";
@@ -8,8 +9,16 @@ import { serverCommands, vaultCommands } from "../../lib/tauriCommands";
 import { useVaultStore } from "../../store/vaultStore";
 import { useSshKeyStore } from "../../store/sshKeyStore";
 import { formatError } from "../../lib/errors";
-import Input from "../shared/Input";
-import Button from "../shared/Button";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import PortForwardsSection from "./PortForwardsSection";
 
 interface FormData {
@@ -182,16 +191,6 @@ export default function ServerForm() {
     }
   };
 
-  const handleGroupChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    if (e.target.value === "__create_new__") {
-      setShowNewGroup(true);
-      setForm((f) => ({ ...f, groupId: "" }));
-    } else {
-      setShowNewGroup(false);
-      setForm((f) => ({ ...f, groupId: e.target.value }));
-    }
-  };
-
   const handleCreateGroup = async () => {
     const name = newGroupName.trim();
     if (!name) return;
@@ -295,7 +294,7 @@ export default function ServerForm() {
               onChange={set("displayName")}
               onBlur={(e) => validateField("displayName", e.target.value)}
               placeholder="Production Web Server"
-              error={!!errors.displayName}
+              aria-invalid={!!errors.displayName}
               autoComplete="off"
             />
           </Field>
@@ -308,7 +307,7 @@ export default function ServerForm() {
               onChange={set("hostname")}
               onBlur={(e) => validateField("hostname", e.target.value)}
               placeholder="web.example.com"
-              error={!!errors.hostname}
+              aria-invalid={!!errors.hostname}
               autoComplete="off"
             />
           </Field>
@@ -324,7 +323,7 @@ export default function ServerForm() {
                 value={form.port}
                 onChange={set("port")}
                 onBlur={(e) => validateField("port", e.target.value)}
-                error={!!errors.port}
+                aria-invalid={!!errors.port}
                 autoComplete="off"
               />
             </Field>
@@ -380,37 +379,45 @@ export default function ServerForm() {
           {form.authMethod === "key" && (
             <Field label="Identity File">
               {managedKeys.length > 0 && (
-                <select
-                  className="w-full h-10 bg-surface-3 border border-white/5 rounded px-3 text-sm text-white mb-2 focus:outline-none focus:border-accent/30 transition-[border-color] duration-200"
-                  value={managedKeys.some((k) => k.keyPath === form.identityFilePath) ? form.identityFilePath : ""}
-                  onChange={(e) => {
-                    if (e.target.value) setForm((f) => ({ ...f, identityFilePath: e.target.value }));
+                <Select
+                  value={managedKeys.some((k) => k.keyPath === form.identityFilePath) ? form.identityFilePath : "__none__"}
+                  onValueChange={(value) => {
+                    if (value && value !== "__none__") {
+                      setForm((f) => ({ ...f, identityFilePath: value }));
+                      setDirty(true);
+                    }
                   }}
                 >
-                  <option value="">— pick a managed key —</option>
-                  {managedKeys.map((k) => (
-                    <option key={k.id} value={k.keyPath}>
-                      {k.name} ({k.keyType.toUpperCase()})
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full h-10 mb-2">
+                    <SelectValue placeholder="— pick a managed key —" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— pick a managed key —</SelectItem>
+                    {managedKeys.map((k) => (
+                      <SelectItem key={k.id} value={k.keyPath}>
+                        {k.name} ({k.keyType.toUpperCase()})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
-              <div className="flex gap-2">
+              <div className="relative">
                 <Input
                   id="identityFilePath"
                   value={form.identityFilePath}
                   onChange={set("identityFilePath")}
                   placeholder="~/.ssh/id_ed25519"
-                  className="flex-1"
+                  className="pr-9"
                   autoComplete="off"
                 />
-                <Button
+                <button
                   type="button"
                   onClick={() => { void pickIdentityFile(); }}
-                  className="px-3 border border-stroke shrink-0"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 text-muted hover:text-white rounded transition-colors"
+                  aria-label="Browse for identity file"
                 >
-                  Browse
-                </Button>
+                  <FolderOpen className="size-4" />
+                </button>
               </div>
             </Field>
           )}
@@ -448,20 +455,30 @@ export default function ServerForm() {
           <>
           <Field label="Group" error={errors.group}>
             {!showNewGroup ? (
-              <SelectWrapper>
-                <select
-                  id="groupId"
-                  value={form.groupId}
-                  onChange={handleGroupChange}
-                  className={select()}
-                >
-                  <option value="">No Group</option>
+              <Select
+                value={form.groupId || "__none__"}
+                onValueChange={(value) => {
+                  if (value === "__create_new__") {
+                    setShowNewGroup(true);
+                    setForm((f) => ({ ...f, groupId: "" }));
+                  } else {
+                    setShowNewGroup(false);
+                    setForm((f) => ({ ...f, groupId: value && value !== "__none__" ? value : "" }));
+                  }
+                  setDirty(true);
+                }}
+              >
+                <SelectTrigger id="groupId" className="w-full h-10">
+                  <SelectValue placeholder="No Group" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No Group</SelectItem>
                   {groups.map((g) => (
-                    <option key={g.id} value={g.id}>{g.name}</option>
+                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
                   ))}
-                  <option value="__create_new__">＋ Create new group…</option>
-                </select>
-              </SelectWrapper>
+                  <SelectItem value="__create_new__">＋ Create new group…</SelectItem>
+                </SelectContent>
+              </Select>
             ) : (
               <div className="flex gap-2">
                 <Input
@@ -475,7 +492,6 @@ export default function ServerForm() {
                 />
                 <Button
                   type="button"
-                  variant="primary"
                   onClick={() => { void handleCreateGroup(); }}
                   className="px-3 shrink-0"
                 >
@@ -483,6 +499,7 @@ export default function ServerForm() {
                 </Button>
                 <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => { setShowNewGroup(false); setNewGroupName(""); }}
                   className="px-3 shrink-0"
                 >
@@ -565,11 +582,12 @@ export default function ServerForm() {
           <>
           <Field label="">
             <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={form.isJumpHost}
-                onChange={set("isJumpHost")}
-                className="rounded border-stroke bg-surface-3 text-accent-fg"
+                onCheckedChange={(checked) => {
+                  setForm((f) => ({ ...f, isJumpHost: checked === true }));
+                  setDirty(true);
+                }}
               />
               <span className="text-sm text-secondary">This server is a jump host / bastion</span>
             </label>
@@ -578,21 +596,25 @@ export default function ServerForm() {
           {/* Jump through */}
           {!form.isJumpHost && (
             <Field label="Jump Host (optional)">
-              <SelectWrapper>
-                <select
-                  id="jumpHostId"
-                  value={form.jumpHostId}
-                  onChange={set("jumpHostId")}
-                  className={select()}
-                >
-                  <option value="">Direct connection</option>
+              <Select
+                value={form.jumpHostId || "__none__"}
+                onValueChange={(value) => {
+                  setForm((f) => ({ ...f, jumpHostId: value && value !== "__none__" ? value : "" }));
+                  setDirty(true);
+                }}
+              >
+                <SelectTrigger id="jumpHostId" className="w-full h-10">
+                  <SelectValue placeholder="Direct connection" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Direct connection</SelectItem>
                   {servers
                     .filter((s) => s.isJumpHost && s.id !== editingServerId)
                     .map((s) => (
-                      <option key={s.id} value={s.id}>{s.displayName}</option>
+                      <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>
                     ))}
-                </select>
-              </SelectWrapper>
+                </SelectContent>
+              </Select>
 
               {/* Visual chain display */}
               {form.jumpHostId && (() => {
@@ -655,10 +677,10 @@ export default function ServerForm() {
 
         {/* Footer */}
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-stroke-subtle shrink-0">
-          <Button type="button" onClick={handleClose}>
+          <Button type="button" variant="secondary" onClick={handleClose}>
             Cancel
           </Button>
-          <Button type="submit" form="server-form" variant="primary" disabled={submitting}>
+          <Button type="submit" form="server-form" disabled={submitting}>
             {saved ? "Saved ✓" : submitting ? "Saving…" : isEdit ? "Save Changes" : "Add Server"}
           </Button>
         </div>
@@ -671,7 +693,6 @@ export default function ServerForm() {
 
 // NOTE: PortForwardsSection lives in ./PortForwardsSection.tsx
 
-// Field, SelectWrapper, and select() helpers follow below.
 function Field({
   label,
   children,
@@ -697,18 +718,3 @@ function Field({
   );
 }
 
-function SelectWrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="relative">
-      {children}
-      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-muted">
-        <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-        </svg>
-      </div>
-    </div>
-  );
-}
-
-const select = () =>
-  "w-full h-10 appearance-none bg-surface-3 border border-stroke rounded px-3 pr-10 text-sm text-white focus:outline-none focus:border-accent transition-colors";

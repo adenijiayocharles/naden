@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useVaultStore } from "../../store/vaultStore";
 import { formatError } from "../../lib/errors";
 import { passwordStrength } from "../../lib/passwordStrength";
-import Input from "../shared/Input";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
 
 export default function VaultSetupModal() {
   const { setup, skipSetup } = useVaultStore();
@@ -79,23 +80,24 @@ export default function VaultSetupModal() {
 
           {error && <p className="text-sm text-error text-center">{error}</p>}
 
-          <button
+          <Button
             type="submit"
             disabled={loading || skipping || password.length < 8 || password !== confirm}
-            className="w-full bg-accent hover:bg-accent-hover disabled:opacity-40 text-black font-semibold py-3 rounded transition-colors"
+            className="w-full h-10"
           >
             {loading ? "Setting up…" : "Set up vault"}
-          </button>
+          </Button>
         </form>
 
         <div className="mt-4 text-center">
-          <button
+          <Button
+            variant="ghost"
             onClick={() => { void handleSkip(); }}
             disabled={loading || skipping}
-            className="text-sm text-faint hover:text-muted disabled:opacity-40 transition-colors"
+            className="text-faint hover:text-muted"
           >
             {skipping ? "Skipping…" : "Continue without password protection"}
-          </button>
+          </Button>
           <p className="text-meta text-dim mt-1">
             You can enable a master password anytime in Settings.
           </p>

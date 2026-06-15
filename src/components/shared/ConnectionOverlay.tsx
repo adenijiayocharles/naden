@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Button } from "../ui/button";
 
 interface ReconnectingProps {
   reconnectAt: number;
@@ -24,12 +25,9 @@ export function ReconnectingOverlay({ reconnectAt, onCancel }: ReconnectingProps
         Reconnecting in{" "}
         <span className="text-white tabular-nums">{remaining}s</span>…
       </p>
-      <button
-        onClick={onCancel}
-        className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
-      >
+      <Button variant="secondary" onClick={onCancel} className="h-10">
         Cancel
-      </button>
+      </Button>
     </div>
   );
 }
@@ -65,12 +63,9 @@ export function ConnectingOverlay({ serverName, onCancel }: ConnectingProps) {
         />
       </div>
       <p className="text-dim text-xs">Establishing SSH connection…</p>
-      <button
-        onClick={onCancel}
-        className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
-      >
+      <Button variant="secondary" onClick={onCancel} className="h-10">
         Cancel
-      </button>
+      </Button>
     </div>
   );
 }
@@ -86,27 +81,18 @@ export function ErrorOverlay({ errorMessage, onClose, onReconnect, onRemoveKnown
       )}
       <div className="flex gap-3 mt-1">
         {onReconnect && (
-          <button
-            onClick={onReconnect}
-            className="px-4 py-2 text-sm text-black bg-accent hover:bg-accent-hover rounded font-semibold transition-colors"
-          >
+          <Button onClick={onReconnect} className="h-10">
             Reconnect
-          </button>
+          </Button>
         )}
         {isHostKeyMismatch && onRemoveKnownHost && (
-          <button
-            onClick={onRemoveKnownHost}
-            className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-500 rounded font-semibold transition-colors"
-          >
+          <Button variant="delete" onClick={onRemoveKnownHost} className="h-10">
             Remove from known hosts
-          </button>
+          </Button>
         )}
-        <button
-          onClick={onClose}
-          className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
-        >
+        <Button variant="secondary" onClick={onClose} className="h-10">
           Close
-        </button>
+        </Button>
       </div>
     </div>
   );

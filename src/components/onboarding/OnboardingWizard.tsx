@@ -5,7 +5,8 @@ import { useUiStore } from "../../store/uiStore";
 import { settingsCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import SshConfigImport from "../servers/SshConfigImport";
-import Input from "../shared/Input";
+import DiscoverHosts from "../servers/DiscoverHosts";
+import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Progress } from "../ui/progress";
 import { Checkbox } from "../ui/checkbox";
@@ -29,6 +30,7 @@ const STEPS: Step[] = ["welcome", "vault", "import", "done"];
 export default function OnboardingWizard({ onComplete }: Props) {
   const [step, setStep] = useState<Step>("welcome");
   const [showImport, setShowImport] = useState(false);
+  const [showDiscover, setShowDiscover] = useState(false);
 
   // Vault step state
   const { setup, isSetup } = useVaultStore();
@@ -73,6 +75,10 @@ export default function OnboardingWizard({ onComplete }: Props) {
 
   if (showImport) {
     return <SshConfigImport onClose={() => { setShowImport(false); advance(); }} />;
+  }
+
+  if (showDiscover) {
+    return <DiscoverHosts onClose={() => { setShowDiscover(false); advance(); }} />;
   }
 
   return (
@@ -176,16 +182,26 @@ export default function OnboardingWizard({ onComplete }: Props) {
               <p className="text-sm text-muted">
                 If you have servers configured in <code className="text-accent-fg">~/.ssh/config</code>, you can import them now. You can also do this later from the toolbar.
               </p>
-              <div className="flex gap-2 pt-2">
-                <Button variant="ghost" onClick={() => setStep("vault")} className="text-faint">
-                  Back
-                </Button>
-                <Button onClick={() => setShowImport(true)} className="flex-1 h-9">
-                  Import SSH config
-                </Button>
-                <Button variant="secondary" onClick={advance} className="flex-1 h-9 border border-stroke">
-                  Skip
-                </Button>
+              <p className="text-sm text-muted">
+                Or discover hosts already in <code className="text-accent-fg">~/.ssh/known_hosts</code> or on your local network.
+              </p>
+              <div className="space-y-2 pt-2">
+                <div className="flex gap-2">
+                  <Button onClick={() => setShowImport(true)} className="flex-1 h-9">
+                    Import SSH config
+                  </Button>
+                  <Button variant="secondary" onClick={() => setShowDiscover(true)} className="flex-1 h-9 border border-stroke">
+                    Discover hosts
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="ghost" onClick={() => setStep("vault")} className="text-faint">
+                    Back
+                  </Button>
+                  <Button variant="secondary" onClick={advance} className="flex-1 h-9 border border-stroke">
+                    Skip
+                  </Button>
+                </div>
               </div>
             </div>
           )}

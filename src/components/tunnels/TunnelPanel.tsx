@@ -3,8 +3,16 @@ import { useTunnelStore } from "../../store/tunnelStore";
 import { useServerStore } from "../../store/serverStore";
 import { formatError } from "../../lib/errors";
 import type { ForwardType, PortForward, TunnelStatus } from "../../types/portForward";
-import Input from "../shared/Input";
-import Button from "../shared/Button";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import EmptyState from "../shared/EmptyState";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 
@@ -126,29 +134,39 @@ function AddTunnelModal({ onClose }: { onClose: () => void }) {
       <div className="bg-surface-2 border border-stroke rounded-xl shadow-overlay animate-overlay-in w-full max-w-md flex flex-col">
         <div className="px-5 py-4 border-b border-stroke-subtle flex items-center justify-between">
           <h2 className="text-white font-semibold text-base">Add port forward</h2>
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={onClose}
-            className="text-muted hover:text-white transition-colors"
+            className="text-muted hover:text-white"
             aria-label="Close"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" d="M3 3l10 10M13 3L3 13" />
             </svg>
-          </button>
+          </Button>
         </div>
 
         <div className="p-5 space-y-4">
           <div>
             <label className="block text-xs text-secondary mb-1">Server</label>
-            <select
+            <Select
               value={form.serverId}
-              onChange={setF("serverId")}
-              className="w-full h-9 px-2.5 rounded-md bg-surface-3 border border-stroke text-sm text-white focus:outline-none focus:border-accent"
+              onValueChange={(value) => {
+                if (!value) return;
+                setForm((f) => ({ ...f, serverId: value }));
+                setFormError(null);
+              }}
             >
-              {servers.map((s) => (
-                <option key={s.id} value={s.id}>{s.displayName}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {servers.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
@@ -221,11 +239,12 @@ function AddTunnelModal({ onClose }: { onClose: () => void }) {
               />
             </div>
             <label className="flex items-center gap-1.5 pb-2.5 text-xs text-secondary cursor-pointer shrink-0">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={form.autoStart}
-                onChange={setF("autoStart")}
-                className="rounded border-stroke bg-surface-3 text-accent-fg"
+                onCheckedChange={(checked) => {
+                  setForm((f) => ({ ...f, autoStart: checked === true }));
+                  setFormError(null);
+                }}
               />
               Auto-start
             </label>
@@ -235,13 +254,12 @@ function AddTunnelModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="px-5 py-4 border-t border-stroke-subtle flex gap-2 justify-end">
-          <Button type="button" size="sm" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="secondary" onClick={onClose} className="h-8">Cancel</Button>
           <Button
             type="button"
-            size="sm"
-            variant="primary"
             onClick={() => { void handleSave(); }}
             disabled={saving}
+            className="h-8"
           >
             {saving ? "Saving…" : "Add"}
           </Button>
@@ -293,15 +311,17 @@ const TunnelRow = memo(function TunnelRow({
         </div>
 
         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={() => isRunning ? onStop(fwd.id) : onStart(fwd.id)}
             disabled={status === "connecting"}
             title={isRunning ? "Stop tunnel" : "Start tunnel"}
-            className={`p-1 rounded transition-colors disabled:opacity-40 ${
+            className={
               isRunning
-                ? "text-dim hover:text-red-400 hover:bg-surface-3"
-                : "text-dim hover:text-accent hover:bg-surface-3"
-            }`}
+                ? "text-dim hover:text-red-400"
+                : "text-dim hover:text-accent"
+            }
           >
             {isRunning ? (
               <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 14 14">
@@ -312,16 +332,18 @@ const TunnelRow = memo(function TunnelRow({
                 <polygon points="3,2 11,7 3,12" />
               </svg>
             )}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={() => onDelete(fwd.id)}
             title="Delete"
-            className="p-1 rounded text-dim hover:text-red-400 hover:bg-surface-3 transition-colors"
+            className="text-dim hover:text-red-400"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 4h10M6 4V2h4v2M5 4v9a1 1 0 001 1h4a1 1 0 001-1V4" />
             </svg>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -402,17 +424,16 @@ export default function TunnelPanel() {
       {/* Toolbar */}
       <div className="px-4 h-14 border-b border-stroke-subtle shrink-0 flex items-center gap-2">
         <div className="flex-1 min-w-0">
-          <input
+          <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search port forwards…"
-            className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
           />
         </div>
         <Button
-          variant="primary"
           onClick={() => setModalOpen(true)}
           disabled={servers.length === 0}
+          className="h-10"
         >
           + New
         </Button>

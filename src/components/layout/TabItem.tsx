@@ -1,3 +1,5 @@
+import { Button } from "../ui/button";
+
 interface TabItemProps {
   serverName: string;
   statusColor: string;
@@ -52,16 +54,18 @@ export default function TabItem({
       <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${statusColor}`} />
       {icon}
       <span className="max-w-[120px] truncate">{serverName}</span>
-      <button
+      <Button
+        variant="ghost"
+        size="icon-xs"
         onClick={(e) => {
           e.stopPropagation();
           onClose();
         }}
-        className="text-faint hover:text-white ml-1 leading-none transition-colors text-base"
+        className="text-faint hover:text-white ml-1 leading-none text-base"
         aria-label={closeLabel}
       >
         ×
-      </button>
+      </Button>
     </div>
   );
 }

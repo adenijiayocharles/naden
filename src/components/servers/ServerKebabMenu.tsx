@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useServerStore } from "../../store/serverStore";
+import { Button } from "../ui/button";
 
 interface Props {
   menuRef: React.RefObject<HTMLDivElement>;
@@ -63,13 +64,14 @@ export default function ServerKebabMenu({
       ref={menuRef}
       onClick={(e) => e.stopPropagation()}
     >
-      <button
+      <Button
+        variant="ghost"
         onClick={() => { setMenuOpen(!menuOpen); setShowGroupPicker(false); }}
         className={buttonClassName}
         aria-label="Server options"
       >
         ⋮
-      </button>
+      </Button>
 
       {menuOpen && (
         <div ref={menuRef2} className="absolute right-0 top-8 bg-surface-2 border border-stroke rounded-lg shadow-overlay z-20 min-w-[170px] py-1">

@@ -1,7 +1,14 @@
 import { useEffect, useState, useRef } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
-import Input from "../shared/Input";
-import Button from "../shared/Button";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import EmptyState from "../shared/EmptyState";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
@@ -282,40 +289,48 @@ export default function LogView() {
       {/* Filter bar */}
       <div className="px-5 py-3 border-b border-stroke-subtle shrink-0">
         <div className="flex items-center gap-3 flex-wrap">
-          <select
-            value={filterServer}
-            onChange={(e) => setFilterServer(e.target.value)}
-            className="h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white focus:outline-none focus:border-accent"
+          <Select
+            value={filterServer || "__all__"}
+            onValueChange={(value) => setFilterServer(!value || value === "__all__" ? "" : value)}
           >
-            <option value="">All servers</option>
-            {servers.map((s) => (
-              <option key={s.id} value={s.id}>{s.displayName}</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-10">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All servers</SelectItem>
+              {servers.map((s) => (
+                <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          <select
-            value={filterOutcome}
-            onChange={(e) => setFilterOutcome(e.target.value)}
-            className="h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white focus:outline-none focus:border-accent"
+          <Select
+            value={filterOutcome || "__all__"}
+            onValueChange={(value) => setFilterOutcome(!value || value === "__all__" ? "" : value)}
           >
-            {OUTCOME_CHIPS.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-10">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {OUTCOME_CHIPS.map(({ value, label }) => (
+                <SelectItem key={value || "__all__"} value={value || "__all__"}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           <Input type="date" value={filterStart} onChange={(e) => setFilterStart(e.target.value)} className="w-auto" />
           <span className="text-faint text-sm">→</span>
           <Input type="date" value={filterEnd} onChange={(e) => setFilterEnd(e.target.value)} className="w-auto" />
 
           {hasFilters && (
-            <Button variant="ghost" onClick={clearFilters}>Clear</Button>
+            <Button variant="ghost" onClick={clearFilters} className="h-10">Clear</Button>
           )}
 
           <div className="ml-auto flex items-center gap-2">
-            <Button onClick={() => { void handleExport(); }} disabled={exporting} className="px-3 border border-stroke">
+            <Button variant="secondary" onClick={() => { void handleExport(); }} disabled={exporting} className="h-10 px-3 border border-stroke">
               {exporting ? "Exporting…" : "Export CSV"}
             </Button>
-            <Button variant="danger" onClick={() => setShowClearConfirm(true)} disabled={clearing}>
+            <Button variant="destructive" onClick={() => setShowClearConfirm(true)} disabled={clearing} className="h-10">
               Clear Logs
             </Button>
           </div>

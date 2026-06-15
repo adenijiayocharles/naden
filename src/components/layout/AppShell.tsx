@@ -1,6 +1,14 @@
 import { useEffect, useCallback, useState, useRef, useMemo } from "react";
 import { useUiStore, type ViewMode, type SortMode } from "../../store/uiStore";
-import Input from "../shared/Input";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { useVaultStore } from "../../store/vaultStore";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useBroadcastStore } from "../../store/broadcastStore";
@@ -361,13 +369,13 @@ export default function AppShell() {
                 {/* Server list toolbar */}
                 <div className="px-3 h-14 border-b border-stroke-subtle shrink-0 flex items-center gap-2">
                   <div className="relative flex-1 min-w-0">
-                    <input
+                    <Input
                       ref={searchRef}
                       data-search-input
                       value={searchQuery}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="Search…"
-                      className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 pr-10 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
+                      className="pr-10"
                     />
                     {!searchQuery && (
                       <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-dim pointer-events-none select-none">⌘K</kbd>
@@ -375,24 +383,26 @@ export default function AppShell() {
                   </div>
                   {!(hasPanel && !serverListCollapsed) && (
                     <>
-                      <select
-                        value={sortMode}
-                        onChange={(e) => setSortMode(e.target.value as SortMode)}
-                        className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-secondary focus:outline-none focus:border-accent shrink-0 cursor-pointer"
-                      >
-                        <option value="default">Default</option>
-                        <option value="name_asc">A → Z</option>
-                        <option value="name_desc">Z → A</option>
-                        <option value="host">Host</option>
-                        <option value="last_connected">Recent</option>
-                      </select>
+                      <Select value={sortMode} onValueChange={(value) => setSortMode(value as SortMode)}>
+                        <SelectTrigger className="h-10 shrink-0">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="default">Default</SelectItem>
+                          <SelectItem value="name_asc">A → Z</SelectItem>
+                          <SelectItem value="name_desc">Z → A</SelectItem>
+                          <SelectItem value="host">Host</SelectItem>
+                          <SelectItem value="last_connected">Recent</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <div className="flex items-center h-10 bg-surface-3 border border-stroke rounded overflow-hidden shrink-0">
                         {(["card", "row"] as ViewMode[]).map((mode) => (
-                          <button
+                          <Button
                             key={mode}
+                            variant="ghost"
                             onClick={() => setViewMode(mode)}
                             aria-label={mode === "card" ? "Card view" : "List view"}
-                            className={`px-1.5 h-full transition-colors ${viewMode === mode ? "bg-surface-4 text-white" : "text-faint hover:text-muted"}`}
+                            className={`px-1.5 h-full rounded-none ${viewMode === mode ? "bg-surface-4 text-white" : "text-faint hover:text-muted"}`}
                           >
                             {mode === "card" ? (
                               <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
@@ -408,15 +418,16 @@ export default function AppShell() {
                                 <line x1="1" y1="12" x2="15" y2="12" />
                               </svg>
                             )}
-                          </button>
+                          </Button>
                         ))}
                       </div>
-                      <button
+                      <Button
+                        variant="ghost"
                         onClick={toggleBulkMode}
-                        className={`h-10 px-2 rounded border text-sm transition-colors shrink-0 ${bulkMode ? "bg-accent/10 border-accent/30 text-accent-fg" : "bg-surface-3 border-stroke text-faint hover:text-muted"}`}
+                        className={`h-10 px-2 rounded border shrink-0 ${bulkMode ? "bg-accent/10 border-accent/30 text-accent-fg" : "bg-surface-3 border-stroke text-faint hover:text-muted"}`}
                       >
                         {bulkMode ? `Cancel${bulkSelected.length > 0 ? ` (${bulkSelected.length})` : ""}` : "Select"}
-                      </button>
+                      </Button>
                     </>
                   )}
                 </div>
@@ -430,10 +441,11 @@ export default function AppShell() {
 
           {/* Collapse / expand handle */}
           {!activeBroadcastGroupId && hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings" && activeView !== "keys" && (
-            <button
+            <Button
+              variant="ghost"
               onClick={toggleServerList}
               aria-label={serverListCollapsed ? "Expand server list" : "Collapse server list"}
-              className="w-4 shrink-0 flex items-center justify-center bg-surface-0 border-r border-stroke-subtle hover:bg-surface-2 transition-colors group"
+              className="w-4 h-auto shrink-0 rounded-none justify-center bg-surface-0 border-r border-stroke-subtle hover:bg-surface-2 group"
             >
               <svg
                 className="w-2.5 h-2.5 text-dim group-hover:text-muted transition-colors"
@@ -450,7 +462,7 @@ export default function AppShell() {
                   <polyline points="5,1 1,5 5,9" />
                 )}
               </svg>
-            </button>
+            </Button>
           )}
 
           {/* Unified panel: terminals + SFTP browsers */}
@@ -467,20 +479,24 @@ export default function AppShell() {
                 <div className="relative flex-1 min-w-0">
                   {tabFade.left && (
                     <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-surface-1 to-transparent flex items-center justify-start pl-0.5">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
                         onClick={() => tabBarRef.current?.scrollBy({ left: -120, behavior: "smooth" })}
-                        className="pointer-events-auto text-muted hover:text-white transition-colors leading-none"
+                        className="pointer-events-auto text-muted hover:text-white leading-none"
                         aria-label="Scroll tabs left"
-                      >‹</button>
+                      >‹</Button>
                     </div>
                   )}
                   {tabFade.right && (
                     <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-surface-1 to-transparent flex items-center justify-end pr-0.5">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
                         onClick={() => tabBarRef.current?.scrollBy({ left: 120, behavior: "smooth" })}
-                        className="pointer-events-auto text-muted hover:text-white transition-colors leading-none"
+                        className="pointer-events-auto text-muted hover:text-white leading-none"
                         aria-label="Scroll tabs right"
-                      >›</button>
+                      >›</Button>
                     </div>
                   )}
                   <div ref={tabBarRef} className="flex items-center gap-1 px-2 overflow-x-auto [&::-webkit-scrollbar]:hidden">
@@ -541,8 +557,10 @@ export default function AppShell() {
 
                 {/* New terminal session */}
                 <div className="px-1.5 shrink-0 relative">
-                  <button
+                  <Button
                     ref={newTabButtonRef}
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => {
                       setShowNewTabPicker((v) => !v);
                       setPickerQuery("");
@@ -550,12 +568,12 @@ export default function AppShell() {
                     }}
                     title="New terminal session"
                     aria-label="New terminal session"
-                    className="w-7 h-7 flex items-center justify-center rounded text-faint hover:text-white hover:bg-surface-3 transition-colors"
+                    className="text-faint hover:text-white"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M8 3v10M3 8h10" />
                     </svg>
-                  </button>
+                  </Button>
                   {showNewTabPicker && (
                     <div
                       ref={newTabPickerRef}
@@ -615,16 +633,18 @@ export default function AppShell() {
                 {/* AI assistant, playbook, and snippet picker triggers for the active terminal session */}
                 {activePanelType === "terminal" && terminalActiveId && (
                   <div className="px-1.5 shrink-0 border-l border-stroke-subtle flex items-center gap-0.5">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       data-terminal-tool-trigger
                       onClick={() => toggleTerminalTool("assistant")}
                       title="AI assistant"
                       aria-label="Open AI assistant"
-                      className={`w-7 h-7 flex items-center justify-center rounded transition-colors ${
+                      className={
                         openTerminalTool === "assistant"
                           ? "bg-accent/20 text-accent-fg"
-                          : "text-faint hover:text-white hover:bg-surface-3"
-                      }`}
+                          : "text-faint hover:text-white"
+                      }
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
@@ -633,32 +653,36 @@ export default function AppShell() {
                         <path d="M4 17v2" />
                         <path d="M5 18H3" />
                       </svg>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       data-terminal-tool-trigger
                       onClick={() => toggleTerminalTool("playbooks")}
                       title="Run a playbook"
                       aria-label="Open playbook picker"
-                      className={`w-7 h-7 flex items-center justify-center rounded transition-colors ${
+                      className={
                         openTerminalTool === "playbooks"
                           ? "bg-accent/20 text-accent-fg"
-                          : "text-faint hover:text-white hover:bg-surface-3"
-                      }`}
+                          : "text-faint hover:text-white"
+                      }
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                         <polygon points="6,4 12,8 6,12" />
                       </svg>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       data-terminal-tool-trigger
                       onClick={() => toggleTerminalTool("snippets")}
                       title="Run a snippet"
                       aria-label="Open snippet picker"
-                      className={`w-7 h-7 flex items-center justify-center rounded transition-colors ${
+                      className={
                         openTerminalTool === "snippets"
                           ? "bg-accent/20 text-accent-fg"
-                          : "text-faint hover:text-white hover:bg-surface-3"
-                      }`}
+                          : "text-faint hover:text-white"
+                      }
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                         <rect x="2" y="2" width="12" height="12" rx="2" />
@@ -666,14 +690,16 @@ export default function AppShell() {
                         <line x1="5" y1="8" x2="11" y2="8" />
                         <line x1="5" y1="10.5" x2="8" y2="10.5" />
                       </svg>
-                    </button>
+                    </Button>
                   </div>
                 )}
 
                 {/* Open SFTP browser for the active terminal session */}
                 {activePanelType === "terminal" && terminalActiveId && (
                   <div className="px-1.5 shrink-0 border-l border-stroke-subtle">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       onClick={() => {
                         if (!activeTerminalSession) return;
                         if (linkedSftpSession) {
@@ -685,16 +711,16 @@ export default function AppShell() {
                       }}
                       title="Open SFTP browser"
                       aria-label="Open SFTP browser for this session"
-                      className={`w-7 h-7 flex items-center justify-center rounded transition-colors ${
+                      className={
                         isSftpActive
                           ? "bg-accent/20 text-accent-fg"
-                          : "text-faint hover:text-white hover:bg-surface-3"
-                      }`}
+                          : "text-faint hover:text-white"
+                      }
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M2 4.5a1 1 0 0 1 1-1h2.5l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z" />
                       </svg>
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>

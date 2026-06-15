@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getActiveClear, subscribeClipboardClear } from "../../lib/clipboardClear";
+import { Button } from "../ui/button";
 
 export default function ClipboardClearBanner() {
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
@@ -53,20 +54,24 @@ export default function ClipboardClearBanner() {
         Clipboard clears in{" "}
         <span className="font-mono font-semibold text-white">{secondsLeft}s</span>
       </span>
-      <button
+      <Button
+        variant="ghost"
+        size="xs"
         onClick={() => clearNow?.()}
-        className="text-faint hover:text-white transition-colors ml-1"
+        className="text-faint hover:text-white ml-1"
         aria-label="Clear clipboard now"
       >
         Clear now
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-xs"
         onClick={() => setDismissed(true)}
-        className="text-dim hover:text-white transition-colors text-base leading-none"
+        className="text-dim hover:text-white text-base leading-none"
         aria-label="Dismiss"
       >
         ×
-      </button>
+      </Button>
     </div>
   );
 }

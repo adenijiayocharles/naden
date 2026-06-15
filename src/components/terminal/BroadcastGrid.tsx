@@ -11,6 +11,8 @@ import BroadcastGuardBar from "./BroadcastGuardBar";
 import PlaybookRunBar from "./PlaybookRunBar";
 import type { TerminalSession } from "../../store/terminalStore";
 import type { Playbook } from "../../types/playbook";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 
 interface Props {
   groupId: string;
@@ -110,51 +112,54 @@ export default function BroadcastGrid({ groupId }: Props) {
         <span className="text-warning font-semibold">Broadcasting to {targetCount} of {panes.length} hosts</span>
         <span className="text-faint">— keystrokes are sent to every unmuted pane</span>
         <div className="relative ml-auto">
-          <button
+          <Button
             ref={playbookButtonRef}
+            variant="ghost"
             onClick={openPlaybookPicker}
-            className="px-2 py-1 rounded text-faint hover:text-white hover:bg-surface-3 transition-colors"
+            className="h-auto px-2 py-1 text-faint"
           >
             Run playbook
-          </button>
+          </Button>
           {playbookPickerOpen && (
             <div
               ref={playbookPickerRef}
               className="absolute right-0 top-full mt-1 w-64 rounded border border-stroke bg-surface-2 shadow-lg z-20 text-sm"
             >
-              <input
+              <Input
                 autoFocus
                 value={playbookQuery}
                 onChange={(e) => setPlaybookQuery(e.target.value)}
                 placeholder="Search playbooks…"
-                className="w-full px-2 py-1.5 bg-transparent border-b border-stroke text-secondary placeholder:text-faint focus:outline-none"
+                className="h-auto w-full rounded-none border-0 border-b bg-transparent px-2 py-1.5 border-stroke focus-visible:border-stroke"
               />
               <div className="max-h-64 overflow-y-auto">
                 {filteredPlaybooks.length === 0 && (
                   <div className="px-2 py-3 text-faint text-center">No playbooks found</div>
                 )}
                 {filteredPlaybooks.map((playbook) => (
-                  <button
+                  <Button
                     key={playbook.id}
+                    variant="ghost"
                     onClick={() => startBroadcastPlaybook(playbook)}
-                    className="w-full text-left px-2 py-1.5 hover:bg-surface-3 transition-colors"
+                    className="h-auto w-full flex-col items-start rounded-none px-2 py-1.5"
                   >
                     <div className="text-secondary truncate">{playbook.title}</div>
                     {playbook.description && (
                       <div className="text-faint text-xs truncate">{playbook.description}</div>
                     )}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
           )}
         </div>
-        <button
+        <Button
+          variant="ghost"
           onClick={() => disbandGroup(group.id)}
-          className="px-2 py-1 rounded text-faint hover:text-white hover:bg-surface-3 transition-colors"
+          className="h-auto px-2 py-1 text-faint"
         >
           Exit broadcast
-        </button>
+        </Button>
       </div>
 
       <PlaybookRunBar />
@@ -182,24 +187,26 @@ export default function BroadcastGrid({ groupId }: Props) {
               <div className="flex items-center justify-between px-2 py-1 bg-surface-2 text-xs shrink-0">
                 <span className="truncate text-secondary">{session.serverName}</span>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() => toggleExcluded(session.id)}
                     title={isExcluded ? "Include in broadcast" : "Exclude from broadcast"}
                     aria-label={isExcluded ? `Include ${session.serverName} in broadcast` : `Exclude ${session.serverName} from broadcast`}
-                    className={`px-1.5 py-0.5 rounded transition-colors ${
-                      isExcluded ? "text-faint hover:text-white" : "text-accent-fg hover:text-white"
+                    className={`h-auto px-1.5 py-0.5 ${
+                      isExcluded ? "text-faint" : "text-accent-fg"
                     }`}
                   >
                     {isExcluded ? "Muted" : "Synced"}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
                     onClick={() => void closeSession(session.id)}
                     title={`Close ${session.serverName}`}
                     aria-label={`Close ${session.serverName}`}
-                    className="text-faint hover:text-white leading-none transition-colors text-base px-1"
+                    className="h-auto text-faint leading-none text-base px-1"
                   >
                     ×
-                  </button>
+                  </Button>
                 </div>
               </div>
               <div className="flex-1 min-h-0">

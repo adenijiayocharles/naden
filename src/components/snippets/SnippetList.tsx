@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { useSnippetStore } from "../../store/snippetStore";
 import { formatError } from "../../lib/errors";
-import Button from "../shared/Button";
-import Input from "../shared/Input";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import CodeEditor from "../shared/CodeEditor";
 import EmptyState from "../shared/EmptyState";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
@@ -64,14 +64,13 @@ function SnippetFormModal({
         />
         {error && <p className="text-xs text-error">{error}</p>}
         <div className="flex items-center justify-end gap-2">
-          <Button size="sm" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} className="h-8">
             Cancel
           </Button>
           <Button
-            size="sm"
-            variant="primary"
             onClick={() => void handleSave()}
             disabled={busy || !title.trim()}
+            className="h-8"
           >
             {busy ? "Saving…" : "Save"}
           </Button>
@@ -104,9 +103,11 @@ function SnippetCard({
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium text-white leading-snug break-words min-w-0">{snippet.title}</p>
         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={() => void handleCopy()}
-            className={`p-1 rounded transition-colors ${copied ? "text-success" : "text-dim hover:text-muted hover:bg-surface-3"}`}
+            className={copied ? "text-success" : "text-dim hover:text-muted"}
             title="Copy"
           >
             {copied ? (
@@ -119,25 +120,29 @@ function SnippetCard({
                 <path d="M9 5V3a1 1 0 00-1-1H3a1 1 0 00-1 1v8a1 1 0 001 1h2" />
               </svg>
             )}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={onEdit}
-            className="p-1 rounded text-dim hover:text-muted hover:bg-surface-3 transition-colors"
+            className="text-dim hover:text-muted"
             title="Edit"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
               <path d="M11.5 2.5a1.414 1.414 0 012 2L5 13H2v-3L11.5 2.5z" />
             </svg>
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={onDelete}
-            className="p-1 rounded text-dim hover:text-red-400 hover:bg-surface-3 transition-colors"
+            className="text-dim hover:text-red-400"
             title="Delete"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 4h10M6 4V2h4v2M5 4v9a1 1 0 001 1h4a1 1 0 001-1V4" />
             </svg>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -182,14 +187,13 @@ export default function SnippetList() {
       {/* Toolbar */}
       <div className="px-4 h-14 border-b border-stroke-subtle shrink-0 flex items-center gap-2">
         <div className="flex-1 min-w-0">
-          <input
+          <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search snippets…"
-            className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
           />
         </div>
-        <Button variant="primary" onClick={() => setCreating(true)}>
+        <Button onClick={() => setCreating(true)} className="h-10">
           + New
         </Button>
       </div>

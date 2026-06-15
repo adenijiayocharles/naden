@@ -20,6 +20,8 @@ import { resolvePlaybookStep } from "../../lib/playbookVariables";
 import PlaybookRunBar from "./PlaybookRunBar";
 import { AssistantPanel } from "./AssistantPanel";
 import type { Playbook } from "../../types/playbook";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 
 // Matches xterm's auto-reply to a Device Status Report / cursor-position query
 // (ESC[6n -> ESC[<row>;<col>R) — a per-session PTY reply, never user input.
@@ -595,7 +597,7 @@ export default function TerminalPane({ sessionId }: Props) {
           className="absolute top-3 right-4 z-30 w-64 bg-surface-2 border border-stroke rounded-lg shadow-overlay overflow-hidden flex flex-col"
         >
           <div className="p-2 border-b border-stroke-subtle shrink-0">
-            <input
+            <Input
               autoFocus
               type="text"
               value={playbookQuery}
@@ -605,23 +607,24 @@ export default function TerminalPane({ sessionId }: Props) {
                 if (e.key === "Enter" && filteredPlaybooks.length === 1) startPlaybook(filteredPlaybooks[0]);
               }}
               placeholder="Search playbooks…"
-              className="w-full bg-surface-3 border border-stroke rounded px-2.5 py-1.5 text-sm text-white placeholder-faint outline-none focus:border-accent transition-colors"
+              className="h-auto px-2.5 py-1.5"
             />
           </div>
           <div className="overflow-y-auto h-[134px] p-2 flex flex-col gap-1.5">
             {filteredPlaybooks.length > 0 ? (
               filteredPlaybooks.map((pb) => (
-                <button
+                <Button
                   key={pb.id}
+                  variant="ghost"
                   onClick={() => startPlaybook(pb)}
-                  className="w-full text-left bg-surface-1 border border-stroke-subtle rounded-lg px-3 py-2.5 hover:border-stroke hover:bg-surface-2 transition-colors group"
+                  className="h-auto w-full flex-col items-start text-left bg-surface-1 border border-stroke-subtle rounded-lg px-3 py-2.5 hover:border-stroke group"
                 >
                   <p className="text-sm font-medium text-white truncate">{pb.title}</p>
                   <p className="text-meta text-dim font-mono truncate mt-1 group-hover:text-muted">
                     {pb.steps.length} step{pb.steps.length === 1 ? "" : "s"}
                     {pb.description ? ` — ${pb.description}` : ""}
                   </p>
-                </button>
+                </Button>
               ))
             ) : (
               <p className="py-4 text-center text-sm text-dim">
@@ -639,7 +642,7 @@ export default function TerminalPane({ sessionId }: Props) {
           className="absolute top-3 right-4 z-30 w-64 bg-surface-2 border border-stroke rounded-lg shadow-overlay overflow-hidden flex flex-col"
         >
           <div className="p-2 border-b border-stroke-subtle shrink-0">
-            <input
+            <Input
               autoFocus
               type="text"
               value={snippetQuery}
@@ -649,20 +652,21 @@ export default function TerminalPane({ sessionId }: Props) {
                 if (e.key === "Enter" && filteredSnippets.length === 1) runSnippet(filteredSnippets[0].body);
               }}
               placeholder="Search snippets…"
-              className="w-full bg-surface-3 border border-stroke rounded px-2.5 py-1.5 text-sm text-white placeholder-faint outline-none focus:border-accent transition-colors"
+              className="h-auto px-2.5 py-1.5"
             />
           </div>
           <div className="overflow-y-auto h-[134px] p-2 flex flex-col gap-1.5">
             {filteredSnippets.length > 0 ? (
               filteredSnippets.map((sn) => (
-                <button
+                <Button
                   key={sn.id}
+                  variant="ghost"
                   onClick={() => runSnippet(sn.body)}
-                  className="w-full text-left bg-surface-1 border border-stroke-subtle rounded-lg px-3 py-2.5 hover:border-stroke hover:bg-surface-2 transition-colors group"
+                  className="h-auto w-full flex-col items-start text-left bg-surface-1 border border-stroke-subtle rounded-lg px-3 py-2.5 hover:border-stroke group"
                 >
                   <p className="text-sm font-medium text-white truncate">{sn.title}</p>
                   <p className="text-meta text-dim font-mono truncate mt-1 group-hover:text-muted">{sn.body}</p>
-                </button>
+                </Button>
               ))
             ) : (
               <p className="py-4 text-center text-sm text-dim">
@@ -676,7 +680,7 @@ export default function TerminalPane({ sessionId }: Props) {
       {/* Search bar — floats over terminal at top-right */}
       {searchVisible && (
         <div className="absolute top-3 right-4 z-30 flex items-center gap-1.5 bg-surface-3 rounded-lg px-2.5 py-1.5">
-          <input
+          <Input
             autoFocus
             type="text"
             value={searchQuery}
@@ -697,19 +701,19 @@ export default function TerminalPane({ sessionId }: Props) {
               else if (e.key === "Escape") { closeSearch(); }
             }}
             placeholder="Find in terminal…"
-            className="bg-transparent text-sm text-white placeholder-[#555] outline-none w-44 pl-2"
+            className="h-auto border-0 bg-transparent placeholder-[#555] w-44 pl-2"
           />
           {searchResults && (
             <span className="text-meta text-dim tabular-nums shrink-0">
               {searchResults.index !== undefined ? `${searchResults.index + 1}/` : ""}{searchResults.count}
             </span>
           )}
-          <button onClick={findPrevious} title="Previous (Shift+Enter)"
-            className="text-muted hover:text-white px-1 text-sm leading-none">↑</button>
-          <button onClick={findNext} title="Next (Enter)"
-            className="text-muted hover:text-white px-1 text-sm leading-none">↓</button>
-          <button onClick={closeSearch} aria-label="Close search"
-            className="text-faint hover:text-white px-1 text-base leading-none ml-0.5">×</button>
+          <Button variant="ghost" onClick={findPrevious} title="Previous (Shift+Enter)"
+            className="h-auto text-muted px-1 text-sm leading-none">↑</Button>
+          <Button variant="ghost" onClick={findNext} title="Next (Enter)"
+            className="h-auto text-muted px-1 text-sm leading-none">↓</Button>
+          <Button variant="ghost" onClick={closeSearch} aria-label="Close search"
+            className="h-auto text-faint px-1 text-base leading-none ml-0.5">×</Button>
         </div>
       )}
 

@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useTunnelStore } from "../../store/tunnelStore";
 import { formatError } from "../../lib/errors";
 import type { ForwardType, PortForward } from "../../types/portForward";
-import Input from "../shared/Input";
-import Button from "../shared/Button";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 
 const FORWARD_TYPES: { value: ForwardType; label: string; hint: string }[] = [
@@ -129,13 +130,14 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm font-medium text-secondary">Port Forwards</p>
         {!adding && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={openAdd}
-            className="text-xs text-accent hover:text-accent-hover transition-colors"
+            className="text-xs text-accent hover:text-accent-hover h-auto p-0"
           >
             + Add
-          </button>
+          </Button>
         )}
       </div>
 
@@ -163,26 +165,30 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
                 {fwd.autoStart && <span className="text-faint ml-1.5">auto</span>}
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-xs"
                   onClick={() => openEdit(fwd)}
-                  className="text-muted hover:text-white transition-colors"
+                  className="text-muted hover:text-white"
                   aria-label="Edit"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M11 2l3 3-8 8H3v-3l8-8z" />
                   </svg>
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-xs"
                   onClick={() => setPendingDeleteId(fwd.id)}
-                  className="text-muted hover:text-red-400 transition-colors"
+                  className="text-muted hover:text-red-400"
                   aria-label="Delete"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h10M6 4V2h4v2M5 4l1 9h4l1-9" />
                   </svg>
-                </button>
+                </Button>
               </div>
             </div>
           ))}
@@ -259,11 +265,9 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
               />
             </div>
             <label className="flex items-center gap-1.5 pb-2.5 text-xs text-secondary cursor-pointer shrink-0">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={fwdForm.autoStart}
-                onChange={setF("autoStart")}
-                className="rounded border-stroke bg-surface-3 text-accent-fg"
+                onCheckedChange={(checked) => setFwdForm((f) => ({ ...f, autoStart: checked === true }))}
               />
               Auto-start
             </label>
@@ -272,15 +276,14 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
           {fwdError && <p className="text-xs text-error">{fwdError}</p>}
 
           <div className="flex gap-2">
-            <Button type="button" onClick={cancelEdit} className="flex-1">
+            <Button type="button" variant="secondary" onClick={cancelEdit} className="flex-1 h-10">
               Cancel
             </Button>
             <Button
               type="button"
-              variant="primary"
               onClick={() => { void handleSave(); }}
               disabled={saving}
-              className="flex-1"
+              className="flex-1 h-10"
             >
               {saving ? "Saving…" : editingId ? "Update" : "Add"}
             </Button>

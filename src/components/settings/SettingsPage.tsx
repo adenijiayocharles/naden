@@ -1,7 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { getVersion } from "@tauri-apps/api/app";
-import Input from "../shared/Input";
-import Button from "../shared/Button";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import { useVaultStore } from "../../store/vaultStore";
 import { useUiStore, type SettingsSection } from "../../store/uiStore";
@@ -297,7 +304,8 @@ export default function SettingsPage() {
       .catch(() => {});
   }, [setVaultTimeoutMins]);
   const [autoLockNeedsPassword, setAutoLockNeedsPassword] = useState(false);
-  const saveTimeout = (v: string) => {
+  const saveTimeout = (v: string | null) => {
+    if (v === null) return;
     if (v !== "0" && !isPasswordRequired) {
       setAutoLockNeedsPassword(true);
       return;
@@ -316,7 +324,8 @@ export default function SettingsPage() {
       .then((v) => { if (v !== null) setKeepaliveInterval(v); })
       .catch(() => {});
   }, []);
-  const saveKeepalive = (v: string) => {
+  const saveKeepalive = (v: string | null) => {
+    if (v === null) return;
     setKeepaliveInterval(v);
     settingsCommands.setSetting("ssh_keepalive_interval", v).catch(() => {});
     flashSaved();
@@ -479,15 +488,18 @@ export default function SettingsPage() {
                     ? "App is locked with a password on launch."
                     : "App opens without a password. Credentials still use the OS keychain."}
                 />
-                <select
+                <Select
                   value={isPasswordRequired ? "enabled" : "disabled"}
-                  onChange={(e) => { if ((e.target.value === "enabled") !== isPasswordRequired) handleToggle(); }}
-                  aria-label="Require master password"
-                  className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+                  onValueChange={(value) => { if ((value === "enabled") !== isPasswordRequired) handleToggle(); }}
                 >
-                  <option value="enabled">Enabled</option>
-                  <option value="disabled">Disabled</option>
-                </select>
+                  <SelectTrigger aria-label="Require master password" className="h-10 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="enabled">Enabled</SelectItem>
+                    <SelectItem value="disabled">Disabled</SelectItem>
+                  </SelectContent>
+                </Select>
               </Row>
 
               {activeForm === "disable" && (
@@ -496,8 +508,8 @@ export default function SettingsPage() {
                   <PasswordInput autoFocus value={disablePwd} onChange={setDisablePwd} placeholder="Current password" />
                   {error && <p className="text-xs text-error">{error}</p>}
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => openForm("none")} className="flex-1">Cancel</Button>
-                    <Button size="sm" onClick={() => { void submitDisable(); }} disabled={loading || !disablePwd} className="flex-1 bg-red-500 hover:bg-red-400 text-black font-semibold disabled:opacity-40">
+                    <Button variant="secondary" onClick={() => openForm("none")} className="flex-1 h-8">Cancel</Button>
+                    <Button onClick={() => { void submitDisable(); }} disabled={loading || !disablePwd} className="flex-1 h-8 bg-red-500 hover:bg-red-400 text-black font-semibold disabled:opacity-40">
                       {loading ? "Verifying…" : "Disable password"}
                     </Button>
                   </div>
@@ -521,8 +533,8 @@ export default function SettingsPage() {
                   <PasswordInput value={enableConfirm} onChange={(v) => { setEnableConfirm(v); setError(null); }} placeholder="Confirm password" />
                   {error && <p className="text-xs text-error">{error}</p>}
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => openForm("none")} className="flex-1">Cancel</Button>
-                    <Button size="sm" variant="primary" onClick={() => { void submitEnable(); }} disabled={loading || enablePwd.length < 8 || enablePwd !== enableConfirm} className="flex-1">
+                    <Button variant="secondary" onClick={() => openForm("none")} className="flex-1 h-8">Cancel</Button>
+                    <Button onClick={() => { void submitEnable(); }} disabled={loading || enablePwd.length < 8 || enablePwd !== enableConfirm} className="flex-1 h-8">
                       {loading ? "Setting up…" : "Enable password"}
                     </Button>
                   </div>
@@ -531,15 +543,16 @@ export default function SettingsPage() {
 
               {isPasswordRequired && (
                 <div>
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() => openForm(activeForm === "change" ? "none" : "change")}
-                    className="w-full text-left py-3 text-sm text-secondary hover:text-white transition-colors flex items-center justify-between border-b border-stroke-subtle"
+                    className="w-full justify-between text-left py-3 h-auto text-sm text-secondary hover:text-white rounded-none border-b border-stroke-subtle"
                   >
                     <span>Change master password</span>
                     <svg className={`w-3.5 h-3.5 text-muted transition-transform ${activeForm === "change" ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                     </svg>
-                  </button>
+                  </Button>
                   {activeForm === "change" && (
                     <div className="mb-2 space-y-3 p-3 bg-surface-0 rounded-lg border border-stroke-subtle">
                       <PasswordInput autoFocus value={changeCurrent} onChange={(v) => { setChangeCurrent(v); setError(null); }} placeholder="Current password" />
@@ -557,8 +570,8 @@ export default function SettingsPage() {
                       <PasswordInput value={changeConfirm} onChange={(v) => { setChangeConfirm(v); setError(null); }} placeholder="Confirm new password" />
                       {error && <p className="text-xs text-error">{error}</p>}
                       <div className="flex gap-2">
-                        <Button size="sm" onClick={() => openForm("none")} className="flex-1">Cancel</Button>
-                        <Button size="sm" variant="primary" onClick={() => { void submitChange(); }} disabled={loading || !changeCurrent || changeNew.length < 8 || changeNew !== changeConfirm} className="flex-1">
+                        <Button variant="secondary" onClick={() => openForm("none")} className="flex-1 h-8">Cancel</Button>
+                        <Button onClick={() => { void submitChange(); }} disabled={loading || !changeCurrent || changeNew.length < 8 || changeNew !== changeConfirm} className="flex-1 h-8">
                           {loading ? "Updating…" : "Change password"}
                         </Button>
                       </div>
@@ -569,23 +582,27 @@ export default function SettingsPage() {
 
               <Row>
                 <RowLabel title="Auto-lock vault" description="Lock after this many minutes of inactivity (0 = never)" />
-                <select
+                <Select
                   value={timeoutMins}
-                  onChange={(e) => saveTimeout(e.target.value)}
+                  onValueChange={saveTimeout}
                   disabled={!isPasswordRequired && timeoutMins === "0"}
-                  className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {[["0","Never"],["5","5 min"],["15","15 min"],["30","30 min"],["60","1 hour"],["120","2 hours"]].map(([v, l]) => (
-                    <option key={v} value={v}>{l}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-10 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[["0","Never"],["5","5 min"],["15","15 min"],["30","30 min"],["60","1 hour"],["120","2 hours"]].map(([v, l]) => (
+                      <SelectItem key={v} value={v}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Row>
               {autoLockNeedsPassword && (
                 <div className="mb-3 flex items-center justify-between gap-3 bg-warning-subtle border border-warning-subtle rounded-lg px-3 py-2">
                   <p className="text-xs text-warning">A master password is required to use auto-lock.</p>
-                  <button onClick={() => { setAutoLockNeedsPassword(false); openForm("enable"); }} className="text-xs text-accent hover:text-accent-hover shrink-0 transition-colors">
+                  <Button variant="ghost" onClick={() => { setAutoLockNeedsPassword(false); openForm("enable"); }} className="h-auto px-0 text-xs text-accent hover:text-accent-hover hover:bg-transparent shrink-0">
                     Set password →
-                  </button>
+                  </Button>
                 </div>
               )}
 
@@ -629,95 +646,119 @@ export default function SettingsPage() {
                   <p className="text-sm text-white font-medium">Font</p>
                   <p className="text-meta text-muted mt-0.5 truncate" style={{ fontFamily: fontCss(fontFamily) }}>the quick brown fox</p>
                 </div>
-                <select
+                <Select
                   value={fontFamily}
-                  onChange={(e) => { setFontFamily(e.target.value as typeof fontFamily); flashSaved(); }}
-                  className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+                  onValueChange={(value) => { setFontFamily(value as typeof fontFamily); flashSaved(); }}
                 >
-                  {TERMINAL_FONTS.map(({ id, label }) => (
-                    <option key={id} value={id}>{label}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-10 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TERMINAL_FONTS.map(({ id, label }) => (
+                      <SelectItem key={id} value={id}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Row>
 
               <Row>
                 <RowLabel title="Font size" />
-                <select
-                  value={fontSize}
-                  onChange={(e) => { setFontSize(Number(e.target.value)); flashSaved(); }}
-                  className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+                <Select
+                  value={String(fontSize)}
+                  onValueChange={(value) => { setFontSize(Number(value)); flashSaved(); }}
                 >
-                  {[10, 12, 13, 14, 16, 18, 20].map((n) => (
-                    <option key={n} value={n}>{n}px</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-10 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 12, 13, 14, 16, 18, 20].map((n) => (
+                      <SelectItem key={n} value={String(n)}>{n}px</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Row>
 
               <Row>
                 <RowLabel title="Line height" />
-                <select
-                  value={lineHeight}
-                  onChange={(e) => { setLineHeight(Number(e.target.value)); flashSaved(); }}
-                  className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+                <Select
+                  value={String(lineHeight)}
+                  onValueChange={(value) => { setLineHeight(Number(value)); flashSaved(); }}
                 >
-                  {Array.from({ length: 30 }, (_, i) => i + 1).map((n) => (
-                    <option key={n} value={n}>{n}px</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-10 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 30 }, (_, i) => i + 1).map((n) => (
+                      <SelectItem key={n} value={String(n)}>{n}px</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Row>
 
               <Row>
                 <RowLabel title="Cursor style" />
-                <select
+                <Select
                   value={cursorStyle}
-                  onChange={(e) => { setCursorStyle(e.target.value as typeof cursorStyle); flashSaved(); }}
-                  className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+                  onValueChange={(value) => { setCursorStyle(value as typeof cursorStyle); flashSaved(); }}
                 >
-                  {CURSOR_STYLES.map(({ id, label }) => (
-                    <option key={id} value={id}>{label}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-10 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURSOR_STYLES.map(({ id, label }) => (
+                      <SelectItem key={id} value={id}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Row>
 
               <Row>
                 <RowLabel title="Scrollback lines" description="Lines retained above the viewport" />
-                <select
-                  value={scrollback}
-                  onChange={(e) => { setScrollback(Number(e.target.value)); flashSaved(); }}
-                  className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+                <Select
+                  value={String(scrollback)}
+                  onValueChange={(value) => { setScrollback(Number(value)); flashSaved(); }}
                 >
-                  {[[500,"500"],[1000,"1 000"],[5000,"5 000"],[10000,"10 000"],[50000,"50 000"]].map(([v, l]) => (
-                    <option key={v} value={v}>{l}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-10 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[[500,"500"],[1000,"1 000"],[5000,"5 000"],[10000,"10 000"],[50000,"50 000"]].map(([v, l]) => (
+                      <SelectItem key={v} value={String(v)}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Row>
 
               <Row>
                 <RowLabel title="Copy on select" description="Automatically copy selected text to clipboard" />
-                <select
+                <Select
                   value={copyOnSelect ? "on" : "off"}
-                  onChange={(e) => { setCopyOnSelect(e.target.value === "on"); flashSaved(); }}
-                  aria-label="Copy on select"
-                  className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+                  onValueChange={(value) => { setCopyOnSelect(value === "on"); flashSaved(); }}
                 >
-                  <option value="on">On</option>
-                  <option value="off">Off</option>
-                </select>
+                  <SelectTrigger aria-label="Copy on select" className="h-10 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="on">On</SelectItem>
+                    <SelectItem value="off">Off</SelectItem>
+                  </SelectContent>
+                </Select>
               </Row>
 
               <Row>
                 <RowLabel title="SSH keepalive" description="Send periodic packets to prevent idle session drops" />
-                <select
-                  value={keepaliveInterval}
-                  onChange={(e) => saveKeepalive(e.target.value)}
-                  className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
-                >
-                  <option value="0">Disabled</option>
-                  <option value="30">30 s</option>
-                  <option value="60">60 s</option>
-                  <option value="120">2 min</option>
-                  <option value="300">5 min</option>
-                </select>
+                <Select value={keepaliveInterval} onValueChange={saveKeepalive}>
+                  <SelectTrigger className="h-10 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Disabled</SelectItem>
+                    <SelectItem value="30">30 s</SelectItem>
+                    <SelectItem value="60">60 s</SelectItem>
+                    <SelectItem value="120">2 min</SelectItem>
+                    <SelectItem value="300">5 min</SelectItem>
+                  </SelectContent>
+                </Select>
               </Row>
             </div>
           )}
@@ -748,27 +789,29 @@ export default function SettingsPage() {
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
                         {isConfigured && (
-                          <button
+                          <Button
+                            variant="ghost"
                             onClick={() => { setConfirmForgetProvider(p); setAssistantError(null); }}
                             disabled={assistantLoading}
-                            className="text-sm text-secondary hover:text-red-400 transition-colors disabled:opacity-40"
+                            className="h-auto px-0 text-sm text-secondary hover:text-red-400 hover:bg-transparent"
                           >
                             Forget
-                          </button>
+                          </Button>
                         )}
-                        <button
+                        <Button
+                          variant="ghost"
                           onClick={() => {
                             setAddingProvider(isAdding ? null : p);
                             setAddKeyInput("");
                             setAssistantError(null);
                           }}
-                          className="text-sm text-secondary hover:text-white transition-colors flex items-center gap-1"
+                          className="h-auto px-0 text-sm text-secondary hover:text-white hover:bg-transparent gap-1"
                         >
                           {isConfigured ? "Update key" : "Add key"}
                           <svg className={`w-3 h-3 text-muted transition-transform ${isAdding ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                           </svg>
-                        </button>
+                        </Button>
                       </div>
                     </div>
                     {isAdding && (
@@ -781,8 +824,8 @@ export default function SettingsPage() {
                         />
                         {assistantError && <p className="text-xs text-error">{assistantError}</p>}
                         <div className="flex gap-2">
-                          <Button size="sm" onClick={() => { setAddingProvider(null); setAddKeyInput(""); setAssistantError(null); }} className="flex-1">Cancel</Button>
-                          <Button size="sm" variant="primary" onClick={() => { void submitAddKey(p); }} disabled={assistantLoading || !addKeyInput.trim()} className="flex-1">
+                          <Button variant="secondary" onClick={() => { setAddingProvider(null); setAddKeyInput(""); setAssistantError(null); }} className="flex-1 h-8">Cancel</Button>
+                          <Button onClick={() => { void submitAddKey(p); }} disabled={assistantLoading || !addKeyInput.trim()} className="flex-1 h-8">
                             {assistantLoading ? "Saving…" : "Save key"}
                           </Button>
                         </div>
@@ -796,15 +839,18 @@ export default function SettingsPage() {
               {assistantStatus?.openaiConfigured && assistantStatus?.anthropicConfigured && (
                 <Row>
                   <RowLabel title="Active provider" description="Which provider handles your messages" />
-                  <select
-                    value={assistantStatus.activeProvider ?? ""}
-                    onChange={(e) => { void switchToProvider(e.target.value); }}
-                    aria-label="Active AI provider"
-                    className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+                  <Select
+                    value={assistantStatus.activeProvider ?? "openai"}
+                    onValueChange={(value) => { if (value) void switchToProvider(value); }}
                   >
-                    <option value="openai">OpenAI</option>
-                    <option value="anthropic">Anthropic</option>
-                  </select>
+                    <SelectTrigger aria-label="Active AI provider" className="h-10 shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="openai">OpenAI</SelectItem>
+                      <SelectItem value="anthropic">Anthropic</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </Row>
               )}
 
@@ -813,30 +859,36 @@ export default function SettingsPage() {
                 <>
                   <Row>
                     <RowLabel title="Enable assistant" />
-                    <select
+                    <Select
                       value={assistantStatus!.enabled ? "enabled" : "disabled"}
-                      onChange={(e) => { void toggleAssistantEnabled(e.target.value === "enabled"); }}
-                      aria-label="Enable AI assistant"
-                      className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+                      onValueChange={(value) => { void toggleAssistantEnabled(value === "enabled"); }}
                     >
-                      <option value="enabled">Enabled</option>
-                      <option value="disabled">Disabled</option>
-                    </select>
+                      <SelectTrigger aria-label="Enable AI assistant" className="h-10 shrink-0">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="enabled">Enabled</SelectItem>
+                        <SelectItem value="disabled">Disabled</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </Row>
                   <Row>
                     <RowLabel
                       title="Save chat history"
                       description="Encrypted at rest with the same key as your credentials. Off by default — turning it off erases everything already saved."
                     />
-                    <select
+                    <Select
                       value={assistantStatus!.persistHistory ? "on" : "off"}
-                      onChange={(e) => { void toggleAssistantPersistHistory(e.target.value === "on"); }}
-                      aria-label="Save AI assistant chat history to disk"
-                      className="h-10 bg-surface-3 border border-stroke rounded px-2 text-sm text-white focus:outline-none focus:border-accent shrink-0"
+                      onValueChange={(value) => { void toggleAssistantPersistHistory(value === "on"); }}
                     >
-                      <option value="on">On</option>
-                      <option value="off">Off</option>
-                    </select>
+                      <SelectTrigger aria-label="Save AI assistant chat history to disk" className="h-10 shrink-0">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="on">On</SelectItem>
+                        <SelectItem value="off">Off</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </Row>
                 </>
               )}
@@ -882,18 +934,19 @@ export default function SettingsPage() {
                   }
                 />
                 {updateState === "ready" ? (
-                  <Button size="sm" variant="primary" onClick={() => { void updaterCommands.relaunch(); }}>
+                  <Button onClick={() => { void updaterCommands.relaunch(); }} className="h-8">
                     Restart now
                   </Button>
                 ) : updateState === "available" ? (
-                  <Button size="sm" variant="primary" onClick={() => { void installUpdate(); }}>
+                  <Button onClick={() => { void installUpdate(); }} className="h-8">
                     Download &amp; install
                   </Button>
                 ) : (
                   <Button
-                    size="sm"
+                    variant="secondary"
                     onClick={() => { void checkForUpdates(); }}
                     disabled={updateState === "checking" || updateState === "downloading"}
+                    className="h-8"
                   >
                     Check for updates
                   </Button>

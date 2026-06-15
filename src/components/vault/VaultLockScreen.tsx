@@ -3,7 +3,8 @@ import { getVersion } from "@tauri-apps/api/app";
 import serverIcon from "../../assets/server.png";
 import { useVaultStore } from "../../store/vaultStore";
 import { formatError } from "../../lib/errors";
-import Input from "../shared/Input";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
 
 export default function VaultLockScreen() {
   const unlock = useVaultStore((s) => s.unlock);
@@ -88,13 +89,9 @@ export default function VaultLockScreen() {
 
           {error && <p className="text-sm text-error text-center">{error}</p>}
 
-          <button
-            type="submit"
-            disabled={loading || !password}
-            className="w-full bg-accent hover:bg-accent-hover disabled:opacity-40 text-black font-semibold py-3 rounded transition-colors"
-          >
+          <Button type="submit" disabled={loading || !password} className="w-full h-10">
             {loading ? "Unlocking…" : "Unlock"}
-          </button>
+          </Button>
         </form>
 
         {appVersion && (
@@ -106,13 +103,14 @@ export default function VaultLockScreen() {
             <p className="text-meta text-muted mb-3">
               Vault data may be missing or corrupted. You can re-check vault status to return to the setup screen.
             </p>
-            <button
+            <Button
+              variant="ghost"
               onClick={() => { void handleRecheck(); }}
               disabled={recovering}
-              className="text-sm text-accent hover:text-accent-hover disabled:opacity-40 transition-colors"
+              className="text-accent hover:text-accent-hover"
             >
               {recovering ? "Checking…" : "Re-check vault status"}
-            </button>
+            </Button>
           </div>
         )}
       </div>

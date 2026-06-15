@@ -1,3 +1,5 @@
+import { Button } from "../ui/button";
+
 interface Props {
   hostCount: number;
   pendingInput: string;
@@ -12,12 +14,12 @@ export default function BroadcastGuardBar({ hostCount, pendingInput, onConfirm, 
         Send <span className="font-mono text-white">{pendingInput.trim()}</span> to{" "}
         <span className="font-semibold">{hostCount} host{hostCount > 1 ? "s" : ""}</span>? This looks destructive.
       </span>
-      <button onClick={onConfirm} className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white rounded transition-colors font-semibold">
+      <Button variant="delete" onClick={onConfirm} className="h-auto px-2.5 py-1">
         Send anyway
-      </button>
-      <button onClick={onCancel} className="text-faint hover:text-white transition-colors">
+      </Button>
+      <Button variant="ghost" onClick={onCancel} className="h-auto text-faint">
         Cancel
-      </button>
+      </Button>
     </div>
   );
 }

@@ -13,6 +13,7 @@ import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import ErrorBanner from "./ErrorBanner";
 import ChmodDialog from "./ChmodDialog";
 import { useRemotePane } from "./useRemotePane";
+import { Button } from "../ui/button";
 
 interface Props {
   sessionId: string;
@@ -385,12 +386,13 @@ export default function SftpBrowser({ sessionId }: Props) {
             )}
           </div>
           {(isBusy || crossTransferBusy) && (
-            <button
+            <Button
+              variant="ghost"
               onClick={crossTransferBusy ? handleCancelCrossTransfer : handleCancelTransfer}
-              className="text-meta text-muted hover:text-white shrink-0 px-2 py-0.5 rounded hover:bg-surface-3 transition-colors"
+              className="text-meta text-muted hover:text-white shrink-0 px-2 py-0.5 h-auto"
             >
               Cancel
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -403,32 +405,36 @@ export default function SftpBrowser({ sessionId }: Props) {
               {/* Peer navigation header — only shown when a remote session is active */}
               {!leftPaneIsLocal && validPeer && (
                 <div className="flex items-center gap-2 px-3 py-2 border-b border-stroke-subtle bg-surface-1 shrink-0">
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={peerPane.handleUp}
                     disabled={peerPane.isBusy || peerPane.session?.currentPath === "/"}
-                    className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="text-muted hover:text-white hover:bg-surface-3"
                     title="Go up (peer)"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 16 16" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M8 12V4M4 8l4-4 4 4" />
                     </svg>
-                  </button>
+                  </Button>
                   <PathBar
                     path={peerPane.session?.currentPath ?? ""}
                     busy={peerPane.isBusy}
                     onNavigateTo={(p) => { peerPane.navigate(p); }}
                   />
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={peerPane.handleRefresh}
                     disabled={peerPane.isBusy}
-                    className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30"
+                    className="text-muted hover:text-white hover:bg-surface-3"
                     title="Refresh (peer)"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                         d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                  </button>
+                  </Button>
                 </div>
               )}
 
@@ -518,49 +524,57 @@ export default function SftpBrowser({ sessionId }: Props) {
             <div className="w-10 shrink-0 flex flex-col items-center justify-center gap-3 bg-surface-2 border-r border-stroke-subtle">
               {leftPaneIsLocal ? (
                 <>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={handleUploadFromLocal}
                     disabled={!canUploadFromLocal}
                     title="Upload selected local files to remote"
-                    className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-4 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="text-muted hover:text-white hover:bg-surface-4"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M3 8h10M9 4l4 4-4 4" />
                     </svg>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={handleDownloadToLocal}
                     disabled={!canDownloadToLocal}
                     title="Download selected remote files to local"
-                    className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-4 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="text-muted hover:text-white hover:bg-surface-4"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M13 8H3M7 4L3 8l4 4" />
                     </svg>
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => { void handleCopyPeerToRemote(); }}
                     disabled={!canCopyPeerToRemote}
                     title="Copy selected peer files here"
-                    className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-4 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="text-muted hover:text-white hover:bg-surface-4"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M3 8h10M9 4l4 4-4 4" />
                     </svg>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => { void handleCopyRemoteToPeer(); }}
                     disabled={!canCopyRemoteToPeer}
                     title="Copy selected files to peer"
-                    className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-4 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="text-muted hover:text-white hover:bg-surface-4"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M13 8H3M7 4L3 8l4 4" />
                     </svg>
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
@@ -587,32 +601,36 @@ export default function SftpBrowser({ sessionId }: Props) {
       {/* Per-pane remote path bar — only in split mode */}
       {showLocalPane && (
         <div className="flex items-center gap-3 px-3 py-2.5 border-b border-stroke-subtle bg-surface-1 shrink-0">
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={handleUp}
             disabled={isBusy || session.currentPath === "/"}
-            className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="text-muted hover:text-white hover:bg-surface-3"
             title="Go up (remote)"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 16 16" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 12V4M4 8l4-4 4 4" />
             </svg>
-          </button>
+          </Button>
           <PathBar
             path={session.currentPath}
             busy={isBusy}
             onNavigateTo={(p) => { navigate(p); }}
           />
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={handleRefresh}
             disabled={isBusy}
-            className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30"
+            className="text-muted hover:text-white hover:bg-surface-3"
             title="Refresh (remote)"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-          </button>
+          </Button>
           {clipboard && (
             <span className="text-sm text-accent-fg shrink-0">
               ● {clipboard.mode === "copy" ? "copied" : "cut"} — paste to move here

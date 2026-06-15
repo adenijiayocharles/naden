@@ -1,4 +1,14 @@
 import React from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "../ui/dialog";
+import { Checkbox } from "../ui/checkbox";
+import { Button } from "../ui/button";
 
 interface Props {
   target: { path: string; mode: number } | null;
@@ -13,12 +23,12 @@ export default function ChmodDialog({ target, mode, disabled, onModeChange, onAp
   if (!target) return null;
 
   return (
-    <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/85">
-      <div className="bg-surface-1 border border-stroke-subtle rounded-lg shadow-overlay animate-overlay-in w-80 p-5 flex flex-col gap-4">
-        <div>
-          <h3 className="text-title text-white">Change Permissions</h3>
-          <p className="text-meta text-faint mt-0.5 font-mono truncate">{target.path}</p>
-        </div>
+    <Dialog open onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent className="w-80 max-w-sm gap-4 p-5">
+        <DialogHeader>
+          <DialogTitle className="text-title">Change Permissions</DialogTitle>
+          <DialogDescription className="font-mono truncate">{target.path}</DialogDescription>
+        </DialogHeader>
 
         {/* Permission checkboxes */}
         <div className="grid grid-cols-4 gap-y-2 text-xs">
@@ -36,11 +46,9 @@ export default function ChmodDialog({ target, mode, disabled, onModeChange, onAp
                   const checked = (mode & mask) !== 0;
                   return (
                     <div key={`${bit}-${shift}`} className="flex justify-center">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={checked}
-                        onChange={() => onModeChange(checked ? mode & ~mask : mode | mask)}
-                        className="w-3.5 h-3.5 accent-accent"
+                        onCheckedChange={() => onModeChange(checked ? mode & ~mask : mode | mask)}
                       />
                     </div>
                   );
@@ -58,22 +66,15 @@ export default function ChmodDialog({ target, mode, disabled, onModeChange, onAp
           </span>
         </div>
 
-        <div className="flex gap-2 justify-end">
-          <button
-            onClick={onCancel}
-            className="px-3 py-1.5 text-xs text-muted hover:text-white transition-colors"
-          >
+        <DialogFooter>
+          <Button variant="secondary" onClick={onCancel} className="px-3 py-1.5 text-xs h-auto">
             Cancel
-          </button>
-          <button
-            onClick={onApply}
-            disabled={disabled}
-            className="px-3 py-1.5 bg-accent hover:bg-accent/80 text-black rounded text-xs font-medium transition-colors disabled:opacity-50"
-          >
+          </Button>
+          <Button onClick={onApply} disabled={disabled} className="px-3 py-1.5 text-xs h-auto">
             Apply
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

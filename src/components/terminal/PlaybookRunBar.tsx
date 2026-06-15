@@ -1,4 +1,5 @@
 import { usePlaybookRunStore } from "../../store/playbookRunStore";
+import { Button } from "../ui/button";
 
 export default function PlaybookRunBar() {
   const playbook = usePlaybookRunStore((s) => s.playbook);
@@ -17,15 +18,15 @@ export default function PlaybookRunBar() {
           Step {status.stepIndex + 1}/{playbook.steps.length} — send{" "}
           <span className="font-mono text-white">{status.resolvedCommand}</span>? This looks destructive.
         </span>
-        <button onClick={confirm} className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white rounded transition-colors font-semibold">
+        <Button variant="delete" onClick={confirm} className="h-auto px-2.5 py-1">
           Send anyway
-        </button>
-        <button onClick={skip} className="text-faint hover:text-white transition-colors">
+        </Button>
+        <Button variant="ghost" onClick={skip} className="h-auto text-faint">
           Skip
-        </button>
-        <button onClick={cancel} className="text-faint hover:text-white transition-colors">
+        </Button>
+        <Button variant="ghost" onClick={cancel} className="h-auto text-faint">
           Cancel
-        </button>
+        </Button>
       </div>
     );
   }
@@ -39,9 +40,9 @@ export default function PlaybookRunBar() {
           {status.stepIndex + 1}/{playbook.steps.length}{" "}
           <span className="font-mono text-white">{step.command}</span>
         </span>
-        <button onClick={cancel} className="text-faint hover:text-white transition-colors">
+        <Button variant="ghost" onClick={cancel} className="h-auto text-faint">
           Cancel
-        </button>
+        </Button>
       </div>
     );
   }
@@ -52,9 +53,9 @@ export default function PlaybookRunBar() {
         <span className="text-white font-medium">{playbook.title}</span>{" "}
         {status.kind === "done" ? "finished" : "cancelled"}
       </span>
-      <button onClick={dismiss} className="text-faint hover:text-white transition-colors">
+      <Button variant="ghost" onClick={dismiss} className="h-auto text-faint">
         Dismiss
-      </button>
+      </Button>
     </div>
   );
 }

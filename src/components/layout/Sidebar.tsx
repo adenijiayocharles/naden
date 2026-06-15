@@ -3,8 +3,8 @@ import { useServerStore } from "../../store/serverStore";
 import { useSnippetStore } from "../../store/snippetStore";
 import { usePlaybookStore } from "../../store/playbookStore";
 import { useUiStore } from "../../store/uiStore";
-import Input from "../shared/Input";
-import Button from "../shared/Button";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
@@ -71,8 +71,8 @@ function GroupCreateModal({ onClose }: { onClose: () => void }) {
           {error && <p className="text-xs text-error">{error}</p>}
         </div>
         <div className="flex items-center justify-end gap-2 mt-5">
-          <Button size="sm" onClick={onClose}>Cancel</Button>
-          <Button size="sm" variant="primary" onClick={() => { void handleCreate(); }} disabled={busy || !name.trim()}>
+          <Button variant="secondary" className="h-8" onClick={onClose}>Cancel</Button>
+          <Button className="h-8" onClick={() => { void handleCreate(); }} disabled={busy || !name.trim()}>
             {busy ? "Creating…" : "Create"}
           </Button>
         </div>
@@ -115,9 +115,9 @@ function GroupEditModal({ group, onClose, onDelete }: { group: Group; onClose: (
           {error && <p className="text-xs text-error">{error}</p>}
         </div>
         <div className="flex items-center gap-2 mt-5">
-          <Button size="sm" variant="ghost" onClick={onDelete} disabled={busy} className="text-red-500 hover:text-red-400 mr-auto px-0">Delete</Button>
-          <Button size="sm" onClick={onClose}>Cancel</Button>
-          <Button size="sm" variant="primary" onClick={() => { void handleSave(); }} disabled={busy || !name.trim()}>
+          <Button variant="ghost" className="h-8 text-red-500 hover:text-red-400 mr-auto px-0" onClick={onDelete} disabled={busy}>Delete</Button>
+          <Button variant="secondary" className="h-8" onClick={onClose}>Cancel</Button>
+          <Button className="h-8" onClick={() => { void handleSave(); }} disabled={busy || !name.trim()}>
             {busy ? "Saving…" : "Save"}
           </Button>
         </div>
@@ -156,8 +156,8 @@ function TagRenameModal({ tag, onClose }: { tag: Tag; onClose: () => void }) {
           placeholder="Tag name" />
         {error && <p className="text-xs text-error mt-2">{error}</p>}
         <div className="flex items-center justify-end gap-2 mt-5">
-          <Button size="sm" onClick={onClose}>Cancel</Button>
-          <Button size="sm" variant="primary" onClick={() => { void handleSave(); }} disabled={busy || !name.trim()}>
+          <Button variant="secondary" className="h-8" onClick={onClose}>Cancel</Button>
+          <Button className="h-8" onClick={() => { void handleSave(); }} disabled={busy || !name.trim()}>
             {busy ? "Saving…" : "Save"}
           </Button>
         </div>
@@ -214,9 +214,10 @@ function NavRow({
 
       {hasMenu && (
         <div ref={menuRef} className="relative">
-          <button
+          <Button
+            variant="ghost"
             onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
-            className={`px-1.5 py-2 rounded-r transition-opacity ${
+            className={`h-full px-1.5 py-2 rounded-l-none transition-opacity ${
               menuOpen ? "opacity-100" : "opacity-0 group-hover/row:opacity-100"
             } ${activeMenu}`}
             aria-label="More options"
@@ -226,7 +227,7 @@ function NavRow({
               <circle cx="8" cy="8" r="1.3" />
               <circle cx="8" cy="13" r="1.3" />
             </svg>
-          </button>
+          </Button>
 
           {menuOpen && (
             <div className="absolute right-0 top-8 bg-surface-2 border border-stroke rounded-lg shadow-overlay z-30 min-w-[130px] py-1">
@@ -591,16 +592,18 @@ export default function Sidebar() {
         <div className="mt-6">
           <div className="flex items-center justify-between px-3 pb-2">
             <span className="text-xs font-semibold text-faint uppercase tracking-wider">Groups</span>
-            <button
+            <Button
+              variant="ghost"
+              size="icon-xs"
               onClick={() => setCreatingGroup(true)}
-              className="flex items-center p-0 text-dim hover:text-muted transition-colors"
+              className="text-dim hover:text-muted"
               title="New group" aria-label="New group"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 14 14" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
                 <line x1="7" y1="2" x2="7" y2="12" />
                 <line x1="2" y1="7" x2="12" y2="7" />
               </svg>
-            </button>
+            </Button>
           </div>
           {groups.map((g) => (
             <GroupRow
@@ -676,10 +679,8 @@ export default function Sidebar() {
         </span>
         <div ref={addMenuRef} className="relative shrink-0">
           <Button
-            size="sm"
-            variant="primary"
+            className="h-8"
             onClick={() => setAddMenuOpen((v) => !v)}
-
           >
             + Add
           </Button>

@@ -1,5 +1,5 @@
 import { twMerge } from "tailwind-merge";
-import Button from "./Button";
+import { Button } from "../ui/button";
 
 interface EmptyStateProps {
   icon: React.ReactNode;
@@ -18,7 +18,7 @@ export default function EmptyState({ icon, heading, subline, action, className }
       <p className="text-muted font-medium mb-1">{heading}</p>
       {subline && <p className="text-muted text-sm font-medium mb-4">{subline}</p>}
       {action && (
-        <Button variant="primary" onClick={action.onClick}>
+        <Button onClick={action.onClick}>
           {action.label}
         </Button>
       )}

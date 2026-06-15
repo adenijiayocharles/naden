@@ -1,3 +1,11 @@
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogTitle,
+} from "../ui/dialog";
+import { Button } from "../ui/button";
+
 interface Props {
   serverName: string;
   message?: string;
@@ -8,11 +16,8 @@ interface Props {
 
 export default function ConnectionErrorModal({ serverName, message, onRetry, onEdit, onClose }: Props) {
   return (
-    <div
-      className="fixed inset-0 bg-black/85 animate-backdrop-in flex items-center justify-center z-50 p-4"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="bg-surface-1 border border-stroke rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm p-6">
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-sm">
         <div className="flex items-start gap-3 mb-4">
           <div className="w-8 h-8 rounded-full bg-error-subtle border border-error-subtle flex items-center justify-center shrink-0 mt-0.5">
             <svg className="w-4 h-4 text-error" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
@@ -21,7 +26,7 @@ export default function ConnectionErrorModal({ serverName, message, onRetry, onE
             </svg>
           </div>
           <div className="min-w-0">
-            <p className="text-title text-white mb-0.5">Connection failed</p>
+            <DialogTitle className="text-title text-white mb-0.5">Connection failed</DialogTitle>
             <p className="text-meta text-muted">{serverName}</p>
           </div>
         </div>
@@ -32,27 +37,18 @@ export default function ConnectionErrorModal({ serverName, message, onRetry, onE
           </p>
         )}
 
-        <div className="flex gap-2">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
-          >
+        <DialogFooter className="gap-2">
+          <Button variant="secondary" onClick={onClose} className="flex-1 h-10">
             Dismiss
-          </button>
-          <button
-            onClick={onEdit}
-            className="flex-1 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
-          >
+          </Button>
+          <Button variant="secondary" onClick={onEdit} className="flex-1 h-10">
             Edit
-          </button>
-          <button
-            onClick={onRetry}
-            className="flex-1 py-2 text-sm text-black bg-accent hover:bg-accent-hover rounded font-semibold transition-colors"
-          >
+          </Button>
+          <Button onClick={onRetry} className="flex-1 h-10">
             Retry
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -8,8 +8,9 @@ import { discoveryCommands, serverCommands, vaultCommands } from "../../lib/taur
 import { useServerStore } from "../../store/serverStore";
 import { useVaultStore } from "../../store/vaultStore";
 import { formatError } from "../../lib/errors";
-import Input from "../shared/Input";
-import Button from "../shared/Button";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
 
 interface Props {
   onClose: () => void;
@@ -200,7 +201,7 @@ export default function DiscoverHosts({ onClose }: Props) {
           <h2 className="text-lg font-semibold text-white">
             {step === "select" ? "Discover Hosts" : "Server Details"}
           </h2>
-          <button onClick={onClose} className="text-muted hover:text-white p-1 rounded" aria-label="Close">✕</button>
+          <Button variant="ghost" size="icon-sm" onClick={onClose} className="text-muted hover:text-white" aria-label="Close">✕</Button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
@@ -220,18 +221,18 @@ export default function DiscoverHosts({ onClose }: Props) {
                 <p className="text-sm text-muted">
                   Hosts from <span className="font-mono">~/.ssh/known_hosts</span> and your local network.
                 </p>
-                <button
+                <Button
                   type="button"
                   onClick={() => { void scanLan(); }}
                   disabled={scanning}
-                  className="px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-40 text-black font-semibold text-sm rounded transition-colors shrink-0"
+                  className="h-10 shrink-0"
                 >
                   {scanning
                     ? progress && progress.total > 0
                       ? `Scanning… ${progress.scanned}/${progress.total}`
                       : "Scanning…"
                     : "Scan network"}
-                </button>
+                </Button>
               </div>
 
               {!loading && hosts.length === 0 && (
@@ -278,12 +279,10 @@ export default function DiscoverHosts({ onClose }: Props) {
                               }`}
                             >
                               <td className="px-3 py-2 text-center">
-                                <input
-                                  type="checkbox"
+                                <Checkbox
                                   checked={selected.has(key)}
-                                  onChange={() => toggle(key)}
+                                  onCheckedChange={() => toggle(key)}
                                   onClick={(e) => e.stopPropagation()}
-                                  className="rounded border-stroke"
                                 />
                               </td>
                               <td className="px-3 py-2 font-mono text-white">{host.ip}</td>
@@ -380,8 +379,9 @@ export default function DiscoverHosts({ onClose }: Props) {
                             />
                             <Button
                               type="button"
+                              variant="secondary"
                               onClick={() => { void pickIdentityFile(key); }}
-                              className="px-3 border border-stroke shrink-0"
+                              className="px-3 h-10 border border-stroke shrink-0"
                             >
                               Browse
                             </Button>
@@ -426,36 +426,38 @@ export default function DiscoverHosts({ onClose }: Props) {
         {/* Footer */}
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-stroke-subtle shrink-0">
           {step === "details" && imported === null && (
-            <button
+            <Button
+              variant="secondary"
               onClick={() => setStep("select")}
-              className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
+              className="h-10"
             >
               Back
-            </button>
+            </Button>
           )}
-          <button
+          <Button
+            variant="secondary"
             onClick={onClose}
-            className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
+            className="h-10"
           >
             {imported !== null ? "Done" : "Cancel"}
-          </button>
+          </Button>
           {step === "select" && hosts.length > 0 && imported === null && (
-            <button
+            <Button
               onClick={startDetails}
               disabled={selected.size === 0}
-              className="px-4 py-2 text-sm text-black bg-accent hover:bg-accent-hover disabled:opacity-40 rounded transition-colors font-semibold"
+              className="h-10"
             >
               Continue
-            </button>
+            </Button>
           )}
           {step === "details" && imported === null && (
-            <button
+            <Button
               onClick={() => { void handleImport(); }}
               disabled={importing}
-              className="px-4 py-2 text-sm text-black bg-accent hover:bg-accent-hover disabled:opacity-40 rounded transition-colors font-semibold"
+              className="h-10"
             >
               {importing ? "Adding…" : `Add ${selected.size} server${selected.size !== 1 ? "s" : ""}`}
-            </button>
+            </Button>
           )}
         </div>
       </div>

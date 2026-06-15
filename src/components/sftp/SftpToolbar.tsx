@@ -1,4 +1,13 @@
 import { useState } from "react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 export function PathBar({ path, busy, onNavigateTo }: { path: string; busy: boolean; onNavigateTo: (p: string) => void }) {
   const [editing, setEditing] = useState(false);
@@ -18,13 +27,13 @@ export function PathBar({ path, busy, onNavigateTo }: { path: string; busy: bool
 
   if (editing) {
     return (
-      <input
+      <Input
         autoFocus
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
         onBlur={commit}
-        className="flex-1 h-7 bg-surface-3 border border-accent rounded px-2 text-sm text-white outline-none"
+        className="flex-1 h-7 border-accent"
       />
     );
   }
@@ -102,14 +111,15 @@ function ToolbarBtn({
   children: React.ReactNode;
 }) {
   return (
-    <button
+    <Button
+      variant="ghost"
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm text-muted hover:text-white hover:bg-surface-4 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+      className="gap-1.5 px-3 py-1.5 h-auto text-sm text-muted hover:text-white hover:bg-surface-4"
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -146,30 +156,31 @@ export default function SftpToolbar({
   return (
     <div className="flex flex-col shrink-0 bg-surface-2 border-b border-stroke-subtle">
       <div className="h-12 flex items-center gap-1 px-2">
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onToggleLocalPane}
           title={showLocalPane ? "Hide left pane" : "Show left pane"}
-          className={`p-1.5 rounded transition-colors ${
-            showLocalPane ? "text-white bg-surface-4" : "text-muted hover:text-white hover:bg-surface-4"
-          }`}
+          className={showLocalPane ? "text-white bg-surface-4" : "text-muted"}
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
             <rect x="1" y="2" width="14" height="12" rx="1.5" />
             <path strokeLinecap="round" d="M6 2v12" />
           </svg>
-        </button>
+        </Button>
 
         {showLocalPane && (
-          <select
-            value={leftPaneSelection}
-            onChange={(e) => { onLeftPaneChange(e.target.value); }}
-            className="text-xs bg-surface-3 border border-stroke-subtle rounded px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-accent/50 leading-none"
-          >
-            <option value="local">Local</option>
-            {leftPaneServers.map((s) => (
-              <option key={s.id} value={s.id}>{s.displayName}</option>
-            ))}
-          </select>
+          <Select value={leftPaneSelection} onValueChange={(value) => { if (value) onLeftPaneChange(value); }}>
+            <SelectTrigger size="sm" className="text-xs leading-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="local">Local</SelectItem>
+              {leftPaneServers.map((s) => (
+                <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
 
         {/* Remote controls — dimmed when local pane is focused */}

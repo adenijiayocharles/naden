@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
 
 interface Props {
   label: string;
@@ -14,7 +16,7 @@ export default function InlineCreateInput({ label, placeholder, onCommit, onCanc
   return (
     <div className="px-4 py-2 bg-surface-1 border-b border-stroke-subtle flex items-center gap-2 shrink-0">
       <span className="text-meta text-muted">{label}</span>
-      <input
+      <Input
         ref={ref}
         defaultValue=""
         onKeyDown={(e) => {
@@ -22,10 +24,10 @@ export default function InlineCreateInput({ label, placeholder, onCommit, onCanc
           if (e.key === "Escape") onCancel();
         }}
         placeholder={placeholder}
-        className="flex-1 bg-surface-3 border border-[#333] rounded px-2 py-1 text-sm text-white outline-none focus:border-accent font-mono placeholder-[#444]"
+        className="flex-1 h-8 bg-surface-3 border-[#333] px-2 py-1 font-mono placeholder-[#444]"
       />
-      <button onClick={() => onCommit(ref.current?.value.trim() ?? "")} className="text-xs text-accent-fg px-2">Create</button>
-      <button onClick={onCancel} className="text-xs text-faint px-2">Cancel</button>
+      <Button variant="ghost" onClick={() => onCommit(ref.current?.value.trim() ?? "")} className="text-xs text-accent-fg px-2">Create</Button>
+      <Button variant="ghost" onClick={onCancel} className="text-xs text-faint px-2">Cancel</Button>
     </div>
   );
 }

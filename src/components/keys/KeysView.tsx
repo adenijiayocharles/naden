@@ -5,8 +5,15 @@ import { useSshKeyStore } from "../../store/sshKeyStore";
 import { clipboardCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import type { SshKey } from "../../types/sshKey";
-import Button from "../shared/Button";
-import Input from "../shared/Input";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import EmptyState from "../shared/EmptyState";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 
@@ -71,7 +78,7 @@ function AddKeyModal({ onClose }: { onClose: () => void }) {
                 className="flex-1"
                 autoFocus
               />
-              <Button type="button" onClick={() => { void browse(); }} className="px-3 border border-stroke shrink-0">
+              <Button type="button" variant="secondary" onClick={() => { void browse(); }} className="px-3 h-10 border border-stroke shrink-0">
                 Browse
               </Button>
             </div>
@@ -90,8 +97,8 @@ function AddKeyModal({ onClose }: { onClose: () => void }) {
           {error && <p className="text-xs text-error">{error}</p>}
         </div>
         <div className="flex gap-3 justify-end">
-          <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button variant="primary" onClick={() => { void submit(); }} disabled={saving || !path.trim()}>
+          <Button variant="secondary" onClick={onClose} disabled={saving} className="h-10">Cancel</Button>
+          <Button onClick={() => { void submit(); }} disabled={saving || !path.trim()} className="h-10">
             {saving ? "Adding…" : "Add Key"}
           </Button>
         </div>
@@ -192,15 +199,22 @@ function GenerateKeyModal({ onClose }: { onClose: () => void }) {
           <div className="flex gap-3">
             <div className="flex flex-col gap-1.5 flex-1">
               <label className="text-sm text-secondary">Key type</label>
-              <select
+              <Select
                 value={form.keyType}
-                onChange={set("keyType")}
-                className="h-10 bg-surface-3 border border-white/5 rounded px-3 text-sm text-white focus:outline-none focus:border-accent/30 transition-[border-color] duration-200"
+                onValueChange={(value) => {
+                  setForm((f) => ({ ...f, keyType: value as KeyType }));
+                  setError(null);
+                }}
               >
-                <option value="ed25519">Ed25519 (recommended)</option>
-                <option value="rsa">RSA 4096</option>
-                <option value="ecdsa">ECDSA 521</option>
-              </select>
+                <SelectTrigger className="w-full h-10">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ed25519">Ed25519 (recommended)</SelectItem>
+                  <SelectItem value="rsa">RSA 4096</SelectItem>
+                  <SelectItem value="ecdsa">ECDSA 521</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -240,8 +254,8 @@ function GenerateKeyModal({ onClose }: { onClose: () => void }) {
           {error && <p className="text-xs text-error">{error}</p>}
         </div>
         <div className="flex gap-3 justify-end">
-          <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button variant="primary" onClick={() => { void submit(); }} disabled={saving}>
+          <Button variant="secondary" onClick={onClose} disabled={saving} className="h-10">Cancel</Button>
+          <Button onClick={() => { void submit(); }} disabled={saving} className="h-10">
             {saving ? "Generating…" : "Generate"}
           </Button>
         </div>
@@ -309,26 +323,29 @@ function KeyRow({ sshKey, onDelete }: { sshKey: SshKey; onDelete: () => void }) 
       </div>
 
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-        <button
+        <Button
+          variant="ghost"
           onClick={() => { void copyPublicKey(); }}
           title="Copy public key"
-          className={`h-8 px-2.5 rounded text-xs font-medium transition-colors ${
+          className={`h-8 px-2.5 text-xs font-medium ${
             copied
               ? "bg-success-subtle text-success border border-success-subtle"
               : "bg-surface-3 text-secondary border border-stroke hover:border-accent/40 hover:text-white"
           }`}
         >
           {copied ? "Copied!" : "Copy pub key"}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onDelete}
           title="Remove from vault"
-          className="w-8 h-8 flex items-center justify-center rounded text-faint hover:text-error hover:bg-error-subtle transition-colors"
+          className="text-faint hover:text-error hover:bg-error-subtle"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
             <path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10" />
           </svg>
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -370,13 +387,13 @@ export default function KeysView() {
           <p className="text-sm text-faint mt-0.5">Manage private keys used for authentication</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setShowGenerate(true)}>
+          <Button variant="secondary" onClick={() => setShowGenerate(true)} className="h-8">
             <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
               <path d="M8 2v12M2 8h12" />
             </svg>
             Generate
           </Button>
-          <Button variant="primary" size="sm" onClick={() => setShowAdd(true)}>
+          <Button onClick={() => setShowAdd(true)} className="h-8">
             <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
               <path d="M8 2v12M2 8h12" />
             </svg>

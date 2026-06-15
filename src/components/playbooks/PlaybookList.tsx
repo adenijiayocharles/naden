@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { usePlaybookStore } from "../../store/playbookStore";
 import { formatError } from "../../lib/errors";
-import Button from "../shared/Button";
-import Input from "../shared/Input";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import EmptyState from "../shared/EmptyState";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import type { Playbook, StepInput } from "../../types/playbook";
@@ -52,61 +52,68 @@ function StepRow({
         />
         <div className="flex items-center gap-1.5 flex-wrap">
           {VARIABLE_HINTS.map((hint) => (
-            <button
+            <Button
               key={hint}
               type="button"
+              variant="ghost"
               onClick={() => onChange({ command: `${step.command}${hint}` })}
-              className="px-1.5 py-0.5 rounded text-[11px] font-mono text-dim bg-surface-3 hover:text-white hover:bg-surface-4 transition-colors"
+              className="px-1.5 py-0.5 h-auto text-[11px] font-mono text-dim bg-surface-3 hover:text-white hover:bg-surface-4"
             >
               {hint}
-            </button>
+            </Button>
           ))}
           <span className="text-faint text-[11px] ml-auto shrink-0">delay</span>
-          <input
+          <Input
             type="number"
             min={0}
             step={100}
             value={step.delayMs}
             onChange={(e) => onChange({ delayMs: Math.max(0, Number(e.target.value) || 0) })}
-            className="w-16 h-6 bg-surface-3 border border-white/5 rounded px-1.5 text-[11px] text-white focus:outline-none focus:border-accent/30 transition-colors"
+            className="w-16 h-6 px-1.5 text-[11px]"
           />
           <span className="text-faint text-[11px]">ms</span>
         </div>
       </div>
       <div className="flex flex-col gap-0.5 shrink-0">
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
           onClick={() => onMove(-1)}
           disabled={index === 0}
-          className="p-1 rounded text-dim hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+          className="text-dim hover:text-white disabled:hover:bg-transparent"
           title="Move up"
         >
           <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 9V3M3 6l3-3 3 3" />
           </svg>
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
           onClick={() => onMove(1)}
           disabled={index === total - 1}
-          className="p-1 rounded text-dim hover:text-white hover:bg-surface-3 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+          className="text-dim hover:text-white disabled:hover:bg-transparent"
           title="Move down"
         >
           <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 3v6M3 6l3 3 3-3" />
           </svg>
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
           onClick={onRemove}
           disabled={total === 1}
-          className="p-1 rounded text-dim hover:text-red-400 hover:bg-surface-3 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+          className="text-dim hover:text-red-400 disabled:hover:bg-transparent"
           title="Remove step"
         >
           <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
             <path d="M2.5 2.5l7 7M9.5 2.5l-7 7" />
           </svg>
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -205,21 +212,20 @@ function PlaybookFormModal({
               onMove={(direction) => moveStep(i, direction)}
             />
           ))}
-          <Button size="sm" onClick={addStep} className="self-start">
+          <Button variant="secondary" onClick={addStep} className="self-start h-8">
             + Add step
           </Button>
         </div>
 
         {error && <p className="text-xs text-error">{error}</p>}
         <div className="flex items-center justify-end gap-2">
-          <Button size="sm" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} className="h-8">
             Cancel
           </Button>
           <Button
-            size="sm"
-            variant="primary"
             onClick={() => void handleSave()}
             disabled={busy || !isValid}
+            className="h-8"
           >
             {busy ? "Saving…" : "Save"}
           </Button>
@@ -250,24 +256,28 @@ function PlaybookCard({
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={onEdit}
-            className="p-1 rounded text-dim hover:text-muted hover:bg-surface-3 transition-colors"
+            className="text-dim hover:text-muted"
             title="Edit"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
               <path d="M11.5 2.5a1.414 1.414 0 012 2L5 13H2v-3L11.5 2.5z" />
             </svg>
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={onDelete}
-            className="p-1 rounded text-dim hover:text-red-400 hover:bg-surface-3 transition-colors"
+            className="text-dim hover:text-red-400"
             title="Delete"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 4h10M6 4V2h4v2M5 4v9a1 1 0 001 1h4a1 1 0 001-1V4" />
             </svg>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -321,14 +331,13 @@ export default function PlaybookList() {
       {/* Toolbar */}
       <div className="px-4 h-14 border-b border-stroke-subtle shrink-0 flex items-center gap-2">
         <div className="flex-1 min-w-0">
-          <input
+          <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search playbooks…"
-            className="w-full h-10 bg-surface-3 border border-stroke rounded px-3 text-sm text-white placeholder-faint focus:outline-none focus:border-accent transition-colors"
           />
         </div>
-        <Button variant="primary" onClick={() => setCreating(true)}>
+        <Button onClick={() => setCreating(true)} className="h-10">
           + New
         </Button>
       </div>

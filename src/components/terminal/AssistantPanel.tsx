@@ -8,6 +8,9 @@ import {
   type AssistantMessage,
   type AssistantMessageContext,
 } from "../../store/assistantStore";
+import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
+import { Textarea } from "../ui/textarea";
 
 // Stable empty references so selectors don't trigger re-renders for servers with no chat yet.
 const EMPTY_MESSAGES: AssistantMessage[] = [];
@@ -53,28 +56,29 @@ function CodeBlock({ content, isShell, onRunCommand }: {
           <div className="flex items-center justify-between px-3 py-1.5 bg-warning-subtle border-t border-warning-subtle">
             <span className="text-[11px] text-warning">Run this command in the terminal?</span>
             <div className="flex gap-1.5">
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => setConfirming(false)}
-                className="px-2 py-0.5 text-[11px] text-secondary hover:text-white rounded border border-stroke transition-colors"
+                className="h-auto px-2 py-0.5 text-[11px] border border-stroke"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleRun}
-                className="px-2 py-0.5 text-[11px] font-semibold text-black bg-accent rounded hover:bg-accent-hover transition-colors"
+                className="h-auto px-2 py-0.5 text-[11px] font-semibold"
               >
                 Run
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
-          <button
+          <Button
             onClick={handleRun}
             title="Run in terminal"
-            className="absolute top-1.5 right-1.5 px-2 py-1 text-[11px] font-semibold text-black bg-accent rounded hover:bg-accent-hover transition-colors leading-none"
+            className="absolute top-1.5 right-1.5 h-auto px-2 py-1 text-[11px] font-semibold leading-none"
           >
             Run
-          </button>
+          </Button>
         )
       )}
     </div>
@@ -243,39 +247,42 @@ export function AssistantPanel({
       <div className="relative flex items-center justify-between px-3 py-2.5 border-b border-stroke-subtle shrink-0">
         <span className="text-sm font-medium text-white">AI Assistant</span>
         <div className="flex items-center gap-1">
-          <button
+          <Button
             ref={historyButtonRef}
+            variant="ghost"
+            size="icon-sm"
             onClick={() => setHistoryOpen((v) => !v)}
             disabled={history.length === 0}
             title="Past chats"
             aria-label="Show past chats"
-            className={`w-7 h-7 flex items-center justify-center rounded transition-colors disabled:opacity-30 ${
-              historyOpen ? "bg-accent/20 text-accent-fg" : "text-faint hover:text-white hover:bg-surface-3"
-            }`}
+            className={historyOpen ? "bg-accent/20 text-accent-fg" : "text-faint"}
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
               <circle cx="8" cy="8" r="6" />
               <path d="M8 5v3l2 1.5" />
             </svg>
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={() => startNewChat(serverId)}
             disabled={messages.length === 0}
             title="New chat"
             aria-label="Start a new chat"
-            className="w-7 h-7 flex items-center justify-center rounded transition-colors text-faint hover:text-white hover:bg-surface-3 disabled:opacity-30"
+            className="text-faint"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
               <path d="M8 3v10M3 8h10" />
             </svg>
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={onClose}
             aria-label="Close assistant panel"
-            className="text-faint hover:text-white transition-colors text-base leading-none px-1"
+            className="h-auto text-faint text-base leading-none px-1"
           >
             ×
-          </button>
+          </Button>
         </div>
 
         {historyOpen && (
@@ -286,16 +293,17 @@ export function AssistantPanel({
             <div className="px-2.5 py-2 border-b border-stroke-subtle text-meta text-dim shrink-0">Past chats</div>
             <div className="overflow-y-auto max-h-64 p-2 flex flex-col gap-1.5">
               {history.map((c) => (
-                <button
+                <Button
                   key={c.id}
+                  variant="ghost"
                   onClick={() => openPastChat(c.id)}
-                  className="w-full text-left bg-surface-1 border border-stroke-subtle rounded-lg px-3 py-2 hover:border-stroke hover:bg-surface-2 transition-colors group"
+                  className="h-auto w-full flex-col items-start text-left bg-surface-1 border border-stroke-subtle rounded-lg px-3 py-2 hover:border-stroke group"
                 >
                   <p className="text-sm font-medium text-white truncate">{c.title}</p>
                   <p className="text-meta text-dim font-mono truncate mt-1 group-hover:text-muted">
                     {c.messages.length} message{c.messages.length === 1 ? "" : "s"} · {timeAgo(new Date(c.updatedAt).toISOString())}
                   </p>
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -359,16 +367,14 @@ export function AssistantPanel({
           )}
           <div className="p-2.5 border-t border-stroke-subtle shrink-0">
             <label className="flex items-center gap-1.5 text-sm text-dim cursor-pointer select-none mb-1.5">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={includeContext}
-                onChange={(e) => setIncludeContext(e.target.checked)}
-                className="accent-accent"
+                onCheckedChange={(checked) => setIncludeContext(checked === true)}
               />
               Include terminal context (server, status, recent output)
             </label>
             <div className="flex items-start gap-1.5">
-              <textarea
+              <Textarea
                 ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -380,19 +386,21 @@ export function AssistantPanel({
                 }}
                 rows={3}
                 placeholder="Ask the assistant…"
-                className="flex-1 resize-none bg-surface-3 border border-stroke rounded px-2.5 py-1.5 text-sm text-white placeholder-faint outline-none focus:border-accent transition-colors overflow-y-auto max-h-36"
+                className="flex-1 resize-none px-2.5 py-1.5 overflow-y-auto max-h-36"
               />
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={submit}
                 disabled={!input.trim() || isSending}
                 title="Send"
                 aria-label="Send message"
-                className="w-8 h-8 shrink-0 flex items-center justify-center rounded transition-colors bg-accent/20 text-accent-fg hover:bg-accent/30 disabled:opacity-40"
+                className="shrink-0 bg-accent/20 text-accent-fg hover:bg-accent/30"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M2 8h12M9 4l5 4-5 4" />
                 </svg>
-              </button>
+              </Button>
             </div>
           </div>
         </>

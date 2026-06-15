@@ -4,6 +4,7 @@ import { List, type RowComponentProps } from "react-window";
 import { AutoSizer } from "react-virtualized-auto-sizer";
 import type { FileEntry } from "../../types/sftp";
 import { formatSize, formatDate } from "../../lib/format";
+import { Input } from "../ui/input";
 
 export type SortKey = "name" | "size" | "modified";
 export type SortDir = "asc" | "desc";
@@ -200,7 +201,7 @@ const Row = ({ index, style, entries, selectedSet, renaming, renameValue, dblCli
       <div className="px-2 flex items-center gap-2 min-w-0">
         <FileIcon isDir={entry.isDir} />
         {isRenaming ? (
-          <input
+          <Input
             autoFocus
             value={renameValue}
             onChange={(e) => onRenameChange(e.target.value)}
@@ -212,7 +213,7 @@ const Row = ({ index, style, entries, selectedSet, renaming, renameValue, dblCli
               if (e.key === "Escape") onRenameCancel();
             }}
             onBlur={onRenameCommit}
-            className="flex-1 h-6 bg-surface-3 border border-accent rounded px-1.5 text-xs text-white outline-none min-w-0"
+            className="flex-1 h-6 border-accent px-1.5 text-xs min-w-0"
           />
         ) : (
           <span className="truncate text-xs" title={entry.name}>{entry.name}</span>

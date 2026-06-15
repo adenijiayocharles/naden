@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import Input from "../shared/Input";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
 import { homeDir, join } from "@tauri-apps/api/path";
 import type { ImportPreview } from "../../types/server";
 import { sshCommands } from "../../lib/tauriCommands";
@@ -98,7 +100,7 @@ export default function SshConfigImport({ onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-stroke-subtle shrink-0">
           <h2 className="text-lg font-semibold text-white">Import from SSH Config</h2>
-          <button onClick={onClose} className="text-muted hover:text-white p-1 rounded" aria-label="Close">✕</button>
+          <Button variant="ghost" size="icon-sm" onClick={onClose} className="text-muted hover:text-white" aria-label="Close">✕</Button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
@@ -111,21 +113,22 @@ export default function SshConfigImport({ onClose }: Props) {
                 onChange={(e) => setConfigPath(e.target.value)}
                 className="flex-1"
               />
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => { void browseConfig(); }}
-                className="px-3 py-2 bg-surface-3 hover:bg-surface-4 text-secondary text-sm rounded border border-stroke transition-colors shrink-0"
+                className="px-3 h-10 border border-stroke shrink-0"
               >
                 Browse
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => { void loadPreviews(); }}
                 disabled={loading}
-                className="px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-40 text-black font-semibold text-sm rounded transition-colors shrink-0"
+                className="px-4 h-10 shrink-0"
               >
                 {loading ? "Reading…" : "Read"}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -181,12 +184,10 @@ export default function SshConfigImport({ onClose }: Props) {
                         }`}
                       >
                         <td className="px-3 py-2 text-center">
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={selected.has(p.pattern)}
-                            onChange={() => toggle(p.pattern)}
+                            onCheckedChange={() => toggle(p.pattern)}
                             onClick={(e) => e.stopPropagation()}
-                            className="rounded border-stroke"
                           />
                         </td>
                         <td className="px-3 py-2 font-mono text-white">{p.pattern}</td>
@@ -204,20 +205,21 @@ export default function SshConfigImport({ onClose }: Props) {
 
         {/* Footer */}
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-stroke-subtle shrink-0">
-          <button
+          <Button
+            variant="secondary"
             onClick={onClose}
-            className="px-4 py-2 text-sm text-muted hover:text-white bg-surface-3 hover:bg-surface-4 rounded transition-colors"
+            className="h-10"
           >
             {imported !== null ? "Done" : "Cancel"}
-          </button>
+          </Button>
           {previews && previews.length > 0 && imported === null && (
-            <button
+            <Button
               onClick={() => { void handleImport(); }}
               disabled={importing || selected.size === 0}
-              className="px-4 py-2 text-sm text-black bg-accent hover:bg-accent-hover disabled:opacity-40 rounded transition-colors font-semibold"
+              className="h-10"
             >
               {importing ? "Importing…" : `Import ${selected.size} server${selected.size !== 1 ? "s" : ""}`}
-            </button>
+            </Button>
           )}
         </div>
       </div>
