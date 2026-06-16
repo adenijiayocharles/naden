@@ -19,6 +19,37 @@ import { passwordStrength } from "../../lib/passwordStrength";
 
 type Section = SettingsSection;
 
+function shiftLightness(hex: string, delta: number): string {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (max === g) h = ((b - r) / d + 2) / 6;
+    else h = ((r - g) / d + 4) / 6;
+  }
+  const nl = Math.min(0.95, Math.max(0.05, l + delta / 100));
+  const q = nl < 0.5 ? nl * (1 + s) : nl + s - nl * s;
+  const p = 2 * nl - q;
+  const hk = h;
+  const toC = (t: number) => {
+    const tc = ((t % 1) + 1) % 1;
+    if (tc < 1 / 6) return p + (q - p) * 6 * tc;
+    if (tc < 1 / 2) return q;
+    if (tc < 2 / 3) return p + (q - p) * (2 / 3 - tc) * 6;
+    return p;
+  };
+  const nr = s === 0 ? nl : toC(hk + 1 / 3);
+  const ng = s === 0 ? nl : toC(hk);
+  const nb = s === 0 ? nl : toC(hk - 1 / 3);
+  return `#${[nr, ng, nb].map((c) => Math.round(c * 255).toString(16).padStart(2, "0")).join("")}`;
+}
+
 type ActiveForm = "none" | "disable" | "enable" | "change";
 
 function PasswordInput({
@@ -274,11 +305,26 @@ export default function SettingsPage() {
     { id: "white",  base: "#ffffff", hover: "#eeeeee", dim: "#cccccc" },
   ] as const;
   type AccentId = typeof ACCENTS[number]["id"];
-  const [accentId, setAccentId] = useState<AccentId>("lime");
+  const [accentId, setAccentId] = useState<AccentId | "custom">("lime");
+  const [customHex, setCustomHex] = useState("#ffffff");
+  const colorInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    settingsCommands.getSetting("accent")
-      .then((v) => { if (v) setAccentId(v as AccentId); })
-      .catch(() => {});
+    settingsCommands.getSetting("accent").then((v) => {
+      if (!v) return;
+      if (v === "custom") {
+        setAccentId("custom");
+        settingsCommands.getSetting("accent_custom_color").then((hex) => {
+          if (!hex) return;
+          setCustomHex(hex);
+          const root = document.documentElement;
+          root.style.setProperty("--color-accent", hex);
+          root.style.setProperty("--color-accent-hover", shiftLightness(hex, 15));
+          root.style.setProperty("--color-accent-dim", shiftLightness(hex, -20));
+        }).catch(() => {});
+      } else {
+        setAccentId(v as AccentId);
+      }
+    }).catch(() => {});
   }, []);
   const saveAccent = (id: AccentId) => {
     const a = ACCENTS.find((x) => x.id === id)!;
@@ -288,6 +334,17 @@ export default function SettingsPage() {
     root.style.setProperty("--color-accent-hover", a.hover);
     root.style.setProperty("--color-accent-dim", a.dim);
     settingsCommands.setSetting("accent", id).catch(() => {});
+    flashSaved();
+  };
+  const saveCustomAccent = (hex: string) => {
+    setCustomHex(hex);
+    setAccentId("custom");
+    const root = document.documentElement;
+    root.style.setProperty("--color-accent", hex);
+    root.style.setProperty("--color-accent-hover", shiftLightness(hex, 15));
+    root.style.setProperty("--color-accent-dim", shiftLightness(hex, -20));
+    settingsCommands.setSetting("accent", "custom").catch(() => {});
+    settingsCommands.setSetting("accent_custom_color", hex).catch(() => {});
     flashSaved();
   };
 
@@ -474,7 +531,7 @@ export default function SettingsPage() {
               </div>
 
               <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Accent colour</p>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap items-center">
                 {ACCENTS.map(({ id, base }) => (
                   <button
                     key={id}
@@ -486,6 +543,32 @@ export default function SettingsPage() {
                     style={{ backgroundColor: base }}
                   />
                 ))}
+                <button
+                  onClick={() => colorInputRef.current?.click()}
+                  title="Custom colour"
+                  className={`w-7 h-7 rounded-full transition-transform hover:scale-110 flex items-center justify-center border border-stroke ${
+                    accentId === "custom" ? "ring-2 ring-white/50 scale-110" : ""
+                  }`}
+                  style={accentId === "custom" ? { backgroundColor: customHex } : {}}
+                >
+                  {accentId !== "custom" && (
+                    <svg className="w-3.5 h-3.5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+                      <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+                      <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+                      <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+                      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
+                    </svg>
+                  )}
+                </button>
+                <input
+                  ref={colorInputRef}
+                  type="color"
+                  value={customHex}
+                  onChange={(e) => saveCustomAccent(e.target.value)}
+                  className="sr-only"
+                  aria-label="Custom accent colour"
+                />
               </div>
             </div>
           )}

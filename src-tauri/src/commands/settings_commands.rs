@@ -14,6 +14,7 @@ const ALLOWED_SETTINGS: &[&str] = &[
     "terminal_theme",
     "terminal_cursor_style",
     "default_terminal",
+    "accent_custom_color",
 ];
 
 /// Reads a setting value directly from the db — used by commands that need
