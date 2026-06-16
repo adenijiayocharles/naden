@@ -123,6 +123,7 @@ export default function AppShell() {
   const terminalSetActive = useTerminalStore((s) => s.setActive);
   const terminalClose = useTerminalStore((s) => s.closeSession);
   const terminalReorder = useTerminalStore((s) => s.reorderSessions);
+  const terminalRename = useTerminalStore((s) => s.renameSession);
 
   const activeBroadcastGroupId = useBroadcastStore((s) => s.activeGroupId);
 
@@ -334,7 +335,7 @@ export default function AppShell() {
       <TopBar />
 
       <div className="flex flex-1 min-h-0">
-      {!sidebarCollapsed && !activeBroadcastGroupId && <Sidebar />}
+      {!sidebarCollapsed && <Sidebar />}
 
       <div className="flex flex-col flex-1 min-w-0">
         <div className="flex flex-1 min-h-0">
@@ -524,7 +525,7 @@ export default function AppShell() {
                   {terminalSessions.map((session) => (
                     <TabItem
                       key={session.id}
-                      serverName={session.serverName}
+                      serverName={session.customName ?? session.serverName}
                       statusColor={TERMINAL_STATUS_COLORS[session.status]}
                       isActive={activePanelType === "terminal" && session.id === terminalActiveId}
                       isDragging={drag?.id === session.id}
@@ -532,7 +533,9 @@ export default function AppShell() {
                       title={
                         session.status === "error" && session.errorMessage
                           ? `${session.serverName} — ${session.errorMessage}`
-                          : session.serverName
+                          : session.customName
+                            ? `${session.customName} (${session.serverName})`
+                            : session.serverName
                       }
                       closeLabel={`Close ${session.serverName}`}
                       onActivate={() => {
@@ -540,6 +543,7 @@ export default function AppShell() {
                         setActivePanelType("terminal");
                       }}
                       onClose={() => void terminalClose(session.id)}
+                      onRename={(name) => terminalRename(session.id, name)}
                       onDragStart={(e) => handleDragStart(session.id, "terminal", e)}
                       onDragOver={(e) => handleDragOver(session.id, "terminal", e)}
                       onDrop={(e) => handleDrop(session.id, "terminal", e)}

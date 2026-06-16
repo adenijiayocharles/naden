@@ -9,12 +9,16 @@ export interface TerminalSession {
   id: string;
   serverId: string;
   serverName: string;
+  customName?: string;
   status: SessionStatus;
   errorMessage?: string;
   reconnectAt?: number; // epoch ms when the auto-reconnect will fire
 }
 
 const MAX_TABS = 20;
+// Backoff delays in ms for successive reconnect attempts (5 s → 10 s → 20 s → 40 s).
+// Index 0 is the first attempt after an unexpected drop.
+const RECONNECT_DELAYS = [5_000, 10_000, 20_000, 40_000] as const;
 
 // Held outside Zustand so cleanup functions are never serialised into state
 const sessionUnlisteners = new Map<string, UnlistenFn[]>();
@@ -22,8 +26,8 @@ const sessionUnlisteners = new Map<string, UnlistenFn[]>();
 const sessionReconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
 // Sessions that reached "connected" at least once (so a later drop triggers auto-reconnect)
 const connectedSessions = new Set<string>();
-// Sessions that were opened as an auto-reconnect attempt — one shot only, close silently on failure
-const autoReconnectSessions = new Set<string>();
+// Sessions that were opened as a reconnect attempt, mapped to their attempt index (0-based)
+const autoReconnectSessions = new Map<string, number>();
 
 interface TerminalStore {
   sessions: TerminalSession[];
@@ -35,6 +39,7 @@ interface TerminalStore {
   setActive: (sessionId: string) => void;
   removeSession: (sessionId: string) => void;
   reorderSessions: (sessions: TerminalSession[]) => void;
+  renameSession: (sessionId: string, name: string) => void;
 }
 
 function teardownResources(sessionId: string) {
@@ -100,9 +105,43 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
         const session = get().sessions.find((s) => s.id === sessionId);
         if (!session) return;
 
-        // Auto-reconnect attempt ended — close silently (one shot, no retry).
+        // Reconnect attempt ended — retry with backoff or show error when exhausted.
         if (autoReconnectSessions.has(sessionId)) {
-          get().removeSession(sessionId); // teardownResources called inside
+          const attempt = autoReconnectSessions.get(sessionId)!;
+          autoReconnectSessions.delete(sessionId);
+
+          const nextAttempt = attempt + 1;
+          if (nextAttempt >= RECONNECT_DELAYS.length) {
+            set((state) => ({
+              sessions: state.sessions.map((s) =>
+                s.id === sessionId
+                  ? { ...s, status: "error", errorMessage: "Connection lost. Could not reconnect after multiple attempts." }
+                  : s,
+              ),
+            }));
+            return;
+          }
+
+          const delay = RECONNECT_DELAYS[nextAttempt];
+          const reconnectAt = Date.now() + delay;
+          set((state) => ({
+            sessions: state.sessions.map((s) =>
+              s.id === sessionId
+                ? { ...s, status: "disconnected", reconnectAt, errorMessage: undefined }
+                : s,
+            ),
+          }));
+          const retryTimer = setTimeout(async () => {
+            sessionReconnectTimers.delete(sessionId);
+            const s = get().sessions.find((s) => s.id === sessionId);
+            if (!s) return;
+            const { serverId, serverName } = s;
+            teardownResources(sessionId);
+            set((state) => dropFromState(state, sessionId));
+            const newId = await get().openSession(serverId, serverName);
+            if (newId) autoReconnectSessions.set(newId, nextAttempt);
+          }, delay);
+          sessionReconnectTimers.set(sessionId, retryTimer);
           return;
         }
 
@@ -117,7 +156,8 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
         // terminal:error also fired (error fires before closed on most drops).
         if (connectedSessions.has(sessionId)) {
           connectedSessions.delete(sessionId);
-          const reconnectAt = Date.now() + 20_000;
+          const delay = RECONNECT_DELAYS[0];
+          const reconnectAt = Date.now() + delay;
           set((state) => ({
             sessions: state.sessions.map((s) =>
               s.id === sessionId
@@ -133,8 +173,8 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
             teardownResources(sessionId);
             set((state) => dropFromState(state, sessionId));
             const newId = await get().openSession(serverId, serverName);
-            if (newId) autoReconnectSessions.add(newId);
-          }, 20_000);
+            if (newId) autoReconnectSessions.set(newId, 0);
+          }, delay);
           sessionReconnectTimers.set(sessionId, timer);
           return;
         }
@@ -209,6 +249,13 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
 
   setActive: (sessionId) => set({ activeSessionId: sessionId }),
   reorderSessions: (sessions) => set({ sessions }),
+
+  renameSession: (sessionId, name) =>
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === sessionId ? { ...s, customName: name.trim() || undefined } : s,
+      ),
+    })),
 
   removeSession: (sessionId) => {
     // Guard against double-removal (e.g. closeSession + terminal:closed race)

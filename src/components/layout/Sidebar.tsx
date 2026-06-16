@@ -9,6 +9,7 @@ import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
 import { useTunnelStore } from "../../store/tunnelStore";
+import { useBroadcastStore } from "../../store/broadcastStore";
 import VaultCountdown from "./VaultCountdown";
 import { formatError } from "../../lib/errors";
 import type { Group, Tag } from "../../types/server";
@@ -418,6 +419,12 @@ export default function Sidebar() {
   const tunnelStatuses = useTunnelStore((s) => s.statuses);
   const activeTunnels = Object.values(tunnelStatuses).filter((s) => s === "active").length;
 
+  const savedBroadcastGroups = useBroadcastStore((s) => s.savedGroups);
+  const deleteSavedBroadcastGroup = useBroadcastStore((s) => s.deleteSaved);
+  const reactivateBroadcastGroup = useBroadcastStore((s) => s.reactivateGroup);
+  const [broadcastGroupsCollapsed, setBroadcastGroupsCollapsed] = useState(false);
+  const [reactivatingGroupId, setReactivatingGroupId] = useState<string | null>(null);
+
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<Group | null>(null);
   const [confirmDeleteTag, setConfirmDeleteTag] = useState<Tag | null>(null);
@@ -644,6 +651,55 @@ export default function Sidebar() {
                 onRename={() => setRenamingTag(t)}
                 onDelete={() => setConfirmDeleteTag(t)}
               />
+            ))}
+          </div>
+        )}
+
+        {/* Broadcast Groups */}
+        {savedBroadcastGroups.length > 0 && (
+          <div className="mt-6">
+            <button
+              onClick={() => setBroadcastGroupsCollapsed((v) => !v)}
+              className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-1 w-full text-left px-3 select-none text-faint hover:text-muted transition-colors"
+            >
+              <svg
+                className={`w-2.5 h-2.5 shrink-0 transition-transform ${broadcastGroupsCollapsed ? "" : "rotate-90"}`}
+                fill="none" viewBox="0 0 6 10" stroke="currentColor" strokeWidth={1.5}
+                strokeLinecap="round" strokeLinejoin="round"
+              >
+                <polyline points="1,1 5,5 1,9" />
+              </svg>
+              Broadcast Groups
+            </button>
+            {!broadcastGroupsCollapsed && savedBroadcastGroups.map((g) => (
+              <div
+                key={g.id}
+                className="group flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-surface-2 transition-colors"
+              >
+                <svg className="w-3 h-3 shrink-0 text-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span className="flex-1 text-sm text-secondary truncate">{g.name}</span>
+                <button
+                  onClick={() => {
+                    setReactivatingGroupId(g.id);
+                    reactivateBroadcastGroup(g.id).finally(() => setReactivatingGroupId(null));
+                  }}
+                  disabled={reactivatingGroupId === g.id}
+                  title="Reconnect all servers in this group"
+                  className="opacity-0 group-hover:opacity-100 ml-1 text-xs text-accent hover:text-accent-hover transition-opacity disabled:opacity-50"
+                >
+                  {reactivatingGroupId === g.id ? "…" : "▶"}
+                </button>
+                <button
+                  onClick={() => deleteSavedBroadcastGroup(g.id).catch(() => {})}
+                  title="Remove saved group"
+                  className="opacity-0 group-hover:opacity-100 text-dim hover:text-error transition-opacity ml-0.5"
+                  aria-label="Delete broadcast group"
+                >
+                  ×
+                </button>
+              </div>
             ))}
           </div>
         )}

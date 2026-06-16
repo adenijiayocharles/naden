@@ -35,7 +35,7 @@ export default function TopBar() {
           <span className="text-sm text-secondary select-none">
             naden
             {appVersion && <span className="text-dim"> v{appVersion}</span>}
-            {activeSession ? ` — ${activeSession.serverName}` : ""}
+            {activeSession ? ` — ${'customName' in activeSession && activeSession.customName ? activeSession.customName : activeSession.serverName}` : ""}
           </span>
         </div>
 

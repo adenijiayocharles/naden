@@ -163,6 +163,10 @@ pub fn run() {
             commands::key_commands::generate_ssh_key,
             commands::key_commands::get_public_key,
             commands::key_commands::rename_ssh_key,
+            // Broadcast groups
+            commands::broadcast_commands::list_broadcast_groups,
+            commands::broadcast_commands::create_broadcast_group,
+            commands::broadcast_commands::delete_broadcast_group,
             // Port forwards
             commands::tunnel_commands::list_port_forwards,
             commands::tunnel_commands::create_port_forward,

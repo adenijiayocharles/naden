@@ -3,6 +3,7 @@ import { useServerStore } from "../store/serverStore";
 import { useVaultStore } from "../store/vaultStore";
 import { useUiStore } from "../store/uiStore";
 import { useTunnelStore } from "../store/tunnelStore";
+import { useBroadcastStore } from "../store/broadcastStore";
 import { useTerminalSettings } from "../lib/terminalSettings";
 import { settingsCommands } from "../lib/tauriCommands";
 import { promptForUpdate } from "../lib/checkForUpdates";
@@ -38,12 +39,14 @@ export function useAppInit() {
   const setOnboardingComplete = useUiStore((s) => s.setOnboardingComplete);
   const setOnboardingChecked = useUiStore((s) => s.setOnboardingChecked);
   const loadTunnels = useTunnelStore((s) => s.load);
+  const loadSavedBroadcastGroups = useBroadcastStore((s) => s.loadSaved);
 
   useEffect(() => {
     void fetchAll();
     void check();
     void loadTerminalSettings();
     void loadTunnels();
+    void loadSavedBroadcastGroups();
 
     Promise.all([
       settingsCommands.getSetting("theme"),
@@ -77,7 +80,7 @@ export function useAppInit() {
       .catch(() => {
         setOnboardingChecked();
       });
-  }, [fetchAll, check, loadTerminalSettings, loadTunnels, setOnboardingComplete, setOnboardingChecked]);
+  }, [fetchAll, check, loadTerminalSettings, loadTunnels, loadSavedBroadcastGroups, setOnboardingComplete, setOnboardingChecked]);
 
   // Schedule the startup update check once the vault is unlocked (or
   // immediately if no master password is set), then recheck periodically.

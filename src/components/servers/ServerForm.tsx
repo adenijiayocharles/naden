@@ -31,6 +31,7 @@ interface FormData {
   groupId: string;
   isJumpHost: boolean;
   jumpHostId: string;
+  initialDir: string;
 }
 
 const DEFAULT_FORM: FormData = {
@@ -43,6 +44,7 @@ const DEFAULT_FORM: FormData = {
   groupId: "",
   isJumpHost: false,
   jumpHostId: "",
+  initialDir: "",
 };
 
 export default function ServerForm() {
@@ -78,6 +80,7 @@ export default function ServerForm() {
   const [showNewGroup, setShowNewGroup] = useState(false);
   const [showGroupTags, setShowGroupTags] = useState(false);
   const [showJumpHost, setShowJumpHost] = useState(false);
+  const [showInitialDir, setShowInitialDir] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [, setTouched] = useState<Set<keyof FormData>>(new Set());
   const [submitting, setSubmitting] = useState(false);
@@ -99,15 +102,18 @@ export default function ServerForm() {
         groupId: existingServer.groupId ?? "",
         isJumpHost: existingServer.isJumpHost,
         jumpHostId: existingServer.jumpHostId ?? "",
+        initialDir: existingServer.initialDir ?? "",
       });
       setTags(existingServer.tags);
       setShowGroupTags(!!existingServer.groupId || existingServer.tags.length > 0);
       setShowJumpHost(existingServer.isJumpHost || !!existingServer.jumpHostId);
+      setShowInitialDir(!!existingServer.initialDir);
     } else {
       setForm(DEFAULT_FORM);
       setTags([]);
       setShowGroupTags(false);
       setShowJumpHost(false);
+      setShowInitialDir(false);
     }
     setErrors({});
     setTouched(new Set());
@@ -230,6 +236,8 @@ export default function ServerForm() {
       } else if (form.authMethod === "key" && passphrase.trim()) {
         freshCredentialId = await vaultCommands.storeCredential(passphrase.trim());
         vaultCredentialId = freshCredentialId;
+      } else if (form.authMethod === "agent") {
+        vaultCredentialId = undefined;
       }
 
       const payload = {
@@ -243,6 +251,7 @@ export default function ServerForm() {
         groupId: form.groupId || undefined,
         isJumpHost: form.isJumpHost,
         jumpHostId: form.jumpHostId || undefined,
+        initialDir: form.initialDir.trim() || undefined,
         tagIds: tags.map((t) => t.id),
       };
 
@@ -341,7 +350,7 @@ export default function ServerForm() {
           {/* Auth Method */}
           <Field label="Auth Method">
             <div className="flex h-10 rounded border border-stroke overflow-hidden">
-              {(["key", "password"] as const).map((method) => (
+              {(["key", "password", "agent"] as const).map((method) => (
                 <button
                   key={method}
                   type="button"
@@ -352,10 +361,15 @@ export default function ServerForm() {
                       : "bg-surface-3 text-muted hover:text-white hover:bg-surface-4"
                   }`}
                 >
-                  {method === "key" ? "SSH Key" : "Password"}
+                  {method === "key" ? "SSH Key" : method === "password" ? "Password" : "SSH Agent"}
                 </button>
               ))}
             </div>
+            {form.authMethod === "agent" && (
+              <p className="mt-1.5 text-xs text-muted">
+                Uses your running ssh-agent. Run <code className="text-accent-fg">ssh-add</code> to load keys into the agent.
+              </p>
+            )}
           </Field>
 
           {/* Password */}
@@ -656,6 +670,40 @@ export default function ServerForm() {
             − Hide jump host
           </button>
           </>
+          )}
+
+          {/* Initial Directory */}
+          {!showInitialDir && (
+            <button
+              type="button"
+              onClick={() => setShowInitialDir(true)}
+              className="block text-sm text-faint hover:text-white transition-colors"
+            >
+              + Set initial directory
+            </button>
+          )}
+          {showInitialDir && (
+            <>
+              <Field label="Initial Directory">
+                <Input
+                  id="initialDir"
+                  value={form.initialDir}
+                  onChange={set("initialDir")}
+                  placeholder="/var/www/html"
+                  autoComplete="off"
+                />
+                <p className="mt-1 text-xs text-muted">
+                  Shell will <code className="text-accent-fg">cd</code> here immediately after connecting.
+                </p>
+              </Field>
+              <button
+                type="button"
+                onClick={() => { setShowInitialDir(false); setForm((f) => ({ ...f, initialDir: "" })); }}
+                className="text-sm text-faint hover:text-white transition-colors"
+              >
+                − Clear initial directory
+              </button>
+            </>
           )}
 
           {/* Port Forwards */}

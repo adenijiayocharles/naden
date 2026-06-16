@@ -180,6 +180,7 @@ pub(crate) async fn auth_for_server(
                 passphrase: passphrase.map(Zeroizing::new),
             })
         }
+        "agent" => Ok(AuthInfo::Agent),
         _ => Err(AppError::Ssh(format!(
             "unsupported auth method: {}",
             s.auth_method
@@ -326,6 +327,7 @@ pub async fn confirm_ssh_config_import(
             group_id: None,
             is_jump_host: None,
             jump_host_id: None,
+            initial_dir: None,
             tag_ids: None,
         };
         let server = queries::create_server_db(&state.db, &payload).await?;
@@ -428,6 +430,7 @@ pub async fn open_terminal_session(
         s.username.clone(),
         auth,
         jump_chain,
+        s.initial_dir.clone(),
         Some(on_close),
         app_handle.clone(),
         keepalive_interval,

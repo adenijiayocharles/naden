@@ -16,6 +16,7 @@ fn make_server(display_name: &str, hostname: &str, tags: &[&str]) -> ServerWithT
             is_jump_host: false,
             jump_host_id: None,
             is_favourite: false,
+            initial_dir: None,
             created_at: "".to_string(),
             updated_at: "".to_string(),
         },

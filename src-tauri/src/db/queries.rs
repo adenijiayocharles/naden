@@ -138,8 +138,8 @@ pub async fn create_server_db(
         "INSERT INTO servers
          (id, display_name, hostname, port, username, auth_method,
           identity_file_path, vault_credential_id, group_id,
-          is_jump_host, jump_host_id, is_favourite, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          is_jump_host, jump_host_id, is_favourite, initial_dir, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(&payload.display_name)
@@ -153,6 +153,7 @@ pub async fn create_server_db(
     .bind(payload.is_jump_host.unwrap_or(false))
     .bind(&payload.jump_host_id)
     .bind(false) // is_favourite defaults to false on creation
+    .bind(&payload.initial_dir)
     .bind(&now)
     .bind(&now)
     .execute(db)
@@ -215,19 +216,20 @@ pub async fn update_server_db(
         .or(s.vault_credential_id.as_deref());
 
     // Normalise empty strings to NULL for nullable optional fields so callers can
-    // clear group_id / identity_file_path by sending Some("") without breaking
+    // clear group_id / identity_file_path / initial_dir by sending Some("") without breaking
     // IS NULL queries (e.g. ungrouped server lookup).
     let group_id = payload.group_id.as_deref().filter(|v| !v.is_empty());
     let identity_file_path = payload
         .identity_file_path
         .as_deref()
         .filter(|v| !v.is_empty());
+    let initial_dir = payload.initial_dir.as_deref().filter(|v| !v.is_empty());
 
     sqlx::query(
         "UPDATE servers SET
          display_name = ?, hostname = ?, port = ?, username = ?, auth_method = ?,
          identity_file_path = ?, vault_credential_id = ?, group_id = ?,
-         is_jump_host = ?, jump_host_id = ?, is_favourite = ?, updated_at = ?
+         is_jump_host = ?, jump_host_id = ?, is_favourite = ?, initial_dir = ?, updated_at = ?
          WHERE id = ?",
     )
     .bind(payload.display_name.as_deref().unwrap_or(&s.display_name))
@@ -241,6 +243,7 @@ pub async fn update_server_db(
     .bind(payload.is_jump_host.unwrap_or(s.is_jump_host))
     .bind(payload.jump_host_id.as_deref())
     .bind(payload.is_favourite.unwrap_or(s.is_favourite))
+    .bind(initial_dir)
     .bind(&now)
     .bind(id)
     .execute(&mut *tx)

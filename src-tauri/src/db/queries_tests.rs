@@ -28,6 +28,7 @@ fn payload(name: &str, host: &str) -> CreateServerPayload {
         group_id: None,
         is_jump_host: None,
         jump_host_id: None,
+        initial_dir: None,
         tag_ids: None,
     }
 }

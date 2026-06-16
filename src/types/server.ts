@@ -1,4 +1,4 @@
-export type AuthMethod = "key" | "password";
+export type AuthMethod = "key" | "password" | "agent";
 
 export interface Server {
   id: string;
@@ -13,6 +13,7 @@ export interface Server {
   isJumpHost: boolean;
   jumpHostId?: string;
   isFavourite: boolean;
+  initialDir?: string;
   tags: Tag[];
   createdAt: string;
   updatedAt: string;
@@ -43,6 +44,7 @@ export interface CreateServerPayload {
   isJumpHost?: boolean;
   jumpHostId?: string;
   isFavourite?: boolean;
+  initialDir?: string;
   tagIds?: string[];
 }
 

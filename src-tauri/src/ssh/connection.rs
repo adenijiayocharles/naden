@@ -49,6 +49,7 @@ pub enum AuthInfo {
         key_data: Zeroizing<String>,
         passphrase: Option<Zeroizing<String>>,
     },
+    Agent,
 }
 
 pub(crate) fn known_hosts_path() -> std::path::PathBuf {
@@ -239,6 +240,7 @@ impl SessionManager {
         username: String,
         auth: AuthInfo,
         jump_chain: Vec<JumpInfo>,
+        initial_dir: Option<String>,
         on_close: Option<OnCloseCallback>,
         app_handle: tauri::AppHandle,
         keepalive_interval: u32,
@@ -258,6 +260,7 @@ impl SessionManager {
                     username,
                     auth,
                     jump_chain,
+                    initial_dir,
                     on_close,
                     sid.clone(),
                     rx,
@@ -361,6 +364,34 @@ pub fn authenticate_session(
                 Err(e) => return Err(AppError::Ssh(format!("Key auth failed: {e}"))),
             }
         }
+        AuthInfo::Agent => {
+            let mut agent = session
+                .agent()
+                .map_err(|e| AppError::Ssh(format!("SSH agent init failed: {e}")))?;
+            agent.connect().map_err(|_| {
+                AppError::Ssh(
+                    "Cannot connect to ssh-agent. \
+                     Run `eval \"$(ssh-agent -s)\"` in your shell and try again."
+                        .into(),
+                )
+            })?;
+            agent
+                .list_identities()
+                .map_err(|e| AppError::Ssh(format!("SSH agent list identities failed: {e}")))?;
+            for identity in agent
+                .identities()
+                .map_err(|e| AppError::Ssh(format!("SSH agent identities error: {e}")))?
+            {
+                if agent.userauth(username, &identity).is_ok() && session.authenticated() {
+                    return Ok(());
+                }
+            }
+            return Err(AppError::Ssh(
+                "SSH agent authentication failed. \
+                 Ensure the correct key is loaded with `ssh-add`."
+                    .into(),
+            ));
+        }
     }
     Ok(())
 }
@@ -417,6 +448,7 @@ fn run_session(
     username: String,
     auth: AuthInfo,
     jump_chain: Vec<JumpInfo>,
+    initial_dir: Option<String>,
     on_close: Option<OnCloseCallback>,
     session_id: String,
     rx: std::sync::mpsc::Receiver<SessionMessage>,
@@ -461,6 +493,13 @@ fn run_session(
         channel
             .shell()
             .map_err(|e| AppError::Ssh(format!("Shell request failed: {e}")))?;
+
+        if let Some(ref dir) = initial_dir {
+            // Single-quoted to handle spaces; the shell interprets this before the
+            // prompt renders so no visible command appears in the session output.
+            let cmd = format!("cd '{}'\n", dir.replace('\'', "'\\''"));
+            let _ = channel.write_all(cmd.as_bytes());
+        }
 
         let _ = app_handle.emit(&format!("terminal:status:{session_id}"), "connected");
 

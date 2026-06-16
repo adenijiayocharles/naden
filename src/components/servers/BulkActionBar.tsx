@@ -78,7 +78,8 @@ export default function BulkActionBar() {
 
       if (sessionIds.length > 0) {
         const name = targets.length === 1 ? targets[0].displayName : `${targets.length} servers`;
-        createBroadcastGroup(name, sessionIds);
+        const serverIds = targets.map((t) => t.id);
+        await createBroadcastGroup(name, sessionIds, serverIds);
         toggleBulkMode();
       } else {
         setError("Could not open any terminal sessions");

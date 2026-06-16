@@ -382,6 +382,23 @@ export const keyCommands = {
     invoke<SshKey>("rename_ssh_key", { id, name }),
 };
 
+export interface SavedBroadcastGroup {
+  id: string;
+  name: string;
+  serverIds: string[];
+}
+
+export const broadcastCommands = {
+  listBroadcastGroups: () =>
+    invoke<SavedBroadcastGroup[]>("list_broadcast_groups"),
+
+  createBroadcastGroup: (name: string, serverIds: string[]) =>
+    invoke<SavedBroadcastGroup>("create_broadcast_group", { name, serverIds }),
+
+  deleteBroadcastGroup: (id: string) =>
+    invoke<void>("delete_broadcast_group", { id }),
+};
+
 export const tunnelCommands = {
   listPortForwards: (serverId?: string) =>
     invoke<PortForward[]>("list_port_forwards", { serverId: serverId ?? null }),
