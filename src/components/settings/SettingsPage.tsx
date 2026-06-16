@@ -16,6 +16,7 @@ import { useTerminalSettings, TERMINAL_FONTS, TERMINAL_THEMES, CURSOR_STYLES, fo
 import { settingsCommands, assistantCommands, updaterCommands, type AssistantStatus, type UpdateInfo } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import { passwordStrength } from "../../lib/passwordStrength";
+import { shiftLightness } from "../../lib/accentColor";
 
 type Section = SettingsSection;
 
@@ -274,11 +275,26 @@ export default function SettingsPage() {
     { id: "white",  base: "#ffffff", hover: "#eeeeee", dim: "#cccccc" },
   ] as const;
   type AccentId = typeof ACCENTS[number]["id"];
-  const [accentId, setAccentId] = useState<AccentId>("lime");
+  const [accentId, setAccentId] = useState<AccentId | "custom">("lime");
+  const [customHex, setCustomHex] = useState("#ffffff");
+  const colorInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    settingsCommands.getSetting("accent")
-      .then((v) => { if (v) setAccentId(v as AccentId); })
-      .catch(() => {});
+    settingsCommands.getSetting("accent").then((v) => {
+      if (!v) return;
+      if (v === "custom") {
+        setAccentId("custom");
+        settingsCommands.getSetting("accent_custom_color").then((hex) => {
+          if (!hex) return;
+          setCustomHex(hex);
+          const root = document.documentElement;
+          root.style.setProperty("--color-accent", hex);
+          root.style.setProperty("--color-accent-hover", shiftLightness(hex, 15));
+          root.style.setProperty("--color-accent-dim", shiftLightness(hex, -20));
+        }).catch(() => {});
+      } else {
+        setAccentId(v as AccentId);
+      }
+    }).catch(() => {});
   }, []);
   const saveAccent = (id: AccentId) => {
     const a = ACCENTS.find((x) => x.id === id)!;
@@ -288,6 +304,17 @@ export default function SettingsPage() {
     root.style.setProperty("--color-accent-hover", a.hover);
     root.style.setProperty("--color-accent-dim", a.dim);
     settingsCommands.setSetting("accent", id).catch(() => {});
+    flashSaved();
+  };
+  const saveCustomAccent = (hex: string) => {
+    setCustomHex(hex);
+    setAccentId("custom");
+    const root = document.documentElement;
+    root.style.setProperty("--color-accent", hex);
+    root.style.setProperty("--color-accent-hover", shiftLightness(hex, 15));
+    root.style.setProperty("--color-accent-dim", shiftLightness(hex, -20));
+    settingsCommands.setSetting("accent", "custom").catch(() => {});
+    settingsCommands.setSetting("accent_custom_color", hex).catch(() => {});
     flashSaved();
   };
 
@@ -474,7 +501,7 @@ export default function SettingsPage() {
               </div>
 
               <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Accent colour</p>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap items-center">
                 {ACCENTS.map(({ id, base }) => (
                   <button
                     key={id}
@@ -486,6 +513,32 @@ export default function SettingsPage() {
                     style={{ backgroundColor: base }}
                   />
                 ))}
+                <button
+                  onClick={() => colorInputRef.current?.click()}
+                  title="Custom colour"
+                  className={`w-7 h-7 rounded-full transition-transform hover:scale-110 flex items-center justify-center border border-stroke ${
+                    accentId === "custom" ? "ring-2 ring-white/50 scale-110" : ""
+                  }`}
+                  style={accentId === "custom" ? { backgroundColor: customHex } : {}}
+                >
+                  {accentId !== "custom" && (
+                    <svg className="w-3.5 h-3.5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+                      <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+                      <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+                      <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+                      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
+                    </svg>
+                  )}
+                </button>
+                <input
+                  ref={colorInputRef}
+                  type="color"
+                  value={customHex}
+                  onChange={(e) => saveCustomAccent(e.target.value)}
+                  className="sr-only"
+                  aria-label="Custom accent colour"
+                />
               </div>
             </div>
           )}
