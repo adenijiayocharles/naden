@@ -6,6 +6,7 @@ import { useTunnelStore } from "../store/tunnelStore";
 import { useTerminalSettings } from "../lib/terminalSettings";
 import { settingsCommands } from "../lib/tauriCommands";
 import { promptForUpdate } from "../lib/checkForUpdates";
+import { shiftLightness } from "../lib/accentColor";
 
 // Delay the startup update check, measured from when the vault unlocks, so
 // it doesn't compete with initial data loading right after launch/unlock.
@@ -47,14 +48,19 @@ export function useAppInit() {
     Promise.all([
       settingsCommands.getSetting("theme"),
       settingsCommands.getSetting("accent"),
+      settingsCommands.getSetting("accent_custom_color"),
     ])
-      .then(([theme, accent]) => {
+      .then(([theme, accent, customColor]) => {
         if (theme && theme !== "dark") {
           document.documentElement.dataset.theme = theme;
         }
-        if (accent && accent !== "lime" && ACCENTS[accent]) {
+        const root = document.documentElement;
+        if (accent === "custom" && customColor) {
+          root.style.setProperty("--color-accent", customColor);
+          root.style.setProperty("--color-accent-hover", shiftLightness(customColor, 15));
+          root.style.setProperty("--color-accent-dim", shiftLightness(customColor, -20));
+        } else if (accent && accent !== "lime" && ACCENTS[accent]) {
           const [base, hover, dim] = ACCENTS[accent];
-          const root = document.documentElement;
           root.style.setProperty("--color-accent", base);
           root.style.setProperty("--color-accent-hover", hover);
           root.style.setProperty("--color-accent-dim", dim);
