@@ -4,7 +4,7 @@ import { Button } from "../ui/button";
 interface EmptyStateProps {
   icon: React.ReactNode;
   heading: string;
-  subline?: string;
+  subline?: React.ReactNode;
   action?: { label: string; onClick: () => void };
   className?: string;
 }

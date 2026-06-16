@@ -135,7 +135,7 @@ export default function SettingsPage() {
     changePassword,
   } = useVaultStore();
   const setVaultTimeoutMins = useUiStore((s) => s.setVaultTimeoutMins);
-  const { fontSize, lineHeight, scrollback, copyOnSelect, fontFamily, termTheme, cursorStyle, setFontSize, setLineHeight, setScrollback, setCopyOnSelect, setFontFamily, setTermTheme, setCursorStyle } =
+  const { fontSize, lineHeight, scrollback, copyOnSelect, ghostSuggestions, fontFamily, termTheme, cursorStyle, setFontSize, setLineHeight, setScrollback, setCopyOnSelect, setGhostSuggestions, setFontFamily, setTermTheme, setCursorStyle } =
     useTerminalSettings();
 
   const [activeForm, setActiveForm] = useState<ActiveForm>("none");
@@ -803,6 +803,22 @@ export default function SettingsPage() {
                   onValueChange={(value) => { setCopyOnSelect(value === "on"); flashSaved(); }}
                 >
                   <SelectTrigger aria-label="Copy on select" className="h-10 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="on">On</SelectItem>
+                    <SelectItem value="off">Off</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Row>
+
+              <Row>
+                <RowLabel title="Ghost suggestions" description="Show dimmed command completions from history; accept with →" />
+                <Select
+                  value={ghostSuggestions ? "on" : "off"}
+                  onValueChange={(value) => { setGhostSuggestions(value === "on"); flashSaved(); }}
+                >
+                  <SelectTrigger aria-label="Ghost suggestions" className="h-10 shrink-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

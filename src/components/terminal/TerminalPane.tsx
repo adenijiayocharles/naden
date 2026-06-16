@@ -305,7 +305,7 @@ export default function TerminalPane({ sessionId }: Props) {
         // ghost text disappears in step. Sent directly — never broadcast —
         // because every pane's suggestion is local to its own shadow line, and
         // fanning this one out would inject the wrong text into the others.
-        if (data === "\x1b[C") {
+        if (data === "\x1b[C" && useTerminalSettings.getState().ghostSuggestions) {
           const acceptServerId = useTerminalStore.getState().sessions.find((s) => s.id === sessionId)?.serverId;
           const currentLine = shadowInputBuffer.getLine(sessionId);
           const activeSuggestion = acceptServerId && currentLine
@@ -353,6 +353,10 @@ export default function TerminalPane({ sessionId }: Props) {
       term.element?.querySelector<HTMLElement>(".xterm-screen")?.appendChild(suggestionGhost);
 
       const renderSuggestion = (line: string) => {
+        if (!useTerminalSettings.getState().ghostSuggestions) {
+          suggestionGhost.style.display = "none";
+          return;
+        }
         const serverId = useTerminalStore.getState().sessions.find((s) => s.id === sessionId)?.serverId;
         const suggestion = serverId && line ? useCommandHistoryStore.getState().suggest(serverId, line) : null;
         if (!suggestion) {
@@ -371,6 +375,13 @@ export default function TerminalPane({ sessionId }: Props) {
         suggestionGhost.style.display = "block";
       };
       const unsubscribeSuggestion = shadowInputBuffer.subscribe(sessionId, renderSuggestion);
+      let prevGhostSuggestions = useTerminalSettings.getState().ghostSuggestions;
+      const unsubscribeGhostSetting = useTerminalSettings.subscribe((state) => {
+        if (state.ghostSuggestions === prevGhostSuggestions) return;
+        prevGhostSuggestions = state.ghostSuggestions;
+        if (state.ghostSuggestions) renderSuggestion(shadowInputBuffer.getLine(sessionId));
+        else suggestionGhost.style.display = "none";
+      });
       // Incoming PTY output can scroll the cursor to a new row without any
       // keystroke (e.g. async log lines) — re-anchor the ghost so it doesn't
       // linger over what's now a stale row.
@@ -432,6 +443,7 @@ export default function TerminalPane({ sessionId }: Props) {
         unsub();
         shadowInputBuffer.detach(sessionId);
         unsubscribeSuggestion();
+        unsubscribeGhostSetting();
         cursorMoveDisposer.dispose();
         suggestionGhost.remove();
         dataDisposer.dispose();

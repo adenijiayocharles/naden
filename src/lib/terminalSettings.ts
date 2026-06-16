@@ -179,6 +179,7 @@ interface TerminalSettingsStore {
   lineHeight: number;
   scrollback: number;
   copyOnSelect: boolean;
+  ghostSuggestions: boolean;
   fontFamily: TerminalFontId;
   termTheme: TerminalThemeId;
   cursorStyle: CursorStyleId;
@@ -187,6 +188,7 @@ interface TerminalSettingsStore {
   setLineHeight: (n: number) => void;
   setScrollback: (n: number) => void;
   setCopyOnSelect: (v: boolean) => void;
+  setGhostSuggestions: (v: boolean) => void;
   setFontFamily: (id: TerminalFontId) => void;
   setTermTheme: (id: TerminalThemeId) => void;
   setCursorStyle: (id: CursorStyleId) => void;
@@ -197,16 +199,18 @@ export const useTerminalSettings = create<TerminalSettingsStore>((set) => ({
   lineHeight: 14,
   scrollback: 1000,
   copyOnSelect: true,
+  ghostSuggestions: true,
   fontFamily: "jetbrains-mono",
   termTheme: "system",
   cursorStyle: "block",
 
   load: async () => {
-    const [fs, lh, sb, cos, ff, tt, cs] = await Promise.all([
+    const [fs, lh, sb, cos, gs, ff, tt, cs] = await Promise.all([
       settingsCommands.getSetting("terminal_font_size"),
       settingsCommands.getSetting("terminal_line_height"),
       settingsCommands.getSetting("terminal_scrollback"),
       settingsCommands.getSetting("terminal_copy_on_select"),
+      settingsCommands.getSetting("terminal_ghost_suggestions"),
       settingsCommands.getSetting("terminal_font_family"),
       settingsCommands.getSetting("terminal_theme"),
       settingsCommands.getSetting("terminal_cursor_style"),
@@ -216,6 +220,7 @@ export const useTerminalSettings = create<TerminalSettingsStore>((set) => ({
       lineHeight: lh ? Number(lh) : 14,
       scrollback: sb ? Number(sb) : 1000,
       copyOnSelect: cos !== null ? cos === "true" : true,
+      ghostSuggestions: gs !== null ? gs === "true" : true,
       fontFamily: (ff as TerminalFontId | null) ?? "jetbrains-mono",
       termTheme: (tt as TerminalThemeId | null) ?? "system",
       cursorStyle: (cs as CursorStyleId | null) ?? "block",
@@ -240,6 +245,11 @@ export const useTerminalSettings = create<TerminalSettingsStore>((set) => ({
   setCopyOnSelect: (v) => {
     set({ copyOnSelect: v });
     void settingsCommands.setSetting("terminal_copy_on_select", String(v));
+  },
+
+  setGhostSuggestions: (v) => {
+    set({ ghostSuggestions: v });
+    void settingsCommands.setSetting("terminal_ghost_suggestions", String(v));
   },
 
   setFontFamily: (id) => {

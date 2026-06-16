@@ -367,7 +367,7 @@ export default function PlaybookList() {
                 </svg>
               }
               heading="No playbooks yet"
-              subline="Save ordered command sequences with {{host}}/{{username}} placeholders, and run them in one pane or fan them out across a broadcast group."
+              subline={<>Save ordered command sequences with {"{{host}}"}/{"{{username}}"} placeholders,<br />and run them in one pane or fan them out across a broadcast group.</>}
               action={{ label: "+ New Playbook", onClick: () => setCreating(true) }}
             />
           )

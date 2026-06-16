@@ -262,6 +262,9 @@ body {
    is selected. */
 .xterm {
   padding: 10px 14px;
+  /* Subpixel antialiasing (macOS default in WKWebView) makes font strokes
+     look heavier than intended. Antialiased keeps weights visually accurate. */
+  -webkit-font-smoothing: antialiased;
 }
 
 /* TerminalPane.tsx sets term.element.style.backgroundColor to the active
