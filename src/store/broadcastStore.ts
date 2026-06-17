@@ -27,7 +27,7 @@ interface BroadcastStore {
   // Pending input held back pending destructive-command confirmation
   pendingInput: string | null;
 
-  createGroup: (name: string, sessionIds: string[], serverIds?: string[]) => Promise<string>;
+  createGroup: (name: string, sessionIds: string[], serverIds?: string[], groupId?: string) => Promise<string>;
   disbandGroup: (groupId: string) => void;
   setActiveGroup: (groupId: string | null) => void;
   toggleExcluded: (sessionId: string) => void;
@@ -46,8 +46,8 @@ export const useBroadcastStore = create<BroadcastStore>((set, get) => ({
   excludedSessionIds: new Set(),
   pendingInput: null,
 
-  createGroup: async (name, sessionIds, serverIds) => {
-    const id = crypto.randomUUID();
+  createGroup: async (name, sessionIds, serverIds, groupId) => {
+    const id = groupId ?? crypto.randomUUID();
     let savedId: string | undefined;
     if (serverIds && serverIds.length > 0) {
       try {
@@ -67,11 +67,21 @@ export const useBroadcastStore = create<BroadcastStore>((set, get) => ({
   },
 
   disbandGroup: (groupId) => {
+    const group = get().groups.find((g) => g.id === groupId);
     set((state) => ({
       groups: state.groups.filter((g) => g.id !== groupId),
       activeGroupId: state.activeGroupId === groupId ? null : state.activeGroupId,
       excludedSessionIds: state.activeGroupId === groupId ? new Set() : state.excludedSessionIds,
     }));
+    // Close sessions that were opened exclusively for this group
+    if (group) {
+      const { sessions, closeSession } = useTerminalStore.getState();
+      for (const sessionId of group.sessionIds) {
+        if (sessions.find((s) => s.id === sessionId && s.broadcastGroupId === groupId)) {
+          void closeSession(sessionId);
+        }
+      }
+    }
   },
 
   setActiveGroup: (groupId) => set({ activeGroupId: groupId, excludedSessionIds: new Set() }),
@@ -124,16 +134,19 @@ export const useBroadcastStore = create<BroadcastStore>((set, get) => ({
     const servers = useServerStore.getState().servers;
     const openSession = useTerminalStore.getState().openSession;
 
+    // Generate the runtime group ID before opening sessions so each session
+    // is tagged immediately and never appears as an individual tab.
+    const runtimeId = crypto.randomUUID();
+
     const sessionIds: string[] = [];
     for (const serverId of saved.serverIds) {
       const server = servers.find((s) => s.id === serverId);
       if (!server) continue;
-      const sessionId = await openSession(server.id, server.displayName);
+      const sessionId = await openSession(server.id, server.displayName, runtimeId);
       if (sessionId) sessionIds.push(sessionId);
     }
     if (sessionIds.length === 0) return;
 
-    const runtimeId = crypto.randomUUID();
     set((state) => ({
       groups: [
         ...state.groups,

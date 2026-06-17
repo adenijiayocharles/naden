@@ -3,6 +3,7 @@ import { useServerStore } from "../../store/serverStore";
 import { useUiStore, type SortMode } from "../../store/uiStore";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
+import { useBroadcastStore } from "../../store/broadcastStore";
 import ServerCard from "./ServerCard";
 import ServerRow from "./ServerRow";
 import EmptyState from "../shared/EmptyState";
@@ -46,9 +47,30 @@ export default function ServerList() {
   const filterFavourites = useUiStore((s) => s.filterFavourites);
   const searchQuery = useUiStore((s) => s.searchQuery);
   const searchResults = useUiStore((s) => s.searchResults);
-  const hasTerminal = useTerminalStore((s) => s.sessions.length > 0);
+  const terminalSessions = useTerminalStore((s) => s.sessions);
+  const activeSessionId = useTerminalStore((s) => s.activeSessionId);
+  const hasTerminal = terminalSessions.length > 0;
   const hasSftp = useSftpStore((s) => s.sessions.length > 0);
   const hasPanel = hasTerminal || hasSftp;
+
+  const activeBroadcastGroupId = useBroadcastStore((s) => s.activeGroupId);
+  const broadcastGroups = useBroadcastStore((s) => s.groups);
+
+  const activeServerIds = useMemo(() => {
+    if (activeBroadcastGroupId) {
+      const group = broadcastGroups.find((g) => g.id === activeBroadcastGroupId);
+      // serverIds is persisted on the group; fall back to reading from sessions
+      const ids = group?.serverIds?.length
+        ? group.serverIds
+        : terminalSessions.filter((s) => s.broadcastGroupId === activeBroadcastGroupId).map((s) => s.serverId);
+      return new Set(ids);
+    }
+    if (activeSessionId) {
+      const session = terminalSessions.find((s) => s.id === activeSessionId && !s.broadcastGroupId);
+      if (session) return new Set([session.serverId]);
+    }
+    return new Set<string>();
+  }, [activeBroadcastGroupId, broadcastGroups, activeSessionId, terminalSessions]);
 
   const listClass = viewMode === "row"
     ? "border border-stroke-subtle rounded-lg"
@@ -62,6 +84,7 @@ export default function ServerList() {
         groupColor={groupColorFor(groups, s.groupId)}
         lastConnected={lastConnectedMap[s.id]}
         narrow={hasPanel}
+        isHighlighted={activeServerIds.has(s.id)}
       />
     ) : (
       <ServerCard
@@ -69,6 +92,7 @@ export default function ServerList() {
         server={s}
         groupColor={groupColorFor(groups, s.groupId)}
         lastConnected={lastConnectedMap[s.id]}
+        isHighlighted={activeServerIds.has(s.id)}
       />
     );
 

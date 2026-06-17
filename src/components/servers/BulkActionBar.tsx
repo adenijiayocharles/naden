@@ -70,16 +70,20 @@ export default function BulkActionBar() {
         .filter((s): s is NonNullable<typeof s> => !!s)
         .slice(0, MAX_BROADCAST_HOSTS);
 
+      // Pre-generate the group ID so sessions are tagged immediately on open
+      // and never appear as individual tabs during the connection loop.
+      const groupId = crypto.randomUUID();
+
       const sessionIds: string[] = [];
       for (const target of targets) {
-        const sessionId = await openTerminalSession(target.id, target.displayName);
+        const sessionId = await openTerminalSession(target.id, target.displayName, groupId);
         if (sessionId) sessionIds.push(sessionId);
       }
 
       if (sessionIds.length > 0) {
         const name = targets.length === 1 ? targets[0].displayName : `${targets.length} servers`;
         const serverIds = targets.map((t) => t.id);
-        await createBroadcastGroup(name, sessionIds, serverIds);
+        await createBroadcastGroup(name, sessionIds, serverIds, groupId);
         toggleBulkMode();
       } else {
         setError("Could not open any terminal sessions");

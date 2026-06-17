@@ -14,9 +14,10 @@ interface ServerCardProps {
   server: Server;
   groupColor?: string;
   lastConnected?: string;
+  isHighlighted?: boolean;
 }
 
-export default function ServerCard({ server, groupColor, lastConnected }: ServerCardProps) {
+export default function ServerCard({ server, groupColor, lastConnected, isHighlighted }: ServerCardProps) {
   const actions = useServerActions(server);
   const jumpHost = useServerStore((s) =>
     server.jumpHostId ? s.servers.find((sv) => sv.id === server.jumpHostId) : undefined
@@ -41,7 +42,7 @@ export default function ServerCard({ server, groupColor, lastConnected }: Server
       style={groupColor && !isSelected ? { backgroundColor: `${groupColor}18` } : undefined}
       className={`bg-surface-1 border rounded-lg p-3 flex flex-col gap-3 select-none shadow-card
         transition-[background-color,border-color,box-shadow,transform] duration-200 ease-premium
-        ${isSelected ? "border-accent/50 bg-accent/5" : "border-stroke-subtle"}
+        ${isSelected ? "border-accent/50 bg-accent/5" : isHighlighted ? "border-accent/40 bg-accent/5" : "border-stroke-subtle"}
         ${actions.connecting ? "opacity-60 cursor-wait" : "hover:border-stroke cursor-pointer hover:bg-surface-2 hover:shadow-card-hover hover:-translate-y-0.5"}`}
     >
       <div className="flex items-start gap-2">

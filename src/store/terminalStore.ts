@@ -13,6 +13,7 @@ export interface TerminalSession {
   status: SessionStatus;
   errorMessage?: string;
   reconnectAt?: number; // epoch ms when the auto-reconnect will fire
+  broadcastGroupId?: string; // if set, session lives only inside a broadcast group tab
 }
 
 const MAX_TABS = 20;
@@ -33,7 +34,7 @@ interface TerminalStore {
   sessions: TerminalSession[];
   activeSessionId: string | null;
 
-  openSession: (serverId: string, serverName: string) => Promise<string | null>;
+  openSession: (serverId: string, serverName: string, broadcastGroupId?: string) => Promise<string | null>;
   closeSession: (sessionId: string) => Promise<void>;
   reconnectSession: (sessionId: string) => Promise<void>;
   setActive: (sessionId: string) => void;
@@ -72,7 +73,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   sessions: [],
   activeSessionId: null,
 
-  openSession: async (serverId, serverName) => {
+  openSession: async (serverId, serverName, broadcastGroupId) => {
     if (get().sessions.length >= MAX_TABS) return null;
 
     // Generate the session ID here and register all listeners BEFORE invoking
@@ -135,10 +136,10 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
             sessionReconnectTimers.delete(sessionId);
             const s = get().sessions.find((s) => s.id === sessionId);
             if (!s) return;
-            const { serverId, serverName } = s;
+            const { serverId, serverName, broadcastGroupId: bgid } = s;
             teardownResources(sessionId);
             set((state) => dropFromState(state, sessionId));
-            const newId = await get().openSession(serverId, serverName);
+            const newId = await get().openSession(serverId, serverName, bgid);
             if (newId) autoReconnectSessions.set(newId, nextAttempt);
           }, delay);
           sessionReconnectTimers.set(sessionId, retryTimer);
@@ -169,10 +170,10 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
             sessionReconnectTimers.delete(sessionId);
             const s = get().sessions.find((s) => s.id === sessionId);
             if (!s) return; // user cancelled during the wait
-            const { serverId, serverName } = s;
+            const { serverId, serverName, broadcastGroupId: bgid } = s;
             teardownResources(sessionId);
             set((state) => dropFromState(state, sessionId));
-            const newId = await get().openSession(serverId, serverName);
+            const newId = await get().openSession(serverId, serverName, bgid);
             if (newId) autoReconnectSessions.set(newId, 0);
           }, delay);
           sessionReconnectTimers.set(sessionId, timer);
@@ -206,9 +207,10 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     set((state) => ({
       sessions: [
         ...state.sessions,
-        { id: sessionId, serverId, serverName, status: "connecting" },
+        { id: sessionId, serverId, serverName, status: "connecting", broadcastGroupId },
       ],
-      activeSessionId: sessionId,
+      // Broadcast-group sessions live inside the group tab — don't switch the active tab
+      activeSessionId: broadcastGroupId ? state.activeSessionId : sessionId,
     }));
 
     try {
@@ -241,10 +243,10 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   reconnectSession: async (sessionId) => {
     const session = get().sessions.find((s) => s.id === sessionId);
     if (!session) return;
-    const { serverId, serverName } = session;
+    const { serverId, serverName, broadcastGroupId } = session;
     teardownResources(sessionId);
     set((state) => dropFromState(state, sessionId));
-    await get().openSession(serverId, serverName);
+    await get().openSession(serverId, serverName, broadcastGroupId);
   },
 
   setActive: (sessionId) => set({ activeSessionId: sessionId }),

@@ -15,9 +15,10 @@ interface ServerRowProps {
   groupColor?: string;
   lastConnected?: string;
   narrow?: boolean;
+  isHighlighted?: boolean;
 }
 
-export default function ServerRow({ server, groupColor, lastConnected, narrow }: ServerRowProps) {
+export default function ServerRow({ server, groupColor, lastConnected, narrow, isHighlighted }: ServerRowProps) {
   const actions = useServerActions(server);
   const bulkMode = useUiStore((s) => s.bulkMode);
   const jumpHost = useServerStore((s) =>
@@ -41,7 +42,8 @@ export default function ServerRow({ server, groupColor, lastConnected, narrow }:
       onClick={handleClick}
       style={groupColor && !isSelected ? { backgroundColor: `${groupColor}18` } : undefined}
       className={`group flex items-center gap-3 px-3 py-2.5 border-b border-stroke-subtle last:border-b-0 first:rounded-t-lg last:rounded-b-lg select-none transition-colors
-        ${isSelected ? "bg-accent/5" : ""}
+        ${isSelected || isHighlighted ? "bg-accent/5" : ""}
+        ${isHighlighted && !isSelected ? "border-l-2 border-l-accent/60" : ""}
         ${actions.connecting ? "opacity-60 cursor-wait bg-surface-0" : "cursor-pointer hover:bg-surface-0"}`}
     >
       {bulkMode ? (

@@ -126,6 +126,9 @@ export default function AppShell() {
   const terminalRename = useTerminalStore((s) => s.renameSession);
 
   const activeBroadcastGroupId = useBroadcastStore((s) => s.activeGroupId);
+  const broadcastGroups = useBroadcastStore((s) => s.groups);
+  const disbandBroadcastGroup = useBroadcastStore((s) => s.disbandGroup);
+  const setActiveBroadcastGroup = useBroadcastStore((s) => s.setActiveGroup);
 
   const openTerminalTool = useTerminalToolsStore((s) => s.openTool);
   const toggleTerminalTool = useTerminalToolsStore((s) => s.toggleTool);
@@ -207,6 +210,11 @@ export default function AppShell() {
   const hasTerminal = terminalSessions.length > 0;
   const hasSftp = sftpSessions.length > 0;
   const hasPanel = hasTerminal || hasSftp;
+
+  const visibleTerminalSessions = useMemo(
+    () => terminalSessions.filter((s) => !s.broadcastGroupId),
+    [terminalSessions],
+  );
 
   const pickerServers = useMemo(
     () =>
@@ -342,15 +350,13 @@ export default function AppShell() {
           {/* Server list / logs / tunnels */}
           <main
             className={`shrink-0 transition-[width,padding] duration-200 ${
-              activeBroadcastGroupId
-                ? "w-0 p-0 overflow-hidden"
-                : activeView === "logs" || activeView === "snippets" || activeView === "playbooks" || activeView === "tunnels" || activeView === "settings" || activeView === "keys"
-                  ? "flex-1 overflow-hidden flex flex-col"
-                  : hasPanel
-                    ? serverListCollapsed
-                      ? "w-0 p-0 overflow-hidden"
-                      : "w-72 border-r border-stroke-subtle overflow-hidden flex flex-col"
-                    : "flex-1 overflow-hidden flex flex-col"
+              activeView === "logs" || activeView === "snippets" || activeView === "playbooks" || activeView === "tunnels" || activeView === "settings" || activeView === "keys"
+                ? "flex-1 overflow-hidden flex flex-col"
+                : hasPanel
+                  ? serverListCollapsed
+                    ? "w-0 p-0 overflow-hidden"
+                    : "w-72 border-r border-stroke-subtle overflow-hidden flex flex-col"
+                  : "flex-1 overflow-hidden flex flex-col"
             }`}
           >
             {activeView === "settings" ? (
@@ -462,7 +468,7 @@ export default function AppShell() {
           </main>
 
           {/* Collapse / expand handle */}
-          {!activeBroadcastGroupId && hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings" && activeView !== "keys" && (
+          {hasPanel && activeView !== "logs" && activeView !== "snippets" && activeView !== "playbooks" && activeView !== "tunnels" && activeView !== "settings" && activeView !== "keys" && (
             <Button
               variant="ghost"
               onClick={toggleServerList}
@@ -522,12 +528,12 @@ export default function AppShell() {
                     </div>
                   )}
                   <div ref={tabBarRef} className="flex items-center gap-1 px-2 overflow-x-auto [&::-webkit-scrollbar]:hidden">
-                  {terminalSessions.map((session) => (
+                  {visibleTerminalSessions.map((session) => (
                     <TabItem
                       key={session.id}
                       serverName={session.customName ?? session.serverName}
                       statusColor={TERMINAL_STATUS_COLORS[session.status]}
-                      isActive={activePanelType === "terminal" && session.id === terminalActiveId}
+                      isActive={!activeBroadcastGroupId && activePanelType === "terminal" && session.id === terminalActiveId}
                       isDragging={drag?.id === session.id}
                       isDragOver={dragOverId === session.id && drag?.id !== session.id}
                       title={
@@ -541,6 +547,7 @@ export default function AppShell() {
                       onActivate={() => {
                         terminalSetActive(session.id);
                         setActivePanelType("terminal");
+                        setActiveBroadcastGroup(null);
                       }}
                       onClose={() => void terminalClose(session.id)}
                       onRename={(name) => terminalRename(session.id, name)}
@@ -550,8 +557,42 @@ export default function AppShell() {
                     />
                   ))}
 
-                  {/* Separator between terminal and SFTP tab groups */}
-                  {hasTerminal && hasSftp && (
+                  {/* Broadcast group tabs — one per in-memory group, clickable to switch */}
+                  {broadcastGroups.length > 0 && (
+                    <>
+                      {visibleTerminalSessions.length > 0 && <div className="w-px h-5 bg-stroke mx-1 shrink-0" />}
+                      {broadcastGroups.map((group) => {
+                        const isActive = group.id === activeBroadcastGroupId;
+                        return (
+                          <div
+                            key={group.id}
+                            data-active={isActive ? "true" : undefined}
+                            title={`Broadcast: ${group.name}`}
+                            onClick={() => setActiveBroadcastGroup(group.id)}
+                            className={`relative flex items-center gap-2 px-4 py-2.5 rounded text-base cursor-pointer shrink-0 transition-colors duration-200 ease-premium select-none ${
+                              isActive ? "bg-surface-2 text-accent-fg" : "text-muted hover:text-white hover:bg-surface-2"
+                            }`}
+                          >
+                            {isActive && <span aria-hidden="true" className="absolute inset-x-3 bottom-0.5 h-0.5 rounded-full bg-accent" />}
+                            <span className="inline-block w-2 h-2 rounded-full shrink-0 bg-yellow-500" />
+                            <span className="max-w-[120px] truncate">{group.name}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              onClick={(e) => { e.stopPropagation(); disbandBroadcastGroup(group.id); }}
+                              className="text-faint hover:text-white ml-1 leading-none text-base"
+                              aria-label={`Exit broadcast: ${group.name}`}
+                            >
+                              ×
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {/* Separator between terminal/broadcast side and SFTP tab groups */}
+                  {(visibleTerminalSessions.length > 0 || broadcastGroups.length > 0) && hasSftp && (
                     <div className="w-px h-5 bg-stroke mx-1 shrink-0" />
                   )}
 
@@ -560,7 +601,7 @@ export default function AppShell() {
                       key={session.id}
                       serverName={session.serverName}
                       statusColor={SFTP_STATUS_COLORS[session.status]}
-                      isActive={activePanelType === "sftp" && session.id === sftpActiveId}
+                      isActive={!activeBroadcastGroupId && activePanelType === "sftp" && session.id === sftpActiveId}
                       isDragging={drag?.id === session.id}
                       isDragOver={dragOverId === session.id && drag?.id !== session.id}
                       title={session.serverName}
@@ -569,6 +610,7 @@ export default function AppShell() {
                       onActivate={() => {
                         sftpSetActive(session.id);
                         setActivePanelType("sftp");
+                        setActiveBroadcastGroup(null);
                       }}
                       onClose={() => void sftpClose(session.id)}
                       onDragStart={(e) => handleDragStart(session.id, "sftp", e)}
@@ -636,6 +678,7 @@ export default function AppShell() {
                                 if (id === null) {
                                   setPickerError("Maximum terminal sessions (20) reached");
                                 } else {
+                                  setActiveBroadcastGroup(null);
                                   setShowNewTabPicker(false);
                                   setPickerQuery("");
                                   setPickerError(null);
@@ -656,7 +699,7 @@ export default function AppShell() {
                 </div>
 
                 {/* AI assistant, playbook, and snippet picker triggers for the active terminal session */}
-                {activePanelType === "terminal" && terminalActiveId && (
+                {!activeBroadcastGroupId && activePanelType === "terminal" && terminalActiveId && (
                   <div className="px-1.5 shrink-0 border-l border-stroke-subtle flex items-center gap-0.5">
                     <Button
                       variant="ghost"
@@ -720,7 +763,7 @@ export default function AppShell() {
                 )}
 
                 {/* Open SFTP browser for the active terminal session */}
-                {activePanelType === "terminal" && terminalActiveId && (
+                {!activeBroadcastGroupId && activePanelType === "terminal" && terminalActiveId && (
                   <div className="px-1.5 shrink-0 border-l border-stroke-subtle">
                     <Button
                       variant="ghost"
