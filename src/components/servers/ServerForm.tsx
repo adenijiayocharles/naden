@@ -21,6 +21,8 @@ import {
 } from "../ui/select";
 import PortForwardsSection from "./PortForwardsSection";
 
+interface EnvVar { key: string; value: string; }
+
 interface FormData {
   displayName: string;
   hostname: string;
@@ -32,6 +34,8 @@ interface FormData {
   isJumpHost: boolean;
   jumpHostId: string;
   initialDir: string;
+  preConnectHook: string;
+  postDisconnectHook: string;
 }
 
 const DEFAULT_FORM: FormData = {
@@ -45,6 +49,8 @@ const DEFAULT_FORM: FormData = {
   isJumpHost: false,
   jumpHostId: "",
   initialDir: "",
+  preConnectHook: "",
+  postDisconnectHook: "",
 };
 
 export default function ServerForm() {
@@ -81,6 +87,9 @@ export default function ServerForm() {
   const [showGroupTags, setShowGroupTags] = useState(false);
   const [showJumpHost, setShowJumpHost] = useState(false);
   const [showInitialDir, setShowInitialDir] = useState(false);
+  const [envVars, setEnvVars] = useState<EnvVar[]>([]);
+  const [showEnvVars, setShowEnvVars] = useState(false);
+  const [showHooks, setShowHooks] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [, setTouched] = useState<Set<keyof FormData>>(new Set());
   const [submitting, setSubmitting] = useState(false);
@@ -92,6 +101,10 @@ export default function ServerForm() {
 
   useEffect(() => {
     if (existingServer) {
+      const parsedEnvVars: EnvVar[] = (() => {
+        try { return existingServer.envVars ? JSON.parse(existingServer.envVars) : []; }
+        catch { return []; }
+      })();
       setForm({
         displayName: existingServer.displayName,
         hostname: existingServer.hostname,
@@ -103,17 +116,25 @@ export default function ServerForm() {
         isJumpHost: existingServer.isJumpHost,
         jumpHostId: existingServer.jumpHostId ?? "",
         initialDir: existingServer.initialDir ?? "",
+        preConnectHook: existingServer.preConnectHook ?? "",
+        postDisconnectHook: existingServer.postDisconnectHook ?? "",
       });
+      setEnvVars(parsedEnvVars);
       setTags(existingServer.tags);
       setShowGroupTags(!!existingServer.groupId || existingServer.tags.length > 0);
       setShowJumpHost(existingServer.isJumpHost || !!existingServer.jumpHostId);
       setShowInitialDir(!!existingServer.initialDir);
+      setShowEnvVars(parsedEnvVars.length > 0);
+      setShowHooks(!!(existingServer.preConnectHook || existingServer.postDisconnectHook));
     } else {
       setForm(DEFAULT_FORM);
+      setEnvVars([]);
       setTags([]);
       setShowGroupTags(false);
       setShowJumpHost(false);
       setShowInitialDir(false);
+      setShowEnvVars(false);
+      setShowHooks(false);
     }
     setErrors({});
     setTouched(new Set());
@@ -240,6 +261,7 @@ export default function ServerForm() {
         vaultCredentialId = undefined;
       }
 
+      const validEnvVars = envVars.filter((v) => v.key.trim());
       const payload = {
         displayName: form.displayName.trim(),
         hostname: form.hostname.trim(),
@@ -252,6 +274,9 @@ export default function ServerForm() {
         isJumpHost: form.isJumpHost,
         jumpHostId: form.jumpHostId || undefined,
         initialDir: form.initialDir.trim() || undefined,
+        envVars: validEnvVars.length > 0 ? JSON.stringify(validEnvVars) : undefined,
+        preConnectHook: form.preConnectHook.trim() || undefined,
+        postDisconnectHook: form.postDisconnectHook.trim() || undefined,
         tagIds: tags.map((t) => t.id),
       };
 
@@ -702,6 +727,124 @@ export default function ServerForm() {
                 className="text-sm text-faint hover:text-white transition-colors"
               >
                 − Clear initial directory
+              </button>
+            </>
+          )}
+
+          {/* Environment Variables */}
+          {!showEnvVars && (
+            <button
+              type="button"
+              onClick={() => setShowEnvVars(true)}
+              className="block text-sm text-faint hover:text-white transition-colors"
+            >
+              + Set environment variables
+            </button>
+          )}
+          {showEnvVars && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-secondary mb-1">
+                  Environment Variables
+                </label>
+                <p className="text-xs text-muted mb-2">
+                  Exported to the shell immediately after connecting.
+                </p>
+                <div className="space-y-1.5">
+                  {envVars.map((v, i) => (
+                    <div key={i} className="flex gap-1.5 items-center">
+                      <Input
+                        value={v.key}
+                        onChange={(e) => setEnvVars((prev) => prev.map((ev, j) => j === i ? { ...ev, key: e.target.value } : ev))}
+                        placeholder="KEY"
+                        className="w-32 shrink-0 font-mono text-xs h-8"
+                        autoComplete="off"
+                        spellCheck={false}
+                      />
+                      <span className="text-dim text-xs shrink-0">=</span>
+                      <Input
+                        value={v.value}
+                        onChange={(e) => setEnvVars((prev) => prev.map((ev, j) => j === i ? { ...ev, value: e.target.value } : ev))}
+                        placeholder="value"
+                        className="flex-1 font-mono text-xs h-8"
+                        autoComplete="off"
+                        spellCheck={false}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setEnvVars((prev) => prev.filter((_, j) => j !== i))}
+                        className="text-dim hover:text-red-400 transition-colors shrink-0 text-sm leading-none px-1"
+                        title="Remove"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setEnvVars((prev) => [...prev, { key: "", value: "" }])}
+                    className="h-7 text-xs px-3 mt-1"
+                  >
+                    + Add variable
+                  </Button>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowEnvVars(false); setEnvVars([]); }}
+                className="text-sm text-faint hover:text-white transition-colors"
+              >
+                − Clear environment variables
+              </button>
+            </>
+          )}
+
+          {/* Connection Hooks */}
+          {!showHooks && (
+            <button
+              type="button"
+              onClick={() => setShowHooks(true)}
+              className="block text-sm text-faint hover:text-white transition-colors"
+            >
+              + Add connection hooks
+            </button>
+          )}
+          {showHooks && (
+            <>
+              <Field label="Pre-connect Hook">
+                <textarea
+                  value={form.preConnectHook}
+                  onChange={set("preConnectHook")}
+                  placeholder={"#!/bin/sh\n# Runs locally before connecting\naws sso login --profile prod"}
+                  rows={3}
+                  spellCheck={false}
+                  className="w-full rounded-md border border-stroke bg-surface-2 px-3 py-2 text-xs font-mono text-white placeholder-[#555] focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+                />
+                <p className="mt-1 text-xs text-muted">
+                  Runs locally before the SSH connection. Non-zero exit cancels the connection.
+                  Env: <code className="text-accent-fg">SSHELTER_HOST</code>, <code className="text-accent-fg">SSHELTER_PORT</code>, <code className="text-accent-fg">SSHELTER_USER</code>.
+                </p>
+              </Field>
+              <Field label="Post-disconnect Hook">
+                <textarea
+                  value={form.postDisconnectHook}
+                  onChange={set("postDisconnectHook")}
+                  placeholder={"#!/bin/sh\n# Runs locally after session ends\nnotify-send \"Disconnected from $SSHELTER_HOST\""}
+                  rows={3}
+                  spellCheck={false}
+                  className="w-full rounded-md border border-stroke bg-surface-2 px-3 py-2 text-xs font-mono text-white placeholder-[#555] focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+                />
+                <p className="mt-1 text-xs text-muted">
+                  Runs locally after disconnect. Spawned in the background — does not block cleanup.
+                </p>
+              </Field>
+              <button
+                type="button"
+                onClick={() => { setShowHooks(false); setForm((f) => ({ ...f, preConnectHook: "", postDisconnectHook: "" })); }}
+                className="text-sm text-faint hover:text-white transition-colors"
+              >
+                − Clear connection hooks
               </button>
             </>
           )}

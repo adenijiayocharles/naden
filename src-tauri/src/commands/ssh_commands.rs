@@ -328,6 +328,9 @@ pub async fn confirm_ssh_config_import(
             is_jump_host: None,
             jump_host_id: None,
             initial_dir: None,
+            env_vars: None,
+            pre_connect_hook: None,
+            post_disconnect_hook: None,
             tag_ids: None,
         };
         let server = queries::create_server_db(&state.db, &payload).await?;
@@ -423,6 +426,30 @@ pub async fn open_terminal_session(
         });
     });
 
+    // Run pre-connect hook synchronously; non-zero exit blocks the connection.
+    if let Some(ref hook) = s.pre_connect_hook {
+        let hook = hook.trim().to_string();
+        if !hook.is_empty() {
+            let status = tokio::process::Command::new("sh")
+                .arg("-c")
+                .arg(&hook)
+                .env("SSHELTER_HOST", &s.hostname)
+                .env("SSHELTER_PORT", s.port.to_string())
+                .env("SSHELTER_USER", &s.username)
+                .env("SSHELTER_SERVER_ID", &server_id)
+                .kill_on_drop(true)
+                .status()
+                .await
+                .map_err(|e| AppError::Ssh(format!("pre-connect hook failed to spawn: {e}")))?;
+            if !status.success() {
+                return Err(AppError::Ssh(format!(
+                    "pre-connect hook exited with code {}",
+                    status.code().unwrap_or(-1)
+                )));
+            }
+        }
+    }
+
     state.session_manager.open_session(
         session_id,
         s.hostname.clone(),
@@ -431,6 +458,8 @@ pub async fn open_terminal_session(
         auth,
         jump_chain,
         s.initial_dir.clone(),
+        s.env_vars.clone(),
+        s.post_disconnect_hook.clone(),
         Some(on_close),
         app_handle.clone(),
         keepalive_interval,

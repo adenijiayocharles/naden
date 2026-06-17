@@ -138,8 +138,10 @@ pub async fn create_server_db(
         "INSERT INTO servers
          (id, display_name, hostname, port, username, auth_method,
           identity_file_path, vault_credential_id, group_id,
-          is_jump_host, jump_host_id, is_favourite, initial_dir, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          is_jump_host, jump_host_id, is_favourite, initial_dir,
+          env_vars, pre_connect_hook, post_disconnect_hook,
+          created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(&payload.display_name)
@@ -154,6 +156,9 @@ pub async fn create_server_db(
     .bind(&payload.jump_host_id)
     .bind(false) // is_favourite defaults to false on creation
     .bind(&payload.initial_dir)
+    .bind(&payload.env_vars)
+    .bind(&payload.pre_connect_hook)
+    .bind(&payload.post_disconnect_hook)
     .bind(&now)
     .bind(&now)
     .execute(db)
@@ -224,12 +229,16 @@ pub async fn update_server_db(
         .as_deref()
         .filter(|v| !v.is_empty());
     let initial_dir = payload.initial_dir.as_deref().filter(|v| !v.is_empty());
+    let env_vars = payload.env_vars.as_deref().filter(|v| !v.is_empty());
+    let pre_connect_hook = payload.pre_connect_hook.as_deref().filter(|v| !v.is_empty());
+    let post_disconnect_hook = payload.post_disconnect_hook.as_deref().filter(|v| !v.is_empty());
 
     sqlx::query(
         "UPDATE servers SET
          display_name = ?, hostname = ?, port = ?, username = ?, auth_method = ?,
          identity_file_path = ?, vault_credential_id = ?, group_id = ?,
-         is_jump_host = ?, jump_host_id = ?, is_favourite = ?, initial_dir = ?, updated_at = ?
+         is_jump_host = ?, jump_host_id = ?, is_favourite = ?, initial_dir = ?,
+         env_vars = ?, pre_connect_hook = ?, post_disconnect_hook = ?, updated_at = ?
          WHERE id = ?",
     )
     .bind(payload.display_name.as_deref().unwrap_or(&s.display_name))
@@ -244,6 +253,9 @@ pub async fn update_server_db(
     .bind(payload.jump_host_id.as_deref())
     .bind(payload.is_favourite.unwrap_or(s.is_favourite))
     .bind(initial_dir)
+    .bind(env_vars.or(s.env_vars.as_deref()))
+    .bind(pre_connect_hook.or(s.pre_connect_hook.as_deref()))
+    .bind(post_disconnect_hook.or(s.post_disconnect_hook.as_deref()))
     .bind(&now)
     .bind(id)
     .execute(&mut *tx)

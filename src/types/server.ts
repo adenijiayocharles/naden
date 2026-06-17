@@ -14,6 +14,9 @@ export interface Server {
   jumpHostId?: string;
   isFavourite: boolean;
   initialDir?: string;
+  envVars?: string;
+  preConnectHook?: string;
+  postDisconnectHook?: string;
   tags: Tag[];
   createdAt: string;
   updatedAt: string;
@@ -45,6 +48,9 @@ export interface CreateServerPayload {
   jumpHostId?: string;
   isFavourite?: boolean;
   initialDir?: string;
+  envVars?: string;
+  preConnectHook?: string;
+  postDisconnectHook?: string;
   tagIds?: string[];
 }
 

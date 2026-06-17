@@ -141,6 +141,9 @@ pub async fn duplicate_server(
         is_jump_host: Some(s.is_jump_host),
         jump_host_id: s.jump_host_id.clone(),
         initial_dir: s.initial_dir.clone(),
+        env_vars: s.env_vars.clone(),
+        pre_connect_hook: s.pre_connect_hook.clone(),
+        post_disconnect_hook: s.post_disconnect_hook.clone(),
         tag_ids: Some(original.tags.iter().map(|t| t.id.clone()).collect()),
     };
     let result = queries::create_server_db(&state.db, &payload).await?;

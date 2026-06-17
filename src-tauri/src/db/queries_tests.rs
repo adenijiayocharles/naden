@@ -29,6 +29,9 @@ fn payload(name: &str, host: &str) -> CreateServerPayload {
         is_jump_host: None,
         jump_host_id: None,
         initial_dir: None,
+        env_vars: None,
+        pre_connect_hook: None,
+        post_disconnect_hook: None,
         tag_ids: None,
     }
 }

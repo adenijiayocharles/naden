@@ -16,6 +16,9 @@ pub struct Server {
     pub jump_host_id: Option<String>,
     pub is_favourite: bool,
     pub initial_dir: Option<String>,
+    pub env_vars: Option<String>,
+    pub pre_connect_hook: Option<String>,
+    pub post_disconnect_hook: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -60,6 +63,9 @@ pub struct CreateServerPayload {
     pub is_jump_host: Option<bool>,
     pub jump_host_id: Option<String>,
     pub initial_dir: Option<String>,
+    pub env_vars: Option<String>,
+    pub pre_connect_hook: Option<String>,
+    pub post_disconnect_hook: Option<String>,
     pub tag_ids: Option<Vec<String>>,
 }
 
@@ -79,6 +85,9 @@ pub struct UpdateServerPayload {
     pub jump_host_id: Option<String>,
     pub is_favourite: Option<bool>,
     pub initial_dir: Option<String>,
+    pub env_vars: Option<String>,
+    pub pre_connect_hook: Option<String>,
+    pub post_disconnect_hook: Option<String>,
     /// When Some, replaces the full tag list. Some(vec![]) clears all tags.
     pub tag_ids: Option<Vec<String>>,
 }

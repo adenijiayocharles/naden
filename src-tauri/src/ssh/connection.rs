@@ -9,6 +9,18 @@ use zeroize::Zeroizing;
 use crate::error::AppError;
 use crate::ssh::jump_host::{self, JumpInfo};
 
+#[derive(serde::Deserialize)]
+struct EnvVar {
+    key: String,
+    value: String,
+}
+
+fn is_valid_env_key(key: &str) -> bool {
+    !key.is_empty()
+        && !key.starts_with(|c: char| c.is_ascii_digit())
+        && key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
+
 const CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
 /// Try every address returned by DNS; succeed on the first that connects.
@@ -241,6 +253,8 @@ impl SessionManager {
         auth: AuthInfo,
         jump_chain: Vec<JumpInfo>,
         initial_dir: Option<String>,
+        env_vars: Option<String>,
+        post_disconnect_hook: Option<String>,
         on_close: Option<OnCloseCallback>,
         app_handle: tauri::AppHandle,
         keepalive_interval: u32,
@@ -261,6 +275,8 @@ impl SessionManager {
                     auth,
                     jump_chain,
                     initial_dir,
+                    env_vars,
+                    post_disconnect_hook,
                     on_close,
                     sid.clone(),
                     rx,
@@ -449,6 +465,8 @@ fn run_session(
     auth: AuthInfo,
     jump_chain: Vec<JumpInfo>,
     initial_dir: Option<String>,
+    env_vars: Option<String>,
+    post_disconnect_hook: Option<String>,
     on_close: Option<OnCloseCallback>,
     session_id: String,
     rx: std::sync::mpsc::Receiver<SessionMessage>,
@@ -499,6 +517,19 @@ fn run_session(
             // prompt renders so no visible command appears in the session output.
             let cmd = format!("cd '{}'\n", dir.replace('\'', "'\\''"));
             let _ = channel.write_all(cmd.as_bytes());
+        }
+
+        // Export per-server env vars before the prompt appears.
+        let parsed_vars: Vec<EnvVar> = env_vars
+            .as_deref()
+            .and_then(|s| serde_json::from_str(s).ok())
+            .unwrap_or_default();
+        for var in &parsed_vars {
+            if is_valid_env_key(&var.key) {
+                let escaped = var.value.replace('\'', "'\\''");
+                let cmd = format!("export {}='{}'\n", var.key, escaped);
+                let _ = channel.write_all(cmd.as_bytes());
+            }
         }
 
         let _ = app_handle.emit(&format!("terminal:status:{session_id}"), "connected");
@@ -617,6 +648,26 @@ fn run_session(
 
     if let Some(cb) = on_close {
         cb(outcome, error_msg.clone());
+    }
+
+    // Fire-and-forget: spawn post-disconnect hook in background so session
+    // cleanup is not blocked. The hook receives context via env vars.
+    if let Some(hook) = post_disconnect_hook {
+        let hook = hook.trim().to_string();
+        if !hook.is_empty() {
+            let h = host.clone();
+            let u = username.clone();
+            let p = port;
+            std::thread::spawn(move || {
+                let _ = std::process::Command::new("sh")
+                    .arg("-c")
+                    .arg(&hook)
+                    .env("SSHELTER_HOST", &h)
+                    .env("SSHELTER_PORT", p.to_string())
+                    .env("SSHELTER_USER", &u)
+                    .spawn();
+            });
+        }
     }
 
     if let Some(msg) = error_msg {
