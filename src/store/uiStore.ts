@@ -15,6 +15,7 @@ interface UiStore {
   serverListCollapsed: boolean;
   importSshConfigOpen: boolean;
   discoverHostsOpen: boolean;
+  paletteOpen: boolean;
   onboardingComplete: boolean;
   onboardingChecked: boolean;
   editingServerId: string | null;
@@ -38,6 +39,8 @@ interface UiStore {
   openKeys: () => void;
   closeForm: () => void;
   openSettings: (section?: SettingsSection) => void;
+  openPalette: () => void;
+  closePalette: () => void;
   openImportSshConfig: () => void;
   closeImportSshConfig: () => void;
   openDiscoverHosts: () => void;
@@ -74,6 +77,7 @@ export const useUiStore = create<UiStore>((set) => ({
   serverListCollapsed: false,
   importSshConfigOpen: false,
   discoverHostsOpen: false,
+  paletteOpen: false,
   onboardingComplete: true, // assume complete until checked
   onboardingChecked: false,
   editingServerId: null,
@@ -97,6 +101,8 @@ export const useUiStore = create<UiStore>((set) => ({
   openKeys: () => set({ activeView: "keys", editingServerId: null }),
   closeForm: () => set({ activeView: "list", editingServerId: null }),
   openSettings: (section) => set({ activeView: "settings", editingServerId: null, ...(section ? { settingsSection: section } : {}) }),
+  openPalette: () => set({ paletteOpen: true }),
+  closePalette: () => set({ paletteOpen: false }),
   openImportSshConfig: () => set({ importSshConfigOpen: true }),
   closeImportSshConfig: () => set({ importSshConfigOpen: false }),
   openDiscoverHosts: () => set({ discoverHostsOpen: true }),

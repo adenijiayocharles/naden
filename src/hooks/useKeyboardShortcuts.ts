@@ -4,6 +4,7 @@ import { useUiStore } from "../store/uiStore";
 export function useKeyboardShortcuts() {
   const openAdd = useUiStore((s) => s.openAdd);
   const openSettings = useUiStore((s) => s.openSettings);
+  const openPalette = useUiStore((s) => s.openPalette);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -12,7 +13,7 @@ export function useKeyboardShortcuts() {
       switch (e.key) {
         case "k":
           e.preventDefault();
-          document.querySelector<HTMLInputElement>("[data-search-input]")?.focus();
+          openPalette();
           break;
         case "n":
           e.preventDefault();
@@ -24,7 +25,7 @@ export function useKeyboardShortcuts() {
           break;
       }
     },
-    [openAdd, openSettings],
+    [openAdd, openSettings, openPalette],
   );
 
   useEffect(() => {

@@ -52,6 +52,7 @@ const SnippetList = lazy(() => import("../snippets/SnippetList"));
 const PlaybookList = lazy(() => import("../playbooks/PlaybookList"));
 const TunnelPanel = lazy(() => import("../tunnels/TunnelPanel"));
 const KeysView = lazy(() => import("../keys/KeysView"));
+const CommandPalette = lazy(() => import("./CommandPalette"));
 
 type PanelType = "terminal" | "sftp";
 
@@ -111,6 +112,8 @@ export default function AppShell() {
   const onboardingComplete = useUiStore((s) => s.onboardingComplete);
   const onboardingChecked = useUiStore((s) => s.onboardingChecked);
   const setOnboardingComplete = useUiStore((s) => s.setOnboardingComplete);
+  const paletteOpen = useUiStore((s) => s.paletteOpen);
+  const closePalette = useUiStore((s) => s.closePalette);
   const importSshConfigOpen = useUiStore((s) => s.importSshConfigOpen);
   const closeImportSshConfig = useUiStore((s) => s.closeImportSshConfig);
   const discoverHostsOpen = useUiStore((s) => s.discoverHostsOpen);
@@ -405,11 +408,7 @@ export default function AppShell() {
                       value={searchQuery}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="Search…"
-                      className="pr-10"
                     />
-                    {!searchQuery && (
-                      <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-dim pointer-events-none select-none">⌘K</kbd>
-                    )}
                   </div>
                   {!(hasPanel && !serverListCollapsed) && (
                     <>
@@ -845,6 +844,16 @@ export default function AppShell() {
         )}
         {importSshConfigOpen && <SshConfigImport onClose={closeImportSshConfig} />}
         {discoverHostsOpen && <DiscoverHosts onClose={closeDiscoverHosts} />}
+        {paletteOpen && (
+          <CommandPalette
+            onActivateSession={(sessionId) => {
+              closePalette();
+              terminalSetActive(sessionId);
+              setActiveBroadcastGroup(null);
+              setActivePanelType("terminal");
+            }}
+          />
+        )}
       </Suspense>
     </div>
   );

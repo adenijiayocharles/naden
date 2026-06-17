@@ -246,7 +246,7 @@ body {
     --color-warning-border: #fde68a;
   }
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-none;
   }
   body {
     @apply bg-background text-foreground;
@@ -308,14 +308,6 @@ body {
   color: var(--color-dim);
 }
 
-/* Visible focus ring for keyboard navigation (WCAG 2.4.7).
-   box-shadow approach avoids layout shifts and works inside overflow:hidden. */
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent-fg) 30%, transparent);
-}
-
 button:not(:disabled),
 [role="button"]:not([aria-disabled="true"]) {
   cursor: pointer;
@@ -326,8 +318,7 @@ button:disabled {
 }
 
 button:focus-visible {
-  outline: 2px solid var(--color-accent-dim);
-  outline-offset: 2px;
+  outline: none;
 }
 
 @keyframes progress-slide {
