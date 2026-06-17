@@ -662,9 +662,9 @@ fn run_session(
                 let _ = std::process::Command::new("sh")
                     .arg("-c")
                     .arg(&hook)
-                    .env("SSHELTER_HOST", &h)
-                    .env("SSHELTER_PORT", p.to_string())
-                    .env("SSHELTER_USER", &u)
+                    .env("NADEN_HOST", &h)
+                    .env("NADEN_PORT", p.to_string())
+                    .env("NADEN_USER", &u)
                     .spawn();
             });
         }
