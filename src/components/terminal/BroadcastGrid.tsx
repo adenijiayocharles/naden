@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { terminalCommands } from "../../lib/tauriCommands";
 import { useBroadcastStore } from "../../store/broadcastStore";
 import { useTerminalStore } from "../../store/terminalStore";
+import type { TerminalSession } from "../../store/terminalStore";
 import { usePlaybookStore } from "../../store/playbookStore";
 import { usePlaybookRunStore } from "../../store/playbookRunStore";
 import { useServerStore } from "../../store/serverStore";
@@ -9,7 +10,6 @@ import { resolvePlaybookStep } from "../../lib/playbookVariables";
 import TerminalPane from "./TerminalPane";
 import BroadcastGuardBar from "./BroadcastGuardBar";
 import PlaybookRunBar from "./PlaybookRunBar";
-import type { TerminalSession } from "../../store/terminalStore";
 import type { Playbook } from "../../types/playbook";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -47,9 +47,9 @@ export default function BroadcastGrid({ groupId }: Props) {
   const playbookButtonRef = useRef<HTMLButtonElement>(null);
 
   const panes = useMemo(
-    () => group?.sessionIds.map((id) => sessions.find((s) => s.id === id)).filter(Boolean) ?? [],
-    [group, sessions],
-  ) as TerminalSession[];
+    () => sessions.filter((s) => s.broadcastGroupId === groupId),
+    [sessions, groupId],
+  );
 
   const filteredPlaybooks = useMemo(() => {
     if (!playbookQuery.trim()) return playbooks;

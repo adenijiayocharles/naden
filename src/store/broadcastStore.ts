@@ -67,20 +67,16 @@ export const useBroadcastStore = create<BroadcastStore>((set, get) => ({
   },
 
   disbandGroup: (groupId) => {
-    const group = get().groups.find((g) => g.id === groupId);
     set((state) => ({
       groups: state.groups.filter((g) => g.id !== groupId),
       activeGroupId: state.activeGroupId === groupId ? null : state.activeGroupId,
       excludedSessionIds: state.activeGroupId === groupId ? new Set() : state.excludedSessionIds,
     }));
-    // Close sessions that were opened exclusively for this group
-    if (group) {
-      const { sessions, closeSession } = useTerminalStore.getState();
-      for (const sessionId of group.sessionIds) {
-        if (sessions.find((s) => s.id === sessionId && s.broadcastGroupId === groupId)) {
-          void closeSession(sessionId);
-        }
-      }
+    // Close all sessions carrying this group's ID — covers reconnected sessions
+    // whose IDs are no longer in the original group.sessionIds list
+    const { sessions, closeSession } = useTerminalStore.getState();
+    for (const session of sessions) {
+      if (session.broadcastGroupId === groupId) void closeSession(session.id);
     }
   },
 
@@ -162,10 +158,9 @@ async function sendToGroup(state: BroadcastStore, data: string) {
   const group = state.groups.find((g) => g.id === state.activeGroupId);
   if (!group) return;
 
-  const liveSessionIds = new Set(useTerminalStore.getState().sessions.map((s) => s.id));
-  const targets = group.sessionIds.filter(
-    (id) => liveSessionIds.has(id) && !state.excludedSessionIds.has(id),
+  const targets = useTerminalStore.getState().sessions.filter(
+    (s) => s.broadcastGroupId === group.id && !state.excludedSessionIds.has(s.id),
   );
 
-  await Promise.all(targets.map((id) => terminalCommands.sendTerminalInput(id, data)));
+  await Promise.all(targets.map((s) => terminalCommands.sendTerminalInput(s.id, data)));
 }
