@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { homeDir, join } from "@tauri-apps/api/path";
 import { useSshKeyStore } from "../../store/sshKeyStore";
+import { useServerStore } from "../../store/serverStore";
 import { clipboardCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import type { SshKey } from "../../types/sshKey";
@@ -264,6 +265,85 @@ function GenerateKeyModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ── View Public Key modal ─────────────────────────────────────────────────────
+
+function ViewPublicKeyModal({ sshKey, onClose }: { sshKey: SshKey; onClose: () => void }) {
+  const getPublicKey = useSshKeyStore((s) => s.getPublicKey);
+  const [pubKey, setPubKey] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  useEffect(() => {
+    getPublicKey(sshKey.id)
+      .then(setPubKey)
+      .catch((e: unknown) => setError(formatError(e)));
+  }, [sshKey.id, getPublicKey]);
+
+  const copy = async () => {
+    if (!pubKey) return;
+    await clipboardCommands.writeText(pubKey.trim());
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 animate-backdrop-in"
+      onClick={onClose}
+    >
+      <div
+        className="bg-surface-2 border border-stroke rounded-xl shadow-overlay animate-overlay-in w-full max-w-lg mx-4 p-6 flex flex-col gap-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-title text-white">Public Key</h2>
+            <p className="text-xs text-faint mt-0.5 font-mono">{sshKey.keyPath}.pub</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-faint hover:text-white p-1 rounded transition-colors shrink-0"
+            aria-label="Close"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
+              <path d="M2 2l12 12M14 2L2 14" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+
+        {error ? (
+          <p className="text-xs text-error">{error}</p>
+        ) : pubKey === null ? (
+          <p className="text-sm text-faint">Loading…</p>
+        ) : (
+          <div className="bg-surface-1 border border-stroke rounded-lg p-3 max-h-48 overflow-y-auto">
+            <pre className="text-xs text-secondary font-mono break-all whitespace-pre-wrap select-all">
+              {pubKey.trim()}
+            </pre>
+          </div>
+        )}
+
+        <div className="flex gap-3 justify-end">
+          <Button variant="secondary" onClick={onClose} className="h-10">Close</Button>
+          <Button
+            onClick={() => { void copy(); }}
+            disabled={!pubKey}
+            className={`h-10 ${copied ? "bg-success/20 text-success border border-success/30" : ""}`}
+          >
+            {copied ? "Copied!" : "Copy to Clipboard"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Key row ───────────────────────────────────────────────────────────────────
 
 const KEY_TYPE_BADGE: Record<string, string> = {
@@ -274,10 +354,59 @@ const KEY_TYPE_BADGE: Record<string, string> = {
   unknown: "bg-surface-3 border-stroke text-faint",
 };
 
-function KeyRow({ sshKey, onDelete }: { sshKey: SshKey; onDelete: () => void }) {
+function KeyRow({
+  sshKey,
+  usageCount,
+  onDelete,
+  onViewPub,
+}: {
+  sshKey: SshKey;
+  usageCount: number;
+  onDelete: () => void;
+  onViewPub: () => void;
+}) {
+  const renameKey = useSshKeyStore((s) => s.renameKey);
   const getPublicKey = useSshKeyStore((s) => s.getPublicKey);
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(sshKey.name);
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [renameSaving, setRenameSaving] = useState(false);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  const startRename = () => {
+    setRenameValue(sshKey.name);
+    setRenameError(null);
+    setIsRenaming(true);
+    // Focus after render
+    setTimeout(() => renameInputRef.current?.select(), 0);
+  };
+
+  const cancelRename = () => {
+    setIsRenaming(false);
+    setRenameError(null);
+  };
+
+  const commitRename = async () => {
+    const trimmed = renameValue.trim();
+    if (!trimmed || trimmed === sshKey.name) { cancelRename(); return; }
+    setRenameSaving(true);
+    setRenameError(null);
+    try {
+      await renameKey(sshKey.id, trimmed);
+      setIsRenaming(false);
+    } catch (e) {
+      setRenameError(formatError(e));
+    } finally {
+      setRenameSaving(false);
+    }
+  };
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") { void commitRename(); }
+    if (e.key === "Escape") { cancelRename(); }
+  };
 
   const copyPublicKey = async () => {
     setCopyError(null);
@@ -304,25 +433,56 @@ function KeyRow({ sshKey, onDelete }: { sshKey: SshKey; onDelete: () => void }) 
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-sm font-medium text-white truncate">{sshKey.name}</span>
-          <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded border ${badge} shrink-0`}>
-            {sshKey.keyType.toUpperCase()}
-          </span>
-          {sshKey.isEncrypted && (
-            <span className="text-[11px] font-medium px-1.5 py-0.5 rounded border bg-warning-subtle border-warning-subtle text-warning shrink-0">
-              passphrase
+        {isRenaming ? (
+          <div className="flex items-center gap-2 mb-0.5">
+            <Input
+              ref={renameInputRef}
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={handleRenameKeyDown}
+              onBlur={() => { void commitRename(); }}
+              autoFocus
+              className="h-7 text-sm py-0 px-2 flex-1"
+              disabled={renameSaving}
+            />
+            {renameError && <p className="text-xs text-error shrink-0">{renameError}</p>}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-sm font-medium text-white truncate">{sshKey.name}</span>
+            <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded border ${badge} shrink-0`}>
+              {sshKey.keyType.toUpperCase()}
+            </span>
+            {sshKey.isEncrypted && (
+              <span className="text-[11px] font-medium px-1.5 py-0.5 rounded border bg-warning-subtle border-warning-subtle text-warning shrink-0">
+                passphrase
+              </span>
+            )}
+          </div>
+        )}
+        <p className="text-xs text-faint font-mono truncate">{sshKey.keyPath}</p>
+        <div className="flex items-center gap-2 mt-0.5">
+          {sshKey.fingerprint && (
+            <p className="text-[11px] text-dim font-mono truncate">{sshKey.fingerprint}</p>
+          )}
+          {usageCount > 0 && (
+            <span className="text-[11px] text-dim shrink-0">
+              · used by {usageCount} {usageCount === 1 ? "server" : "servers"}
             </span>
           )}
         </div>
-        <p className="text-xs text-faint font-mono truncate">{sshKey.keyPath}</p>
-        {sshKey.fingerprint && (
-          <p className="text-[11px] text-dim font-mono truncate mt-0.5">{sshKey.fingerprint}</p>
-        )}
         {copyError && <p className="text-xs text-error mt-0.5">{copyError}</p>}
       </div>
 
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <Button
+          variant="ghost"
+          onClick={onViewPub}
+          title="View public key"
+          className="h-8 px-2.5 text-xs font-medium bg-surface-3 text-secondary border border-stroke hover:border-accent/40 hover:text-white"
+        >
+          View pub
+        </Button>
         <Button
           variant="ghost"
           onClick={() => { void copyPublicKey(); }}
@@ -333,7 +493,18 @@ function KeyRow({ sshKey, onDelete }: { sshKey: SshKey; onDelete: () => void }) 
               : "bg-surface-3 text-secondary border border-stroke hover:border-accent/40 hover:text-white"
           }`}
         >
-          {copied ? "Copied!" : "Copy pub key"}
+          {copied ? "Copied!" : "Copy pub"}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={startRename}
+          title="Rename key"
+          className="text-faint hover:text-white hover:bg-surface-3"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11.5 2.5a2.121 2.121 0 013 3L5 15H2v-3L11.5 2.5z" />
+          </svg>
         </Button>
         <Button
           variant="ghost"
@@ -360,9 +531,12 @@ export default function KeysView() {
   const load = useSshKeyStore((s) => s.load);
   const removeKey = useSshKeyStore((s) => s.removeKey);
 
+  const servers = useServerStore((s) => s.servers);
+
   const [showAdd, setShowAdd] = useState(false);
   const [showGenerate, setShowGenerate] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SshKey | null>(null);
+  const [viewPubTarget, setViewPubTarget] = useState<SshKey | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => { void load(); }, [load]);
@@ -377,6 +551,14 @@ export default function KeysView() {
       setDeleting(false);
     }
   };
+
+  // Count how many servers reference each key by path.
+  const usageByPath = new Map<string, number>();
+  for (const server of servers) {
+    if (server.identityFilePath) {
+      usageByPath.set(server.identityFilePath, (usageByPath.get(server.identityFilePath) ?? 0) + 1);
+    }
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -429,7 +611,9 @@ export default function KeysView() {
               <KeyRow
                 key={k.id}
                 sshKey={k}
+                usageCount={usageByPath.get(k.keyPath) ?? 0}
                 onDelete={() => setDeleteTarget(k)}
+                onViewPub={() => setViewPubTarget(k)}
               />
             ))}
           </div>
@@ -439,6 +623,12 @@ export default function KeysView() {
       {/* Modals */}
       {showAdd && <AddKeyModal onClose={() => setShowAdd(false)} />}
       {showGenerate && <GenerateKeyModal onClose={() => setShowGenerate(false)} />}
+      {viewPubTarget && (
+        <ViewPublicKeyModal
+          sshKey={viewPubTarget}
+          onClose={() => setViewPubTarget(null)}
+        />
+      )}
       {deleteTarget && (
         <ConfirmDeleteModal
           title="Remove key from vault?"

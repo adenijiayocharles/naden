@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type TerminalTool = "assistant" | "playbooks" | "snippets";
+export type TerminalTool = "assistant" | "playbooks" | "snippets" | "tunnels";
 
 interface TerminalToolsStore {
   openTool: TerminalTool | null;

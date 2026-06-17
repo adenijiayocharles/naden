@@ -15,7 +15,7 @@ class SessionBuffer {
   private readonly chunks = new Map<string, Uint8Array[]>();
   private readonly chunkBytes = new Map<string, number>();
   private readonly unlisteners = new Map<string, UnlistenFn>();
-  private readonly subscribers = new Map<string, OutputCallback>();
+  private readonly subscribers = new Map<string, Set<OutputCallback>>();
 
   async attach(sessionId: string): Promise<void> {
     if (this.unlisteners.has(sessionId)) return;
@@ -34,7 +34,7 @@ class SessionBuffer {
         }
         this.chunkBytes.set(sessionId, total);
       }
-      this.subscribers.get(sessionId)?.(bytes);
+      this.subscribers.get(sessionId)?.forEach((cb) => cb(bytes));
     });
 
     this.unlisteners.set(sessionId, unlisten);
@@ -50,6 +50,7 @@ class SessionBuffer {
 
   /**
    * Subscribe to live output AND atomically snapshot the existing buffer.
+   * Multiple subscribers per session are supported — each receives every chunk.
    * Setting the subscriber before snapshotting prevents any gap: events that
    * arrive after this call go straight to the callback; events already in the
    * buffer are returned as `chunks` for the caller to replay synchronously.
@@ -60,10 +61,11 @@ class SessionBuffer {
     sessionId: string,
     cb: OutputCallback,
   ): { chunks: Uint8Array[]; unsub: () => void } {
-    this.subscribers.set(sessionId, cb);
+    if (!this.subscribers.has(sessionId)) this.subscribers.set(sessionId, new Set());
+    this.subscribers.get(sessionId)!.add(cb);
     const chunks = [...(this.chunks.get(sessionId) ?? [])];
     const unsub = () => {
-      if (this.subscribers.get(sessionId) === cb) this.subscribers.delete(sessionId);
+      this.subscribers.get(sessionId)?.delete(cb);
     };
     return { chunks, unsub };
   }

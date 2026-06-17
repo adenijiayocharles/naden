@@ -32,6 +32,7 @@ import BulkActionBar from "../servers/BulkActionBar";
 import ClipboardClearBanner from "./ClipboardClearBanner";
 import { useSnippetStore } from "../../store/snippetStore";
 import { usePlaybookStore } from "../../store/playbookStore";
+import { useSessionLoggingStore } from "../../store/sessionLoggingStore";
 import type { SessionStatus } from "../../store/terminalStore";
 import type { SftpStatus } from "../../store/sftpStore";
 
@@ -133,6 +134,11 @@ export default function AppShell() {
   const openTerminalTool = useTerminalToolsStore((s) => s.openTool);
   const toggleTerminalTool = useTerminalToolsStore((s) => s.toggleTool);
   const closeTerminalTool = useTerminalToolsStore((s) => s.closeTool);
+
+  const startRecording = useSessionLoggingStore((s) => s.startRecording);
+  const stopRecording = useSessionLoggingStore((s) => s.stopRecording);
+  const isRecording = useSessionLoggingStore((s) => s.isRecording);
+  const isActiveSessionRecording = terminalActiveId ? isRecording(terminalActiveId) : false;
 
   const allSftpSessions = useSftpStore((s) => s.sessions);
   const sftpSessions = useMemo(
@@ -758,6 +764,59 @@ export default function AppShell() {
                         <line x1="5" y1="8" x2="11" y2="8" />
                         <line x1="5" y1="10.5" x2="8" y2="10.5" />
                       </svg>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      data-terminal-tool-trigger
+                      onClick={() => toggleTerminalTool("tunnels")}
+                      title="Manage port forwards"
+                      aria-label="Open port forward manager"
+                      className={
+                        openTerminalTool === "tunnels"
+                          ? "bg-accent/20 text-accent-fg"
+                          : "text-faint hover:text-white"
+                      }
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 8h4M10 8h4M6 5l-2 3 2 3M10 5l2 3-2 3" />
+                      </svg>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => {
+                        if (!terminalActiveId) return;
+                        const session = terminalSessions.find((t) => t.id === terminalActiveId);
+                        if (isActiveSessionRecording) {
+                          void stopRecording(terminalActiveId);
+                        } else {
+                          void startRecording(
+                            terminalActiveId,
+                            session?.serverId,
+                            session?.serverName ?? "Unknown",
+                          );
+                        }
+                      }}
+                      title={isActiveSessionRecording ? "Stop recording" : "Record session"}
+                      aria-label={isActiveSessionRecording ? "Stop recording session" : "Start recording session"}
+                      className={
+                        isActiveSessionRecording
+                          ? "text-red-400 hover:text-red-300"
+                          : "text-faint hover:text-white"
+                      }
+                    >
+                      {isActiveSessionRecording ? (
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
+                          <circle cx="8" cy="8" r="5" />
+                          <circle cx="8" cy="8" r="3" className="animate-pulse" fill="white" />
+                        </svg>
+                      ) : (
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
+                          <circle cx="8" cy="8" r="5" />
+                          <circle cx="8" cy="8" r="2" fill="currentColor" stroke="none" />
+                        </svg>
+                      )}
                     </Button>
                   </div>
                 )}

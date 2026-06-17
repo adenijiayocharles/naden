@@ -177,6 +177,13 @@ pub fn run() {
             commands::tunnel_commands::start_tunnel,
             commands::tunnel_commands::stop_tunnel,
             commands::tunnel_commands::list_active_tunnel_ids,
+            // Session logs
+            commands::session_log_commands::create_session_log,
+            commands::session_log_commands::append_session_log,
+            commands::session_log_commands::finish_session_log,
+            commands::session_log_commands::list_session_logs,
+            commands::session_log_commands::delete_session_log,
+            commands::session_log_commands::reveal_session_log,
         ])
         .on_menu_event(|app, event| {
             let _ = app.emit(&format!("menu:{}", event.id().as_ref()), ());

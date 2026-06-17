@@ -22,6 +22,7 @@ import type {
 } from "../types/portForward";
 import type { SshKey } from "../types/sshKey";
 import type { DiscoveredHost } from "../types/discovery";
+import type { SessionLog } from "../types/sessionLog";
 
 export interface ReachabilityResult {
   reachable: boolean;
@@ -420,6 +421,34 @@ export const tunnelCommands = {
 
   listActiveTunnelIds: () =>
     invoke<string[]>("list_active_tunnel_ids"),
+};
+
+export interface SessionLogMeta {
+  id: string;
+  filePath: string;
+}
+
+export const sessionLogCommands = {
+  createSessionLog: (serverDisplayName: string, serverId?: string) =>
+    invoke<SessionLogMeta>("create_session_log", {
+      serverDisplayName,
+      serverId: serverId ?? null,
+    }),
+
+  appendSessionLog: (logId: string, dataBase64: string) =>
+    invoke<void>("append_session_log", { logId, dataBase64 }),
+
+  finishSessionLog: (logId: string) =>
+    invoke<void>("finish_session_log", { logId }),
+
+  listSessionLogs: (serverId?: string) =>
+    invoke<SessionLog[]>("list_session_logs", { serverId: serverId ?? null }),
+
+  deleteSessionLog: (logId: string) =>
+    invoke<void>("delete_session_log", { logId }),
+
+  revealSessionLog: (filePath: string) =>
+    invoke<void>("reveal_session_log", { filePath }),
 };
 
 export interface UpdateInfo {
