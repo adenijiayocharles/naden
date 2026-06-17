@@ -254,7 +254,7 @@ function AddTunnelModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="px-5 py-4 border-t border-stroke-subtle flex gap-2 justify-end">
-          <Button type="button" variant="secondary" onClick={onClose} className="h-8">Cancel</Button>
+          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
           <Button
             type="button"
             onClick={() => { void handleSave(); }}

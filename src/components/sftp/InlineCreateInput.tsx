@@ -26,8 +26,8 @@ export default function InlineCreateInput({ label, placeholder, onCommit, onCanc
         placeholder={placeholder}
         className="flex-1 h-8 bg-surface-3 border-[#333] px-2 py-1 font-mono placeholder-[#444]"
       />
-      <Button variant="ghost" onClick={() => onCommit(ref.current?.value.trim() ?? "")} className="text-xs text-accent-fg px-2">Create</Button>
-      <Button variant="ghost" onClick={onCancel} className="text-xs text-faint px-2">Cancel</Button>
+      <Button variant="ghost" size="xs" onClick={() => onCommit(ref.current?.value.trim() ?? "")} className="text-accent-fg">Create</Button>
+      <Button variant="ghost" size="xs" onClick={onCancel} className="text-faint">Cancel</Button>
     </div>
   );
 }

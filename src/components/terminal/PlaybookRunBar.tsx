@@ -18,13 +18,13 @@ export default function PlaybookRunBar() {
           Step {status.stepIndex + 1}/{playbook.steps.length} — send{" "}
           <span className="font-mono text-white">{status.resolvedCommand}</span>? This looks destructive.
         </span>
-        <Button variant="delete" onClick={confirm} className="h-auto px-2.5 py-1">
+        <Button variant="delete" onClick={confirm} size="sm">
           Send anyway
         </Button>
-        <Button variant="ghost" onClick={skip} className="h-auto text-faint">
+        <Button variant="ghost" onClick={skip} size="sm" className="text-faint">
           Skip
         </Button>
-        <Button variant="ghost" onClick={cancel} className="h-auto text-faint">
+        <Button variant="ghost" onClick={cancel} size="sm" className="text-faint">
           Cancel
         </Button>
       </div>
@@ -40,7 +40,7 @@ export default function PlaybookRunBar() {
           {status.stepIndex + 1}/{playbook.steps.length}{" "}
           <span className="font-mono text-white">{step.command}</span>
         </span>
-        <Button variant="ghost" onClick={cancel} className="h-auto text-faint">
+        <Button variant="ghost" onClick={cancel} size="sm" className="text-faint">
           Cancel
         </Button>
       </div>
@@ -53,7 +53,7 @@ export default function PlaybookRunBar() {
         <span className="text-white font-medium">{playbook.title}</span>{" "}
         {status.kind === "done" ? "finished" : "cancelled"}
       </span>
-      <Button variant="ghost" onClick={dismiss} className="h-auto text-faint">
+      <Button variant="ghost" onClick={dismiss} size="sm" className="text-faint">
         Dismiss
       </Button>
     </div>

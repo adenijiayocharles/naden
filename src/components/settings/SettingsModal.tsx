@@ -420,8 +420,8 @@ export default function SettingsModal({ onClose }: Props) {
                 />
                 {error && <p className="text-xs text-error">{error}</p>}
                 <div className="flex gap-2">
-                  <Button variant="secondary" onClick={() => openForm("none")} className="flex-1 h-8">Cancel</Button>
-                  <Button onClick={() => { void submitDisable(); }} disabled={loading || !disablePwd} className="flex-1 h-8 bg-red-500 hover:bg-red-400 text-black font-semibold disabled:opacity-40">
+                  <Button variant="secondary" onClick={() => openForm("none")} className="flex-1">Cancel</Button>
+                  <Button onClick={() => { void submitDisable(); }} disabled={loading || !disablePwd} className="flex-1 bg-red-500 hover:bg-red-400 text-black font-semibold disabled:opacity-40">
                     {loading ? "Verifying…" : "Disable password"}
                   </Button>
                 </div>
@@ -455,8 +455,8 @@ export default function SettingsModal({ onClose }: Props) {
                 />
                 {error && <p className="text-xs text-error">{error}</p>}
                 <div className="flex gap-2">
-                  <Button variant="secondary" onClick={() => openForm("none")} className="flex-1 h-8">Cancel</Button>
-                  <Button onClick={() => { void submitEnable(); }} disabled={loading || enablePwd.length < 8 || enablePwd !== enableConfirm} className="flex-1 h-8">
+                  <Button variant="secondary" onClick={() => openForm("none")} className="flex-1">Cancel</Button>
+                  <Button onClick={() => { void submitEnable(); }} disabled={loading || enablePwd.length < 8 || enablePwd !== enableConfirm} className="flex-1">
                     {loading ? "Setting up…" : "Enable password"}
                   </Button>
                 </div>
@@ -507,8 +507,8 @@ export default function SettingsModal({ onClose }: Props) {
                     />
                     {error && <p className="text-xs text-error">{error}</p>}
                     <div className="flex gap-2">
-                      <Button variant="secondary" onClick={() => openForm("none")} className="flex-1 h-8">Cancel</Button>
-                      <Button onClick={() => { void submitChange(); }} disabled={loading || !changeCurrent || changeNew.length < 8 || changeNew !== changeConfirm} className="flex-1 h-8">
+                      <Button variant="secondary" onClick={() => openForm("none")} className="flex-1">Cancel</Button>
+                      <Button onClick={() => { void submitChange(); }} disabled={loading || !changeCurrent || changeNew.length < 8 || changeNew !== changeConfirm} className="flex-1">
                         {loading ? "Updating…" : "Change password"}
                       </Button>
                     </div>
@@ -757,8 +757,8 @@ export default function SettingsModal({ onClose }: Props) {
                       />
                       {assistantError && <p className="text-xs text-error">{assistantError}</p>}
                       <div className="flex gap-2">
-                        <Button variant="secondary" onClick={() => { setAddingProvider(null); setAddKeyInput(""); setAssistantError(null); }} className="flex-1 h-8">Cancel</Button>
-                        <Button onClick={() => { void submitAddKey(p); }} disabled={assistantLoading || !addKeyInput.trim()} className="flex-1 h-8">
+                        <Button variant="secondary" onClick={() => { setAddingProvider(null); setAddKeyInput(""); setAssistantError(null); }} className="flex-1">Cancel</Button>
+                        <Button onClick={() => { void submitAddKey(p); }} disabled={assistantLoading || !addKeyInput.trim()} className="flex-1">
                           {assistantLoading ? "Saving…" : "Save key"}
                         </Button>
                       </div>
@@ -855,7 +855,7 @@ export default function SettingsModal({ onClose }: Props) {
         </div>
 
         <DialogFooter className="px-6 py-4 border-t border-stroke-subtle">
-          <Button onClick={onClose} className="h-8">Done</Button>
+          <Button onClick={onClose}>Done</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

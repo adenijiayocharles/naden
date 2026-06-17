@@ -91,7 +91,7 @@ export default function VaultLockScreen() {
 
           {error && <p className="text-sm text-error text-center">{error}</p>}
 
-          <Button type="submit" disabled={loading || !password} className="w-full h-10">
+          <Button type="submit" size="lg" disabled={loading || !password} className="w-full">
             {loading ? "Unlocking…" : "Unlock"}
           </Button>
         </form>

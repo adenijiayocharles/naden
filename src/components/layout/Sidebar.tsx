@@ -72,8 +72,8 @@ function GroupCreateModal({ onClose }: { onClose: () => void }) {
           {error && <p className="text-xs text-error">{error}</p>}
         </div>
         <div className="flex items-center justify-end gap-2 mt-5">
-          <Button variant="secondary" className="h-8" onClick={onClose}>Cancel</Button>
-          <Button className="h-8" onClick={() => { void handleCreate(); }} disabled={busy || !name.trim()}>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button onClick={() => { void handleCreate(); }} disabled={busy || !name.trim()}>
             {busy ? "Creating…" : "Create"}
           </Button>
         </div>
@@ -116,9 +116,9 @@ function GroupEditModal({ group, onClose, onDelete }: { group: Group; onClose: (
           {error && <p className="text-xs text-error">{error}</p>}
         </div>
         <div className="flex items-center gap-2 mt-5">
-          <Button variant="ghost" className="h-8 text-red-500 hover:text-red-400 mr-auto px-0" onClick={onDelete} disabled={busy}>Delete</Button>
-          <Button variant="secondary" className="h-8" onClick={onClose}>Cancel</Button>
-          <Button className="h-8" onClick={() => { void handleSave(); }} disabled={busy || !name.trim()}>
+          <Button variant="ghost" className="text-red-500 hover:text-red-400 mr-auto px-0" onClick={onDelete} disabled={busy}>Delete</Button>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button onClick={() => { void handleSave(); }} disabled={busy || !name.trim()}>
             {busy ? "Saving…" : "Save"}
           </Button>
         </div>
@@ -157,8 +157,8 @@ function TagRenameModal({ tag, onClose }: { tag: Tag; onClose: () => void }) {
           placeholder="Tag name" />
         {error && <p className="text-xs text-error mt-2">{error}</p>}
         <div className="flex items-center justify-end gap-2 mt-5">
-          <Button variant="secondary" className="h-8" onClick={onClose}>Cancel</Button>
-          <Button className="h-8" onClick={() => { void handleSave(); }} disabled={busy || !name.trim()}>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button onClick={() => { void handleSave(); }} disabled={busy || !name.trim()}>
             {busy ? "Saving…" : "Save"}
           </Button>
         </div>

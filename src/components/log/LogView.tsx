@@ -352,14 +352,14 @@ export default function LogView() {
           <Input type="date" value={filterEnd} onChange={(e) => setFilterEnd(e.target.value)} className="w-auto" />
 
           {hasFilters && (
-            <Button variant="ghost" onClick={clearFilters} className="h-10">Clear</Button>
+            <Button variant="ghost" size="lg" onClick={clearFilters}>Clear</Button>
           )}
 
           <div className="ml-auto flex items-center gap-2">
-            <Button variant="secondary" onClick={() => { void handleExport(); }} disabled={exporting} className="h-10 px-3 border border-stroke">
+            <Button variant="secondary" size="lg" onClick={() => { void handleExport(); }} disabled={exporting} className="border border-stroke">
               {exporting ? "Exporting…" : "Export CSV"}
             </Button>
-            <Button variant="destructive" onClick={() => setShowClearConfirm(true)} disabled={clearing} className="h-10">
+            <Button variant="destructive" size="lg" onClick={() => setShowClearConfirm(true)} disabled={clearing}>
               Clear Logs
             </Button>
           </div>

@@ -64,13 +64,12 @@ function SnippetFormModal({
         />
         {error && <p className="text-xs text-error">{error}</p>}
         <div className="flex items-center justify-end gap-2">
-          <Button variant="secondary" onClick={onClose} className="h-8">
+          <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button
             onClick={() => void handleSave()}
             disabled={busy || !title.trim()}
-            className="h-8"
           >
             {busy ? "Saving…" : "Save"}
           </Button>
@@ -193,7 +192,7 @@ export default function SnippetList() {
             placeholder="Search snippets…"
           />
         </div>
-        <Button onClick={() => setCreating(true)} className="h-10">
+        <Button size="lg" onClick={() => setCreating(true)}>
           + New
         </Button>
       </div>

@@ -79,7 +79,7 @@ function AddKeyModal({ onClose }: { onClose: () => void }) {
                 className="flex-1"
                 autoFocus
               />
-              <Button type="button" variant="secondary" onClick={() => { void browse(); }} className="px-3 h-10 border border-stroke shrink-0">
+              <Button type="button" variant="secondary" size="lg" onClick={() => { void browse(); }} className="border border-stroke shrink-0">
                 Browse
               </Button>
             </div>
@@ -98,8 +98,8 @@ function AddKeyModal({ onClose }: { onClose: () => void }) {
           {error && <p className="text-xs text-error">{error}</p>}
         </div>
         <div className="flex gap-3 justify-end">
-          <Button variant="secondary" onClick={onClose} disabled={saving} className="h-10">Cancel</Button>
-          <Button onClick={() => { void submit(); }} disabled={saving || !path.trim()} className="h-10">
+          <Button variant="secondary" size="lg" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button size="lg" onClick={() => { void submit(); }} disabled={saving || !path.trim()}>
             {saving ? "Adding…" : "Add Key"}
           </Button>
         </div>
@@ -255,8 +255,8 @@ function GenerateKeyModal({ onClose }: { onClose: () => void }) {
           {error && <p className="text-xs text-error">{error}</p>}
         </div>
         <div className="flex gap-3 justify-end">
-          <Button variant="secondary" onClick={onClose} disabled={saving} className="h-10">Cancel</Button>
-          <Button onClick={() => { void submit(); }} disabled={saving} className="h-10">
+          <Button variant="secondary" size="lg" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button size="lg" onClick={() => { void submit(); }} disabled={saving}>
             {saving ? "Generating…" : "Generate"}
           </Button>
         </div>
@@ -330,11 +330,12 @@ function ViewPublicKeyModal({ sshKey, onClose }: { sshKey: SshKey; onClose: () =
         )}
 
         <div className="flex gap-3 justify-end">
-          <Button variant="secondary" onClick={onClose} className="h-10">Close</Button>
+          <Button variant="secondary" size="lg" onClick={onClose}>Close</Button>
           <Button
+            size="lg"
             onClick={() => { void copy(); }}
             disabled={!pubKey}
-            className={`h-10 ${copied ? "bg-success/20 text-success border border-success/30" : ""}`}
+            className={copied ? "bg-success/20 text-success border border-success/30" : ""}
           >
             {copied ? "Copied!" : "Copy to Clipboard"}
           </Button>
@@ -571,13 +572,13 @@ export default function KeysView() {
           <p className="text-sm text-faint mt-0.5">Manage private keys used for authentication</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={() => setShowGenerate(true)} className="h-8">
+          <Button variant="secondary" onClick={() => setShowGenerate(true)}>
             <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
               <path d="M8 2v12M2 8h12" />
             </svg>
             Generate
           </Button>
-          <Button onClick={() => setShowAdd(true)} className="h-8">
+          <Button onClick={() => setShowAdd(true)}>
             <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
               <path d="M8 2v12M2 8h12" />
             </svg>

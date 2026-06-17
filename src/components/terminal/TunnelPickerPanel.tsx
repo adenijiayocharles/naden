@@ -201,7 +201,7 @@ export default function TunnelPickerPanel({ serverId }: Props) {
       {serverForwards.length === 0 && !showAddTunnel && (
         <div className="px-3 py-4 text-center">
           <p className="text-sm text-dim mb-2">No port forwards configured</p>
-          <Button variant="secondary" onClick={() => setShowAddTunnel(true)} className="h-7 text-xs px-3">
+          <Button variant="secondary" size="sm" onClick={() => setShowAddTunnel(true)}>
             + Add Forward
           </Button>
         </div>
@@ -280,10 +280,10 @@ export default function TunnelPickerPanel({ serverId }: Props) {
           {addTunnelError && <p className="text-[11px] text-error">{addTunnelError}</p>}
 
           <div className="flex gap-1.5">
-            <Button variant="secondary" onClick={reset} disabled={addTunnelSaving} className="flex-1 h-7 text-xs">
+            <Button variant="secondary" size="sm" onClick={reset} disabled={addTunnelSaving} className="flex-1">
               Cancel
             </Button>
-            <Button onClick={() => { void handleAdd(); }} disabled={addTunnelSaving} className="flex-1 h-7 text-xs">
+            <Button size="sm" onClick={() => { void handleAdd(); }} disabled={addTunnelSaving} className="flex-1">
               {addTunnelSaving ? "Adding…" : "Add"}
             </Button>
           </div>

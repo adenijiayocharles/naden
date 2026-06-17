@@ -276,14 +276,14 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
           {fwdError && <p className="text-xs text-error">{fwdError}</p>}
 
           <div className="flex gap-2">
-            <Button type="button" variant="secondary" onClick={cancelEdit} className="flex-1 h-10">
+            <Button type="button" variant="secondary" onClick={cancelEdit} size="lg" className="flex-1">
               Cancel
             </Button>
             <Button
               type="button"
               onClick={() => { void handleSave(); }}
               disabled={saving}
-              className="flex-1 h-10"
+              size="lg" className="flex-1"
             >
               {saving ? "Saving…" : editingId ? "Update" : "Add"}
             </Button>

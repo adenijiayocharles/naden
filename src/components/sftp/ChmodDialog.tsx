@@ -67,10 +67,10 @@ export default function ChmodDialog({ target, mode, disabled, onModeChange, onAp
         </div>
 
         <DialogFooter>
-          <Button variant="secondary" onClick={onCancel} className="px-3 py-1.5 text-xs h-auto">
+          <Button variant="secondary" size="sm" onClick={onCancel}>
             Cancel
           </Button>
-          <Button onClick={onApply} disabled={disabled} className="px-3 py-1.5 text-xs h-auto">
+          <Button size="sm" onClick={onApply} disabled={disabled}>
             Apply
           </Button>
         </DialogFooter>

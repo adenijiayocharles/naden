@@ -118,11 +118,11 @@ export default function BulkActionBar() {
         {count > 0 ? `${count} selected` : "Click servers to select"}
       </span>
 
-      <Button variant="ghost" onClick={handleSelectAll} disabled={busy} className="h-8">
+      <Button variant="ghost" onClick={handleSelectAll} disabled={busy}>
         Select all
       </Button>
 
-      <Button variant="ghost" onClick={clearSelected} disabled={busy || count === 0} className="h-8">
+      <Button variant="ghost" onClick={clearSelected} disabled={busy || count === 0}>
         Clear
       </Button>
 
@@ -135,8 +135,7 @@ export default function BulkActionBar() {
           onClick={() => { void handleConnectAsGroup(); }}
           disabled={busy || count === 0}
           title={count > MAX_BROADCAST_HOSTS ? `Opens the first ${MAX_BROADCAST_HOSTS} selected servers` : undefined}
-          className="h-8"
-        >
+                 >
           {connectingGroup ? "Connecting…" : `Connect as group${count > 0 ? ` (${Math.min(count, MAX_BROADCAST_HOSTS)})` : ""}`}
         </Button>
 
@@ -145,8 +144,7 @@ export default function BulkActionBar() {
           <Button
             onClick={() => setShowGroupPicker((v) => !v)}
             disabled={busy || count === 0}
-            className="h-8"
-          >
+                     >
             Add to Group
           </Button>
 
@@ -179,8 +177,7 @@ export default function BulkActionBar() {
           variant="delete"
           onClick={() => setConfirmDelete(true)}
           disabled={busy || count === 0}
-          className="h-8"
-        >
+                 >
           Delete {count > 0 ? count : ""}
         </Button>
       </div>

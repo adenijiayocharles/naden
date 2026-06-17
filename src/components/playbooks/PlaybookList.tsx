@@ -212,20 +212,19 @@ function PlaybookFormModal({
               onMove={(direction) => moveStep(i, direction)}
             />
           ))}
-          <Button variant="secondary" onClick={addStep} className="self-start h-8">
+          <Button variant="secondary" onClick={addStep} className="self-start">
             + Add step
           </Button>
         </div>
 
         {error && <p className="text-xs text-error">{error}</p>}
         <div className="flex items-center justify-end gap-2">
-          <Button variant="secondary" onClick={onClose} className="h-8">
+          <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button
             onClick={() => void handleSave()}
             disabled={busy || !isValid}
-            className="h-8"
           >
             {busy ? "Saving…" : "Save"}
           </Button>
@@ -337,7 +336,7 @@ export default function PlaybookList() {
             placeholder="Search playbooks…"
           />
         </div>
-        <Button onClick={() => setCreating(true)} className="h-10">
+        <Button size="lg" onClick={() => setCreating(true)}>
           + New
         </Button>
       </div>

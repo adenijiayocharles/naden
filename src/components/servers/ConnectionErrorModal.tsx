@@ -38,13 +38,13 @@ export default function ConnectionErrorModal({ serverName, message, onRetry, onE
         )}
 
         <DialogFooter className="gap-2">
-          <Button variant="secondary" onClick={onClose} className="flex-1 h-10">
+          <Button variant="secondary" size="lg" onClick={onClose} className="flex-1">
             Dismiss
           </Button>
-          <Button variant="secondary" onClick={onEdit} className="flex-1 h-10">
+          <Button variant="secondary" size="lg" onClick={onEdit} className="flex-1">
             Edit
           </Button>
-          <Button onClick={onRetry} className="flex-1 h-10">
+          <Button size="lg" onClick={onRetry} className="flex-1">
             Retry
           </Button>
         </DialogFooter>

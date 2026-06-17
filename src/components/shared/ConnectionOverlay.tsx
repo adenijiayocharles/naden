@@ -25,7 +25,7 @@ export function ReconnectingOverlay({ reconnectAt, onCancel }: ReconnectingProps
         Reconnecting in{" "}
         <span className="text-white tabular-nums">{remaining}s</span>…
       </p>
-      <Button variant="secondary" onClick={onCancel} className="h-10">
+      <Button variant="secondary" onClick={onCancel} size="lg">
         Cancel
       </Button>
     </div>
@@ -63,7 +63,7 @@ export function ConnectingOverlay({ serverName, onCancel }: ConnectingProps) {
         />
       </div>
       <p className="text-dim text-xs">Establishing SSH connection…</p>
-      <Button variant="secondary" onClick={onCancel} className="h-10">
+      <Button variant="secondary" onClick={onCancel} size="lg">
         Cancel
       </Button>
     </div>
@@ -81,16 +81,16 @@ export function ErrorOverlay({ errorMessage, onClose, onReconnect, onRemoveKnown
       )}
       <div className="flex gap-3 mt-1">
         {onReconnect && (
-          <Button onClick={onReconnect} className="h-10">
+          <Button onClick={onReconnect} size="lg">
             Reconnect
           </Button>
         )}
         {isHostKeyMismatch && onRemoveKnownHost && (
-          <Button variant="delete" onClick={onRemoveKnownHost} className="h-10">
+          <Button variant="delete" onClick={onRemoveKnownHost} size="lg">
             Remove from known hosts
           </Button>
         )}
-        <Button variant="secondary" onClick={onClose} className="h-10">
+        <Button variant="secondary" onClick={onClose} size="lg">
           Close
         </Button>
       </div>

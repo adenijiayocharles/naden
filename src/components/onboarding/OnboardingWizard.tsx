@@ -113,7 +113,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                 A fast, secure desktop app for managing all your SSH connections.
                 Let's get you set up in a minute.
               </p>
-              <Button onClick={advance} className="w-full mt-4 h-10">
+              <Button size="lg" onClick={advance} className="w-full mt-4">
                 Get started
               </Button>
             </div>

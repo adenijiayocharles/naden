@@ -14,10 +14,10 @@ export default function BroadcastGuardBar({ hostCount, pendingInput, onConfirm, 
         Send <span className="font-mono text-white">{pendingInput.trim()}</span> to{" "}
         <span className="font-semibold">{hostCount} host{hostCount > 1 ? "s" : ""}</span>? This looks destructive.
       </span>
-      <Button variant="delete" onClick={onConfirm} className="h-auto px-2.5 py-1">
+      <Button variant="delete" onClick={onConfirm} size="sm">
         Send anyway
       </Button>
-      <Button variant="ghost" onClick={onCancel} className="h-auto text-faint">
+      <Button variant="ghost" onClick={onCancel} size="sm" className="text-faint">
         Cancel
       </Button>
     </div>

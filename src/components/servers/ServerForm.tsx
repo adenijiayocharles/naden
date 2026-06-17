@@ -766,8 +766,9 @@ export default function ServerForm() {
                       <Button
                         type="button"
                         variant="secondary"
+                        size="sm"
                         onClick={() => setEnvVars((prev) => [...prev, { key: "", value: "" }])}
-                        className="h-7 text-xs px-3 mt-1"
+                        className="mt-1"
                       >
                         + Add variable
                       </Button>
@@ -829,10 +830,10 @@ export default function ServerForm() {
             </p>
           )}
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="secondary" onClick={handleClose}>
+            <Button type="button" variant="secondary" size="lg" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" form="server-form" disabled={submitting}>
+            <Button type="submit" form="server-form" size="lg" disabled={submitting}>
               {saved ? "Saved ✓" : submitting ? "Saving…" : isEdit ? "Save Changes" : "Add Server"}
             </Button>
           </div>
