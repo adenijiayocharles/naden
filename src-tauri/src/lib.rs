@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use tauri::{Emitter, Manager};
 
 mod assistant;
@@ -14,6 +16,10 @@ mod ssh;
 mod tray;
 mod tunnel;
 mod vault;
+
+/// Timestamp of the last `export_ssh_config` write; used by the file-watcher
+/// to suppress notifications triggered by Naden's own writes.
+pub struct SshConfigExportTs(pub Arc<Mutex<std::time::Instant>>);
 
 pub struct AppState {
     pub db: sqlx::SqlitePool,
@@ -132,6 +138,7 @@ pub fn run() {
             commands::ssh_commands::launch_in_terminal,
             commands::ssh_commands::import_ssh_config,
             commands::ssh_commands::confirm_ssh_config_import,
+            commands::ssh_commands::export_ssh_config,
             commands::ssh_commands::open_terminal_session,
             commands::ssh_commands::close_terminal_session,
             commands::ssh_commands::send_terminal_input,
@@ -219,6 +226,11 @@ pub fn run() {
                 None
             };
 
+            // Initialized far in the past so elapsed() > suppress window on first check.
+            app.manage(SshConfigExportTs(Arc::new(Mutex::new(
+                std::time::Instant::now() - std::time::Duration::from_secs(60),
+            ))));
+
             app.manage(AppState {
                 db: pool,
                 vault_key: tokio::sync::Mutex::new(initial_vault_key),
@@ -244,6 +256,10 @@ pub fn run() {
 
             // Spawn the sleep-watcher thread that emits `system:wake` on resume.
             power::start_sleep_watcher(app.handle().clone());
+
+            // Spawn the SSH config file-watcher thread that emits `ssh:config-changed`
+            // when ~/.ssh/config is modified externally.
+            start_ssh_config_watcher(app.handle().clone());
 
             // Register the `naden` CLI command in ~/.local/bin so the app
             // can be launched from a terminal regardless of install location.
@@ -335,6 +351,73 @@ async fn auto_lock_task(app: tauri::AppHandle) {
 
         tokio::time::sleep(std::time::Duration::from_secs(30)).await;
     }
+}
+
+fn start_ssh_config_watcher(app: tauri::AppHandle) {
+    std::thread::spawn(move || {
+        use notify::{EventKind, RecursiveMode, Watcher};
+
+        let home = match app.path().home_dir() {
+            Ok(h) => h,
+            Err(_) => return,
+        };
+        let ssh_dir = home.join(".ssh");
+        if !ssh_dir.exists() {
+            return;
+        }
+
+        let export_ts = app.state::<SshConfigExportTs>().inner().0.clone();
+
+        let (tx, rx) = std::sync::mpsc::channel::<notify::Result<notify::Event>>();
+        let mut watcher = match notify::recommended_watcher(move |ev| {
+            tx.send(ev).ok();
+        }) {
+            Ok(w) => w,
+            Err(_) => return,
+        };
+
+        if watcher
+            .watch(&ssh_dir, RecursiveMode::NonRecursive)
+            .is_err()
+        {
+            return;
+        }
+
+        loop {
+            let Ok(Ok(event)) = rx.recv() else { break };
+
+            // Only care about the config file itself
+            if !event
+                .paths
+                .iter()
+                .any(|p| p.file_name().map_or(false, |n| n == "config"))
+            {
+                continue;
+            }
+
+            // Skip read-only access events
+            if !matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_)) {
+                continue;
+            }
+
+            // Debounce: drain all events that arrive within 400 ms
+            while rx
+                .recv_timeout(std::time::Duration::from_millis(400))
+                .is_ok()
+            {}
+
+            // Suppress if Naden itself wrote the file recently
+            if export_ts
+                .lock()
+                .map(|ts| ts.elapsed() < std::time::Duration::from_secs(3))
+                .unwrap_or(false)
+            {
+                continue;
+            }
+
+            let _ = app.emit("ssh:config-changed", ());
+        }
+    });
 }
 
 fn build_app_menu(

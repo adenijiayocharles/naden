@@ -4,7 +4,7 @@ use crate::db::queries;
 use crate::error::AppError;
 use crate::models::server::{CreateServerPayload, ServerWithTags};
 use crate::ssh::{
-    config_parser::{self, ImportPreview},
+    config_parser::{self, ExportServer, ImportPreview},
     connection::AuthInfo,
     jump_host::JumpInfo,
     launcher,
@@ -554,4 +554,48 @@ pub async fn remove_known_host_entry(
 ) -> Result<usize, AppError> {
     let server = queries::get_server_db(&state.db, &server_id).await?;
     crate::ssh::connection::remove_known_host(&server.server.hostname, server.server.port as u16)
+}
+
+#[tauri::command]
+pub async fn export_ssh_config(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    export_ts: tauri::State<'_, crate::SshConfigExportTs>,
+) -> Result<usize, AppError> {
+    use tauri::Manager;
+
+    let home = app
+        .path()
+        .home_dir()
+        .map_err(|e| AppError::Io(e.to_string()))?;
+    let config_path = home.join(".ssh").join("config");
+
+    let servers = state.server_cache.read().await;
+    let export_servers: Vec<ExportServer> = servers
+        .iter()
+        .map(|s| ExportServer {
+            display_name: s.server.display_name.clone(),
+            hostname: s.server.hostname.clone(),
+            port: s.server.port,
+            username: s.server.username.clone(),
+            identity_file_path: s.server.identity_file_path.clone(),
+        })
+        .collect();
+    let count = export_servers.len();
+    drop(servers);
+
+    let new_block = config_parser::build_managed_block(&export_servers);
+    let existing = std::fs::read_to_string(&config_path).unwrap_or_default();
+    let merged = config_parser::merge_managed_block(&existing, &new_block);
+
+    if let Some(parent) = config_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| AppError::Io(e.to_string()))?;
+    }
+
+    // Mark timestamp before writing so the file-watcher suppresses this event.
+    *export_ts.inner().0.lock().unwrap() = std::time::Instant::now();
+
+    std::fs::write(&config_path, merged).map_err(|e| AppError::Io(e.to_string()))?;
+
+    Ok(count)
 }

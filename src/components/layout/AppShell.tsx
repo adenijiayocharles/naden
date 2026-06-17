@@ -30,6 +30,7 @@ import ServerForm from "../servers/ServerForm";
 import VaultLockScreen from "../vault/VaultLockScreen";
 import BulkActionBar from "../servers/BulkActionBar";
 import ClipboardClearBanner from "./ClipboardClearBanner";
+import SshConfigChangedBanner from "./SshConfigChangedBanner";
 import { useSnippetStore } from "../../store/snippetStore";
 import { usePlaybookStore } from "../../store/playbookStore";
 import type { SessionStatus } from "../../store/terminalStore";
@@ -836,6 +837,7 @@ export default function AppShell() {
       </div>
 
 <ClipboardClearBanner />
+<SshConfigChangedBanner />
       {(activeView === "add" || activeView === "edit") && <ServerForm />}
       <Suspense fallback={null}>
         {onboardingChecked && !onboardingComplete && (

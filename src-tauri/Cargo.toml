@@ -54,6 +54,7 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "str
 async-trait = "0.1"
 futures-util = "0.3"
 bytes = "1"
+notify = "6"
 
 # Compile crypto crates with full optimizations even in debug builds.
 # PBKDF2-HMAC-SHA256 at 600k rounds is ~30s unoptimized vs ~1s optimized.

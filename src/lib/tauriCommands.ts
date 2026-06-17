@@ -96,6 +96,9 @@ export const sshCommands = {
 
   confirmSshConfigImport: (previews: ImportPreview[]) =>
     invoke<Server[]>("confirm_ssh_config_import", { previews }),
+
+  exportSshConfig: () =>
+    invoke<number>("export_ssh_config"),
 };
 
 export const discoveryCommands = {
