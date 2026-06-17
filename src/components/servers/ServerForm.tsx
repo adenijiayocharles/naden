@@ -408,6 +408,33 @@ export default function ServerForm() {
                   />
                 </Field>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-secondary mb-1">
+                  Terminal theme
+                </label>
+                <div className="grid grid-cols-6 gap-1.5">
+                  {[{ id: "" as const, label: "Global", bg: "#111111", fg: "#CDFF00" }, ...TERMINAL_THEMES].map(({ id, label, bg, fg }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => { setForm((f) => ({ ...f, terminalTheme: id as TerminalThemeId | "" })); setDirty(true); }}
+                      title={label}
+                      className={`rounded-lg border-2 overflow-hidden transition-all ${
+                        form.terminalTheme === id ? "border-accent" : "border-transparent hover:border-stroke"
+                      }`}
+                    >
+                      <div className="h-8 flex items-center justify-center gap-0.5 px-1" style={{ backgroundColor: bg }}>
+                        <span className="font-mono text-[8px] leading-none select-none" style={{ color: fg }}>{">"}</span>
+                        <span className="inline-block w-[4px] h-[8px] rounded-[1px]" style={{ backgroundColor: fg, opacity: 0.85 }} />
+                      </div>
+                      <div className="bg-surface-2 py-0.5 px-1">
+                        <p className={`text-[9px] leading-tight truncate ${form.terminalTheme === id ? "text-accent-fg" : "text-secondary"}`}>{label}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </>
           )}
 
@@ -715,39 +742,9 @@ export default function ServerForm() {
                 </>
               )}
 
-              {/* Session — Initial Dir, Terminal Theme & Env Vars */}
+              {/* Session — Initial Dir & Env Vars */}
               {activeAdvancedTab === "session" && (
                 <>
-                  <div>
-                    <label className="block text-sm font-medium text-secondary mb-1">
-                      Terminal theme
-                    </label>
-                    <p className="text-xs text-muted mb-2">
-                      Override the global theme for this server. Leave blank to use Settings → Terminal.
-                    </p>
-                    <div className="grid grid-cols-5 gap-2">
-                      {[{ id: "" as const, label: "Global", bg: "#111111", fg: "#CDFF00" }, ...TERMINAL_THEMES].map(({ id, label, bg, fg }) => (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() => { setForm((f) => ({ ...f, terminalTheme: id as TerminalThemeId | "" })); setDirty(true); }}
-                          title={label}
-                          className={`rounded-lg border-2 overflow-hidden transition-all ${
-                            form.terminalTheme === id ? "border-accent" : "border-transparent hover:border-stroke"
-                          }`}
-                        >
-                          <div className="h-8 flex items-center justify-center gap-0.5 px-1" style={{ backgroundColor: bg }}>
-                            <span className="font-mono text-[8px] leading-none select-none" style={{ color: fg }}>{">"}</span>
-                            <span className="inline-block w-[4px] h-[8px] rounded-[1px]" style={{ backgroundColor: fg, opacity: 0.85 }} />
-                          </div>
-                          <div className="bg-surface-2 py-0.5 px-1">
-                            <p className={`text-[9px] leading-tight truncate ${form.terminalTheme === id ? "text-accent-fg" : "text-secondary"}`}>{label}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
                   <Field label="Initial Directory">
                     <Input
                       id="initialDir"
