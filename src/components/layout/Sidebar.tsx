@@ -678,10 +678,14 @@ export default function Sidebar() {
               return (
               <div
                 key={g.id}
-                className={`group flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors ${isActive ? "bg-surface-2 text-accent-fg" : "hover:bg-surface-2"}`}
+                className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${isActive ? "bg-surface-2 text-accent-fg" : "hover:bg-surface-2"}`}
               >
-                <svg className="w-3 h-3 shrink-0 text-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                <svg className="w-3.5 h-3.5 shrink-0 text-muted" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5,9 A3,3 0 0,0 11,9" />
+                  <path d="M2,9 A6,6 0 0,0 14,9" />
+                  <line x1="8" y1="9" x2="8" y2="14" />
+                  <line x1="5" y1="14" x2="11" y2="14" />
+                  <circle cx="8" cy="9" r="1.25" fill="currentColor" stroke="none" />
                 </svg>
                 <span className="flex-1 text-sm text-secondary truncate">{g.name}</span>
                 <button
