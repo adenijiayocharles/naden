@@ -9,6 +9,8 @@ import ConnectionErrorModal from "./ConnectionErrorModal";
 import { FavouriteButton } from "./FavouriteButton";
 import { ReachabilityDot } from "./ReachabilityDot";
 import { timeAgo } from "../../lib/format";
+import { useHealthStore } from "../../store/healthStore";
+import { HealthStats } from "./HealthStats";
 
 interface ServerCardProps {
   server: Server;
@@ -28,6 +30,7 @@ export default function ServerCard({ server, groupColor, lastConnected, isHighli
   );
   const bulkMode = useUiStore((s) => s.bulkMode);
   const isSelected = useUiStore((s) => s.bulkSelected.includes(server.id));
+  const health = useHealthStore((s) => s.health[server.id]);
   const toggleSelected = useUiStore((s) => s.toggleSelected);
 
   const handleClick = () => {
@@ -149,6 +152,12 @@ export default function ServerCard({ server, groupColor, lastConnected, isHighli
               #{tag.name}
             </span>
           ))}
+        </div>
+      )}
+
+      {health && (
+        <div className="border-t border-stroke-subtle pt-2">
+          <HealthStats cpu={health.cpuPercent} mem={health.memPercent} disk={health.diskPercent} />
         </div>
       )}
 

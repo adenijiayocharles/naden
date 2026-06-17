@@ -163,6 +163,8 @@ pub fn run() {
             commands::key_commands::generate_ssh_key,
             commands::key_commands::get_public_key,
             commands::key_commands::rename_ssh_key,
+            // Health
+            commands::health_commands::fetch_server_health,
             // Broadcast groups
             commands::broadcast_commands::list_broadcast_groups,
             commands::broadcast_commands::create_broadcast_group,

@@ -1,6 +1,7 @@
 pub mod assistant_commands;
 pub mod broadcast_commands;
 pub mod discovery_commands;
+pub mod health_commands;
 pub mod key_commands;
 pub mod local_commands;
 pub mod log_commands;

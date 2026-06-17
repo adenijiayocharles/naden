@@ -9,6 +9,8 @@ import ConnectionErrorModal from "./ConnectionErrorModal";
 import { FavouriteButton } from "./FavouriteButton";
 import { ReachabilityDot } from "./ReachabilityDot";
 import { timeAgo } from "../../lib/format";
+import { useHealthStore } from "../../store/healthStore";
+import { HealthStatsInline } from "./HealthStats";
 
 interface ServerRowProps {
   server: Server;
@@ -30,6 +32,7 @@ export default function ServerRow({ server, groupColor, lastConnected, narrow, i
   );
   const isSelected = useUiStore((s) => s.bulkSelected.includes(server.id));
   const toggleSelected = useUiStore((s) => s.toggleSelected);
+  const health = useHealthStore((s) => s.health[server.id]);
 
   const handleClick = () => {
     if (bulkMode) { toggleSelected(server.id); return; }
@@ -93,6 +96,7 @@ export default function ServerRow({ server, groupColor, lastConnected, narrow, i
           )}
 
           <div className="hidden md:flex items-center gap-1.5 shrink-0">
+            {health && <HealthStatsInline cpu={health.cpuPercent} mem={health.memPercent} disk={health.diskPercent} />}
             {!bulkMode && (
               <FavouriteButton
                 isFavourite={server.isFavourite}
