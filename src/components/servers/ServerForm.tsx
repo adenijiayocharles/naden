@@ -3,6 +3,7 @@ import { FolderOpen } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { homeDir, join } from "@tauri-apps/api/path";
 import type { AuthMethod, Tag } from "../../types/server";
+import { TERMINAL_THEMES, type TerminalThemeId } from "../../lib/terminalSettings";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import { serverCommands, vaultCommands } from "../../lib/tauriCommands";
@@ -36,6 +37,7 @@ interface FormData {
   initialDir: string;
   preConnectHook: string;
   postDisconnectHook: string;
+  terminalTheme: TerminalThemeId | "";
 }
 
 const DEFAULT_FORM: FormData = {
@@ -51,6 +53,7 @@ const DEFAULT_FORM: FormData = {
   initialDir: "",
   preConnectHook: "",
   postDisconnectHook: "",
+  terminalTheme: "",
 };
 
 type Tab = "connection" | "auth" | "advanced" | "tunnels";
@@ -132,6 +135,7 @@ export default function ServerForm() {
         initialDir: existingServer.initialDir ?? "",
         preConnectHook: existingServer.preConnectHook ?? "",
         postDisconnectHook: existingServer.postDisconnectHook ?? "",
+        terminalTheme: (existingServer.terminalTheme ?? "") as TerminalThemeId | "",
       });
       setEnvVars(parsedEnvVars);
       setTags(existingServer.tags);
@@ -285,6 +289,7 @@ export default function ServerForm() {
         envVars: validEnvVars.length > 0 ? JSON.stringify(validEnvVars) : undefined,
         preConnectHook: form.preConnectHook.trim() || undefined,
         postDisconnectHook: form.postDisconnectHook.trim() || undefined,
+        terminalTheme: form.terminalTheme || undefined,
         tagIds: tags.map((t) => t.id),
       };
 
@@ -710,9 +715,39 @@ export default function ServerForm() {
                 </>
               )}
 
-              {/* Session — Initial Dir & Env Vars */}
+              {/* Session — Initial Dir, Terminal Theme & Env Vars */}
               {activeAdvancedTab === "session" && (
                 <>
+                  <div>
+                    <label className="block text-sm font-medium text-secondary mb-1">
+                      Terminal theme
+                    </label>
+                    <p className="text-xs text-muted mb-2">
+                      Override the global theme for this server. Leave blank to use Settings → Terminal.
+                    </p>
+                    <div className="grid grid-cols-5 gap-2">
+                      {[{ id: "" as const, label: "Global", bg: "#111111", fg: "#CDFF00" }, ...TERMINAL_THEMES].map(({ id, label, bg, fg }) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => { setForm((f) => ({ ...f, terminalTheme: id as TerminalThemeId | "" })); setDirty(true); }}
+                          title={label}
+                          className={`rounded-lg border-2 overflow-hidden transition-all ${
+                            form.terminalTheme === id ? "border-accent" : "border-transparent hover:border-stroke"
+                          }`}
+                        >
+                          <div className="h-8 flex items-center justify-center gap-0.5 px-1" style={{ backgroundColor: bg }}>
+                            <span className="font-mono text-[8px] leading-none select-none" style={{ color: fg }}>{">"}</span>
+                            <span className="inline-block w-[4px] h-[8px] rounded-[1px]" style={{ backgroundColor: fg, opacity: 0.85 }} />
+                          </div>
+                          <div className="bg-surface-2 py-0.5 px-1">
+                            <p className={`text-[9px] leading-tight truncate ${form.terminalTheme === id ? "text-accent-fg" : "text-secondary"}`}>{label}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <Field label="Initial Directory">
                     <Input
                       id="initialDir"

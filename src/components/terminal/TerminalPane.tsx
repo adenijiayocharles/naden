@@ -9,7 +9,7 @@ import { useTerminalStore } from "../../store/terminalStore";
 import { useCommandHistoryStore } from "../../store/commandHistoryStore";
 import { useBroadcastStore } from "../../store/broadcastStore";
 import { useTerminalToolsStore } from "../../store/terminalToolsStore";
-import { useTerminalSettings, fontCss, resolveTermTheme, lineHeightMultiplier } from "../../lib/terminalSettings";
+import { useTerminalSettings, fontCss, resolveTermTheme, lineHeightMultiplier, type TerminalThemeId } from "../../lib/terminalSettings";
 import { ensureCanvasFonts, ensureFont } from "../../lib/canvasFonts";
 import { ConnectingOverlay, ErrorOverlay, ReconnectingOverlay } from "../shared/ConnectionOverlay";
 import { useSnippetStore } from "../../store/snippetStore";
@@ -55,6 +55,11 @@ export default function TerminalPane({ sessionId }: Props) {
   const session = useTerminalStore((s) => s.sessions.find((t) => t.id === sessionId));
   const closeSession = useTerminalStore((s) => s.closeSession);
   const reconnectSession = useTerminalStore((s) => s.reconnectSession);
+
+  // Per-server terminal theme override — takes precedence over the global setting.
+  const serverTermTheme = useServerStore((s) =>
+    s.servers.find((sv) => sv.id === session?.serverId)?.terminalTheme as TerminalThemeId | undefined,
+  );
 
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -156,6 +161,12 @@ export default function TerminalPane({ sessionId }: Props) {
       const { fontSize, lineHeight, scrollback, copyOnSelect, fontFamily, termTheme, cursorStyle } =
         useTerminalSettings.getState();
       const css = fontCss(fontFamily);
+      // Per-server theme override: if the server has one set, use it; otherwise global.
+      const serverId = useTerminalStore.getState().sessions.find((s) => s.id === sessionId)?.serverId;
+      const perServerTheme = serverId
+        ? (useServerStore.getState().servers.find((sv) => sv.id === serverId)?.terminalTheme as TerminalThemeId | undefined)
+        : undefined;
+      const effectiveTheme = perServerTheme ?? termTheme;
 
       // Ensure the default font and the selected font are loaded before creating
       // the terminal so xterm measures Canvas metrics against the real font from
@@ -174,7 +185,7 @@ export default function TerminalPane({ sessionId }: Props) {
         fontSize,
         lineHeight: lineHeightMultiplier(lineHeight, fontSize),
         scrollback,
-        theme: resolveTermTheme(termTheme),
+        theme: resolveTermTheme(effectiveTheme),
       });
 
       const fitAddon = new FitAddon();
@@ -188,7 +199,7 @@ export default function TerminalPane({ sessionId }: Props) {
       term.open(containerRef.current);
       // xterm never sets viewport.style.backgroundColor — apply the theme
       // background to .xterm itself so it shows through the transparent viewport.
-      if (term.element) term.element.style.backgroundColor = resolveTermTheme(termTheme).background ?? "";
+      if (term.element) term.element.style.backgroundColor = resolveTermTheme(effectiveTheme).background ?? "";
       fitAddon.fit();
       term.focus();
 
@@ -221,7 +232,7 @@ export default function TerminalPane({ sessionId }: Props) {
       requestAnimationFrame(() => {
         if (cancelled) return;
         term.options.fontFamily = css;
-        const theme = resolveTermTheme(termTheme);
+        const theme = resolveTermTheme(effectiveTheme);
         term.options.theme = theme;
         if (term.element) term.element.style.backgroundColor = theme.background ?? "";
         requestAnimationFrame(() => {
@@ -422,7 +433,12 @@ export default function TerminalPane({ sessionId }: Props) {
       // Update terminal colours when the app theme or accent changes.
       // Only relevant when terminal theme is "system" (reads CSS vars).
       const themeObserver = new MutationObserver(() => {
-        const theme = resolveTermTheme(useTerminalSettings.getState().termTheme);
+        const globalTheme = useTerminalSettings.getState().termTheme;
+        const sId = useTerminalStore.getState().sessions.find((s) => s.id === sessionId)?.serverId;
+        const perServer = sId
+          ? (useServerStore.getState().servers.find((sv) => sv.id === sId)?.terminalTheme as TerminalThemeId | undefined)
+          : undefined;
+        const theme = resolveTermTheme(perServer ?? globalTheme);
         term.options.theme = theme;
         if (term.element) term.element.style.backgroundColor = theme.background ?? "";
         restartBlink();
@@ -493,7 +509,7 @@ export default function TerminalPane({ sessionId }: Props) {
       term.options.lineHeight = lineHeightMultiplier(lineHeight, fontSize);
       term.options.fontFamily = css;
       term.options.cursorStyle = cursorStyle;
-      const resolvedTheme = resolveTermTheme(termTheme);
+      const resolvedTheme = resolveTermTheme(serverTermTheme ?? termTheme);
       term.options.theme = resolvedTheme;
       if (term.element) term.element.style.backgroundColor = resolvedTheme.background ?? "";
       requestAnimationFrame(() => {
@@ -501,7 +517,7 @@ export default function TerminalPane({ sessionId }: Props) {
         term.refresh(0, term.rows - 1);
       });
     });
-  }, [fontSize, lineHeight, fontFamily, termTheme, cursorStyle]);
+  }, [fontSize, lineHeight, fontFamily, termTheme, cursorStyle, serverTermTheme]);
 
   // Reads clean text (no escape sequences) from xterm's parsed buffer rather
   // than the raw byte scrollback in sessionBuffer — the buffer already holds

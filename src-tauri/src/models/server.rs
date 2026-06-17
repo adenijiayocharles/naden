@@ -19,6 +19,7 @@ pub struct Server {
     pub env_vars: Option<String>,
     pub pre_connect_hook: Option<String>,
     pub post_disconnect_hook: Option<String>,
+    pub terminal_theme: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -66,6 +67,7 @@ pub struct CreateServerPayload {
     pub env_vars: Option<String>,
     pub pre_connect_hook: Option<String>,
     pub post_disconnect_hook: Option<String>,
+    pub terminal_theme: Option<String>,
     pub tag_ids: Option<Vec<String>>,
 }
 
@@ -88,6 +90,7 @@ pub struct UpdateServerPayload {
     pub env_vars: Option<String>,
     pub pre_connect_hook: Option<String>,
     pub post_disconnect_hook: Option<String>,
+    pub terminal_theme: Option<String>,
     /// When Some, replaces the full tag list. Some(vec![]) clears all tags.
     pub tag_ids: Option<Vec<String>>,
 }

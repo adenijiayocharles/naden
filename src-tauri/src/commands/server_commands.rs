@@ -144,6 +144,7 @@ pub async fn duplicate_server(
         env_vars: s.env_vars.clone(),
         pre_connect_hook: s.pre_connect_hook.clone(),
         post_disconnect_hook: s.post_disconnect_hook.clone(),
+        terminal_theme: s.terminal_theme.clone(),
         tag_ids: Some(original.tags.iter().map(|t| t.id.clone()).collect()),
     };
     let result = queries::create_server_db(&state.db, &payload).await?;

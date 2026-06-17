@@ -20,6 +20,7 @@ fn make_server(display_name: &str, hostname: &str, tags: &[&str]) -> ServerWithT
             env_vars: None,
             pre_connect_hook: None,
             post_disconnect_hook: None,
+            terminal_theme: None,
             created_at: "".to_string(),
             updated_at: "".to_string(),
         },

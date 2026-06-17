@@ -331,6 +331,7 @@ pub async fn confirm_ssh_config_import(
             env_vars: None,
             pre_connect_hook: None,
             post_disconnect_hook: None,
+            terminal_theme: None,
             tag_ids: None,
         };
         let server = queries::create_server_db(&state.db, &payload).await?;

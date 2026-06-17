@@ -139,9 +139,9 @@ pub async fn create_server_db(
          (id, display_name, hostname, port, username, auth_method,
           identity_file_path, vault_credential_id, group_id,
           is_jump_host, jump_host_id, is_favourite, initial_dir,
-          env_vars, pre_connect_hook, post_disconnect_hook,
+          env_vars, pre_connect_hook, post_disconnect_hook, terminal_theme,
           created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(&payload.display_name)
@@ -159,6 +159,7 @@ pub async fn create_server_db(
     .bind(&payload.env_vars)
     .bind(&payload.pre_connect_hook)
     .bind(&payload.post_disconnect_hook)
+    .bind(&payload.terminal_theme)
     .bind(&now)
     .bind(&now)
     .execute(db)
@@ -232,13 +233,15 @@ pub async fn update_server_db(
     let env_vars = payload.env_vars.as_deref().filter(|v| !v.is_empty());
     let pre_connect_hook = payload.pre_connect_hook.as_deref().filter(|v| !v.is_empty());
     let post_disconnect_hook = payload.post_disconnect_hook.as_deref().filter(|v| !v.is_empty());
+    let terminal_theme = payload.terminal_theme.as_deref().filter(|v| !v.is_empty());
 
     sqlx::query(
         "UPDATE servers SET
          display_name = ?, hostname = ?, port = ?, username = ?, auth_method = ?,
          identity_file_path = ?, vault_credential_id = ?, group_id = ?,
          is_jump_host = ?, jump_host_id = ?, is_favourite = ?, initial_dir = ?,
-         env_vars = ?, pre_connect_hook = ?, post_disconnect_hook = ?, updated_at = ?
+         env_vars = ?, pre_connect_hook = ?, post_disconnect_hook = ?, terminal_theme = ?,
+         updated_at = ?
          WHERE id = ?",
     )
     .bind(payload.display_name.as_deref().unwrap_or(&s.display_name))
@@ -256,6 +259,7 @@ pub async fn update_server_db(
     .bind(env_vars.or(s.env_vars.as_deref()))
     .bind(pre_connect_hook.or(s.pre_connect_hook.as_deref()))
     .bind(post_disconnect_hook.or(s.post_disconnect_hook.as_deref()))
+    .bind(terminal_theme.or(s.terminal_theme.as_deref()))
     .bind(&now)
     .bind(id)
     .execute(&mut *tx)

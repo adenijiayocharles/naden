@@ -17,6 +17,7 @@ export interface Server {
   envVars?: string;
   preConnectHook?: string;
   postDisconnectHook?: string;
+  terminalTheme?: string;
   tags: Tag[];
   createdAt: string;
   updatedAt: string;
@@ -51,6 +52,7 @@ export interface CreateServerPayload {
   envVars?: string;
   preConnectHook?: string;
   postDisconnectHook?: string;
+  terminalTheme?: string;
   tagIds?: string[];
 }
 
