@@ -53,6 +53,23 @@ const DEFAULT_FORM: FormData = {
   postDisconnectHook: "",
 };
 
+type Tab = "connection" | "auth" | "advanced" | "tunnels";
+type AdvancedTab = "organize" | "network" | "session" | "hooks";
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "connection", label: "Connection" },
+  { id: "auth", label: "Auth" },
+  { id: "advanced", label: "Advanced" },
+  { id: "tunnels", label: "Tunnels" },
+];
+
+const ADVANCED_TABS: { id: AdvancedTab; label: string }[] = [
+  { id: "organize", label: "Organize" },
+  { id: "network", label: "Network" },
+  { id: "session", label: "Session" },
+  { id: "hooks", label: "Hooks" },
+];
+
 export default function ServerForm() {
   const { activeView, editingServerId, closeForm } = useUiStore();
   const isEdit = activeView === "edit";
@@ -76,6 +93,8 @@ export default function ServerForm() {
   const loadKeys = useSshKeyStore((s) => s.load);
   useEffect(() => { void loadKeys(); }, [loadKeys]);
 
+  const [activeTab, setActiveTab] = useState<Tab>("connection");
+  const [activeAdvancedTab, setActiveAdvancedTab] = useState<AdvancedTab>("organize");
   const [form, setForm] = useState<FormData>(DEFAULT_FORM);
   const [password, setPassword] = useState("");
   const [passphrase, setPassphrase] = useState("");
@@ -84,12 +103,7 @@ export default function ServerForm() {
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [showNewGroup, setShowNewGroup] = useState(false);
-  const [showGroupTags, setShowGroupTags] = useState(false);
-  const [showJumpHost, setShowJumpHost] = useState(false);
-  const [showInitialDir, setShowInitialDir] = useState(false);
   const [envVars, setEnvVars] = useState<EnvVar[]>([]);
-  const [showEnvVars, setShowEnvVars] = useState(false);
-  const [showHooks, setShowHooks] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [, setTouched] = useState<Set<keyof FormData>>(new Set());
   const [submitting, setSubmitting] = useState(false);
@@ -121,20 +135,10 @@ export default function ServerForm() {
       });
       setEnvVars(parsedEnvVars);
       setTags(existingServer.tags);
-      setShowGroupTags(!!existingServer.groupId || existingServer.tags.length > 0);
-      setShowJumpHost(existingServer.isJumpHost || !!existingServer.jumpHostId);
-      setShowInitialDir(!!existingServer.initialDir);
-      setShowEnvVars(parsedEnvVars.length > 0);
-      setShowHooks(!!(existingServer.preConnectHook || existingServer.postDisconnectHook));
     } else {
       setForm(DEFAULT_FORM);
       setEnvVars([]);
       setTags([]);
-      setShowGroupTags(false);
-      setShowJumpHost(false);
-      setShowInitialDir(false);
-      setShowEnvVars(false);
-      setShowHooks(false);
     }
     setErrors({});
     setTouched(new Set());
@@ -143,6 +147,8 @@ export default function ServerForm() {
     setTagDropdownOpen(false);
     setShowNewGroup(false);
     setNewGroupName("");
+    setActiveTab("connection");
+    setActiveAdvancedTab("organize");
   }, [existingServer, activeView]);
 
   const set = (field: keyof FormData) =>
@@ -202,7 +208,7 @@ export default function ServerForm() {
       const tag = await serverCommands.createTag(name);
       if (!tags.some((t) => t.id === tag.id)) {
         setTags((ts) => [...ts, tag]);
-        await createTag(name); // sync global tag list
+        await createTag(name);
       }
       setTagInput("");
       tagInputRef.current?.focus();
@@ -242,12 +248,14 @@ export default function ServerForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validate()) {
+      setActiveTab("connection");
+      return;
+    }
 
     setSubmitting(true);
     let freshCredentialId: string | undefined;
     try {
-      // Store password in vault if provided, reuse existing credential ID otherwise
       let vaultCredentialId: string | undefined = isEdit
         ? existingServer?.vaultCredentialId
         : undefined;
@@ -298,6 +306,8 @@ export default function ServerForm() {
     }
   };
 
+  const connectionHasError = !!(errors.displayName || errors.hostname || errors.port);
+
   return (
     <div
       className="fixed inset-0 bg-black/85 animate-backdrop-in flex items-center justify-center z-50 p-4"
@@ -318,562 +328,514 @@ export default function ServerForm() {
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="flex border-b border-stroke-subtle px-6 shrink-0">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-3 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                activeTab === tab.id
+                  ? "border-accent text-white"
+                  : "border-transparent text-muted hover:text-secondary"
+              }`}
+            >
+              {tab.label}
+              {tab.id === "connection" && connectionHasError && (
+                <span className="size-1.5 rounded-full bg-error inline-block" />
+              )}
+            </button>
+          ))}
+        </div>
+
         {/* Form */}
         <form id="server-form" onSubmit={(e) => { void handleSubmit(e); }} className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
-          {/* Display Name */}
-          <Field label="Display Name" error={errors.displayName} required>
-            <Input
-              id="displayName"
-              value={form.displayName}
-              onChange={set("displayName")}
-              onBlur={(e) => validateField("displayName", e.target.value)}
-              placeholder="Production Web Server"
-              aria-invalid={!!errors.displayName}
-              autoComplete="off"
-            />
-          </Field>
 
-          {/* Hostname */}
-          <Field label="Hostname / IP" error={errors.hostname} required>
-            <Input
-              id="hostname"
-              value={form.hostname}
-              onChange={set("hostname")}
-              onBlur={(e) => validateField("hostname", e.target.value)}
-              placeholder="web.example.com"
-              aria-invalid={!!errors.hostname}
-              autoComplete="off"
-            />
-          </Field>
-
-          {/* Port + Username */}
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Port" error={errors.port} required>
-              <Input
-                id="port"
-                type="number"
-                min={1}
-                max={65535}
-                value={form.port}
-                onChange={set("port")}
-                onBlur={(e) => validateField("port", e.target.value)}
-                aria-invalid={!!errors.port}
-                autoComplete="off"
-              />
-            </Field>
-            <Field label="Username">
-              <Input
-                id="username"
-                value={form.username}
-                onChange={set("username")}
-                placeholder="ubuntu"
-                autoComplete="off"
-              />
-            </Field>
-          </div>
-
-          {/* Auth Method */}
-          <Field label="Auth Method">
-            <div className="flex h-10 rounded border border-stroke overflow-hidden">
-              {(["key", "password", "agent"] as const).map((method) => (
-                <button
-                  key={method}
-                  type="button"
-                  onClick={() => { setForm((f) => ({ ...f, authMethod: method })); setDirty(true); }}
-                  className={`flex-1 h-full text-sm transition-colors ${
-                    form.authMethod === method
-                      ? "bg-accent text-black font-semibold"
-                      : "bg-surface-3 text-muted hover:text-white hover:bg-surface-4"
-                  }`}
-                >
-                  {method === "key" ? "SSH Key" : method === "password" ? "Password" : "SSH Agent"}
-                </button>
-              ))}
-            </div>
-            {form.authMethod === "agent" && (
-              <p className="mt-1.5 text-xs text-muted">
-                Uses your running ssh-agent. Run <code className="text-accent-fg">ssh-add</code> to load keys into the agent.
-              </p>
-            )}
-          </Field>
-
-          {/* Password */}
-          {form.authMethod === "password" && (
-            <Field label={isEdit && existingServer?.vaultCredentialId ? "New Password (leave blank to keep existing)" : "Password"}>
-              {!vaultAvailable ? (
-                <p className="text-xs text-yellow-500">Unlock the vault to store a password.</p>
-              ) : (
+          {/* ── Connection ── */}
+          {activeTab === "connection" && (
+            <>
+              <Field label="Display Name" error={errors.displayName} required>
                 <Input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={isEdit && existingServer?.vaultCredentialId ? "Enter new password to change…" : "SSH password"}
-                  autoComplete="new-password"
-                />
-              )}
-            </Field>
-          )}
-
-          {/* Identity File */}
-          {form.authMethod === "key" && (
-            <Field label="Identity File">
-              {managedKeys.length > 0 && (
-                <Select
-                  value={managedKeys.some((k) => k.keyPath === form.identityFilePath) ? form.identityFilePath : "__none__"}
-                  onValueChange={(value) => {
-                    if (value && value !== "__none__") {
-                      setForm((f) => ({ ...f, identityFilePath: value }));
-                      setDirty(true);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-full h-10 mb-2">
-                    <SelectValue placeholder="— pick a managed key —" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">— pick a managed key —</SelectItem>
-                    {managedKeys.map((k) => (
-                      <SelectItem key={k.id} value={k.keyPath}>
-                        {k.name} ({k.keyType.toUpperCase()})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <div className="relative">
-                <Input
-                  id="identityFilePath"
-                  value={form.identityFilePath}
-                  onChange={set("identityFilePath")}
-                  placeholder="~/.ssh/id_ed25519"
-                  className="pr-9"
+                  id="displayName"
+                  value={form.displayName}
+                  onChange={set("displayName")}
+                  onBlur={(e) => validateField("displayName", e.target.value)}
+                  placeholder="Production Web Server"
+                  aria-invalid={!!errors.displayName}
                   autoComplete="off"
                 />
-                <button
-                  type="button"
-                  onClick={() => { void pickIdentityFile(); }}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 text-muted hover:text-white rounded transition-colors"
-                  aria-label="Browse for identity file"
-                >
-                  <FolderOpen className="size-4" />
-                </button>
-              </div>
-            </Field>
-          )}
+              </Field>
 
-          {/* Key Passphrase */}
-          {form.authMethod === "key" && (
-            <Field label={isEdit && existingServer?.vaultCredentialId ? "New Passphrase (leave blank to keep existing)" : "Passphrase (optional)"}>
-              {!vaultAvailable ? (
-                <p className="text-xs text-yellow-500">Unlock the vault to store a passphrase.</p>
-              ) : (
+              <Field label="Hostname / IP" error={errors.hostname} required>
                 <Input
-                  type="password"
-                  value={passphrase}
-                  onChange={(e) => setPassphrase(e.target.value)}
-                  placeholder={isEdit && existingServer?.vaultCredentialId ? "Enter new passphrase to change…" : "Leave empty if the key has no passphrase"}
-                  autoComplete="new-password"
+                  id="hostname"
+                  value={form.hostname}
+                  onChange={set("hostname")}
+                  onBlur={(e) => validateField("hostname", e.target.value)}
+                  placeholder="web.example.com"
+                  aria-invalid={!!errors.hostname}
+                  autoComplete="off"
                 />
-              )}
-            </Field>
+              </Field>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Port" error={errors.port} required>
+                  <Input
+                    id="port"
+                    type="number"
+                    min={1}
+                    max={65535}
+                    value={form.port}
+                    onChange={set("port")}
+                    onBlur={(e) => validateField("port", e.target.value)}
+                    aria-invalid={!!errors.port}
+                    autoComplete="off"
+                  />
+                </Field>
+                <Field label="Username">
+                  <Input
+                    id="username"
+                    value={form.username}
+                    onChange={set("username")}
+                    placeholder="ubuntu"
+                    autoComplete="off"
+                  />
+                </Field>
+              </div>
+            </>
           )}
 
-          {/* Group & Tags toggle */}
-          {!showGroupTags && (
-            <button
-              type="button"
-              onClick={() => setShowGroupTags(true)}
-              className="block text-sm text-faint hover:text-white transition-colors"
-            >
-              + Add group / tags
-            </button>
-          )}
-
-          {/* Group */}
-          {showGroupTags && (
-          <>
-          <Field label="Group" error={errors.group}>
-            {!showNewGroup ? (
-              <Select
-                value={form.groupId || "__none__"}
-                onValueChange={(value) => {
-                  if (value === "__create_new__") {
-                    setShowNewGroup(true);
-                    setForm((f) => ({ ...f, groupId: "" }));
-                  } else {
-                    setShowNewGroup(false);
-                    setForm((f) => ({ ...f, groupId: value && value !== "__none__" ? value : "" }));
-                  }
-                  setDirty(true);
-                }}
-              >
-                <SelectTrigger id="groupId" className="w-full h-10">
-                  <SelectValue placeholder="No Group" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">No Group</SelectItem>
-                  {groups.map((g) => (
-                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+          {/* ── Auth ── */}
+          {activeTab === "auth" && (
+            <>
+              <Field label="Auth Method">
+                <div className="flex h-10 rounded border border-stroke overflow-hidden">
+                  {(["key", "password", "agent"] as const).map((method) => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => { setForm((f) => ({ ...f, authMethod: method })); setDirty(true); }}
+                      className={`flex-1 h-full text-sm transition-colors ${
+                        form.authMethod === method
+                          ? "bg-accent text-black font-semibold"
+                          : "bg-surface-3 text-muted hover:text-white hover:bg-surface-4"
+                      }`}
+                    >
+                      {method === "key" ? "SSH Key" : method === "password" ? "Password" : "SSH Agent"}
+                    </button>
                   ))}
-                  <SelectItem value="__create_new__">＋ Create new group…</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <div className="flex gap-2">
-                <Input
-                  autoFocus
-                  value={newGroupName}
-                  onChange={(e) => setNewGroupName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void handleCreateGroup(); } }}
-                  placeholder="Group name"
-                  className="flex-1"
-                  autoComplete="off"
-                />
-                <Button
-                  type="button"
-                  onClick={() => { void handleCreateGroup(); }}
-                  className="px-3 shrink-0"
-                >
-                  Add
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => { setShowNewGroup(false); setNewGroupName(""); }}
-                  className="px-3 shrink-0"
-                >
-                  Cancel
-                </Button>
-              </div>
-            )}
-          </Field>
+                </div>
+                {form.authMethod === "agent" && (
+                  <p className="mt-1.5 text-xs text-muted">
+                    Uses your running ssh-agent. Run <code className="text-accent-fg">ssh-add</code> to load keys into the agent.
+                  </p>
+                )}
+              </Field>
 
-          {/* Tags */}
-          <Field label="Tags" error={errors.tag}>
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-2">
-                {tags.map((t) => (
-                  <span key={t.id} className="flex items-center gap-1 bg-surface-3 border border-stroke text-muted text-xs px-2 py-1 rounded-full">
-                    #{t.name}
+              {form.authMethod === "password" && (
+                <Field label={isEdit && existingServer?.vaultCredentialId ? "New Password (leave blank to keep existing)" : "Password"}>
+                  {!vaultAvailable ? (
+                    <p className="text-xs text-yellow-500">Unlock the vault to store a password.</p>
+                  ) : (
+                    <Input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder={isEdit && existingServer?.vaultCredentialId ? "Enter new password to change…" : "SSH password"}
+                      autoComplete="new-password"
+                    />
+                  )}
+                </Field>
+              )}
+
+              {form.authMethod === "key" && (
+                <Field label="Identity File">
+                  {managedKeys.length > 0 && (
+                    <Select
+                      value={managedKeys.some((k) => k.keyPath === form.identityFilePath) ? form.identityFilePath : "__none__"}
+                      onValueChange={(value) => {
+                        if (value && value !== "__none__") {
+                          setForm((f) => ({ ...f, identityFilePath: value }));
+                          setDirty(true);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full h-10 mb-2">
+                        <SelectValue placeholder="— pick a managed key —" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">— pick a managed key —</SelectItem>
+                        {managedKeys.map((k) => (
+                          <SelectItem key={k.id} value={k.keyPath}>
+                            {k.name} ({k.keyType.toUpperCase()})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <div className="relative">
+                    <Input
+                      id="identityFilePath"
+                      value={form.identityFilePath}
+                      onChange={set("identityFilePath")}
+                      placeholder="~/.ssh/id_ed25519"
+                      className="pr-9"
+                      autoComplete="off"
+                    />
                     <button
                       type="button"
-                      onClick={() => setTags((ts) => ts.filter((x) => x.id !== t.id))}
-                      className="text-muted hover:text-white leading-none"
-                      aria-label={`Remove tag ${t.name}`}
+                      onClick={() => { void pickIdentityFile(); }}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 text-muted hover:text-white rounded transition-colors"
+                      aria-label="Browse for identity file"
                     >
-                      ×
+                      <FolderOpen className="size-4" />
                     </button>
-                  </span>
+                  </div>
+                </Field>
+              )}
+
+              {form.authMethod === "key" && (
+                <Field label={isEdit && existingServer?.vaultCredentialId ? "New Passphrase (leave blank to keep existing)" : "Passphrase (optional)"}>
+                  {!vaultAvailable ? (
+                    <p className="text-xs text-yellow-500">Unlock the vault to store a passphrase.</p>
+                  ) : (
+                    <Input
+                      type="password"
+                      value={passphrase}
+                      onChange={(e) => setPassphrase(e.target.value)}
+                      placeholder={isEdit && existingServer?.vaultCredentialId ? "Enter new passphrase to change…" : "Leave empty if the key has no passphrase"}
+                      autoComplete="new-password"
+                    />
+                  )}
+                </Field>
+              )}
+            </>
+          )}
+
+          {/* ── Advanced ── */}
+          {activeTab === "advanced" && (
+            <>
+              {/* Sub-tab bar */}
+              <div className="flex gap-1 p-1 bg-surface-2 rounded-lg shrink-0">
+                {ADVANCED_TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveAdvancedTab(tab.id)}
+                    className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                      activeAdvancedTab === tab.id
+                        ? "bg-surface-4 text-white shadow-sm"
+                        : "text-muted hover:text-secondary"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
                 ))}
               </div>
-            )}
-            <div className="relative" ref={tagDropdownRef}>
-              <Input
-                ref={tagInputRef}
-                value={tagInput}
-                onChange={(e) => { setTagInput(e.target.value); setTagDropdownOpen(true); }}
-                onFocus={() => setTagDropdownOpen(true)}
-                onBlur={() => setTimeout(() => setTagDropdownOpen(false), 150)}
-                onKeyDown={handleTagKeyDown}
-                placeholder="Type a tag and press Enter"
-                autoComplete="off"
-              />
-              {tagDropdownOpen && tagSuggestions.length > 0 && (
-                <div className="absolute z-20 top-full mt-1 w-full bg-surface-2 border border-stroke rounded-lg shadow-overlay max-h-40 overflow-y-auto">
-                  {tagSuggestions.map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onMouseDown={(e) => { e.preventDefault(); setTags((ts) => [...ts, t]); setTagInput(""); setTagDropdownOpen(false); }}
-                      className="w-full text-left px-3 py-2 text-sm text-secondary hover:bg-surface-4 hover:text-white transition-colors"
-                    >
-                      #{t.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </Field>
 
-          <button
-            type="button"
-            onClick={() => setShowGroupTags(false)}
-            className="text-sm text-faint hover:text-white transition-colors"
-          >
-            − Hide group / tags
-          </button>
-          </>
-          )}
-
-          {/* Jump Host toggle */}
-          {!showJumpHost && (
-            <button
-              type="button"
-              onClick={() => setShowJumpHost(true)}
-              className="block text-sm text-faint hover:text-white transition-colors"
-            >
-              + Add jump host
-            </button>
-          )}
-
-          {/* Jump Host */}
-          {showJumpHost && (
-          <>
-          <Field label="">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <Checkbox
-                checked={form.isJumpHost}
-                onCheckedChange={(checked) => {
-                  setForm((f) => ({ ...f, isJumpHost: checked === true }));
-                  setDirty(true);
-                }}
-              />
-              <span className="text-sm text-secondary">This server is a jump host / bastion</span>
-            </label>
-          </Field>
-
-          {/* Jump through */}
-          {!form.isJumpHost && (
-            <Field label="Jump Host (optional)">
-              <Select
-                value={form.jumpHostId || "__none__"}
-                onValueChange={(value) => {
-                  setForm((f) => ({ ...f, jumpHostId: value && value !== "__none__" ? value : "" }));
-                  setDirty(true);
-                }}
-              >
-                <SelectTrigger id="jumpHostId" className="w-full h-10">
-                  <SelectValue placeholder="Direct connection" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Direct connection</SelectItem>
-                  {servers
-                    .filter((s) => s.isJumpHost && s.id !== editingServerId)
-                    .map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-
-              {/* Visual chain display */}
-              {form.jumpHostId && (() => {
-                const chain: string[] = ["Your machine"];
-                let id: string | undefined = form.jumpHostId;
-                const visited = new Set<string>();
-                while (id && !visited.has(id)) {
-                  visited.add(id);
-                  const hop = servers.find((s) => s.id === id);
-                  if (!hop) break;
-                  chain.push(hop.displayName);
-                  id = hop.jumpHostId ?? undefined;
-                }
-                const target = form.displayName.trim() || "this server";
-                chain.push(target);
-                return (
-                  <div className="mt-2 flex items-center flex-wrap gap-1 text-meta text-faint">
-                    {chain.map((label, i) => (
-                      <span key={i} className="flex items-center gap-1">
-                        <span className={i === 0 || i === chain.length - 1
-                          ? "text-muted"
-                          : "text-secondary font-medium"}>
-                          {label}
-                        </span>
-                        {i < chain.length - 1 && <span className="text-dim">→</span>}
-                      </span>
-                    ))}
-                  </div>
-                );
-              })()}
-            </Field>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setShowJumpHost(false)}
-            className="text-sm text-faint hover:text-white transition-colors"
-          >
-            − Hide jump host
-          </button>
-          </>
-          )}
-
-          {/* Initial Directory */}
-          {!showInitialDir && (
-            <button
-              type="button"
-              onClick={() => setShowInitialDir(true)}
-              className="block text-sm text-faint hover:text-white transition-colors"
-            >
-              + Set initial directory
-            </button>
-          )}
-          {showInitialDir && (
-            <>
-              <Field label="Initial Directory">
-                <Input
-                  id="initialDir"
-                  value={form.initialDir}
-                  onChange={set("initialDir")}
-                  placeholder="/var/www/html"
-                  autoComplete="off"
-                />
-                <p className="mt-1 text-xs text-muted">
-                  Shell will <code className="text-accent-fg">cd</code> here immediately after connecting.
-                </p>
-              </Field>
-              <button
-                type="button"
-                onClick={() => { setShowInitialDir(false); setForm((f) => ({ ...f, initialDir: "" })); }}
-                className="text-sm text-faint hover:text-white transition-colors"
-              >
-                − Clear initial directory
-              </button>
-            </>
-          )}
-
-          {/* Environment Variables */}
-          {!showEnvVars && (
-            <button
-              type="button"
-              onClick={() => setShowEnvVars(true)}
-              className="block text-sm text-faint hover:text-white transition-colors"
-            >
-              + Set environment variables
-            </button>
-          )}
-          {showEnvVars && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-secondary mb-1">
-                  Environment Variables
-                </label>
-                <p className="text-xs text-muted mb-2">
-                  Exported to the shell immediately after connecting.
-                </p>
-                <div className="space-y-1.5">
-                  {envVars.map((v, i) => (
-                    <div key={i} className="flex gap-1.5 items-center">
-                      <Input
-                        value={v.key}
-                        onChange={(e) => setEnvVars((prev) => prev.map((ev, j) => j === i ? { ...ev, key: e.target.value } : ev))}
-                        placeholder="KEY"
-                        className="w-32 shrink-0 font-mono text-xs h-8"
-                        autoComplete="off"
-                        spellCheck={false}
-                      />
-                      <span className="text-dim text-xs shrink-0">=</span>
-                      <Input
-                        value={v.value}
-                        onChange={(e) => setEnvVars((prev) => prev.map((ev, j) => j === i ? { ...ev, value: e.target.value } : ev))}
-                        placeholder="value"
-                        className="flex-1 font-mono text-xs h-8"
-                        autoComplete="off"
-                        spellCheck={false}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setEnvVars((prev) => prev.filter((_, j) => j !== i))}
-                        className="text-dim hover:text-red-400 transition-colors shrink-0 text-sm leading-none px-1"
-                        title="Remove"
+              {/* Organize — Group & Tags */}
+              {activeAdvancedTab === "organize" && (
+                <>
+                  <Field label="Group" error={errors.group}>
+                    {!showNewGroup ? (
+                      <Select
+                        value={form.groupId || "__none__"}
+                        onValueChange={(value) => {
+                          if (value === "__create_new__") {
+                            setShowNewGroup(true);
+                            setForm((f) => ({ ...f, groupId: "" }));
+                          } else {
+                            setShowNewGroup(false);
+                            setForm((f) => ({ ...f, groupId: value && value !== "__none__" ? value : "" }));
+                          }
+                          setDirty(true);
+                        }}
                       >
-                        ×
-                      </button>
+                        <SelectTrigger id="groupId" className="w-full h-10">
+                          <SelectValue placeholder="No Group" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">No Group</SelectItem>
+                          {groups.map((g) => (
+                            <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                          ))}
+                          <SelectItem value="__create_new__">＋ Create new group…</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          autoFocus
+                          value={newGroupName}
+                          onChange={(e) => setNewGroupName(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void handleCreateGroup(); } }}
+                          placeholder="Group name"
+                          className="flex-1"
+                          autoComplete="off"
+                        />
+                        <Button
+                          type="button"
+                          onClick={() => { void handleCreateGroup(); }}
+                          className="px-3 shrink-0"
+                        >
+                          Add
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => { setShowNewGroup(false); setNewGroupName(""); }}
+                          className="px-3 shrink-0"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    )}
+                  </Field>
+
+                  <Field label="Tags" error={errors.tag}>
+                    {tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {tags.map((t) => (
+                          <span key={t.id} className="flex items-center gap-1 bg-surface-3 border border-stroke text-muted text-xs px-2 py-1 rounded-full">
+                            #{t.name}
+                            <button
+                              type="button"
+                              onClick={() => setTags((ts) => ts.filter((x) => x.id !== t.id))}
+                              className="text-muted hover:text-white leading-none"
+                              aria-label={`Remove tag ${t.name}`}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="relative" ref={tagDropdownRef}>
+                      <Input
+                        ref={tagInputRef}
+                        value={tagInput}
+                        onChange={(e) => { setTagInput(e.target.value); setTagDropdownOpen(true); }}
+                        onFocus={() => setTagDropdownOpen(true)}
+                        onBlur={() => setTimeout(() => setTagDropdownOpen(false), 150)}
+                        onKeyDown={handleTagKeyDown}
+                        placeholder="Type a tag and press Enter"
+                        autoComplete="off"
+                      />
+                      {tagDropdownOpen && tagSuggestions.length > 0 && (
+                        <div className="absolute z-20 top-full mt-1 w-full bg-surface-2 border border-stroke rounded-lg shadow-overlay max-h-40 overflow-y-auto">
+                          {tagSuggestions.map((t) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onMouseDown={(e) => { e.preventDefault(); setTags((ts) => [...ts, t]); setTagInput(""); setTagDropdownOpen(false); }}
+                              className="w-full text-left px-3 py-2 text-sm text-secondary hover:bg-surface-4 hover:text-white transition-colors"
+                            >
+                              #{t.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setEnvVars((prev) => [...prev, { key: "", value: "" }])}
-                    className="h-7 text-xs px-3 mt-1"
-                  >
-                    + Add variable
-                  </Button>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setShowEnvVars(false); setEnvVars([]); }}
-                className="text-sm text-faint hover:text-white transition-colors"
-              >
-                − Clear environment variables
-              </button>
+                  </Field>
+                </>
+              )}
+
+              {/* Network — Jump Host */}
+              {activeAdvancedTab === "network" && (
+                <>
+                  <Field label="">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={form.isJumpHost}
+                        onCheckedChange={(checked) => {
+                          setForm((f) => ({ ...f, isJumpHost: checked === true }));
+                          setDirty(true);
+                        }}
+                      />
+                      <span className="text-sm text-secondary">This server is a jump host / bastion</span>
+                    </label>
+                  </Field>
+
+                  {!form.isJumpHost && (
+                    <Field label="Jump Through (optional)">
+                      <Select
+                        value={form.jumpHostId || "__none__"}
+                        onValueChange={(value) => {
+                          setForm((f) => ({ ...f, jumpHostId: value && value !== "__none__" ? value : "" }));
+                          setDirty(true);
+                        }}
+                      >
+                        <SelectTrigger id="jumpHostId" className="w-full h-10">
+                          <SelectValue placeholder="Direct connection" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Direct connection</SelectItem>
+                          {servers
+                            .filter((s) => s.isJumpHost && s.id !== editingServerId)
+                            .map((s) => (
+                              <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+
+                      {form.jumpHostId && (() => {
+                        const chain: string[] = ["Your machine"];
+                        let id: string | undefined = form.jumpHostId;
+                        const visited = new Set<string>();
+                        while (id && !visited.has(id)) {
+                          visited.add(id);
+                          const hop = servers.find((s) => s.id === id);
+                          if (!hop) break;
+                          chain.push(hop.displayName);
+                          id = hop.jumpHostId ?? undefined;
+                        }
+                        const target = form.displayName.trim() || "this server";
+                        chain.push(target);
+                        return (
+                          <div className="mt-2 flex items-center flex-wrap gap-1 text-meta text-faint">
+                            {chain.map((label, i) => (
+                              <span key={i} className="flex items-center gap-1">
+                                <span className={i === 0 || i === chain.length - 1 ? "text-muted" : "text-secondary font-medium"}>
+                                  {label}
+                                </span>
+                                {i < chain.length - 1 && <span className="text-dim">→</span>}
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </Field>
+                  )}
+                </>
+              )}
+
+              {/* Session — Initial Dir & Env Vars */}
+              {activeAdvancedTab === "session" && (
+                <>
+                  <Field label="Initial Directory">
+                    <Input
+                      id="initialDir"
+                      value={form.initialDir}
+                      onChange={set("initialDir")}
+                      placeholder="/var/www/html"
+                      autoComplete="off"
+                    />
+                    <p className="mt-1 text-xs text-muted">
+                      Shell will <code className="text-accent-fg">cd</code> here immediately after connecting.
+                    </p>
+                  </Field>
+
+                  <div>
+                    <label className="block text-sm font-medium text-secondary mb-1">
+                      Environment Variables
+                    </label>
+                    <p className="text-xs text-muted mb-2">
+                      Exported to the shell immediately after connecting.
+                    </p>
+                    <div className="space-y-1.5">
+                      {envVars.map((v, i) => (
+                        <div key={i} className="flex gap-1.5 items-center">
+                          <Input
+                            value={v.key}
+                            onChange={(e) => setEnvVars((prev) => prev.map((ev, j) => j === i ? { ...ev, key: e.target.value } : ev))}
+                            placeholder="KEY"
+                            className="w-32 shrink-0 font-mono text-xs h-8"
+                            autoComplete="off"
+                            spellCheck={false}
+                          />
+                          <span className="text-dim text-xs shrink-0">=</span>
+                          <Input
+                            value={v.value}
+                            onChange={(e) => setEnvVars((prev) => prev.map((ev, j) => j === i ? { ...ev, value: e.target.value } : ev))}
+                            placeholder="value"
+                            className="flex-1 font-mono text-xs h-8"
+                            autoComplete="off"
+                            spellCheck={false}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setEnvVars((prev) => prev.filter((_, j) => j !== i))}
+                            className="text-dim hover:text-red-400 transition-colors shrink-0 text-sm leading-none px-1"
+                            title="Remove"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setEnvVars((prev) => [...prev, { key: "", value: "" }])}
+                        className="h-7 text-xs px-3 mt-1"
+                      >
+                        + Add variable
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Hooks — Pre/Post connection scripts */}
+              {activeAdvancedTab === "hooks" && (
+                <>
+                  <Field label="Pre-connect Hook">
+                    <textarea
+                      value={form.preConnectHook}
+                      onChange={set("preConnectHook")}
+                      placeholder={"#!/bin/sh\n# Runs locally before connecting\naws sso login --profile prod"}
+                      rows={4}
+                      spellCheck={false}
+                      className="w-full rounded-md border border-stroke bg-surface-2 px-3 py-2 text-xs font-mono text-white placeholder-[#555] focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+                    />
+                    <p className="mt-1 text-xs text-muted">
+                      Runs locally before the SSH connection. Non-zero exit cancels the connection.
+                      Env: <code className="text-accent-fg">SSHELTER_HOST</code>, <code className="text-accent-fg">SSHELTER_PORT</code>, <code className="text-accent-fg">SSHELTER_USER</code>.
+                    </p>
+                  </Field>
+
+                  <Field label="Post-disconnect Hook">
+                    <textarea
+                      value={form.postDisconnectHook}
+                      onChange={set("postDisconnectHook")}
+                      placeholder={"#!/bin/sh\n# Runs locally after session ends\nnotify-send \"Disconnected from $SSHELTER_HOST\""}
+                      rows={4}
+                      spellCheck={false}
+                      className="w-full rounded-md border border-stroke bg-surface-2 px-3 py-2 text-xs font-mono text-white placeholder-[#555] focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+                    />
+                    <p className="mt-1 text-xs text-muted">
+                      Runs locally after disconnect. Spawned in the background — does not block cleanup.
+                    </p>
+                  </Field>
+                </>
+              )}
             </>
           )}
 
-          {/* Connection Hooks */}
-          {!showHooks && (
-            <button
-              type="button"
-              onClick={() => setShowHooks(true)}
-              className="block text-sm text-faint hover:text-white transition-colors"
-            >
-              + Add connection hooks
-            </button>
-          )}
-          {showHooks && (
-            <>
-              <Field label="Pre-connect Hook">
-                <textarea
-                  value={form.preConnectHook}
-                  onChange={set("preConnectHook")}
-                  placeholder={"#!/bin/sh\n# Runs locally before connecting\naws sso login --profile prod"}
-                  rows={3}
-                  spellCheck={false}
-                  className="w-full rounded-md border border-stroke bg-surface-2 px-3 py-2 text-xs font-mono text-white placeholder-[#555] focus:outline-none focus:ring-1 focus:ring-accent resize-none"
-                />
-                <p className="mt-1 text-xs text-muted">
-                  Runs locally before the SSH connection. Non-zero exit cancels the connection.
-                  Env: <code className="text-accent-fg">SSHELTER_HOST</code>, <code className="text-accent-fg">SSHELTER_PORT</code>, <code className="text-accent-fg">SSHELTER_USER</code>.
-                </p>
-              </Field>
-              <Field label="Post-disconnect Hook">
-                <textarea
-                  value={form.postDisconnectHook}
-                  onChange={set("postDisconnectHook")}
-                  placeholder={"#!/bin/sh\n# Runs locally after session ends\nnotify-send \"Disconnected from $SSHELTER_HOST\""}
-                  rows={3}
-                  spellCheck={false}
-                  className="w-full rounded-md border border-stroke bg-surface-2 px-3 py-2 text-xs font-mono text-white placeholder-[#555] focus:outline-none focus:ring-1 focus:ring-accent resize-none"
-                />
-                <p className="mt-1 text-xs text-muted">
-                  Runs locally after disconnect. Spawned in the background — does not block cleanup.
-                </p>
-              </Field>
-              <button
-                type="button"
-                onClick={() => { setShowHooks(false); setForm((f) => ({ ...f, preConnectHook: "", postDisconnectHook: "" })); }}
-                className="text-sm text-faint hover:text-white transition-colors"
-              >
-                − Clear connection hooks
-              </button>
-            </>
+          {/* ── Tunnels ── */}
+          {activeTab === "tunnels" && (
+            isEdit && editingServerId
+              ? <PortForwardsSection serverId={editingServerId} />
+              : <p className="text-meta text-faint px-1">Port forwards can be configured after saving the server.</p>
           )}
 
-          {/* Port Forwards */}
-          {isEdit && editingServerId && (
-            <PortForwardsSection serverId={editingServerId} />
-          )}
-          {!isEdit && (
-            <p className="text-meta text-faint px-1">
-              Port forwards can be configured after saving the server.
-            </p>
-          )}
-
-          {errors.submit && (
-            <p className="text-sm text-error bg-error-subtle border border-error-subtle rounded-md px-3 py-2">
-              {errors.submit}
-            </p>
-          )}
         </form>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-stroke-subtle shrink-0">
-          <Button type="button" variant="secondary" onClick={handleClose}>
-            Cancel
-          </Button>
-          <Button type="submit" form="server-form" disabled={submitting}>
-            {saved ? "Saved ✓" : submitting ? "Saving…" : isEdit ? "Save Changes" : "Add Server"}
-          </Button>
+        <div className="px-6 pt-3 pb-4 border-t border-stroke-subtle shrink-0">
+          {errors.submit && (
+            <p className="text-sm text-error bg-error-subtle border border-error-subtle rounded-md px-3 py-2 mb-3">
+              {errors.submit}
+            </p>
+          )}
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button type="submit" form="server-form" disabled={submitting}>
+              {saved ? "Saved ✓" : submitting ? "Saving…" : isEdit ? "Save Changes" : "Add Server"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -881,8 +843,6 @@ export default function ServerForm() {
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
-
-// NOTE: PortForwardsSection lives in ./PortForwardsSection.tsx
 
 function Field({
   label,
@@ -908,4 +868,3 @@ function Field({
     </div>
   );
 }
-
