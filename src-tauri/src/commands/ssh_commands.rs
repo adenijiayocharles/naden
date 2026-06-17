@@ -436,7 +436,7 @@ pub async fn open_terminal_session(
                 .env("NADEN_HOST", &s.hostname)
                 .env("NADEN_PORT", s.port.to_string())
                 .env("NADEN_USER", &s.username)
-                .env("SSHELTER_SERVER_ID", &server_id)
+                .env("NADEN_SERVER_ID", &server_id)
                 .kill_on_drop(true)
                 .status()
                 .await
