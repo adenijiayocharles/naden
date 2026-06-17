@@ -583,15 +583,41 @@ export default function SftpBrowser({ sessionId }: Props) {
 
         {/* Remote pane */}
         <div
-          className={`flex-1 min-w-0 flex flex-col transition-colors ${showLocalPane && remoteDragCount > 0 ? "ring-2 ring-inset ring-accent/60 bg-accent/5" : ""}`}
+          className={`flex-1 min-w-0 flex flex-col transition-colors ${remoteDragCount > 0 ? "ring-2 ring-inset ring-accent/60 bg-accent/5" : ""}`}
           onClick={() => setActivePane("remote")}
-          onDragEnter={() => { if (showLocalPane) setRemoteDragCount((c) => c + 1); }}
-          onDragLeave={() => { if (showLocalPane) setRemoteDragCount((c) => Math.max(0, c - 1)); }}
-          onDragOver={(e) => { if (showLocalPane) e.preventDefault(); }}
+          onDragEnter={(e) => {
+            const types = Array.from(e.dataTransfer.types);
+            if (types.includes("Files") || types.includes("application/x-local-paths")) {
+              setRemoteDragCount((c) => c + 1);
+            }
+          }}
+          onDragLeave={(e) => {
+            const types = Array.from(e.dataTransfer.types);
+            if (types.includes("Files") || types.includes("application/x-local-paths")) {
+              setRemoteDragCount((c) => Math.max(0, c - 1));
+            }
+          }}
+          onDragOver={(e) => {
+            const types = Array.from(e.dataTransfer.types);
+            if (types.includes("Files") || types.includes("application/x-local-paths")) {
+              e.preventDefault();
+            }
+          }}
           onDrop={(e) => {
             setRemoteDragCount(0);
+            // OS file drag (e.g. from Finder) — Tauri patches File objects with .path
+            const osFiles = Array.from(e.dataTransfer.files);
+            const osPaths = osFiles
+              .map((f) => (f as File & { path?: string }).path)
+              .filter((p): p is string => !!p);
+            if (osPaths.length > 0) {
+              e.preventDefault();
+              handleUploadPaths(osPaths);
+              return;
+            }
+            // Intra-app drag from split-pane local browser
             const data = e.dataTransfer.getData("application/x-local-paths");
-            if (data && showLocalPane) {
+            if (data) {
               e.preventDefault();
               handleUploadPaths(JSON.parse(data) as string[]);
             }
