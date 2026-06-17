@@ -35,6 +35,7 @@ interface BroadcastStore {
   confirmPendingInput: () => Promise<void>;
   cancelPendingInput: () => void;
   loadSaved: () => Promise<void>;
+  updateSaved: (savedId: string, name: string, serverIds: string[]) => Promise<void>;
   deleteSaved: (savedId: string) => Promise<void>;
   reactivateGroup: (savedId: string) => Promise<void>;
 }
@@ -114,6 +115,17 @@ export const useBroadcastStore = create<BroadcastStore>((set, get) => ({
     } catch {
       // Non-fatal — app works without persisted groups
     }
+  },
+
+  updateSaved: async (savedId, name, serverIds) => {
+    const updated = await broadcastCommands.updateBroadcastGroup(savedId, name, serverIds);
+    set((state) => ({
+      savedGroups: state.savedGroups.map((g) => (g.id === savedId ? updated : g)),
+      // Reflect the rename in any active in-memory group backed by this saved group
+      groups: state.groups.map((g) =>
+        g.savedId === savedId ? { ...g, name: updated.name, serverIds: updated.serverIds } : g,
+      ),
+    }));
   },
 
   deleteSaved: async (savedId) => {

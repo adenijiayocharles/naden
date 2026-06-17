@@ -175,6 +175,7 @@ pub fn run() {
             // Broadcast groups
             commands::broadcast_commands::list_broadcast_groups,
             commands::broadcast_commands::create_broadcast_group,
+            commands::broadcast_commands::update_broadcast_group,
             commands::broadcast_commands::delete_broadcast_group,
             // Port forwards
             commands::tunnel_commands::list_port_forwards,

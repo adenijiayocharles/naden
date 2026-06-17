@@ -9,7 +9,7 @@ import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
 import { useTunnelStore } from "../../store/tunnelStore";
-import { useBroadcastStore } from "../../store/broadcastStore";
+import { useBroadcastStore, type SavedBroadcastGroup } from "../../store/broadcastStore";
 import VaultCountdown from "./VaultCountdown";
 import { formatError } from "../../lib/errors";
 import type { Group, Tag } from "../../types/server";
@@ -393,6 +393,128 @@ function TagRow({
   );
 }
 
+// ── Broadcast group edit modal ─────────────────────────────────────────────────
+function BroadcastGroupEditModal({
+  group,
+  onClose,
+}: {
+  group: SavedBroadcastGroup;
+  onClose: () => void;
+}) {
+  const servers = useServerStore((s) => s.servers);
+  const updateSaved = useBroadcastStore((s) => s.updateSaved);
+  const deleteSaved = useBroadcastStore((s) => s.deleteSaved);
+  const disbandGroup = useBroadcastStore((s) => s.disbandGroup);
+  const broadcastGroups = useBroadcastStore((s) => s.groups);
+
+  const [name, setName] = useState(group.name);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(group.serverIds));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const toggle = (serverId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(serverId)) next.delete(serverId);
+      else next.add(serverId);
+      return next;
+    });
+  };
+
+  const handleSave = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await updateSaved(group.id, name.trim(), [...selectedIds]);
+      onClose();
+    } catch (e) {
+      setError(formatError(e));
+      setBusy(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setBusy(true);
+    try {
+      const active = broadcastGroups.find((ag) => ag.savedId === group.id);
+      if (active) disbandGroup(active.id);
+      await deleteSaved(group.id);
+      onClose();
+    } catch (e) {
+      setError(formatError(e));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-backdrop-in flex items-center justify-center z-50 p-4"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-surface-1/80 backdrop-blur-2xl border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm flex flex-col max-h-[80vh]">
+        <div className="p-5 border-b border-stroke-subtle shrink-0">
+          <h3 className="text-title text-white mb-3">Edit Broadcast Group</h3>
+          <Input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && name.trim() && selectedIds.size > 0) void handleSave(); }}
+            placeholder="Group name"
+          />
+        </div>
+
+        <div className="overflow-y-auto flex-1 p-2 space-y-0.5">
+          {servers.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => toggle(s.id)}
+              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded text-sm text-left transition-colors ${
+                selectedIds.has(s.id)
+                  ? "bg-accent/10 text-white"
+                  : "text-secondary hover:bg-surface-3 hover:text-white"
+              }`}
+            >
+              <span
+                className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                  selectedIds.has(s.id) ? "bg-accent border-accent" : "border-stroke-subtle"
+                }`}
+              >
+                {selectedIds.has(s.id) && (
+                  <svg className="w-2.5 h-2.5 text-black" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 6l3 3 5-5" />
+                  </svg>
+                )}
+              </span>
+              <span className="truncate flex-1">{s.displayName}</span>
+              <span className="text-xs text-muted shrink-0">{s.hostname}</span>
+            </button>
+          ))}
+        </div>
+
+        {error && <p className="text-xs text-error px-5 pb-2 shrink-0">{error}</p>}
+
+        <div className="flex items-center gap-2 p-4 border-t border-stroke-subtle shrink-0">
+          <Button
+            variant="ghost"
+            className="text-red-500 hover:text-red-400 mr-auto px-0"
+            onClick={() => { void handleDelete(); }}
+            disabled={busy}
+          >
+            Delete
+          </Button>
+          <Button variant="secondary" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button
+            onClick={() => { void handleSave(); }}
+            disabled={busy || !name.trim() || selectedIds.size === 0}
+          >
+            {busy ? "Saving…" : "Save"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Sidebar ────────────────────────────────────────────────────────────────────
 export default function Sidebar() {
   const servers = useServerStore((s) => s.servers);
@@ -426,6 +548,7 @@ export default function Sidebar() {
   const reactivateBroadcastGroup = useBroadcastStore((s) => s.reactivateGroup);
   const [broadcastGroupsCollapsed, setBroadcastGroupsCollapsed] = useState(false);
   const [reactivatingGroupId, setReactivatingGroupId] = useState<string | null>(null);
+  const [editingBroadcastGroup, setEditingBroadcastGroup] = useState<SavedBroadcastGroup | null>(null);
 
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<Group | null>(null);
@@ -676,42 +799,52 @@ export default function Sidebar() {
             {!broadcastGroupsCollapsed && savedBroadcastGroups.map((g) => {
               const isActive = broadcastGroups.some((ag) => ag.savedId === g.id);
               return (
-              <div
-                key={g.id}
-                className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${isActive ? "bg-surface-2 text-accent-fg" : "hover:bg-surface-2"}`}
-              >
-                <svg className="w-3.5 h-3.5 shrink-0 text-muted" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5,9 A3,3 0 0,0 11,9" />
-                  <path d="M2,9 A6,6 0 0,0 14,9" />
-                  <line x1="8" y1="9" x2="8" y2="14" />
-                  <line x1="5" y1="14" x2="11" y2="14" />
-                  <circle cx="8" cy="9" r="1.25" fill="currentColor" stroke="none" />
-                </svg>
-                <span className="flex-1 text-sm text-secondary truncate">{g.name}</span>
-                <button
-                  onClick={() => {
-                    setReactivatingGroupId(g.id);
-                    reactivateBroadcastGroup(g.id).finally(() => setReactivatingGroupId(null));
-                  }}
-                  disabled={reactivatingGroupId === g.id}
-                  title="Reconnect all servers in this group"
-                  className="opacity-0 group-hover:opacity-100 ml-1 text-xs text-accent hover:text-accent-hover transition-opacity disabled:opacity-50"
+                <div
+                  key={g.id}
+                  className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${isActive ? "bg-surface-2 text-accent-fg" : "hover:bg-surface-2"}`}
                 >
-                  {reactivatingGroupId === g.id ? "…" : "▶"}
-                </button>
-                <button
-                  onClick={() => {
-                    const active = broadcastGroups.find((ag) => ag.savedId === g.id);
-                    if (active) disbandBroadcastGroup(active.id);
-                    deleteSavedBroadcastGroup(g.id).catch(() => {});
-                  }}
-                  title="Remove saved group"
-                  className="opacity-0 group-hover:opacity-100 text-dim hover:text-error transition-opacity ml-0.5"
-                  aria-label="Delete broadcast group"
-                >
-                  ×
-                </button>
-              </div>
+                  <svg className="w-3.5 h-3.5 shrink-0 text-muted" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5,9 A3,3 0 0,0 11,9" />
+                    <path d="M2,9 A6,6 0 0,0 14,9" />
+                    <line x1="8" y1="9" x2="8" y2="14" />
+                    <line x1="5" y1="14" x2="11" y2="14" />
+                    <circle cx="8" cy="9" r="1.25" fill="currentColor" stroke="none" />
+                  </svg>
+                  <span className="flex-1 text-sm text-secondary truncate">{g.name}</span>
+                  <button
+                    onClick={() => setEditingBroadcastGroup(g)}
+                    title="Edit group"
+                    aria-label="Edit broadcast group"
+                    className="opacity-0 group-hover:opacity-100 text-dim hover:text-secondary transition-opacity"
+                  >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 14 14" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setReactivatingGroupId(g.id);
+                      reactivateBroadcastGroup(g.id).finally(() => setReactivatingGroupId(null));
+                    }}
+                    disabled={reactivatingGroupId === g.id}
+                    title="Reconnect all servers in this group"
+                    className="opacity-0 group-hover:opacity-100 ml-0.5 text-xs text-accent hover:text-accent-hover transition-opacity disabled:opacity-50"
+                  >
+                    {reactivatingGroupId === g.id ? "…" : "▶"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const active = broadcastGroups.find((ag) => ag.savedId === g.id);
+                      if (active) disbandBroadcastGroup(active.id);
+                      deleteSavedBroadcastGroup(g.id).catch(() => {});
+                    }}
+                    title="Remove saved group"
+                    className="opacity-0 group-hover:opacity-100 text-dim hover:text-error transition-opacity ml-0.5"
+                    aria-label="Delete broadcast group"
+                  >
+                    ×
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -805,6 +938,12 @@ export default function Sidebar() {
       )}
       {creatingGroup && <GroupCreateModal onClose={() => setCreatingGroup(false)} />}
       {renamingTag && <TagRenameModal tag={renamingTag} onClose={() => setRenamingTag(null)} />}
+      {editingBroadcastGroup && (
+        <BroadcastGroupEditModal
+          group={editingBroadcastGroup}
+          onClose={() => setEditingBroadcastGroup(null)}
+        />
+      )}
     </aside>
   );
 }

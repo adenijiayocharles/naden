@@ -80,6 +80,60 @@ pub async fn create_broadcast_group(
 }
 
 #[tauri::command]
+pub async fn update_broadcast_group(
+    id: String,
+    name: String,
+    server_ids: Vec<String>,
+    state: tauri::State<'_, AppState>,
+) -> Result<SavedBroadcastGroup, AppError> {
+    if name.trim().is_empty() {
+        return Err(AppError::Validation("name is required".into()));
+    }
+    let now = Utc::now().to_rfc3339();
+
+    let mut tx = state.db.begin().await?;
+
+    let rows = sqlx::query(
+        "UPDATE broadcast_groups SET name = ?, updated_at = ? WHERE id = ?",
+    )
+    .bind(name.trim())
+    .bind(&now)
+    .bind(&id)
+    .execute(&mut *tx)
+    .await?
+    .rows_affected();
+
+    if rows == 0 {
+        return Err(AppError::NotFound(format!(
+            "broadcast group '{id}' not found"
+        )));
+    }
+
+    sqlx::query("DELETE FROM broadcast_group_members WHERE group_id = ?")
+        .bind(&id)
+        .execute(&mut *tx)
+        .await?;
+
+    for server_id in &server_ids {
+        sqlx::query(
+            "INSERT OR IGNORE INTO broadcast_group_members (group_id, server_id) VALUES (?, ?)",
+        )
+        .bind(&id)
+        .bind(server_id)
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    tx.commit().await?;
+
+    Ok(SavedBroadcastGroup {
+        id,
+        name: name.trim().to_string(),
+        server_ids,
+    })
+}
+
+#[tauri::command]
 pub async fn delete_broadcast_group(
     id: String,
     state: tauri::State<'_, AppState>,
