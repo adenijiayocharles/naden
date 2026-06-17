@@ -16,11 +16,10 @@ pub struct SavedBroadcastGroup {
 pub async fn list_broadcast_groups(
     state: tauri::State<'_, AppState>,
 ) -> Result<Vec<SavedBroadcastGroup>, AppError> {
-    let rows: Vec<(String, String)> = sqlx::query_as(
-        "SELECT id, name FROM broadcast_groups ORDER BY created_at",
-    )
-    .fetch_all(&state.db)
-    .await?;
+    let rows: Vec<(String, String)> =
+        sqlx::query_as("SELECT id, name FROM broadcast_groups ORDER BY created_at")
+            .fetch_all(&state.db)
+            .await?;
 
     let mut groups = Vec::with_capacity(rows.len());
     for (id, name) in rows {
@@ -30,7 +29,11 @@ pub async fn list_broadcast_groups(
         .bind(&id)
         .fetch_all(&state.db)
         .await?;
-        groups.push(SavedBroadcastGroup { id, name, server_ids });
+        groups.push(SavedBroadcastGroup {
+            id,
+            name,
+            server_ids,
+        });
     }
     Ok(groups)
 }
@@ -87,7 +90,9 @@ pub async fn delete_broadcast_group(
         .await?
         .rows_affected();
     if rows == 0 {
-        return Err(AppError::NotFound(format!("broadcast group '{id}' not found")));
+        return Err(AppError::NotFound(format!(
+            "broadcast group '{id}' not found"
+        )));
     }
     Ok(())
 }
