@@ -45,23 +45,26 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
     }),
 }));
 
-// Auto-fetch health when a session first reaches "connected", clear when it leaves.
-let prevConnected = new Set<string>();
+// Subscribe with an early-return key comparison so the callback only does real
+// work when the SET of connected server IDs actually changes — not on every
+// terminal output chunk (which is the dominant update frequency).
+let prevKey = "";
 useTerminalStore.subscribe((state) => {
-  const nowConnected = new Set(
-    state.sessions
-      .filter((s) => s.status === "connected")
-      .map((s) => s.serverId),
-  );
-  for (const serverId of nowConnected) {
-    if (!prevConnected.has(serverId)) {
-      void useHealthStore.getState().fetchHealth(serverId);
-    }
+  const nowKey = state.sessions
+    .filter((s) => s.status === "connected")
+    .map((s) => s.serverId)
+    .sort()
+    .join("\0");
+  if (nowKey === prevKey) return;
+
+  const now = new Set(nowKey ? nowKey.split("\0") : []);
+  const prev = new Set(prevKey ? prevKey.split("\0") : []);
+  prevKey = nowKey;
+
+  for (const id of now) {
+    if (!prev.has(id)) void useHealthStore.getState().fetchHealth(id);
   }
-  for (const serverId of prevConnected) {
-    if (!nowConnected.has(serverId)) {
-      useHealthStore.getState().clearHealth(serverId);
-    }
+  for (const id of prev) {
+    if (!now.has(id)) useHealthStore.getState().clearHealth(id);
   }
-  prevConnected = nowConnected;
 });

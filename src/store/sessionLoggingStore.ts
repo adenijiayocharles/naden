@@ -2,7 +2,11 @@ import { create } from "zustand";
 import { sessionBuffer } from "../lib/sessionBuffer";
 import { sessionLogCommands } from "../lib/tauriCommands";
 
-const FLUSH_THRESHOLD = 64 * 1024; // flush every 64 KB
+const FLUSH_THRESHOLD = 64 * 1024;
+
+// Mutable pending buffer kept outside Zustand — avoiding a store update on every
+// incoming terminal chunk eliminates cascading re-renders during active recording.
+const pending = new Map<string, { chunks: Uint8Array[]; bytes: number }>();
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = "";
@@ -24,29 +28,23 @@ function concatChunks(chunks: Uint8Array[]): Uint8Array {
   return out;
 }
 
+async function flushChunks(logId: string, chunks: Uint8Array[]): Promise<void> {
+  if (chunks.length === 0) return;
+  const combined = concatChunks(chunks);
+  await sessionLogCommands.appendSessionLog(logId, bytesToBase64(combined));
+}
+
 type RecordingEntry = {
   logId: string;
-  pending: Uint8Array[];
-  pendingBytes: number;
   unsub: () => void;
 };
 
 type SessionLoggingStore = {
   recordings: Record<string, RecordingEntry>;
-  startRecording: (
-    sessionId: string,
-    serverId: string | undefined,
-    serverName: string,
-  ) => Promise<void>;
+  startRecording: (sessionId: string, serverId: string | undefined, serverName: string) => Promise<void>;
   stopRecording: (sessionId: string) => Promise<void>;
   isRecording: (sessionId: string) => boolean;
 };
-
-async function flushPending(logId: string, chunks: Uint8Array[]): Promise<void> {
-  if (chunks.length === 0) return;
-  const combined = concatChunks(chunks);
-  await sessionLogCommands.appendSessionLog(logId, bytesToBase64(combined));
-}
 
 export const useSessionLoggingStore = create<SessionLoggingStore>((set, get) => ({
   recordings: {},
@@ -59,43 +57,36 @@ export const useSessionLoggingStore = create<SessionLoggingStore>((set, get) => 
     const meta = await sessionLogCommands.createSessionLog(serverName, serverId);
     const logId = meta.id;
 
-    // Subscribe and capture the existing buffer snapshot for replay.
+    pending.set(sessionId, { chunks: [], bytes: 0 });
+
     const { chunks: existingChunks, unsub } = sessionBuffer.subscribeAndReplay(
       sessionId,
       (data) => {
-        set((s) => {
-          const rec = s.recordings[sessionId];
-          if (!rec) return s;
-          const newPending = [...rec.pending, data];
-          const newBytes = rec.pendingBytes + data.length;
-          if (newBytes >= FLUSH_THRESHOLD) {
-            // Fire-and-forget flush; don't update pending until after flush settles
-            // to avoid a race with the next chunk. Instead flush synchronously resets.
-            void flushPending(logId, newPending).catch(() => {});
-            return {
-              recordings: {
-                ...s.recordings,
-                [sessionId]: { ...rec, pending: [], pendingBytes: 0 },
-              },
-            };
-          }
-          return {
-            recordings: {
-              ...s.recordings,
-              [sessionId]: { ...rec, pending: newPending, pendingBytes: newBytes },
-            },
-          };
-        });
+        const buf = pending.get(sessionId);
+        if (!buf) return;
+        buf.chunks.push(data);
+        buf.bytes += data.length;
+        if (buf.bytes >= FLUSH_THRESHOLD) {
+          const toFlush = buf.chunks.splice(0);
+          buf.bytes = 0;
+          flushChunks(logId, toFlush).catch((e) => {
+            // On failure restore the chunks so they are flushed on stop.
+            const current = pending.get(sessionId);
+            if (current) {
+              current.chunks.unshift(...toFlush);
+              current.bytes += toFlush.reduce((n, c) => n + c.length, 0);
+            }
+            console.error("[recording] flush failed:", e);
+          });
+        }
       },
     );
 
-    const entry: RecordingEntry = { logId, pending: [], pendingBytes: 0, unsub };
-    set((s) => ({ recordings: { ...s.recordings, [sessionId]: entry } }));
+    set((s) => ({ recordings: { ...s.recordings, [sessionId]: { logId, unsub } } }));
 
-    // Flush the replayed history as the first chunk if any exists.
+    // Replay buffered history as the opening chunk.
     if (existingChunks.length > 0) {
-      const combined = concatChunks(existingChunks);
-      await flushPending(logId, [combined]).catch(() => {});
+      await flushChunks(logId, existingChunks).catch(console.error);
     }
   },
 
@@ -110,8 +101,12 @@ export const useSessionLoggingStore = create<SessionLoggingStore>((set, get) => 
       return { recordings: next };
     });
 
-    // Flush remaining bytes then close.
-    await flushPending(rec.logId, rec.pending).catch(() => {});
-    await sessionLogCommands.finishSessionLog(rec.logId).catch(() => {});
+    const buf = pending.get(sessionId);
+    pending.delete(sessionId);
+
+    if (buf && buf.chunks.length > 0) {
+      await flushChunks(rec.logId, buf.chunks).catch(console.error);
+    }
+    await sessionLogCommands.finishSessionLog(rec.logId).catch(console.error);
   },
 }));

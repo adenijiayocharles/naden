@@ -54,13 +54,13 @@ fn run_health_check(
     let mut session =
         ssh2::Session::new().map_err(|e| AppError::Ssh(format!("session create failed: {e}")))?;
     session.set_tcp_stream(stream);
+    // Set timeout before the handshake so a stalled server cannot block indefinitely.
+    session.set_timeout(5_000);
     session
         .handshake()
         .map_err(|e| AppError::Ssh(format!("handshake failed: {e}")))?;
     verify_host_key(&session, &host, port)?;
     authenticate_session(&mut session, &username, &auth)?;
-    // 5-second I/O timeout so a stalled server does not block indefinitely
-    session.set_timeout(5_000);
 
     let cpu_percent = fetch_cpu(&session).unwrap_or(0.0);
     let mem_percent = fetch_mem(&session).unwrap_or(0.0);

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { homeDir, join } from "@tauri-apps/api/path";
 import { useSshKeyStore } from "../../store/sshKeyStore";
@@ -552,13 +552,15 @@ export default function KeysView() {
     }
   };
 
-  // Count how many servers reference each key by path.
-  const usageByPath = new Map<string, number>();
-  for (const server of servers) {
-    if (server.identityFilePath) {
-      usageByPath.set(server.identityFilePath, (usageByPath.get(server.identityFilePath) ?? 0) + 1);
+  const usageByPath = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const server of servers) {
+      if (server.identityFilePath) {
+        map.set(server.identityFilePath, (map.get(server.identityFilePath) ?? 0) + 1);
+      }
     }
-  }
+    return map;
+  }, [servers]);
 
   return (
     <div className="flex flex-col h-full">

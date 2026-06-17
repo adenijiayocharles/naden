@@ -425,7 +425,6 @@ export const tunnelCommands = {
 
 export interface SessionLogMeta {
   id: string;
-  filePath: string;
 }
 
 export const sessionLogCommands = {
@@ -441,14 +440,18 @@ export const sessionLogCommands = {
   finishSessionLog: (logId: string) =>
     invoke<void>("finish_session_log", { logId }),
 
-  listSessionLogs: (serverId?: string) =>
-    invoke<SessionLog[]>("list_session_logs", { serverId: serverId ?? null }),
+  listSessionLogs: (serverId?: string, limit?: number, offset?: number) =>
+    invoke<SessionLog[]>("list_session_logs", {
+      serverId: serverId ?? null,
+      limit: limit ?? null,
+      offset: offset ?? null,
+    }),
 
   deleteSessionLog: (logId: string) =>
     invoke<void>("delete_session_log", { logId }),
 
-  revealSessionLog: (filePath: string) =>
-    invoke<void>("reveal_session_log", { filePath }),
+  revealSessionLog: (logId: string) =>
+    invoke<void>("reveal_session_log", { logId }),
 };
 
 export interface UpdateInfo {

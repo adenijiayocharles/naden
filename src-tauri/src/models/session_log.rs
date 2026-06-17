@@ -6,6 +6,8 @@ pub struct SessionLog {
     pub id: String,
     pub server_id: Option<String>,
     pub server_display_name: String,
+    #[serde(skip_serializing)]
+    #[allow(dead_code)]
     pub file_path: String,
     pub start_time: String,
     pub end_time: Option<String>,
