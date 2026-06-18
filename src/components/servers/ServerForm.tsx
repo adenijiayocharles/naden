@@ -56,22 +56,17 @@ const DEFAULT_FORM: FormData = {
   terminalTheme: "",
 };
 
-type Tab = "connection" | "auth" | "theme" | "advanced" | "tunnels";
-type AdvancedTab = "organize" | "network" | "session" | "hooks";
+type Tab = "connection" | "auth" | "theme" | "organize" | "network" | "session" | "hooks" | "tunnels";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "connection", label: "Connection" },
   { id: "auth", label: "Auth" },
   { id: "theme", label: "Theme" },
-  { id: "advanced", label: "Advanced" },
-  { id: "tunnels", label: "Tunnels" },
-];
-
-const ADVANCED_TABS: { id: AdvancedTab; label: string }[] = [
   { id: "organize", label: "Organize" },
   { id: "network", label: "Network" },
   { id: "session", label: "Session" },
   { id: "hooks", label: "Hooks" },
+  { id: "tunnels", label: "Tunnels" },
 ];
 
 export default function ServerForm() {
@@ -98,7 +93,6 @@ export default function ServerForm() {
   useEffect(() => { void loadKeys(); }, [loadKeys]);
 
   const [activeTab, setActiveTab] = useState<Tab>("connection");
-  const [activeAdvancedTab, setActiveAdvancedTab] = useState<AdvancedTab>("organize");
   const [form, setForm] = useState<FormData>(DEFAULT_FORM);
   const [password, setPassword] = useState("");
   const [passphrase, setPassphrase] = useState("");
@@ -153,7 +147,6 @@ export default function ServerForm() {
     setShowNewGroup(false);
     setNewGroupName("");
     setActiveTab("connection");
-    setActiveAdvancedTab("organize");
   }, [existingServer, activeView]);
 
   const set = (field: keyof FormData) =>
@@ -312,11 +305,9 @@ export default function ServerForm() {
   const connectionHasError = !!(errors.displayName || errors.hostname || errors.port);
 
   return (
-    <div
-      className="fixed inset-0 bg-black/85 animate-backdrop-in flex items-center justify-center z-50 p-4"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) handleClose(); }}
-    >
-      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-lg max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/85 animate-backdrop-in z-50 overflow-y-auto" onMouseDown={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
+      <div className="flex min-h-full items-center justify-center p-8" onMouseDown={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
+      <div className="bg-surface-1 border border-stroke-subtle rounded-xl shadow-overlay animate-overlay-in w-full max-w-2xl flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-stroke-subtle shrink-0">
           <h2 className="text-lg font-semibold text-white">
@@ -353,7 +344,7 @@ export default function ServerForm() {
         </div>
 
         {/* Form */}
-        <form id="server-form" onSubmit={(e) => { void handleSubmit(e); }} className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+        <form id="server-form" onSubmit={(e) => { void handleSubmit(e); }} className="px-6 py-4 space-y-4">
 
           {/* ── Connection ── */}
           {activeTab === "connection" && (
@@ -547,303 +538,280 @@ export default function ServerForm() {
             </>
           )}
 
-          {/* ── Advanced ── */}
-          {activeTab === "advanced" && (
+          {/* ── Organize ── */}
+          {activeTab === "organize" && (
             <>
-              {/* Sub-tab bar */}
-              <div className="flex gap-1 p-1 bg-surface-2 rounded-lg shrink-0">
-                {ADVANCED_TABS.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveAdvancedTab(tab.id)}
-                    className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                      activeAdvancedTab === tab.id
-                        ? "bg-surface-4 text-white shadow-sm"
-                        : "text-muted hover:text-secondary"
-                    }`}
+              <Field label="Group" error={errors.group}>
+                {!showNewGroup ? (
+                  <Select
+                    value={form.groupId || "__none__"}
+                    onValueChange={(value) => {
+                      if (value === "__create_new__") {
+                        setShowNewGroup(true);
+                        setForm((f) => ({ ...f, groupId: "" }));
+                      } else {
+                        setShowNewGroup(false);
+                        setForm((f) => ({ ...f, groupId: value && value !== "__none__" ? value : "" }));
+                      }
+                      setDirty(true);
+                    }}
                   >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
+                    <SelectTrigger id="groupId" className="w-full h-10">
+                      <SelectValue placeholder="No Group" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">No Group</SelectItem>
+                      {groups.map((g) => (
+                        <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                      ))}
+                      <SelectItem value="__create_new__">＋ Create new group…</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      autoFocus
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void handleCreateGroup(); } }}
+                      placeholder="Group name"
+                      className="flex-1"
+                      autoComplete="off"
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => { void handleCreateGroup(); }}
+                      className="px-3 shrink-0"
+                    >
+                      Add
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => { setShowNewGroup(false); setNewGroupName(""); }}
+                      className="px-3 shrink-0"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+              </Field>
 
-              {/* Organize — Group & Tags */}
-              {activeAdvancedTab === "organize" && (
-                <>
-                  <Field label="Group" error={errors.group}>
-                    {!showNewGroup ? (
-                      <Select
-                        value={form.groupId || "__none__"}
-                        onValueChange={(value) => {
-                          if (value === "__create_new__") {
-                            setShowNewGroup(true);
-                            setForm((f) => ({ ...f, groupId: "" }));
-                          } else {
-                            setShowNewGroup(false);
-                            setForm((f) => ({ ...f, groupId: value && value !== "__none__" ? value : "" }));
-                          }
-                          setDirty(true);
-                        }}
-                      >
-                        <SelectTrigger id="groupId" className="w-full h-10">
-                          <SelectValue placeholder="No Group" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">No Group</SelectItem>
-                          {groups.map((g) => (
-                            <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                          ))}
-                          <SelectItem value="__create_new__">＋ Create new group…</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Input
-                          autoFocus
-                          value={newGroupName}
-                          onChange={(e) => setNewGroupName(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void handleCreateGroup(); } }}
-                          placeholder="Group name"
-                          className="flex-1"
-                          autoComplete="off"
-                        />
-                        <Button
+              <Field label="Tags" error={errors.tag}>
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {tags.map((t) => (
+                      <span key={t.id} className="flex items-center gap-1 bg-surface-3 border border-stroke text-muted text-xs px-2 py-1 rounded-full">
+                        #{t.name}
+                        <button
                           type="button"
-                          onClick={() => { void handleCreateGroup(); }}
-                          className="px-3 shrink-0"
+                          onClick={() => setTags((ts) => ts.filter((x) => x.id !== t.id))}
+                          className="text-muted hover:text-white leading-none"
+                          aria-label={`Remove tag ${t.name}`}
                         >
-                          Add
-                        </Button>
-                        <Button
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="relative" ref={tagDropdownRef}>
+                  <Input
+                    ref={tagInputRef}
+                    value={tagInput}
+                    onChange={(e) => { setTagInput(e.target.value); setTagDropdownOpen(true); }}
+                    onFocus={() => setTagDropdownOpen(true)}
+                    onBlur={() => setTimeout(() => setTagDropdownOpen(false), 150)}
+                    onKeyDown={handleTagKeyDown}
+                    placeholder="Type a tag and press Enter"
+                    autoComplete="off"
+                  />
+                  {tagDropdownOpen && tagSuggestions.length > 0 && (
+                    <div className="absolute z-20 top-full mt-1 w-full bg-surface-2 border border-stroke rounded-lg shadow-overlay max-h-40 overflow-y-auto">
+                      {tagSuggestions.map((t) => (
+                        <button
+                          key={t.id}
                           type="button"
-                          variant="secondary"
-                          onClick={() => { setShowNewGroup(false); setNewGroupName(""); }}
-                          className="px-3 shrink-0"
+                          onMouseDown={(e) => { e.preventDefault(); setTags((ts) => [...ts, t]); setTagInput(""); setTagDropdownOpen(false); }}
+                          className="w-full text-left px-3 py-2 text-sm text-secondary hover:bg-surface-4 hover:text-white transition-colors"
                         >
-                          Cancel
-                        </Button>
-                      </div>
-                    )}
-                  </Field>
+                          #{t.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Field>
+            </>
+          )}
 
-                  <Field label="Tags" error={errors.tag}>
-                    {tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {tags.map((t) => (
-                          <span key={t.id} className="flex items-center gap-1 bg-surface-3 border border-stroke text-muted text-xs px-2 py-1 rounded-full">
-                            #{t.name}
-                            <button
-                              type="button"
-                              onClick={() => setTags((ts) => ts.filter((x) => x.id !== t.id))}
-                              className="text-muted hover:text-white leading-none"
-                              aria-label={`Remove tag ${t.name}`}
-                            >
-                              ×
-                            </button>
+          {/* ── Network ── */}
+          {activeTab === "network" && (
+            <>
+              <Field label="">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={form.isJumpHost}
+                    onCheckedChange={(checked) => {
+                      setForm((f) => ({ ...f, isJumpHost: checked === true }));
+                      setDirty(true);
+                    }}
+                  />
+                  <span className="text-sm text-secondary">This server is a jump host / bastion</span>
+                </label>
+              </Field>
+
+              {!form.isJumpHost && (
+                <Field label="Jump Through (optional)">
+                  <Select
+                    value={form.jumpHostId || "__none__"}
+                    onValueChange={(value) => {
+                      setForm((f) => ({ ...f, jumpHostId: value && value !== "__none__" ? value : "" }));
+                      setDirty(true);
+                    }}
+                  >
+                    <SelectTrigger id="jumpHostId" className="w-full h-10">
+                      <SelectValue placeholder="Direct connection" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Direct connection</SelectItem>
+                      {servers
+                        .filter((s) => s.isJumpHost && s.id !== editingServerId)
+                        .map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+
+                  {form.jumpHostId && (() => {
+                    const chain: string[] = ["Your machine"];
+                    let id: string | undefined = form.jumpHostId;
+                    const visited = new Set<string>();
+                    while (id && !visited.has(id)) {
+                      visited.add(id);
+                      const hop = servers.find((s) => s.id === id);
+                      if (!hop) break;
+                      chain.push(hop.displayName);
+                      id = hop.jumpHostId ?? undefined;
+                    }
+                    const target = form.displayName.trim() || "this server";
+                    chain.push(target);
+                    return (
+                      <div className="mt-2 flex items-center flex-wrap gap-1 text-meta text-faint">
+                        {chain.map((label, i) => (
+                          <span key={i} className="flex items-center gap-1">
+                            <span className={i === 0 || i === chain.length - 1 ? "text-muted" : "text-secondary font-medium"}>
+                              {label}
+                            </span>
+                            {i < chain.length - 1 && <span className="text-dim">→</span>}
                           </span>
                         ))}
                       </div>
-                    )}
-                    <div className="relative" ref={tagDropdownRef}>
+                    );
+                  })()}
+                </Field>
+              )}
+            </>
+          )}
+
+          {/* ── Session ── */}
+          {activeTab === "session" && (
+            <>
+              <Field label="Initial Directory">
+                <Input
+                  id="initialDir"
+                  value={form.initialDir}
+                  onChange={set("initialDir")}
+                  placeholder="/var/www/html"
+                  autoComplete="off"
+                />
+                <p className="mt-1 text-xs text-muted">
+                  Shell will <code className="text-accent-fg">cd</code> here immediately after connecting.
+                </p>
+              </Field>
+
+              <div>
+                <label className="block text-sm font-medium text-secondary mb-1">
+                  Environment Variables
+                </label>
+                <p className="text-xs text-muted mb-2">
+                  Exported to the shell immediately after connecting.
+                </p>
+                <div className="space-y-1.5">
+                  {envVars.map((v, i) => (
+                    <div key={i} className="flex gap-1.5 items-center">
                       <Input
-                        ref={tagInputRef}
-                        value={tagInput}
-                        onChange={(e) => { setTagInput(e.target.value); setTagDropdownOpen(true); }}
-                        onFocus={() => setTagDropdownOpen(true)}
-                        onBlur={() => setTimeout(() => setTagDropdownOpen(false), 150)}
-                        onKeyDown={handleTagKeyDown}
-                        placeholder="Type a tag and press Enter"
+                        value={v.key}
+                        onChange={(e) => setEnvVars((prev) => prev.map((ev, j) => j === i ? { ...ev, key: e.target.value } : ev))}
+                        placeholder="KEY"
+                        className="w-32 shrink-0 font-mono text-xs h-8"
                         autoComplete="off"
+                        spellCheck={false}
                       />
-                      {tagDropdownOpen && tagSuggestions.length > 0 && (
-                        <div className="absolute z-20 top-full mt-1 w-full bg-surface-2 border border-stroke rounded-lg shadow-overlay max-h-40 overflow-y-auto">
-                          {tagSuggestions.map((t) => (
-                            <button
-                              key={t.id}
-                              type="button"
-                              onMouseDown={(e) => { e.preventDefault(); setTags((ts) => [...ts, t]); setTagInput(""); setTagDropdownOpen(false); }}
-                              className="w-full text-left px-3 py-2 text-sm text-secondary hover:bg-surface-4 hover:text-white transition-colors"
-                            >
-                              #{t.name}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </Field>
-                </>
-              )}
-
-              {/* Network — Jump Host */}
-              {activeAdvancedTab === "network" && (
-                <>
-                  <Field label="">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox
-                        checked={form.isJumpHost}
-                        onCheckedChange={(checked) => {
-                          setForm((f) => ({ ...f, isJumpHost: checked === true }));
-                          setDirty(true);
-                        }}
+                      <span className="text-dim text-xs shrink-0">=</span>
+                      <Input
+                        value={v.value}
+                        onChange={(e) => setEnvVars((prev) => prev.map((ev, j) => j === i ? { ...ev, value: e.target.value } : ev))}
+                        placeholder="value"
+                        className="flex-1 font-mono text-xs h-8"
+                        autoComplete="off"
+                        spellCheck={false}
                       />
-                      <span className="text-sm text-secondary">This server is a jump host / bastion</span>
-                    </label>
-                  </Field>
-
-                  {!form.isJumpHost && (
-                    <Field label="Jump Through (optional)">
-                      <Select
-                        value={form.jumpHostId || "__none__"}
-                        onValueChange={(value) => {
-                          setForm((f) => ({ ...f, jumpHostId: value && value !== "__none__" ? value : "" }));
-                          setDirty(true);
-                        }}
-                      >
-                        <SelectTrigger id="jumpHostId" className="w-full h-10">
-                          <SelectValue placeholder="Direct connection" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">Direct connection</SelectItem>
-                          {servers
-                            .filter((s) => s.isJumpHost && s.id !== editingServerId)
-                            .map((s) => (
-                              <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-
-                      {form.jumpHostId && (() => {
-                        const chain: string[] = ["Your machine"];
-                        let id: string | undefined = form.jumpHostId;
-                        const visited = new Set<string>();
-                        while (id && !visited.has(id)) {
-                          visited.add(id);
-                          const hop = servers.find((s) => s.id === id);
-                          if (!hop) break;
-                          chain.push(hop.displayName);
-                          id = hop.jumpHostId ?? undefined;
-                        }
-                        const target = form.displayName.trim() || "this server";
-                        chain.push(target);
-                        return (
-                          <div className="mt-2 flex items-center flex-wrap gap-1 text-meta text-faint">
-                            {chain.map((label, i) => (
-                              <span key={i} className="flex items-center gap-1">
-                                <span className={i === 0 || i === chain.length - 1 ? "text-muted" : "text-secondary font-medium"}>
-                                  {label}
-                                </span>
-                                {i < chain.length - 1 && <span className="text-dim">→</span>}
-                              </span>
-                            ))}
-                          </div>
-                        );
-                      })()}
-                    </Field>
-                  )}
-                </>
-              )}
-
-              {/* Session — Initial Dir & Env Vars */}
-              {activeAdvancedTab === "session" && (
-                <>
-                  <Field label="Initial Directory">
-                    <Input
-                      id="initialDir"
-                      value={form.initialDir}
-                      onChange={set("initialDir")}
-                      placeholder="/var/www/html"
-                      autoComplete="off"
-                    />
-                    <p className="mt-1 text-xs text-muted">
-                      Shell will <code className="text-accent-fg">cd</code> here immediately after connecting.
-                    </p>
-                  </Field>
-
-                  <div>
-                    <label className="block text-sm font-medium text-secondary mb-1">
-                      Environment Variables
-                    </label>
-                    <p className="text-xs text-muted mb-2">
-                      Exported to the shell immediately after connecting.
-                    </p>
-                    <div className="space-y-1.5">
-                      {envVars.map((v, i) => (
-                        <div key={i} className="flex gap-1.5 items-center">
-                          <Input
-                            value={v.key}
-                            onChange={(e) => setEnvVars((prev) => prev.map((ev, j) => j === i ? { ...ev, key: e.target.value } : ev))}
-                            placeholder="KEY"
-                            className="w-32 shrink-0 font-mono text-xs h-8"
-                            autoComplete="off"
-                            spellCheck={false}
-                          />
-                          <span className="text-dim text-xs shrink-0">=</span>
-                          <Input
-                            value={v.value}
-                            onChange={(e) => setEnvVars((prev) => prev.map((ev, j) => j === i ? { ...ev, value: e.target.value } : ev))}
-                            placeholder="value"
-                            className="flex-1 font-mono text-xs h-8"
-                            autoComplete="off"
-                            spellCheck={false}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setEnvVars((prev) => prev.filter((_, j) => j !== i))}
-                            className="text-dim hover:text-red-400 transition-colors shrink-0 text-sm leading-none px-1"
-                            title="Remove"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                      <Button
+                      <button
                         type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setEnvVars((prev) => [...prev, { key: "", value: "" }])}
-                        className="mt-1"
+                        onClick={() => setEnvVars((prev) => prev.filter((_, j) => j !== i))}
+                        className="text-dim hover:text-red-400 transition-colors shrink-0 text-sm leading-none px-1"
+                        title="Remove"
                       >
-                        + Add variable
-                      </Button>
+                        ×
+                      </button>
                     </div>
-                  </div>
-                </>
-              )}
+                  ))}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setEnvVars((prev) => [...prev, { key: "", value: "" }])}
+                    className="mt-1"
+                  >
+                    + Add variable
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
 
-              {/* Hooks — Pre/Post connection scripts */}
-              {activeAdvancedTab === "hooks" && (
-                <>
-                  <Field label="Pre-connect Hook">
-                    <textarea
-                      value={form.preConnectHook}
-                      onChange={set("preConnectHook")}
-                      placeholder={"#!/bin/sh\n# Runs locally before connecting\naws sso login --profile prod"}
-                      rows={4}
-                      spellCheck={false}
-                      className="w-full rounded-md border border-stroke bg-surface-2 px-3 py-2 text-xs font-mono text-white placeholder-[#555] focus:outline-none focus:ring-1 focus:ring-accent resize-none"
-                    />
-                    <p className="mt-1 text-xs text-muted">
-                      Runs locally before the SSH connection. Non-zero exit cancels the connection.
-                      Env: <code className="text-accent-fg">NADEN_HOST</code>, <code className="text-accent-fg">NADEN_PORT</code>, <code className="text-accent-fg">NADEN_USER</code>.
-                    </p>
-                  </Field>
+          {/* ── Hooks ── */}
+          {activeTab === "hooks" && (
+            <>
+              <Field label="Pre-connect Hook">
+                <textarea
+                  value={form.preConnectHook}
+                  onChange={set("preConnectHook")}
+                  placeholder={"#!/bin/sh\n# Runs locally before connecting\naws sso login --profile prod"}
+                  rows={4}
+                  spellCheck={false}
+                  className="w-full rounded-md border border-stroke bg-surface-2 px-3 py-2 text-xs font-mono text-white placeholder-[#555] focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+                />
+                <p className="mt-1 text-xs text-muted">
+                  Runs locally before the SSH connection. Non-zero exit cancels the connection.
+                  Env: <code className="text-accent-fg">NADEN_HOST</code>, <code className="text-accent-fg">NADEN_PORT</code>, <code className="text-accent-fg">NADEN_USER</code>.
+                </p>
+              </Field>
 
-                  <Field label="Post-disconnect Hook">
-                    <textarea
-                      value={form.postDisconnectHook}
-                      onChange={set("postDisconnectHook")}
-                      placeholder={"#!/bin/sh\n# Runs locally after session ends\nnotify-send \"Disconnected from $NADEN_HOST\""}
-                      rows={4}
-                      spellCheck={false}
-                      className="w-full rounded-md border border-stroke bg-surface-2 px-3 py-2 text-xs font-mono text-white placeholder-[#555] focus:outline-none focus:ring-1 focus:ring-accent resize-none"
-                    />
-                    <p className="mt-1 text-xs text-muted">
-                      Runs locally after disconnect. Spawned in the background — does not block cleanup.
-                    </p>
-                  </Field>
-                </>
-              )}
+              <Field label="Post-disconnect Hook">
+                <textarea
+                  value={form.postDisconnectHook}
+                  onChange={set("postDisconnectHook")}
+                  placeholder={"#!/bin/sh\n# Runs locally after session ends\nnotify-send \"Disconnected from $NADEN_HOST\""}
+                  rows={4}
+                  spellCheck={false}
+                  className="w-full rounded-md border border-stroke bg-surface-2 px-3 py-2 text-xs font-mono text-white placeholder-[#555] focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+                />
+                <p className="mt-1 text-xs text-muted">
+                  Runs locally after disconnect. Spawned in the background — does not block cleanup.
+                </p>
+              </Field>
             </>
           )}
 
@@ -872,6 +840,7 @@ export default function ServerForm() {
             </Button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

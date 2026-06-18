@@ -50,6 +50,35 @@ fn update_tray_menu(app: tauri::AppHandle, servers: Vec<tray::TrayServer>) -> Re
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Show a native alert and write a crash log instead of silently aborting.
+    // Tauri panics when the setup closure returns Err — that panic then fires
+    // inside macOS's `did_finish_launching` ObjC callback, which can't unwind
+    // Rust stack frames, resulting in SIGABRT with no user-visible message.
+    std::panic::set_hook(Box::new(|info| {
+        let msg = info
+            .payload()
+            .downcast_ref::<&str>()
+            .copied()
+            .or_else(|| info.payload().downcast_ref::<String>().map(String::as_str))
+            .unwrap_or("unknown error");
+        let location = info
+            .location()
+            .map(|l| format!(" ({}:{})", l.file(), l.line()))
+            .unwrap_or_default();
+        let full = format!("{msg}{location}");
+        eprintln!("[naden] startup panic: {full}");
+        let log_path = std::env::temp_dir().join("naden_crash.log");
+        let _ = std::fs::write(&log_path, &full);
+        #[cfg(target_os = "macos")]
+        let _ = std::process::Command::new("osascript")
+            .arg("-e")
+            .arg(format!(
+                r#"display alert "naden failed to start" message "{}" buttons {{"OK"}} default button "OK""#,
+                msg.replace('\\', "\\\\").replace('"', "'")
+            ))
+            .status();
+    }));
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -197,19 +226,26 @@ pub fn run() {
             let _ = app.emit(&format!("menu:{}", event.id().as_ref()), ());
         })
         .setup(|app| {
-            let menu = build_app_menu(app)?;
-            app.set_menu(menu)?;
+            eprintln!("[naden] setup: building menu");
+            let menu = build_app_menu(app)
+                .map_err(|e| { eprintln!("[naden] setup: menu failed: {e}"); e })?;
+            app.set_menu(menu)
+                .map_err(|e| { eprintln!("[naden] setup: set_menu failed: {e}"); e })?;
 
-            let data_dir = app.path().app_local_data_dir()?;
+            eprintln!("[naden] setup: resolving data dir");
+            let data_dir = app.path().app_local_data_dir()
+                .map_err(|e| { eprintln!("[naden] setup: data dir failed: {e}"); e })?;
 
-            // Reuse Tauri's own async runtime instead of spinning up a separate
-            // tokio::runtime::Runtime (and its full worker thread pool) just for
-            // these startup queries.
+            eprintln!("[naden] setup: initialising database at {}", data_dir.display());
             let pool = tauri::async_runtime::block_on(db::init_db(data_dir))
-                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+                .map_err(|e| {
+                    eprintln!("[naden] setup: db init failed: {e}");
+                    Box::new(e) as Box<dyn std::error::Error>
+                })?;
 
             // These reads are independent of each other — run them concurrently
             // rather than as three sequential round trips.
+            eprintln!("[naden] setup: loading initial state");
             let (cache_result, password_required_result, initial_failures) =
                 tauri::async_runtime::block_on(async {
                     tokio::join!(
@@ -227,10 +263,11 @@ pub fn run() {
                 None
             };
 
-            // Initialized far in the past so elapsed() > suppress window on first check.
-            app.manage(SshConfigExportTs(Arc::new(Mutex::new(
-                std::time::Instant::now() - std::time::Duration::from_secs(60),
-            ))));
+            // checked_sub avoids a panic if system uptime is under 60 seconds.
+            let export_ts = std::time::Instant::now()
+                .checked_sub(std::time::Duration::from_secs(60))
+                .unwrap_or_else(std::time::Instant::now);
+            app.manage(SshConfigExportTs(Arc::new(Mutex::new(export_ts))));
 
             app.manage(AppState {
                 db: pool,
@@ -244,9 +281,12 @@ pub fn run() {
                 manually_locked: tokio::sync::Mutex::new(false),
             });
 
-            // Menubar tray icon — starts empty; frontend populates on first server load.
+            eprintln!("[naden] setup: initialising tray");
             tray::setup_tray(app.handle())
-                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+                .map_err(|e| {
+                    eprintln!("[naden] setup: tray failed: {e}");
+                    Box::new(e) as Box<dyn std::error::Error>
+                })?;
 
             // Spawn vault auto-lock background task using Tauri's runtime,
             // which is already active during setup (unlike tokio::spawn).
