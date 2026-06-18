@@ -1,8 +1,6 @@
 import type { Server } from "../../types/server";
 import { useServerActions, formatHost } from "./useServerActions";
 import { useUiStore } from "../../store/uiStore";
-import { useServerStore } from "../../store/serverStore";
-import { useTunnelStore } from "../../store/tunnelStore";
 import ServerKebabMenu from "./ServerKebabMenu";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import ConnectionErrorModal from "./ConnectionErrorModal";
@@ -17,17 +15,12 @@ interface ServerCardProps {
   groupColor?: string;
   lastConnected?: string;
   isHighlighted?: boolean;
+  jumpHost?: Server;
+  hasActiveTunnel?: boolean;
 }
 
-export default function ServerCard({ server, groupColor, lastConnected, isHighlighted }: ServerCardProps) {
+export default function ServerCard({ server, groupColor, lastConnected, isHighlighted, jumpHost, hasActiveTunnel }: ServerCardProps) {
   const actions = useServerActions(server);
-  const jumpHost = useServerStore((s) =>
-    server.jumpHostId ? s.servers.find((sv) => sv.id === server.jumpHostId) : undefined
-  );
-  const sid = server.id;
-  const hasActiveTunnel = useTunnelStore((s) =>
-    s.forwards.some((f) => f.serverId === sid && s.statuses[f.id] === "active")
-  );
   const bulkMode = useUiStore((s) => s.bulkMode);
   const isSelected = useUiStore((s) => s.bulkSelected.includes(server.id));
   const health = useHealthStore((s) => s.health[server.id]);

@@ -69,12 +69,14 @@ async fn retrieve_with_wrong_key_fails() {
 }
 
 #[tokio::test]
-async fn reencrypt_all_migrates_to_new_key() {
+async fn reencrypt_all_tx_migrates_to_new_key() {
     let db = make_pool().await;
     let id1 = store_credential(&db, &key(1), "secret-one").await.unwrap();
     let id2 = store_credential(&db, &key(1), "secret-two").await.unwrap();
 
-    reencrypt_all(&db, &key(1), &key(2)).await.unwrap();
+    let mut tx = db.begin().await.unwrap();
+    reencrypt_all_tx(&mut tx, &key(1), &key(2)).await.unwrap();
+    tx.commit().await.unwrap();
 
     assert_eq!(
         retrieve_credential(&db, &key(2), &id1).await.unwrap(),

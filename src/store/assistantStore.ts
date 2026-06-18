@@ -148,7 +148,15 @@ export const useAssistantStore = create<AssistantState>((set, get) => {
 
       let parsed: PersistedServerChat;
       try {
-        parsed = JSON.parse(raw) as PersistedServerChat;
+        const candidate = JSON.parse(raw);
+        if (
+          !candidate ||
+          typeof candidate !== "object" ||
+          !Array.isArray(candidate.messages)
+        ) {
+          return;
+        }
+        parsed = candidate as PersistedServerChat;
       } catch {
         return;
       }

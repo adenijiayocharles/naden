@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useState, useRef, useMemo, lazy, Suspense } from "react";
+import { ErrorBoundary } from "../shared/ErrorBoundary";
 import { useUiStore, type ViewMode, type SortMode } from "../../store/uiStore";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
@@ -365,25 +366,35 @@ export default function AppShell() {
             }`}
           >
             {activeView === "settings" ? (
-              <Suspense fallback={null}>
-                <SettingsPage />
-              </Suspense>
+              <ErrorBoundary inline>
+                <Suspense fallback={null}>
+                  <SettingsPage />
+                </Suspense>
+              </ErrorBoundary>
             ) : activeView === "keys" ? (
-              <Suspense fallback={null}>
-                <KeysView />
-              </Suspense>
+              <ErrorBoundary inline>
+                <Suspense fallback={null}>
+                  <KeysView />
+                </Suspense>
+              </ErrorBoundary>
             ) : activeView === "snippets" ? (
-              <Suspense fallback={null}>
-                <SnippetList />
-              </Suspense>
+              <ErrorBoundary inline>
+                <Suspense fallback={null}>
+                  <SnippetList />
+                </Suspense>
+              </ErrorBoundary>
             ) : activeView === "playbooks" ? (
-              <Suspense fallback={null}>
-                <PlaybookList />
-              </Suspense>
+              <ErrorBoundary inline>
+                <Suspense fallback={null}>
+                  <PlaybookList />
+                </Suspense>
+              </ErrorBoundary>
             ) : activeView === "tunnels" ? (
-              <Suspense fallback={null}>
-                <TunnelPanel />
-              </Suspense>
+              <ErrorBoundary inline>
+                <Suspense fallback={null}>
+                  <TunnelPanel />
+                </Suspense>
+              </ErrorBoundary>
             ) : activeView === "logs" ? (
               <>
                 <div className="px-4 py-2 border-b border-stroke-subtle shrink-0">
@@ -393,9 +404,11 @@ export default function AppShell() {
                     placeholder="Search logs…"
                   />
                 </div>
-                <Suspense fallback={null}>
-                  <LogView />
-                </Suspense>
+                <ErrorBoundary inline>
+                  <Suspense fallback={null}>
+                    <LogView />
+                  </Suspense>
+                </ErrorBoundary>
               </>
             ) : (
               <>
@@ -818,16 +831,18 @@ export default function AppShell() {
 
               {/* Panel content */}
               <div className="flex-1 min-h-0">
-                <Suspense fallback={null}>
-                  {activeBroadcastGroupId ? (
-                    <BroadcastGrid key={activeBroadcastGroupId} groupId={activeBroadcastGroupId} />
-                  ) : activePanelType === "terminal" && terminalActiveId && (
-                    <TerminalPane key={terminalActiveId} sessionId={terminalActiveId} />
-                  )}
-                  {activePanelType === "sftp" && sftpActiveId && (
-                    <SftpBrowser key={sftpActiveId} sessionId={sftpActiveId} />
-                  )}
-                </Suspense>
+                <ErrorBoundary inline>
+                  <Suspense fallback={null}>
+                    {activeBroadcastGroupId ? (
+                      <BroadcastGrid key={activeBroadcastGroupId} groupId={activeBroadcastGroupId} />
+                    ) : activePanelType === "terminal" && terminalActiveId && (
+                      <TerminalPane key={terminalActiveId} sessionId={terminalActiveId} />
+                    )}
+                    {activePanelType === "sftp" && sftpActiveId && (
+                      <SftpBrowser key={sftpActiveId} sessionId={sftpActiveId} />
+                    )}
+                  </Suspense>
+                </ErrorBoundary>
               </div>
             </div>
           )}
@@ -838,23 +853,25 @@ export default function AppShell() {
 <ClipboardClearBanner />
 <SshConfigChangedBanner />
       {(activeView === "add" || activeView === "edit") && <ServerForm />}
-      <Suspense fallback={null}>
-        {onboardingChecked && !onboardingComplete && (
-          <OnboardingWizard onComplete={() => setOnboardingComplete(true)} />
-        )}
-        {importSshConfigOpen && <SshConfigImport onClose={closeImportSshConfig} />}
-        {discoverHostsOpen && <DiscoverHosts onClose={closeDiscoverHosts} />}
-        {paletteOpen && (
-          <CommandPalette
-            onActivateSession={(sessionId) => {
-              closePalette();
-              terminalSetActive(sessionId);
-              setActiveBroadcastGroup(null);
-              setActivePanelType("terminal");
-            }}
-          />
-        )}
-      </Suspense>
+      <ErrorBoundary inline>
+        <Suspense fallback={null}>
+          {onboardingChecked && !onboardingComplete && (
+            <OnboardingWizard onComplete={() => setOnboardingComplete(true)} />
+          )}
+          {importSshConfigOpen && <SshConfigImport onClose={closeImportSshConfig} />}
+          {discoverHostsOpen && <DiscoverHosts onClose={closeDiscoverHosts} />}
+          {paletteOpen && (
+            <CommandPalette
+              onActivateSession={(sessionId) => {
+                closePalette();
+                terminalSetActive(sessionId);
+                setActiveBroadcastGroup(null);
+                setActivePanelType("terminal");
+              }}
+            />
+          )}
+        </Suspense>
+      </ErrorBoundary>
     </div>
   );
 }

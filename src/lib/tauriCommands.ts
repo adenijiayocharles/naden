@@ -144,8 +144,8 @@ export const vaultCommands = {
   retrieveCredential: (serverId: string, vaultCredentialId: string) =>
     invoke<string>("retrieve_credential", { serverId, vaultCredentialId }),
 
-  deleteCredential: (vaultCredentialId: string) =>
-    invoke<void>("delete_credential", { vaultCredentialId }),
+  deleteCredential: (vaultCredentialId: string, serverId?: string) =>
+    invoke<void>("delete_credential", { vaultCredentialId, serverId }),
 
   isSetup: () =>
     invoke<boolean>("vault_is_setup"),

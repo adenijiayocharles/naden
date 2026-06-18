@@ -47,9 +47,9 @@ async fn verify_upgrades_legacy_rounds_transparently() {
     let password = "legacy-password";
 
     // Manually insert a vault set up with LEGACY_ROUNDS
-    let salt = generate_salt();
+    let salt = generate_salt().unwrap();
     let legacy_key = derive_key_with_rounds(password, &salt, LEGACY_ROUNDS);
-    let legacy_verification = verification_hash(&legacy_key);
+    let legacy_verification = sha256_verification_hash(&legacy_key);
     sqlx::query("INSERT INTO vault_meta (key, value) VALUES ('pbkdf2_salt', ?)")
         .bind(STANDARD.encode(salt))
         .execute(&db)
@@ -71,12 +71,16 @@ async fn verify_upgrades_legacy_rounds_transparently() {
 }
 
 #[tokio::test]
-async fn disable_password_removes_credentials() {
+async fn password_not_required_after_set_password_required_false() {
     let db = make_db().await;
     setup(&db, "pass").await.unwrap();
-    disable_password(&db).await.unwrap();
+    // Simulate what vault_disable_password does: remove PBKDF2 meta + mark not required.
+    sqlx::query("DELETE FROM vault_meta WHERE key IN ('pbkdf2_salt', 'verification')")
+        .execute(&db)
+        .await
+        .unwrap();
+    set_password_required(&db, false).await.unwrap();
 
-    // After disable, no salt should exist and password should not be required
     assert!(!is_password_required(&db).await.unwrap());
     let count: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM vault_meta WHERE key = 'pbkdf2_salt'")

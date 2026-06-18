@@ -4,6 +4,7 @@ import { useUiStore, type SortMode } from "../../store/uiStore";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
 import { useBroadcastStore } from "../../store/broadcastStore";
+import { useTunnelStore } from "../../store/tunnelStore";
 import ServerCard from "./ServerCard";
 import ServerRow from "./ServerRow";
 import EmptyState from "../shared/EmptyState";
@@ -55,6 +56,23 @@ export default function ServerList() {
 
   const activeBroadcastGroupId = useBroadcastStore((s) => s.activeGroupId);
   const broadcastGroups = useBroadcastStore((s) => s.groups);
+  const tunnelForwards = useTunnelStore((s) => s.forwards);
+  const tunnelStatuses = useTunnelStore((s) => s.statuses);
+
+  const serverById = useMemo(
+    () => new Map(servers.map((s) => [s.id, s])),
+    [servers],
+  );
+
+  const activeTunnelServerIds = useMemo(
+    () =>
+      new Set(
+        tunnelForwards
+          .filter((f) => tunnelStatuses[f.id] === "active")
+          .map((f) => f.serverId),
+      ),
+    [tunnelForwards, tunnelStatuses],
+  );
 
   const activeServerIds = useMemo(() => {
     if (activeBroadcastGroupId) {
@@ -85,6 +103,8 @@ export default function ServerList() {
         lastConnected={lastConnectedMap[s.id]}
         narrow={hasPanel}
         isHighlighted={activeServerIds.has(s.id)}
+        jumpHost={s.jumpHostId ? serverById.get(s.jumpHostId) : undefined}
+        hasActiveTunnel={activeTunnelServerIds.has(s.id)}
       />
     ) : (
       <ServerCard
@@ -93,6 +113,8 @@ export default function ServerList() {
         groupColor={groupColorFor(groups, s.groupId)}
         lastConnected={lastConnectedMap[s.id]}
         isHighlighted={activeServerIds.has(s.id)}
+        jumpHost={s.jumpHostId ? serverById.get(s.jumpHostId) : undefined}
+        hasActiveTunnel={activeTunnelServerIds.has(s.id)}
       />
     );
 

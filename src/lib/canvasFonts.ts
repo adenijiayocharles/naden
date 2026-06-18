@@ -33,27 +33,13 @@ const FONT_DEFS: Record<string, FontDef[]> = {
   ],
 };
 
-// Decodes a base64 data URI to an ArrayBuffer without any fetch() call.
-// In production the url values are "data:font/woff2;base64,..." embedded by
-// inlineFontsPlugin.  In dev they may be /assets/... URLs, in which case we
-// fall back to fetch().
-async function dataUriToBuffer(url: string): Promise<ArrayBuffer> {
-  if (url.startsWith("data:")) {
-    const b64 = url.split(",")[1];
-    const binaryStr = atob(b64);
-    const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
-    return bytes.buffer;
-  }
-  // Dev fallback: fetch the asset URL from the Vite dev server
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.arrayBuffer();
-}
-
+// fetch() natively handles both "data:" URIs and regular "/assets/..." URLs,
+// making the old char-by-char atob decode loop unnecessary.
 async function loadFont({ family, url, weight }: FontDef): Promise<void> {
   try {
-    const buffer = await dataUriToBuffer(url);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const buffer = await res.arrayBuffer();
     const face = new FontFace(family, buffer, { weight, style: "normal" });
     await face.load();
     document.fonts.add(face);

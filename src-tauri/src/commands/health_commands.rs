@@ -107,12 +107,19 @@ fn fetch_cpu(session: &ssh2::Session) -> Option<f64> {
         Some((idle, total))
     }
 
-    let raw1 = exec_command(session, "cat /proc/stat").ok()?;
-    std::thread::sleep(std::time::Duration::from_millis(200));
-    let raw2 = exec_command(session, "cat /proc/stat").ok()?;
+    // Single round-trip: remote shell does the 200 ms wait, avoiding a
+    // blocking thread::sleep inside spawn_blocking and saving one SSH round-trip.
+    let combined = exec_command(
+        session,
+        "cat /proc/stat; echo '---NADEN_SEP---'; sleep 0.2; cat /proc/stat",
+    )
+    .ok()?;
+    let sep = combined.find("---NADEN_SEP---\n")?;
+    let raw1 = &combined[..sep];
+    let raw2 = &combined[sep + "---NADEN_SEP---\n".len()..];
 
-    let (idle1, total1) = parse_stat(&raw1)?;
-    let (idle2, total2) = parse_stat(&raw2)?;
+    let (idle1, total1) = parse_stat(raw1)?;
+    let (idle2, total2) = parse_stat(raw2)?;
 
     let d_total = total2.saturating_sub(total1);
     let d_idle = idle2.saturating_sub(idle1);

@@ -51,15 +51,16 @@ export const useServerStore = create<ServerStore>((set) => ({
   fetchAll: async () => {
     set({ isLoading: true, error: null });
     try {
-      const [servers, groups, tags] = await Promise.all([
+      const [servers, groups, tags, lastConnectedMap] = await Promise.all([
         serverCommands.listServers(),
         serverCommands.listGroups(),
         serverCommands.listTags(),
+        logCommands.getLastConnectedMap().catch((e) => {
+          console.error("Failed to load last-connected map:", e);
+          return {} as Record<string, string>;
+        }),
       ]);
-      set({ servers, groups, tags });
-      logCommands.getLastConnectedMap()
-        .then((map) => set({ lastConnectedMap: map }))
-        .catch((e) => console.error("Failed to load last-connected map:", e));
+      set({ servers, groups, tags, lastConnectedMap });
     } catch (e) {
       set({ error: String(e) });
     } finally {

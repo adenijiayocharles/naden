@@ -75,6 +75,6 @@ export const useVaultStore = create<VaultStore>((set) => ({
 }));
 
 // Lock the vault whenever the Rust auto-lock task fires
-void listen("vault_auto_locked", () => {
+listen("vault_auto_locked", () => {
   useVaultStore.setState({ isUnlocked: false });
-});
+}).catch((e) => console.error("[vault] failed to register auto-lock listener:", e));

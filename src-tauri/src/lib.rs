@@ -384,14 +384,12 @@ fn start_ssh_config_watcher(app: tauri::AppHandle) {
             return;
         }
 
-        loop {
-            let Ok(Ok(event)) = rx.recv() else { break };
-
+        while let Ok(Ok(event)) = rx.recv() {
             // Only care about the config file itself
             if !event
                 .paths
                 .iter()
-                .any(|p| p.file_name().map_or(false, |n| n == "config"))
+                .any(|p| p.file_name().is_some_and(|n| n == "config"))
             {
                 continue;
             }

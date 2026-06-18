@@ -6,7 +6,7 @@ import type { AuthMethod, Tag } from "../../types/server";
 import { TERMINAL_THEMES, type TerminalThemeId } from "../../lib/terminalSettings";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
-import { serverCommands, vaultCommands } from "../../lib/tauriCommands";
+import { vaultCommands } from "../../lib/tauriCommands";
 import { useVaultStore } from "../../store/vaultStore";
 import { useSshKeyStore } from "../../store/sshKeyStore";
 import { formatError } from "../../lib/errors";
@@ -210,11 +210,8 @@ export default function ServerForm() {
     const name = tagInput.trim();
     if (!name) return;
     try {
-      const tag = await serverCommands.createTag(name);
-      if (!tags.some((t) => t.id === tag.id)) {
-        setTags((ts) => [...ts, tag]);
-        await createTag(name);
-      }
+      const tag = await createTag(name);
+      setTags((ts) => (ts.some((t) => t.id === tag.id) ? ts : [...ts, tag]));
       setTagInput("");
       tagInputRef.current?.focus();
     } catch (e) {

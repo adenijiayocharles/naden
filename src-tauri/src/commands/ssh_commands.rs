@@ -484,17 +484,21 @@ pub async fn open_terminal_session(
             .filter(|f| f.auto_start && !state.tunnel_manager.is_active(&f.id))
             .collect();
 
+        // Resolve auth and jump chain once; clone cheaply per forward.
+        let base_auth = match auth_for_server(&server, &state, &app_handle).await {
+            Ok(a) => a,
+            Err(e) => {
+                log::warn!("[auto-start] could not get auth for server {server_id}: {e}");
+                return;
+            }
+        };
+        let base_jumps = build_jump_chain(&server, &state, &app_handle)
+            .await
+            .unwrap_or_default();
+
         for fwd in auto_fwds {
-            let fwd_auth = match auth_for_server(&server, &state, &app_handle).await {
-                Ok(a) => a,
-                Err(e) => {
-                    log::warn!("[auto-start] could not get auth for tunnel {}: {e}", fwd.id);
-                    continue;
-                }
-            };
-            let fwd_jumps = build_jump_chain(&server, &state, &app_handle)
-                .await
-                .unwrap_or_default();
+            let fwd_auth = base_auth.clone();
+            let fwd_jumps = base_jumps.clone();
             let _ = state.tunnel_manager.start(
                 fwd,
                 crate::tunnel::TunnelTarget {
@@ -554,7 +558,10 @@ pub async fn remove_known_host_entry(
     state: tauri::State<'_, AppState>,
 ) -> Result<usize, AppError> {
     let server = queries::get_server_db(&state.db, &server_id).await?;
-    crate::ssh::connection::remove_known_host(&server.server.hostname, server.server.port as u16)
+    crate::ssh::connection::remove_known_host(
+        &server.server.hostname,
+        u16::try_from(server.server.port).unwrap_or(22),
+    )
 }
 
 #[tauri::command]
@@ -594,7 +601,11 @@ pub async fn export_ssh_config(
     }
 
     // Mark timestamp before writing so the file-watcher suppresses this event.
-    *export_ts.inner().0.lock().unwrap() = std::time::Instant::now();
+    *export_ts
+        .inner()
+        .0
+        .lock()
+        .unwrap_or_else(|e| e.into_inner()) = std::time::Instant::now();
 
     std::fs::write(&config_path, merged).map_err(|e| AppError::Io(e.to_string()))?;
 

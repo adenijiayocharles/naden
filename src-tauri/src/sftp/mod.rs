@@ -823,7 +823,18 @@ fn open_edit(
     }
 
     // Build temp dir: <os_tmp>/naden/<session_id>/
+    // Mode 0700 prevents other local users from reading files being edited.
     let temp_dir = std::env::temp_dir().join("naden").join(session_id);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt as _;
+        std::fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(&temp_dir)
+            .map_err(|e| AppError::Io(format!("cannot create temp dir: {e}")))?;
+    }
+    #[cfg(not(unix))]
     std::fs::create_dir_all(&temp_dir)
         .map_err(|e| AppError::Io(format!("cannot create temp dir: {e}")))?;
 

@@ -12,9 +12,18 @@
     "dialog:allow-save",
     "dialog:allow-ask",
     "dialog:allow-message",
-    "fs:allow-write-text-file",
-    "fs:allow-write-file",
-    "fs:allow-read-file",
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [{ "path": "$HOME/**" }]
+    },
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [{ "path": "$HOME/**" }]
+    },
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [{ "path": "$HOME/**" }]
+    },
     "clipboard-manager:allow-write-text",
     "updater:default",
     "process:allow-restart"

@@ -46,7 +46,7 @@ pub async fn open_sftp_session(
     state.sftp_manager.open_session(
         session_id,
         s.hostname.clone(),
-        s.port as u16,
+        u16::try_from(s.port).unwrap_or(22),
         s.username.clone(),
         auth,
         jump_chain,
@@ -234,8 +234,12 @@ pub async fn cross_copy_sftp_file(
         let tmp = std::env::temp_dir().join("naden-xcopy").join(&unique);
         let _ = std::fs::create_dir_all(tmp.parent().unwrap_or(&std::env::temp_dir()));
         let tmp_str = tmp.to_string_lossy().into_owned();
-        // Reject dst_dir values that could escape via path components.
-        if dst_dir.split('/').any(|c| c == "..") {
+        // Reject dst_dir values that could escape via path traversal.
+        // split('/') misses encoded separators; Path::components catches all of them.
+        if std::path::Path::new(&dst_dir)
+            .components()
+            .any(|c| c == std::path::Component::ParentDir)
+        {
             return Err(AppError::Io(
                 "destination directory must not contain '..' components".into(),
             ));

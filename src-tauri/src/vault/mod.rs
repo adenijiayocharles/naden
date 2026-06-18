@@ -112,17 +112,17 @@ pub async fn delete_credential(db: &SqlitePool, id: &str) -> Result<(), AppError
     Ok(())
 }
 
-/// Re-encrypts every stored credential from `old_key` to `new_key` inside a
-/// single transaction. Called whenever the master password changes so existing
-/// credentials remain accessible under the new key.
-pub async fn reencrypt_all(
-    db: &SqlitePool,
+/// Re-encrypts every stored credential from `old_key` to `new_key` within an
+/// existing caller-owned transaction.  Use this when the re-encryption must be
+/// atomic with other DB writes (e.g. writing new PBKDF2 salt / verification).
+pub async fn reencrypt_all_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     old_key: &[u8],
     new_key: &[u8],
 ) -> Result<(), AppError> {
     let rows: Vec<(String, Vec<u8>, Vec<u8>)> =
         sqlx::query_as("SELECT id, nonce, ciphertext FROM vault_credentials")
-            .fetch_all(db)
+            .fetch_all(&mut **tx)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
 
@@ -134,11 +134,6 @@ pub async fn reencrypt_all(
         .map_err(|_| AppError::Vault("invalid key length".into()))?;
     let new_cipher = Aes256Gcm::new_from_slice(new_key)
         .map_err(|_| AppError::Vault("invalid key length".into()))?;
-
-    let mut tx = db
-        .begin()
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
 
     for (id, nonce_bytes, ciphertext) in rows {
         if nonce_bytes.len() != 12 {
@@ -158,7 +153,8 @@ pub async fn reencrypt_all(
         );
 
         let mut new_nonce_bytes = [0u8; 12];
-        getrandom::getrandom(&mut new_nonce_bytes).map_err(|e| AppError::Vault(e.to_string()))?;
+        getrandom::getrandom(&mut new_nonce_bytes)
+            .map_err(|e| AppError::Vault(e.to_string()))?;
 
         let new_ciphertext = new_cipher
             .encrypt(Nonce::from_slice(&new_nonce_bytes), plaintext.as_ref())
@@ -168,14 +164,11 @@ pub async fn reencrypt_all(
             .bind(new_nonce_bytes.as_slice())
             .bind(&new_ciphertext)
             .bind(&id)
-            .execute(&mut *tx)
+            .execute(&mut **tx)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
     }
 
-    tx.commit()
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
     Ok(())
 }
 
