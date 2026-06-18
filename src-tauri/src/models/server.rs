@@ -41,13 +41,14 @@ pub struct Tag {
     pub name: String,
 }
 
-/// Frontend-facing DTO: all Server fields flattened alongside the tag list.
-/// Assembled in query functions by joining server_tags; not derived from a single row.
+/// Frontend-facing DTO: all Server fields flattened alongside the tag list and group name.
+/// Assembled in query functions; not derived from a single row.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerWithTags {
     #[serde(flatten)]
     pub server: Server,
     pub tags: Vec<Tag>,
+    pub group_name: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

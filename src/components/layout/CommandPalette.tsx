@@ -1,8 +1,12 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useUiStore } from "../../store/uiStore";
 import { useTerminalStore, type TerminalSession } from "../../store/terminalStore";
+import { useSnippetStore } from "../../store/snippetStore";
+import { usePlaybookStore } from "../../store/playbookStore";
 import { searchCommands } from "../../lib/tauriCommands";
 import type { Server } from "../../types/server";
+import type { Snippet } from "../../types/snippet";
+import type { Playbook } from "../../types/playbook";
 
 // ── Item types ─────────────────────────────────────────────────────────────────
 
@@ -12,9 +16,11 @@ type ActionItem = {
   label: string;
   shortcut?: string;
 };
-type ServerItem = { kind: "server"; server: Server };
-type SessionItem = { kind: "session"; session: TerminalSession };
-type PaletteItem = ActionItem | ServerItem | SessionItem;
+type ServerItem  = { kind: "server";   server:   Server };
+type SessionItem = { kind: "session";  session:  TerminalSession };
+type SnippetItem = { kind: "snippet";  snippet:  Snippet };
+type PlaybookItem = { kind: "playbook"; playbook: Playbook };
+type PaletteItem = ActionItem | ServerItem | SessionItem | SnippetItem | PlaybookItem;
 
 interface Section {
   title: string;
@@ -70,6 +76,29 @@ function ActionIcon() {
   );
 }
 
+function SnippetIcon() {
+  return (
+    <svg className={ITEM_ICON_CLS} fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="12" height="12" rx="1.5" />
+      <line x1="5" y1="5.5" x2="11" y2="5.5" />
+      <line x1="5" y1="8" x2="11" y2="8" />
+      <line x1="5" y1="10.5" x2="8" y2="10.5" />
+    </svg>
+  );
+}
+
+function PlaybookIcon() {
+  return (
+    <svg className={ITEM_ICON_CLS} fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="9" height="12" rx="1.5" />
+      <polyline points="9,1 14,6 9,6" />
+      <line x1="5" y1="6" x2="7" y2="6" />
+      <line x1="5" y1="8.5" x2="8" y2="8.5" />
+      <line x1="5" y1="11" x2="7" y2="11" />
+    </svg>
+  );
+}
+
 // ── Status dot ─────────────────────────────────────────────────────────────────
 
 const STATUS_DOT: Record<TerminalSession["status"], string> = {
@@ -82,8 +111,10 @@ const STATUS_DOT: Record<TerminalSession["status"], string> = {
 // ── Unique key for palette items ───────────────────────────────────────────────
 
 function itemKey(item: PaletteItem): string {
-  if (item.kind === "server")  return `s:${item.server.id}`;
-  if (item.kind === "session") return `t:${item.session.id}`;
+  if (item.kind === "server")   return `s:${item.server.id}`;
+  if (item.kind === "session")  return `t:${item.session.id}`;
+  if (item.kind === "snippet")  return `sn:${item.snippet.id}`;
+  if (item.kind === "playbook") return `pb:${item.playbook.id}`;
   return `a:${item.id}`;
 }
 
@@ -105,8 +136,11 @@ export default function CommandPalette({ onActivateSession }: Props) {
   const openTunnels        = useUiStore((s) => s.openTunnels);
   const openKeys           = useUiStore((s) => s.openKeys);
 
-  const sessions   = useTerminalStore((s) => s.sessions);
+  const sessions    = useTerminalStore((s) => s.sessions);
   const openSession = useTerminalStore((s) => s.openSession);
+
+  const snippets  = useSnippetStore((s) => s.snippets);
+  const playbooks = usePlaybookStore((s) => s.playbooks);
 
   const [query, setQuery]             = useState("");
   const [serverResults, setServerResults] = useState<Server[]>([]);
@@ -173,6 +207,26 @@ export default function CommandPalette({ onActivateSession }: Props) {
       });
     }
 
+    const matchedSnippets = snippets.filter((sn) =>
+      sn.title.toLowerCase().includes(q),
+    );
+    if (matchedSnippets.length > 0) {
+      result.push({
+        title: "Snippets",
+        items: matchedSnippets.map((sn) => ({ kind: "snippet", snippet: sn })),
+      });
+    }
+
+    const matchedPlaybooks = playbooks.filter((pb) =>
+      pb.title.toLowerCase().includes(q),
+    );
+    if (matchedPlaybooks.length > 0) {
+      result.push({
+        title: "Playbooks",
+        items: matchedPlaybooks.map((pb) => ({ kind: "playbook", playbook: pb })),
+      });
+    }
+
     const matchedActions = STATIC_ACTIONS.filter((a) =>
       a.label.toLowerCase().includes(q),
     );
@@ -181,7 +235,7 @@ export default function CommandPalette({ onActivateSession }: Props) {
     }
 
     return result;
-  }, [query, serverResults, sessions]);
+  }, [query, serverResults, sessions, snippets, playbooks]);
 
   // Precompute per-section offsets into the flat item list
   const sectionOffsets = useMemo(() => {
@@ -233,11 +287,15 @@ export default function CommandPalette({ onActivateSession }: Props) {
         dispatchAction(item.id);
       } else if (item.kind === "server") {
         void openSession(item.server.id, item.server.displayName);
-      } else {
+      } else if (item.kind === "session") {
         onActivateSession(item.session.id);
+      } else if (item.kind === "snippet") {
+        openSnippets();
+      } else {
+        openPlaybooks();
       }
     },
-    [closePalette, dispatchAction, openSession, onActivateSession],
+    [closePalette, dispatchAction, openSession, onActivateSession, openSnippets, openPlaybooks],
   );
 
   // ── Keyboard handler ──────────────────────────────────────────────────────────
@@ -326,9 +384,11 @@ export default function CommandPalette({ onActivateSession }: Props) {
                         }`}
                       >
                         {/* Icon */}
-                        {item.kind === "server"  && <ServerIcon />}
-                        {item.kind === "session" && <TerminalIcon />}
-                        {item.kind === "action"  && <ActionIcon />}
+                        {item.kind === "server"   && <ServerIcon />}
+                        {item.kind === "session"  && <TerminalIcon />}
+                        {item.kind === "action"   && <ActionIcon />}
+                        {item.kind === "snippet"  && <SnippetIcon />}
+                        {item.kind === "playbook" && <PlaybookIcon />}
 
                         {/* Label */}
                         <span className="flex-1 min-w-0 flex items-center gap-2">
@@ -353,6 +413,12 @@ export default function CommandPalette({ onActivateSession }: Props) {
                               </span>
                             </>
                           )}
+                          {item.kind === "snippet" && (
+                            <span className="truncate">{item.snippet.title}</span>
+                          )}
+                          {item.kind === "playbook" && (
+                            <span className="truncate">{item.playbook.title}</span>
+                          )}
                           {item.kind === "action" && item.label}
                         </span>
 
@@ -362,6 +428,12 @@ export default function CommandPalette({ onActivateSession }: Props) {
                         )}
                         {item.kind === "session" && (
                           <span className="text-xs text-dim shrink-0">Switch</span>
+                        )}
+                        {item.kind === "snippet" && (
+                          <span className="text-xs text-dim shrink-0">Open</span>
+                        )}
+                        {item.kind === "playbook" && (
+                          <span className="text-xs text-dim shrink-0">Open</span>
                         )}
                         {item.kind === "action" && item.shortcut && (
                           <kbd className={`text-xs shrink-0 font-sans ${isActive ? "text-muted" : "text-dim"}`}>

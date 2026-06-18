@@ -93,11 +93,22 @@ pub async fn list_servers_db(db: &SqlitePool) -> Result<Vec<ServerWithTags>, App
         });
     }
 
+    // Batch-load group names to avoid N+1
+    let group_rows: Vec<(String, String)> =
+        sqlx::query_as("SELECT id, name FROM groups")
+            .fetch_all(db)
+            .await?;
+    let groups_map: HashMap<String, String> = group_rows.into_iter().collect();
+
     Ok(servers
         .into_iter()
         .map(|server| {
             let tags = tags_map.remove(&server.id).unwrap_or_default();
-            ServerWithTags { server, tags }
+            let group_name = server
+                .group_id
+                .as_deref()
+                .and_then(|gid| groups_map.get(gid).cloned());
+            ServerWithTags { server, tags, group_name }
         })
         .collect())
 }
@@ -110,7 +121,14 @@ pub async fn get_server_db(db: &SqlitePool, id: &str) -> Result<ServerWithTags, 
 
     let server = server.ok_or_else(|| AppError::NotFound(format!("server '{id}' not found")))?;
     let tags = tags_for_server(db, id).await?;
-    Ok(ServerWithTags { server, tags })
+    let group_name = match server.group_id.as_deref() {
+        Some(gid) => sqlx::query_scalar("SELECT name FROM groups WHERE id = ?")
+            .bind(gid)
+            .fetch_optional(db)
+            .await?,
+        None => None,
+    };
+    Ok(ServerWithTags { server, tags, group_name })
 }
 
 pub async fn create_server_db(

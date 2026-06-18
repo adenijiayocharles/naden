@@ -201,7 +201,17 @@ export default function TerminalPane({ sessionId }: Props) {
       // background to .xterm itself so it shows through the transparent viewport.
       if (term.element) term.element.style.backgroundColor = resolveTermTheme(effectiveTheme).background ?? "";
       fitAddon.fit();
-      term.focus();
+      // Only focus the terminal if the user isn't currently typing in an input
+      // or textarea. Without this guard, every tab switch or auto-reconnect
+      // remounts this pane (due to key={terminalActiveId}) and steals focus.
+      const activeEl = document.activeElement;
+      if (
+        !(activeEl instanceof HTMLInputElement) &&
+        !(activeEl instanceof HTMLTextAreaElement) &&
+        !(activeEl as HTMLElement | null)?.isContentEditable
+      ) {
+        term.focus();
+      }
 
       // Cached cell metrics for the suggestion ghost — recomputed on resize
       // rather than on every cursor move, since clientWidth/clientHeight

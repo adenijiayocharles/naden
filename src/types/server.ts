@@ -10,6 +10,7 @@ export interface Server {
   identityFilePath?: string;
   vaultCredentialId?: string;
   groupId?: string;
+  groupName?: string;
   isJumpHost: boolean;
   jumpHostId?: string;
   isFavourite: boolean;

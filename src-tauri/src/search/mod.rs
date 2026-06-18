@@ -36,6 +36,9 @@ fn build_haystack(server: &ServerWithTags) -> String {
         s.hostname.as_str(),
         s.username.as_str(),
     ];
+    if let Some(ref gname) = server.group_name {
+        parts.push(gname.as_str());
+    }
     for tag in &server.tags {
         parts.push(tag.name.as_str());
     }

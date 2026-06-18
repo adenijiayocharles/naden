@@ -2,6 +2,15 @@ use super::*;
 use crate::models::server::{Server, Tag};
 
 fn make_server(display_name: &str, hostname: &str, tags: &[&str]) -> ServerWithTags {
+    make_server_in_group(display_name, hostname, tags, None)
+}
+
+fn make_server_in_group(
+    display_name: &str,
+    hostname: &str,
+    tags: &[&str],
+    group_name: Option<&str>,
+) -> ServerWithTags {
     ServerWithTags {
         server: Server {
             id: display_name.to_string(),
@@ -12,7 +21,7 @@ fn make_server(display_name: &str, hostname: &str, tags: &[&str]) -> ServerWithT
             auth_method: "key".to_string(),
             identity_file_path: None,
             vault_credential_id: None,
-            group_id: None,
+            group_id: group_name.map(|_| "group-id".to_string()),
             is_jump_host: false,
             jump_host_id: None,
             is_favourite: false,
@@ -31,6 +40,7 @@ fn make_server(display_name: &str, hostname: &str, tags: &[&str]) -> ServerWithT
                 name: name.to_string(),
             })
             .collect(),
+        group_name: group_name.map(str::to_string),
     }
 }
 
@@ -60,6 +70,19 @@ fn fuzzy_query_ranks_closer_match_first() {
     let results = filter_servers(&servers, "prod");
 
     assert_eq!(results[0].server.display_name, "Prod Server");
+}
+
+#[test]
+fn query_matches_group_name() {
+    let servers = vec![
+        make_server_in_group("Web Server", "web.example.com", &[], Some("production")),
+        make_server_in_group("Dev Box", "dev.example.com", &[], Some("staging")),
+    ];
+
+    let results = filter_servers(&servers, "production");
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].server.display_name, "Web Server");
 }
 
 #[test]
