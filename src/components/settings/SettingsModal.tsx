@@ -22,12 +22,26 @@ import { useTerminalSettings, TERMINAL_FONTS, TERMINAL_THEMES, fontCss } from ".
 import { settingsCommands, assistantCommands, type AssistantStatus } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import { passwordStrength } from "../../lib/passwordStrength";
+import { shiftLightness } from "../../lib/accentColor";
 
 interface Props {
   onClose: () => void;
 }
 
 type ActiveForm = "none" | "disable" | "enable" | "change";
+
+const ACCENTS = [
+  { id: "lime",   base: "#CDFF00", hover: "#d8ff33", dim: "#a8cc00" },
+  { id: "green",  base: "#00e676", hover: "#33eb91", dim: "#00b85e" },
+  { id: "cyan",   base: "#00d4ff", hover: "#33ddff", dim: "#00a8cc" },
+  { id: "blue",   base: "#4f8ef7", hover: "#7aaeff", dim: "#3a6bc4" },
+  { id: "purple", base: "#a78bfa", hover: "#c4b0ff", dim: "#7c5ccc" },
+  { id: "orange", base: "#ff8c42", hover: "#ffa566", dim: "#cc6f35" },
+  { id: "pink",   base: "#f472b6", hover: "#f9a8d4", dim: "#c4588c" },
+  { id: "red",    base: "#ff5555", hover: "#ff7777", dim: "#cc4444" },
+  { id: "white",  base: "#ffffff", hover: "#eeeeee", dim: "#cccccc" },
+] as const;
+type AccentId = typeof ACCENTS[number]["id"];
 
 function PasswordInput({
   value,
@@ -115,18 +129,30 @@ export default function SettingsModal({ onClose }: Props) {
     }
   };
   const switchToProvider = async (provider: string) => {
+    const prev = assistantStatus;
     setAssistantStatus((s) => (s ? { ...s, activeProvider: provider } : s));
-    await assistantCommands.switchProvider(provider).catch(() => {});
+    await assistantCommands.switchProvider(provider).catch((e) => {
+      setAssistantStatus(prev);
+      setAssistantError(formatError(e));
+    });
     flashSaved();
   };
   const toggleAssistantEnabled = async (enabled: boolean) => {
+    const prev = assistantStatus;
     setAssistantStatus((s) => (s ? { ...s, enabled } : s));
-    await assistantCommands.setEnabled(enabled).catch(() => {});
+    await assistantCommands.setEnabled(enabled).catch((e) => {
+      setAssistantStatus(prev);
+      setAssistantError(formatError(e));
+    });
     flashSaved();
   };
   const toggleAssistantPersistHistory = async (persistHistory: boolean) => {
+    const prev = assistantStatus;
     setAssistantStatus((s) => (s ? { ...s, persistHistory } : s));
-    await assistantCommands.setPersistHistory(persistHistory).catch(() => {});
+    await assistantCommands.setPersistHistory(persistHistory).catch((e) => {
+      setAssistantStatus(prev);
+      setAssistantError(formatError(e));
+    });
     flashSaved();
   };
 
@@ -135,11 +161,6 @@ export default function SettingsModal({ onClose }: Props) {
   // Theme
   type Theme = "dark" | "oled" | "dim" | "light";
   const [theme, setTheme] = useState<Theme>("dark");
-  useEffect(() => {
-    settingsCommands.getSetting("theme")
-      .then((v) => { if (v) setTheme(v as Theme); })
-      .catch(() => {});
-  }, []);
   const saveTheme = (t: Theme) => {
     setTheme(t);
     document.documentElement.dataset.theme = t === "dark" ? "" : t;
@@ -148,24 +169,9 @@ export default function SettingsModal({ onClose }: Props) {
   };
 
   // Accent colour
-  const ACCENTS = [
-    { id: "lime",   base: "#CDFF00", hover: "#d8ff33", dim: "#a8cc00" },
-    { id: "green",  base: "#00e676", hover: "#33eb91", dim: "#00b85e" },
-    { id: "cyan",   base: "#00d4ff", hover: "#33ddff", dim: "#00a8cc" },
-    { id: "blue",   base: "#4f8ef7", hover: "#7aaeff", dim: "#3a6bc4" },
-    { id: "purple", base: "#a78bfa", hover: "#c4b0ff", dim: "#7c5ccc" },
-    { id: "orange", base: "#ff8c42", hover: "#ffa566", dim: "#cc6f35" },
-    { id: "pink",   base: "#f472b6", hover: "#f9a8d4", dim: "#c4588c" },
-    { id: "red",    base: "#ff5555", hover: "#ff7777", dim: "#cc4444" },
-    { id: "white",  base: "#ffffff", hover: "#eeeeee", dim: "#cccccc" },
-  ] as const;
-  type AccentId = typeof ACCENTS[number]["id"];
-  const [accentId, setAccentId] = useState<AccentId>("lime");
-  useEffect(() => {
-    settingsCommands.getSetting("accent")
-      .then((v) => { if (v) setAccentId(v as AccentId); })
-      .catch(() => {});
-  }, []);
+  const [accentId, setAccentId] = useState<AccentId | "custom">("lime");
+  const [customHex, setCustomHex] = useState("#ffffff");
+  const colorInputRef = useRef<HTMLInputElement>(null);
   const saveAccent = (id: AccentId) => {
     const a = ACCENTS.find((x) => x.id === id)!;
     setAccentId(id);
@@ -176,19 +182,24 @@ export default function SettingsModal({ onClose }: Props) {
     settingsCommands.setSetting("accent", id).catch(() => {});
     flashSaved();
   };
+  const customAccentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveCustomAccent = (hex: string) => {
+    setCustomHex(hex);
+    setAccentId("custom");
+    const root = document.documentElement;
+    root.style.setProperty("--color-accent", hex);
+    root.style.setProperty("--color-accent-hover", shiftLightness(hex, 15));
+    root.style.setProperty("--color-accent-dim", shiftLightness(hex, -20));
+    if (customAccentTimerRef.current) clearTimeout(customAccentTimerRef.current);
+    customAccentTimerRef.current = setTimeout(() => {
+      settingsCommands.setSetting("accent", "custom").catch(() => {});
+      settingsCommands.setSetting("accent_custom_color", hex).catch(() => {});
+      flashSaved();
+    }, 150);
+  };
 
   // Vault timeout
   const [timeoutMins, setTimeoutMins] = useState("0");
-  useEffect(() => {
-    settingsCommands.getSetting("vault_timeout_minutes")
-      .then((v) => {
-        if (v !== null) {
-          setTimeoutMins(v);
-          setVaultTimeoutMins(Number(v));
-        }
-      })
-      .catch(() => {});
-  }, [setVaultTimeoutMins]);
   const [autoLockNeedsPassword, setAutoLockNeedsPassword] = useState(false);
   const saveTimeout = (v: string | null) => {
     if (v === null) return;
@@ -205,17 +216,40 @@ export default function SettingsModal({ onClose }: Props) {
 
   // SSH keepalive
   const [keepaliveInterval, setKeepaliveInterval] = useState("0");
-  useEffect(() => {
-    settingsCommands.getSetting("ssh_keepalive_interval")
-      .then((v) => { if (v !== null) setKeepaliveInterval(v); })
-      .catch(() => {});
-  }, []);
   const saveKeepalive = (v: string | null) => {
     if (v === null) return;
     setKeepaliveInterval(v);
     settingsCommands.setSetting("ssh_keepalive_interval", v).catch(() => {});
     flashSaved();
   };
+
+  // Load all settings in a single IPC call on mount.
+  useEffect(() => {
+    settingsCommands.getAllSettings().then((s) => {
+      if (s.theme) setTheme(s.theme as Theme);
+
+      if (s.accent) {
+        if (s.accent === "custom") {
+          setAccentId("custom");
+          if (s.accent_custom_color) {
+            setCustomHex(s.accent_custom_color);
+            const root = document.documentElement;
+            root.style.setProperty("--color-accent", s.accent_custom_color);
+            root.style.setProperty("--color-accent-hover", shiftLightness(s.accent_custom_color, 15));
+            root.style.setProperty("--color-accent-dim", shiftLightness(s.accent_custom_color, -20));
+          }
+        } else {
+          setAccentId(s.accent as AccentId);
+        }
+      }
+
+      if (s.vault_timeout_minutes != null) {
+        setTimeoutMins(s.vault_timeout_minutes);
+        setVaultTimeoutMins(Number(s.vault_timeout_minutes));
+      }
+      if (s.ssh_keepalive_interval != null) setKeepaliveInterval(s.ssh_keepalive_interval);
+    }).catch(() => {});
+  }, [setVaultTimeoutMins]);
 
   // Disable form state
   const [disablePwd, setDisablePwd] = useState("");
@@ -374,6 +408,32 @@ export default function SettingsModal({ onClose }: Props) {
                   style={{ backgroundColor: base }}
                 />
               ))}
+              <button
+                onClick={() => colorInputRef.current?.click()}
+                title="Custom colour"
+                className={`w-7 h-7 rounded-full transition-transform hover:scale-110 flex items-center justify-center border border-stroke ${
+                  accentId === "custom" ? "ring-2 ring-white/50 scale-110" : ""
+                }`}
+                style={accentId === "custom" ? { backgroundColor: customHex } : {}}
+              >
+                {accentId !== "custom" && (
+                  <svg className="w-3.5 h-3.5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+                    <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+                    <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+                    <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
+                  </svg>
+                )}
+              </button>
+              <input
+                ref={colorInputRef}
+                type="color"
+                value={customHex}
+                onChange={(e) => saveCustomAccent(e.target.value)}
+                className="sr-only"
+                aria-label="Custom accent colour"
+              />
             </div>
           </div>
 
@@ -532,11 +592,13 @@ export default function SettingsModal({ onClose }: Props) {
                 disabled={!isPasswordRequired && timeoutMins === "0"}
               >
                 <SelectTrigger className="ml-4 h-10 shrink-0">
-                  <SelectValue />
+                  <SelectValue>
+                    {(val) => ({"0":"Never","5":"5 min","15":"15 min","30":"30 min","60":"1 hour","120":"2 hours"} as Record<string,string>)[String(val)] ?? String(val)}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {[["0","Never"],["5","5 min"],["15","15 min"],["30","30 min"],["60","1 hour"],["120","2 hours"]].map(([v, l]) => (
-                    <SelectItem key={v} value={v}>{l}</SelectItem>
+                    <SelectItem key={v} value={v} label={l}>{l}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -608,11 +670,13 @@ export default function SettingsModal({ onClose }: Props) {
                 onValueChange={(value) => { setFontFamily(value as typeof fontFamily); flashSaved(); }}
               >
                 <SelectTrigger className="h-10 shrink-0">
-                  <SelectValue />
+                  <SelectValue>
+                    {(val) => TERMINAL_FONTS.find((f) => f.id === val)?.label ?? String(val)}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {TERMINAL_FONTS.map(({ id, label }) => (
-                    <SelectItem key={id} value={id}>{label}</SelectItem>
+                    <SelectItem key={id} value={id} label={label}>{label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -627,11 +691,11 @@ export default function SettingsModal({ onClose }: Props) {
                 onValueChange={(value) => { setFontSize(Number(value)); flashSaved(); }}
               >
                 <SelectTrigger className="ml-4 h-10 shrink-0">
-                  <SelectValue />
+                  <SelectValue>{(val) => `${val}px`}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {[10, 12, 13, 14, 16, 18, 20].map((n) => (
-                    <SelectItem key={n} value={String(n)}>{n}px</SelectItem>
+                    <SelectItem key={n} value={String(n)} label={`${n}px`}>{n}px</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -647,11 +711,13 @@ export default function SettingsModal({ onClose }: Props) {
                 onValueChange={(value) => { setScrollback(Number(value)); flashSaved(); }}
               >
                 <SelectTrigger className="ml-4 h-10 shrink-0">
-                  <SelectValue />
+                  <SelectValue>
+                    {(val) => ({"500":"500","1000":"1 000","5000":"5 000","10000":"10 000","50000":"50 000"} as Record<string,string>)[String(val)] ?? String(val)}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {[[500,"500"],[1000,"1 000"],[5000,"5 000"],[10000,"10 000"],[50000,"50 000"]].map(([v, l]) => (
-                    <SelectItem key={v} value={String(v)}>{l}</SelectItem>
+                    <SelectItem key={v} value={String(v)} label={String(l)}>{l}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -793,7 +859,7 @@ export default function SettingsModal({ onClose }: Props) {
                 <div className="flex items-center justify-between py-3 border-b border-stroke-subtle">
                   <p className="text-sm text-white font-medium">Enable assistant</p>
                   <Select
-                    value={assistantStatus!.enabled ? "enabled" : "disabled"}
+                    value={(assistantStatus?.enabled ?? false) ? "enabled" : "disabled"}
                     onValueChange={(value) => { void toggleAssistantEnabled(value === "enabled"); }}
                   >
                     <SelectTrigger aria-label="Enable AI assistant" className="ml-4 h-10 shrink-0">
@@ -814,7 +880,7 @@ export default function SettingsModal({ onClose }: Props) {
                     </p>
                   </div>
                   <Select
-                    value={assistantStatus!.persistHistory ? "on" : "off"}
+                    value={(assistantStatus?.persistHistory ?? false) ? "on" : "off"}
                     onValueChange={(value) => { void toggleAssistantPersistHistory(value === "on"); }}
                   >
                     <SelectTrigger aria-label="Save AI assistant chat history to disk" className="ml-4 h-10 shrink-0">

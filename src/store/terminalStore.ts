@@ -5,6 +5,13 @@ import { sessionBuffer } from "../lib/sessionBuffer";
 
 export type SessionStatus = "connecting" | "connected" | "disconnected" | "error";
 
+export interface HostKeyPrompt {
+  host: string;
+  port: number;
+  fingerprint: string;
+  keyType: string;
+}
+
 export interface TerminalSession {
   id: string;
   serverId: string;
@@ -14,6 +21,7 @@ export interface TerminalSession {
   errorMessage?: string;
   reconnectAt?: number; // epoch ms when the auto-reconnect will fire
   broadcastGroupId?: string; // if set, session lives only inside a broadcast group tab
+  hostKeyPrompt?: HostKeyPrompt;
 }
 
 const MAX_TABS = 20;
@@ -41,6 +49,7 @@ interface TerminalStore {
   removeSession: (sessionId: string) => void;
   reorderSessions: (sessions: TerminalSession[]) => void;
   renameSession: (sessionId: string, name: string) => void;
+  confirmHostKey: (sessionId: string, accepted: boolean) => Promise<void>;
 }
 
 function teardownResources(sessionId: string) {
@@ -200,6 +209,27 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
           ),
         }));
       }),
+
+      listen<{ host: string; port: number; fingerprint: string; key_type: string }>(
+        `ssh:host-key-prompt:${sessionId}`,
+        ({ payload }) => {
+          set((state) => ({
+            sessions: state.sessions.map((s) =>
+              s.id === sessionId
+                ? {
+                    ...s,
+                    hostKeyPrompt: {
+                      host: payload.host,
+                      port: payload.port,
+                      fingerprint: payload.fingerprint,
+                      keyType: payload.key_type,
+                    },
+                  }
+                : s,
+            ),
+          }));
+        },
+      ),
     ]);
 
     sessionUnlisteners.set(sessionId, unlisteners);
@@ -265,5 +295,14 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
 
     teardownResources(sessionId);
     set((state) => dropFromState(state, sessionId));
+  },
+
+  confirmHostKey: async (sessionId, accepted) => {
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === sessionId ? { ...s, hostKeyPrompt: undefined } : s,
+      ),
+    }));
+    await terminalCommands.confirmHostKey(sessionId, accepted);
   },
 }));

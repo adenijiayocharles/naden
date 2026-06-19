@@ -1,6 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
 import { create } from "zustand";
 
+import { healthCommands } from "../lib/tauriCommands";
 import { useTerminalStore } from "./terminalStore";
 
 export interface ServerHealth {
@@ -14,6 +14,7 @@ export interface ServerHealth {
 interface HealthStore {
   health: Record<string, ServerHealth>;
   fetching: Set<string>;
+  errors: Record<string, string>;
   fetchHealth: (serverId: string) => Promise<void>;
   clearHealth: (serverId: string) => void;
 }
@@ -21,19 +22,22 @@ interface HealthStore {
 export const useHealthStore = create<HealthStore>((set, get) => ({
   health: {},
   fetching: new Set(),
+  errors: {},
 
   fetchHealth: async (serverId) => {
     if (get().fetching.has(serverId)) return;
     set((s) => ({ fetching: new Set([...s.fetching, serverId]) }));
     try {
-      const data = await invoke<ServerHealth>("fetch_server_health", { serverId });
+      const data = await healthCommands.fetchServerHealth(serverId);
       set((s) => ({
         health: { ...s.health, [serverId]: data },
         fetching: new Set([...s.fetching].filter((id) => id !== serverId)),
+        errors: Object.fromEntries(Object.entries(s.errors).filter(([k]) => k !== serverId)),
       }));
-    } catch {
+    } catch (e) {
       set((s) => ({
         fetching: new Set([...s.fetching].filter((id) => id !== serverId)),
+        errors: { ...s.errors, [serverId]: String(e) },
       }));
     }
   },
@@ -41,7 +45,8 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
   clearHealth: (serverId) =>
     set((s) => {
       const { [serverId]: _, ...rest } = s.health;
-      return { health: rest };
+      const { [serverId]: _e, ...restErrors } = s.errors;
+      return { health: rest, errors: restErrors };
     }),
 }));
 

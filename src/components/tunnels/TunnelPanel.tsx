@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useTunnelStore } from "../../store/tunnelStore";
 import { useServerStore } from "../../store/serverStore";
 import { formatError } from "../../lib/errors";
@@ -159,11 +159,13 @@ function AddTunnelModal({ onClose }: { onClose: () => void }) {
               }}
             >
               <SelectTrigger className="w-full h-9">
-                <SelectValue />
+                <SelectValue>
+                  {(val) => servers.find((s) => s.id === val)?.displayName ?? String(val ?? "")}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {servers.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>
+                  <SelectItem key={s.id} value={s.id} label={s.displayName}>{s.displayName}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -371,11 +373,11 @@ export default function TunnelPanel() {
   const [deleteTarget, setDeleteTarget] = useState<PortForward | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const handleStart = (id: string) => { void startTunnel(id).catch(() => {}); };
-  const handleStop  = (id: string) => { void stopTunnel(id).catch(() => {}); };
-  const handleDelete = (id: string) => {
+  const handleStart = useCallback((id: string) => { void startTunnel(id).catch(() => {}); }, [startTunnel]);
+  const handleStop  = useCallback((id: string) => { void stopTunnel(id).catch(() => {}); }, [stopTunnel]);
+  const handleDelete = useCallback((id: string) => {
     setDeleteTarget(forwards.find((fwd) => fwd.id === id) ?? null);
-  };
+  }, [forwards]);
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);

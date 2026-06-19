@@ -15,6 +15,7 @@ const ALLOWED_SETTINGS: &[&str] = &[
     "terminal_cursor_style",
     "default_terminal",
     "accent_custom_color",
+    "ssh_keepalive_interval",
 ];
 
 /// Reads a setting value directly from the db — used by commands that need
@@ -56,6 +57,19 @@ pub async fn set_setting(
         .execute(&state.db)
         .await?;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn get_all_settings(
+    state: tauri::State<'_, AppState>,
+) -> Result<std::collections::HashMap<String, String>, AppError> {
+    let rows: Vec<(String, String)> = sqlx::query_as("SELECT key, value FROM settings")
+        .fetch_all(&state.db)
+        .await?;
+    Ok(rows
+        .into_iter()
+        .filter(|(k, _)| ALLOWED_SETTINGS.contains(&k.as_str()))
+        .collect())
 }
 
 /// Called by the frontend on user activity to reset the auto-lock timer.

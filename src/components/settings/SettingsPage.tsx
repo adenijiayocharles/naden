@@ -120,6 +120,21 @@ const NAV_ITEMS: { id: Section; label: string; icon: React.ReactNode }[] = [
   },
 ];
 
+const ACCENTS = [
+  { id: "lime",   base: "#CDFF00", hover: "#d8ff33", dim: "#a8cc00" },
+  { id: "green",  base: "#00e676", hover: "#33eb91", dim: "#00b85e" },
+  { id: "cyan",   base: "#00d4ff", hover: "#33ddff", dim: "#00a8cc" },
+  { id: "blue",   base: "#4f8ef7", hover: "#7aaeff", dim: "#3a6bc4" },
+  { id: "purple", base: "#a78bfa", hover: "#c4b0ff", dim: "#7c5ccc" },
+  { id: "orange", base: "#ff8c42", hover: "#ffa566", dim: "#cc6f35" },
+  { id: "pink",   base: "#f472b6", hover: "#f9a8d4", dim: "#c4588c" },
+  { id: "red",    base: "#ff5555", hover: "#ff7777", dim: "#cc4444" },
+  { id: "white",  base: "#ffffff", hover: "#eeeeee", dim: "#cccccc" },
+] as const;
+type AccentId = typeof ACCENTS[number]["id"];
+
+const LINE_HEIGHT_OPTIONS = Array.from({ length: 30 }, (_, i) => i + 1);
+
 export default function SettingsPage() {
   const settingsSection = useUiStore((s) => s.settingsSection);
   const [activeSection, setActiveSection] = useState<Section>(settingsSection);
@@ -232,29 +247,36 @@ export default function SettingsPage() {
     }
   };
   const switchToProvider = async (provider: string) => {
+    const prev = assistantStatus;
     setAssistantStatus((s) => (s ? { ...s, activeProvider: provider } : s));
-    await assistantCommands.switchProvider(provider).catch(() => {});
+    await assistantCommands.switchProvider(provider).catch((e) => {
+      setAssistantStatus(prev);
+      setAssistantError(formatError(e));
+    });
     flashSaved();
   };
   const toggleAssistantEnabled = async (enabled: boolean) => {
+    const prev = assistantStatus;
     setAssistantStatus((s) => (s ? { ...s, enabled } : s));
-    await assistantCommands.setEnabled(enabled).catch(() => {});
+    await assistantCommands.setEnabled(enabled).catch((e) => {
+      setAssistantStatus(prev);
+      setAssistantError(formatError(e));
+    });
     flashSaved();
   };
   const toggleAssistantPersistHistory = async (persistHistory: boolean) => {
+    const prev = assistantStatus;
     setAssistantStatus((s) => (s ? { ...s, persistHistory } : s));
-    await assistantCommands.setPersistHistory(persistHistory).catch(() => {});
+    await assistantCommands.setPersistHistory(persistHistory).catch((e) => {
+      setAssistantStatus(prev);
+      setAssistantError(formatError(e));
+    });
     flashSaved();
   };
 
   // Theme
   type Theme = "dark" | "oled" | "dim" | "light";
   const [theme, setTheme] = useState<Theme>("dark");
-  useEffect(() => {
-    settingsCommands.getSetting("theme")
-      .then((v) => { if (v) setTheme(v as Theme); })
-      .catch(() => {});
-  }, []);
   const saveTheme = (t: Theme) => {
     setTheme(t);
     document.documentElement.dataset.theme = t === "dark" ? "" : t;
@@ -263,39 +285,9 @@ export default function SettingsPage() {
   };
 
   // Accent colour
-  const ACCENTS = [
-    { id: "lime",   base: "#CDFF00", hover: "#d8ff33", dim: "#a8cc00" },
-    { id: "green",  base: "#00e676", hover: "#33eb91", dim: "#00b85e" },
-    { id: "cyan",   base: "#00d4ff", hover: "#33ddff", dim: "#00a8cc" },
-    { id: "blue",   base: "#4f8ef7", hover: "#7aaeff", dim: "#3a6bc4" },
-    { id: "purple", base: "#a78bfa", hover: "#c4b0ff", dim: "#7c5ccc" },
-    { id: "orange", base: "#ff8c42", hover: "#ffa566", dim: "#cc6f35" },
-    { id: "pink",   base: "#f472b6", hover: "#f9a8d4", dim: "#c4588c" },
-    { id: "red",    base: "#ff5555", hover: "#ff7777", dim: "#cc4444" },
-    { id: "white",  base: "#ffffff", hover: "#eeeeee", dim: "#cccccc" },
-  ] as const;
-  type AccentId = typeof ACCENTS[number]["id"];
   const [accentId, setAccentId] = useState<AccentId | "custom">("lime");
   const [customHex, setCustomHex] = useState("#ffffff");
   const colorInputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    settingsCommands.getSetting("accent").then((v) => {
-      if (!v) return;
-      if (v === "custom") {
-        setAccentId("custom");
-        settingsCommands.getSetting("accent_custom_color").then((hex) => {
-          if (!hex) return;
-          setCustomHex(hex);
-          const root = document.documentElement;
-          root.style.setProperty("--color-accent", hex);
-          root.style.setProperty("--color-accent-hover", shiftLightness(hex, 15));
-          root.style.setProperty("--color-accent-dim", shiftLightness(hex, -20));
-        }).catch(() => {});
-      } else {
-        setAccentId(v as AccentId);
-      }
-    }).catch(() => {});
-  }, []);
   const saveAccent = (id: AccentId) => {
     const a = ACCENTS.find((x) => x.id === id)!;
     setAccentId(id);
@@ -306,6 +298,7 @@ export default function SettingsPage() {
     settingsCommands.setSetting("accent", id).catch(() => {});
     flashSaved();
   };
+  const customAccentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveCustomAccent = (hex: string) => {
     setCustomHex(hex);
     setAccentId("custom");
@@ -313,23 +306,16 @@ export default function SettingsPage() {
     root.style.setProperty("--color-accent", hex);
     root.style.setProperty("--color-accent-hover", shiftLightness(hex, 15));
     root.style.setProperty("--color-accent-dim", shiftLightness(hex, -20));
-    settingsCommands.setSetting("accent", "custom").catch(() => {});
-    settingsCommands.setSetting("accent_custom_color", hex).catch(() => {});
-    flashSaved();
+    if (customAccentTimerRef.current) clearTimeout(customAccentTimerRef.current);
+    customAccentTimerRef.current = setTimeout(() => {
+      settingsCommands.setSetting("accent", "custom").catch(() => {});
+      settingsCommands.setSetting("accent_custom_color", hex).catch(() => {});
+      flashSaved();
+    }, 150);
   };
 
   // Vault timeout
   const [timeoutMins, setTimeoutMins] = useState("0");
-  useEffect(() => {
-    settingsCommands.getSetting("vault_timeout_minutes")
-      .then((v) => {
-        if (v !== null) {
-          setTimeoutMins(v);
-          setVaultTimeoutMins(Number(v));
-        }
-      })
-      .catch(() => {});
-  }, [setVaultTimeoutMins]);
   const [autoLockNeedsPassword, setAutoLockNeedsPassword] = useState(false);
   const saveTimeout = (v: string | null) => {
     if (v === null) return;
@@ -346,11 +332,6 @@ export default function SettingsPage() {
 
   // SSH keepalive
   const [keepaliveInterval, setKeepaliveInterval] = useState("0");
-  useEffect(() => {
-    settingsCommands.getSetting("ssh_keepalive_interval")
-      .then((v) => { if (v !== null) setKeepaliveInterval(v); })
-      .catch(() => {});
-  }, []);
   const saveKeepalive = (v: string | null) => {
     if (v === null) return;
     setKeepaliveInterval(v);
@@ -360,11 +341,35 @@ export default function SettingsPage() {
 
   // Default terminal for "Open in Terminal"
   const [defaultTerminal, setDefaultTerminal] = useState("Terminal");
+
+  // Load all settings in a single IPC call on mount.
   useEffect(() => {
-    settingsCommands.getSetting("default_terminal")
-      .then((v) => { if (v !== null) setDefaultTerminal(v); })
-      .catch(() => {});
-  }, []);
+    settingsCommands.getAllSettings().then((s) => {
+      if (s.theme) setTheme(s.theme as Theme);
+
+      if (s.accent) {
+        if (s.accent === "custom") {
+          setAccentId("custom");
+          if (s.accent_custom_color) {
+            setCustomHex(s.accent_custom_color);
+            const root = document.documentElement;
+            root.style.setProperty("--color-accent", s.accent_custom_color);
+            root.style.setProperty("--color-accent-hover", shiftLightness(s.accent_custom_color, 15));
+            root.style.setProperty("--color-accent-dim", shiftLightness(s.accent_custom_color, -20));
+          }
+        } else {
+          setAccentId(s.accent as AccentId);
+        }
+      }
+
+      if (s.vault_timeout_minutes != null) {
+        setTimeoutMins(s.vault_timeout_minutes);
+        setVaultTimeoutMins(Number(s.vault_timeout_minutes));
+      }
+      if (s.ssh_keepalive_interval != null) setKeepaliveInterval(s.ssh_keepalive_interval);
+      if (s.default_terminal != null) setDefaultTerminal(s.default_terminal);
+    }).catch(() => {});
+  }, [setVaultTimeoutMins]);
   const saveDefaultTerminal = (v: string | null) => {
     if (v === null) return;
     setDefaultTerminal(v);
@@ -655,11 +660,13 @@ export default function SettingsPage() {
                   disabled={!isPasswordRequired && timeoutMins === "0"}
                 >
                   <SelectTrigger className="h-10 shrink-0">
-                    <SelectValue />
+                    <SelectValue>
+                      {(val) => ({"0":"Never","5":"5 min","15":"15 min","30":"30 min","60":"1 hour","120":"2 hours"} as Record<string,string>)[String(val)] ?? String(val)}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {[["0","Never"],["5","5 min"],["15","15 min"],["30","30 min"],["60","1 hour"],["120","2 hours"]].map(([v, l]) => (
-                      <SelectItem key={v} value={v}>{l}</SelectItem>
+                      <SelectItem key={v} value={v!} label={l}>{l}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -718,11 +725,13 @@ export default function SettingsPage() {
                   onValueChange={(value) => { setFontFamily(value as typeof fontFamily); flashSaved(); }}
                 >
                   <SelectTrigger className="h-10 shrink-0">
-                    <SelectValue />
+                    <SelectValue>
+                      {(val) => TERMINAL_FONTS.find((f) => f.id === val)?.label ?? String(val)}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {TERMINAL_FONTS.map(({ id, label }) => (
-                      <SelectItem key={id} value={id}>{label}</SelectItem>
+                      <SelectItem key={id} value={id} label={label}>{label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -735,11 +744,11 @@ export default function SettingsPage() {
                   onValueChange={(value) => { setFontSize(Number(value)); flashSaved(); }}
                 >
                   <SelectTrigger className="h-10 shrink-0">
-                    <SelectValue />
+                    <SelectValue>{(val) => `${val}px`}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {[10, 12, 13, 14, 16, 18, 20].map((n) => (
-                      <SelectItem key={n} value={String(n)}>{n}px</SelectItem>
+                      <SelectItem key={n} value={String(n)} label={`${n}px`}>{n}px</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -752,11 +761,11 @@ export default function SettingsPage() {
                   onValueChange={(value) => { setLineHeight(Number(value)); flashSaved(); }}
                 >
                   <SelectTrigger className="h-10 shrink-0">
-                    <SelectValue />
+                    <SelectValue>{(val) => `${val}px`}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 30 }, (_, i) => i + 1).map((n) => (
-                      <SelectItem key={n} value={String(n)}>{n}px</SelectItem>
+                    {LINE_HEIGHT_OPTIONS.map((n) => (
+                      <SelectItem key={n} value={String(n)} label={`${n}px`}>{n}px</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -769,11 +778,13 @@ export default function SettingsPage() {
                   onValueChange={(value) => { setCursorStyle(value as typeof cursorStyle); flashSaved(); }}
                 >
                   <SelectTrigger className="h-10 shrink-0">
-                    <SelectValue />
+                    <SelectValue>
+                      {(val) => CURSOR_STYLES.find((c) => c.id === val)?.label ?? String(val)}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {CURSOR_STYLES.map(({ id, label }) => (
-                      <SelectItem key={id} value={id}>{label}</SelectItem>
+                      <SelectItem key={id} value={id} label={label}>{label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -786,11 +797,13 @@ export default function SettingsPage() {
                   onValueChange={(value) => { setScrollback(Number(value)); flashSaved(); }}
                 >
                   <SelectTrigger className="h-10 shrink-0">
-                    <SelectValue />
+                    <SelectValue>
+                      {(val) => ({"500":"500","1000":"1 000","5000":"5 000","10000":"10 000","50000":"50 000"} as Record<string,string>)[String(val)] ?? String(val)}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {[[500,"500"],[1000,"1 000"],[5000,"5 000"],[10000,"10 000"],[50000,"50 000"]].map(([v, l]) => (
-                      <SelectItem key={v} value={String(v)}>{l}</SelectItem>
+                      <SelectItem key={v} value={String(v)} label={String(l)}>{l}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -803,7 +816,7 @@ export default function SettingsPage() {
                   onValueChange={(value) => { setCopyOnSelect(value === "on"); flashSaved(); }}
                 >
                   <SelectTrigger aria-label="Copy on select" className="h-10 shrink-0">
-                    <SelectValue />
+                    <SelectValue>{(val) => val === "on" ? "On" : "Off"}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="on">On</SelectItem>
@@ -819,7 +832,7 @@ export default function SettingsPage() {
                   onValueChange={(value) => { setGhostSuggestions(value === "on"); flashSaved(); }}
                 >
                   <SelectTrigger aria-label="Ghost suggestions" className="h-10 shrink-0">
-                    <SelectValue />
+                    <SelectValue>{(val) => val === "on" ? "On" : "Off"}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="on">On</SelectItem>
@@ -832,7 +845,9 @@ export default function SettingsPage() {
                 <RowLabel title="SSH keepalive" description="Send periodic packets to prevent idle session drops" />
                 <Select value={keepaliveInterval} onValueChange={saveKeepalive}>
                   <SelectTrigger className="h-10 shrink-0">
-                    <SelectValue />
+                    <SelectValue>
+                      {(val) => ({"0":"Disabled","30":"30 s","60":"60 s","120":"2 min","300":"5 min"} as Record<string,string>)[String(val)] ?? String(val)}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="0">Disabled</SelectItem>
@@ -848,7 +863,7 @@ export default function SettingsPage() {
                 <RowLabel title="Default terminal" description="App used by 'Open in Terminal' for external SSH sessions" />
                 <Select value={defaultTerminal} onValueChange={saveDefaultTerminal}>
                   <SelectTrigger className="h-10 shrink-0">
-                    <SelectValue />
+                    <SelectValue>{(val) => val === "iTerm" ? "iTerm2" : String(val)}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Terminal">Terminal</SelectItem>
@@ -956,7 +971,7 @@ export default function SettingsPage() {
                   <Row>
                     <RowLabel title="Enable assistant" />
                     <Select
-                      value={assistantStatus!.enabled ? "enabled" : "disabled"}
+                      value={(assistantStatus?.enabled ?? false) ? "enabled" : "disabled"}
                       onValueChange={(value) => { void toggleAssistantEnabled(value === "enabled"); }}
                     >
                       <SelectTrigger aria-label="Enable AI assistant" className="h-10 shrink-0">
@@ -974,7 +989,7 @@ export default function SettingsPage() {
                       description="Encrypted at rest with the same key as your credentials. Off by default — turning it off erases everything already saved."
                     />
                     <Select
-                      value={assistantStatus!.persistHistory ? "on" : "off"}
+                      value={(assistantStatus?.persistHistory ?? false) ? "on" : "off"}
                       onValueChange={(value) => { void toggleAssistantPersistHistory(value === "on"); }}
                     >
                       <SelectTrigger aria-label="Save AI assistant chat history to disk" className="h-10 shrink-0">

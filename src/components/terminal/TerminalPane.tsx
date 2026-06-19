@@ -55,6 +55,7 @@ export default function TerminalPane({ sessionId }: Props) {
   const session = useTerminalStore((s) => s.sessions.find((t) => t.id === sessionId));
   const closeSession = useTerminalStore((s) => s.closeSession);
   const reconnectSession = useTerminalStore((s) => s.reconnectSession);
+  const confirmHostKey = useTerminalStore((s) => s.confirmHostKey);
 
   // Per-server terminal theme override — takes precedence over the global setting.
   const serverTermTheme = useServerStore((s) =>
@@ -767,6 +768,38 @@ export default function TerminalPane({ sessionId }: Props) {
             className="h-auto text-muted px-1 text-sm leading-none">↓</Button>
           <Button variant="ghost" onClick={closeSearch} aria-label="Close search"
             className="h-auto text-faint px-1 text-base leading-none ml-0.5">×</Button>
+        </div>
+      )}
+
+      {session?.hostKeyPrompt && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-surface-2 border border-stroke rounded-xl p-6 max-w-md w-full mx-4 shadow-overlay">
+            <h3 className="text-base font-semibold text-white mb-2">Unknown host key</h3>
+            <p className="text-sm text-text-muted mb-4">
+              This is the first connection to{" "}
+              <span className="text-white font-mono">{session.hostKeyPrompt.host}:{session.hostKeyPrompt.port}</span>.
+              Verify the fingerprint out of band before accepting.
+            </p>
+            <div className="bg-surface-1 rounded-lg p-3 mb-4 font-mono text-xs text-text-muted break-all">
+              <span className="text-text-subtle block mb-1">{session.hostKeyPrompt.keyType}</span>
+              {session.hostKeyPrompt.fingerprint}
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { void confirmHostKey(sessionId, false); }}
+              >
+                Reject
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => { void confirmHostKey(sessionId, true); }}
+              >
+                Accept &amp; Connect
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

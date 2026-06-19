@@ -46,7 +46,7 @@ pub(crate) fn tcp_connect(host: &str, port: u16) -> Result<TcpStream, AppError> 
     }
     Err(AppError::Ssh(format!(
         "TCP connect to {host}:{port} failed: {}",
-        last_err.unwrap()
+        last_err.expect("addrs was non-empty so at least one Err must exist")
     )))
 }
 
@@ -109,6 +109,109 @@ fn load_known_hosts_cached(known_hosts: &mut ssh2::KnownHosts, path: &std::path:
     for line in content.lines().filter(|l| !l.trim().is_empty()) {
         let _ = known_hosts.read_str(line, ssh2::KnownHostFileKind::OpenSSH);
     }
+}
+
+/// Payload emitted when a new host key is seen for the first time.
+#[derive(serde::Serialize, Clone)]
+pub struct HostKeyPromptPayload {
+    pub host: String,
+    pub port: u16,
+    pub fingerprint: String,
+    pub key_type: String,
+}
+
+/// Like `verify_host_key` but on first contact (key `NotFound`) emits a Tauri
+/// event and waits for the user to accept or reject via `confirm_host_key`.
+/// Only used for interactive terminal sessions; SFTP/tunnel/health use the
+/// silent TOFU path via the regular `verify_host_key`.
+pub(crate) fn verify_host_key_interactive(
+    session: &ssh2::Session,
+    host: &str,
+    port: u16,
+    session_id: &str,
+    app_handle: &tauri::AppHandle,
+    confirmations: &Arc<Mutex<HashMap<String, std::sync::mpsc::SyncSender<bool>>>>,
+) -> Result<(), AppError> {
+    let mut known_hosts = session
+        .known_hosts()
+        .map_err(|e| AppError::Ssh(format!("known_hosts init failed: {e}")))?;
+
+    let path = known_hosts_path();
+    if path.exists() {
+        load_known_hosts_cached(&mut known_hosts, &path);
+    }
+
+    let (key, key_type) = session
+        .host_key()
+        .ok_or_else(|| AppError::Ssh(format!("server {host}:{port} sent no host key")))?;
+
+    match known_hosts.check_port(host, port, key) {
+        ssh2::CheckResult::Match => {}
+        ssh2::CheckResult::NotFound => {
+            let fingerprint = session
+                .host_key_hash(ssh2::HashType::Sha256)
+                .map(|h| {
+                    format!(
+                        "SHA256:{}",
+                        base64::engine::general_purpose::STANDARD.encode(h)
+                    )
+                })
+                .unwrap_or_else(|| "<unknown>".to_string());
+            let key_type_str = format!("{key_type:?}");
+
+            let (tx, rx) = std::sync::mpsc::sync_channel::<bool>(1);
+            recover_lock(confirmations.lock()).insert(session_id.to_string(), tx);
+
+            let _ = app_handle.emit(
+                &format!("ssh:host-key-prompt:{session_id}"),
+                HostKeyPromptPayload {
+                    host: host.to_string(),
+                    port,
+                    fingerprint,
+                    key_type: key_type_str,
+                },
+            );
+
+            let accepted = rx
+                .recv_timeout(std::time::Duration::from_secs(60))
+                .unwrap_or(false);
+
+            recover_lock(confirmations.lock()).remove(session_id);
+
+            if !accepted {
+                return Err(AppError::Ssh(format!(
+                    "Connection to {host}:{port} rejected: host key not trusted"
+                )));
+            }
+
+            let entry = if port == 22 {
+                host.to_string()
+            } else {
+                format!("[{host}]:{port}")
+            };
+            known_hosts
+                .add(&entry, key, "", ssh2::KnownHostKeyFormat::from(key_type))
+                .map_err(|e| AppError::Ssh(format!("known_hosts add failed: {e}")))?;
+            if let Some(parent) = path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            let _ = known_hosts.write_file(&path, ssh2::KnownHostFileKind::OpenSSH);
+            invalidate_known_hosts_cache();
+        }
+        ssh2::CheckResult::Mismatch => {
+            return Err(AppError::Ssh(format!(
+                "Host key mismatch for {host}:{port}. \
+                 The server's key has changed — this may indicate a MITM attack. \
+                 If the server was reinstalled, remove its old entry from ~/.ssh/known_hosts."
+            )));
+        }
+        ssh2::CheckResult::Failure => {
+            return Err(AppError::Ssh(format!(
+                "Host key check failed for {host}:{port}"
+            )));
+        }
+    }
+    Ok(())
 }
 
 /// Check the server's host key against ~/.ssh/known_hosts.
@@ -223,8 +326,11 @@ struct ActiveSession {
     tx: std::sync::mpsc::SyncSender<SessionMessage>,
 }
 
+pub type HostKeyConfirmations = Arc<Mutex<HashMap<String, std::sync::mpsc::SyncSender<bool>>>>;
+
 pub struct SessionManager {
     sessions: Arc<Mutex<HashMap<String, ActiveSession>>>,
+    pub host_key_confirmations: HostKeyConfirmations,
 }
 
 pub(crate) fn recover_lock<T>(
@@ -240,6 +346,7 @@ impl SessionManager {
     pub fn new() -> Self {
         Self {
             sessions: Arc::new(Mutex::new(HashMap::new())),
+            host_key_confirmations: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -264,6 +371,7 @@ impl SessionManager {
         recover_lock(self.sessions.lock()).insert(session_id.clone(), ActiveSession { tx });
 
         let sessions = Arc::clone(&self.sessions);
+        let confirmations = Arc::clone(&self.host_key_confirmations);
         let sid = session_id.clone();
 
         std::thread::spawn(move || {
@@ -283,6 +391,7 @@ impl SessionManager {
                     app_handle.clone(),
                     Arc::clone(&sessions),
                     keepalive_interval,
+                    confirmations,
                 );
             }));
             if result.is_err() {
@@ -473,6 +582,7 @@ fn run_session(
     app_handle: tauri::AppHandle,
     sessions: Arc<Mutex<HashMap<String, ActiveSession>>>,
     keepalive_interval: u32,
+    host_key_confirmations: HostKeyConfirmations,
 ) {
     let output_event = format!("terminal:output:{session_id}");
     let closed_event = format!("terminal:closed:{session_id}");
@@ -493,7 +603,14 @@ fn run_session(
             .handshake()
             .map_err(|e| AppError::Ssh(format!("SSH handshake failed: {e}")))?;
 
-        verify_host_key(&session, &host, port)?;
+        verify_host_key_interactive(
+            &session,
+            &host,
+            port,
+            &session_id,
+            &app_handle,
+            &host_key_confirmations,
+        )?;
         authenticate_session(&mut session, &username, &auth)?;
         // Zeroize key material immediately — it is not needed after auth.
         drop(auth);
@@ -526,7 +643,10 @@ fn run_session(
             .unwrap_or_default();
         for var in &parsed_vars {
             if is_valid_env_key(&var.key) {
-                let escaped = var.value.replace('\'', "'\\''");
+                // Strip CR/LF — a newline inside the single-quoted value would
+                // break out of the export statement and inject arbitrary shell input.
+                let safe_value = var.value.replace(['\n', '\r'], "");
+                let escaped = safe_value.replace('\'', "'\\''");
                 let cmd = format!("export {}='{}'\n", var.key, escaped);
                 let _ = channel.write_all(cmd.as_bytes());
             }
@@ -652,20 +772,36 @@ fn run_session(
 
     // Fire-and-forget: spawn post-disconnect hook in background so session
     // cleanup is not blocked. The hook receives context via env vars.
+    const MAX_HOOK_LEN: usize = 4096;
+    const POST_HOOK_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
     if let Some(hook) = post_disconnect_hook {
         let hook = hook.trim().to_string();
-        if !hook.is_empty() {
+        if !hook.is_empty() && hook.len() <= MAX_HOOK_LEN {
             let h = host.clone();
             let u = username.clone();
             let p = port;
             std::thread::spawn(move || {
-                let _ = std::process::Command::new("sh")
+                if let Ok(mut child) = std::process::Command::new("sh")
                     .arg("-c")
                     .arg(&hook)
                     .env("NADEN_HOST", &h)
                     .env("NADEN_PORT", p.to_string())
                     .env("NADEN_USER", &u)
-                    .spawn();
+                    .spawn()
+                {
+                    let deadline = std::time::Instant::now() + POST_HOOK_TIMEOUT;
+                    loop {
+                        match child.try_wait() {
+                            Ok(Some(_)) => break,
+                            Ok(None) if std::time::Instant::now() >= deadline => {
+                                let _ = child.kill();
+                                break;
+                            }
+                            Ok(None) => std::thread::sleep(std::time::Duration::from_millis(50)),
+                            Err(_) => break,
+                        }
+                    }
+                }
             });
         }
     }

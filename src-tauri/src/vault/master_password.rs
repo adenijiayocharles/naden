@@ -72,6 +72,12 @@ fn check_verification_tag_v2(key: &[u8; KEY_LEN], stored: &[u8]) -> bool {
 }
 
 // ── V1 verification: SHA-256 (legacy read path only) ─────────────────────────
+// NOTE: V1 vaults use SHA-256 for key verification, which is orders of magnitude
+// weaker against offline brute-force than V2's AES-GCM round-trip. The upgrade
+// to V2 runs automatically on the first successful unlock. A V1 vault that has
+// NEVER been unlocked since creation remains weaker until it is opened once.
+// If this becomes a concern, add a forced-migration prompt on open that requires
+// the user to unlock (and thus upgrade) before any credentials can be accessed.
 
 fn sha256_verification_hash(key: &[u8; KEY_LEN]) -> [u8; 32] {
     let mut h = Sha256::new();

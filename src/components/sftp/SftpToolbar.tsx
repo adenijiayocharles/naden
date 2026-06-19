@@ -172,12 +172,14 @@ export default function SftpToolbar({
         {showLocalPane && (
           <Select value={leftPaneSelection} onValueChange={(value) => { if (value) onLeftPaneChange(value); }}>
             <SelectTrigger size="sm" className="text-xs leading-none">
-              <SelectValue />
+              <SelectValue>
+                {(val) => val === "local" ? "Local" : (leftPaneServers.find((s) => s.id === val)?.displayName ?? String(val ?? ""))}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="local">Local</SelectItem>
               {leftPaneServers.map((s) => (
-                <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>
+                <SelectItem key={s.id} value={s.id} label={s.displayName}>{s.displayName}</SelectItem>
               ))}
             </SelectContent>
           </Select>

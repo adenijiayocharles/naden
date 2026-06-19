@@ -23,6 +23,7 @@ import type {
 import type { SshKey } from "../types/sshKey";
 import type { DiscoveredHost } from "../types/discovery";
 import type { SessionLog } from "../types/sessionLog";
+import type { ServerHealth } from "../store/healthStore";
 
 export interface ReachabilityResult {
   reachable: boolean;
@@ -124,11 +125,17 @@ export const terminalCommands = {
 
   removeKnownHostEntry: (serverId: string) =>
     invoke<number>("remove_known_host_entry", { serverId }),
+
+  confirmHostKey: (sessionId: string, accepted: boolean) =>
+    invoke<void>("confirm_host_key", { sessionId, accepted }),
 };
 
 export const settingsCommands = {
   getSetting: (key: string) =>
     invoke<string | null>("get_setting", { key }),
+
+  getAllSettings: () =>
+    invoke<Record<string, string>>("get_all_settings"),
 
   setSetting: (key: string, value: string) =>
     invoke<void>("set_setting", { key, value }),
@@ -359,6 +366,11 @@ export const logCommands = {
 
   getLastConnectedMap: () =>
     invoke<Record<string, string>>("get_last_connected_map"),
+};
+
+export const healthCommands = {
+  fetchServerHealth: (serverId: string) =>
+    invoke<ServerHealth>("fetch_server_health", { serverId }),
 };
 
 export const trayCommands = {

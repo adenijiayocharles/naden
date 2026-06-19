@@ -74,7 +74,7 @@ pub fn run() {
             .arg("-e")
             .arg(format!(
                 r#"display alert "naden failed to start" message "{}" buttons {{"OK"}} default button "OK""#,
-                msg.replace('\\', "\\\\").replace('"', "'")
+                msg.replace('\\', "\\\\").replace('"', "\\\"")
             ))
             .status();
     }));
@@ -125,6 +125,7 @@ pub fn run() {
             commands::log_commands::get_last_connected_map,
             // Settings
             commands::settings_commands::get_setting,
+            commands::settings_commands::get_all_settings,
             commands::settings_commands::set_setting,
             commands::settings_commands::vault_heartbeat,
             // AI Assistant (BYOK)
@@ -172,6 +173,7 @@ pub fn run() {
             commands::ssh_commands::close_terminal_session,
             commands::ssh_commands::send_terminal_input,
             commands::ssh_commands::resize_terminal,
+            commands::ssh_commands::confirm_host_key,
             commands::ssh_commands::remove_known_host_entry,
             // Discovery
             commands::discovery_commands::scan_lan_hosts,
@@ -258,7 +260,17 @@ pub fn run() {
             let initial_cache = cache_result.unwrap_or_default();
             let password_required = password_required_result.unwrap_or(true);
             let initial_vault_key = if !password_required {
-                Some(zeroize::Zeroizing::new([0u8; 32]))
+                // Resolve (or create) the real per-device key immediately so no
+                // credential is ever written under the all-zero placeholder key.
+                match tauri::async_runtime::block_on(
+                    commands::vault_commands::get_or_create_device_key(&pool),
+                ) {
+                    Ok(k) => Some(zeroize::Zeroizing::new(k)),
+                    Err(e) => {
+                        eprintln!("[naden] setup: device key init failed: {e}");
+                        None
+                    }
+                }
             } else {
                 None
             };

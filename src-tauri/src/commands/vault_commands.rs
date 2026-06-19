@@ -83,7 +83,7 @@ fn record_failed_attempt(failures: &mut (u32, Option<SystemTime>)) -> (u32, Opti
 /// On first call it generates a random key and atomically migrates any existing
 /// credentials from the legacy all-zero placeholder to the new device key.
 /// Subsequent calls return the stored key without touching credentials.
-async fn get_or_create_device_key(db: &sqlx::SqlitePool) -> Result<[u8; 32], AppError> {
+pub(crate) async fn get_or_create_device_key(db: &sqlx::SqlitePool) -> Result<[u8; 32], AppError> {
     let stored: Option<String> =
         sqlx::query_scalar("SELECT value FROM vault_meta WHERE key = 'no_password_device_key'")
             .fetch_optional(db)

@@ -428,10 +428,17 @@ pub async fn open_terminal_session(
     });
 
     // Run pre-connect hook synchronously; non-zero exit blocks the connection.
+    const MAX_HOOK_LEN: usize = 4096;
+    const HOOK_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
     if let Some(ref hook) = s.pre_connect_hook {
         let hook = hook.trim().to_string();
         if !hook.is_empty() {
-            let status = tokio::process::Command::new("sh")
+            if hook.len() > MAX_HOOK_LEN {
+                return Err(AppError::Validation(format!(
+                    "pre-connect hook exceeds maximum length ({MAX_HOOK_LEN} bytes)"
+                )));
+            }
+            let child = tokio::process::Command::new("sh")
                 .arg("-c")
                 .arg(&hook)
                 .env("NADEN_HOST", &s.hostname)
@@ -439,8 +446,10 @@ pub async fn open_terminal_session(
                 .env("NADEN_USER", &s.username)
                 .env("NADEN_SERVER_ID", &server_id)
                 .kill_on_drop(true)
-                .status()
+                .status();
+            let status = tokio::time::timeout(HOOK_TIMEOUT, child)
                 .await
+                .map_err(|_| AppError::Ssh("pre-connect hook timed out (30s)".into()))?
                 .map_err(|e| AppError::Ssh(format!("pre-connect hook failed to spawn: {e}")))?;
             if !status.success() {
                 return Err(AppError::Ssh(format!(
@@ -610,4 +619,28 @@ pub async fn export_ssh_config(
     std::fs::write(&config_path, merged).map_err(|e| AppError::Io(e.to_string()))?;
 
     Ok(count)
+}
+
+/// Respond to a `ssh:host-key-prompt:{sessionId}` event. Called by the
+/// frontend after the user accepts or rejects the new host key.
+#[tauri::command]
+pub async fn confirm_host_key(
+    session_id: String,
+    accepted: bool,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    let tx = crate::ssh::connection::recover_lock(
+        state.session_manager.host_key_confirmations.lock(),
+    )
+    .remove(&session_id);
+
+    match tx {
+        Some(sender) => {
+            let _ = sender.send(accepted);
+            Ok(())
+        }
+        None => Err(AppError::Validation(format!(
+            "no pending host key prompt for session {session_id}"
+        ))),
+    }
 }

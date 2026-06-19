@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
@@ -18,6 +18,7 @@ import RecordingsView from "./RecordingsView";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import { formatError } from "../../lib/errors";
+import { duration, fmtDate } from "../../lib/formatTime";
 
 const PAGE = 50;
 
@@ -53,26 +54,6 @@ function durationMs(e: LogEntry): number {
   return new Date(e.sessionEnd).getTime() - new Date(e.sessionStart).getTime();
 }
 
-function duration(start: string, end: string | null): string {
-  if (!end) return "—";
-  const ms = new Date(end).getTime() - new Date(start).getTime();
-  if (ms < 0) return "—";
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  return `${m}m ${s % 60}s`;
-}
-
-function fmt(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString(undefined, {
-      month: "short", day: "numeric",
-      hour: "2-digit", minute: "2-digit", second: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
-}
 
 function sortEntries(list: LogEntry[], col: SortCol | null, dir: SortDir): LogEntry[] {
   if (!col) return list;
@@ -258,7 +239,7 @@ export default function LogView() {
   };
 
   // ── Client-side pipeline: outcome → text search → sort ─────────────────────
-  const displayed = (() => {
+  const displayed = useMemo(() => {
     let list = entries;
     if (filterOutcome) list = list.filter((e) => e.outcome === filterOutcome);
     if (logSearchQuery.trim()) {
@@ -270,7 +251,7 @@ export default function LogView() {
       );
     }
     return sortEntries(list, sortCol, sortDir);
-  })();
+  }, [entries, filterOutcome, logSearchQuery, sortCol, sortDir]);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const thBase = "px-3 py-2.5 font-medium text-left select-none";
@@ -323,12 +304,14 @@ export default function LogView() {
             onValueChange={(value) => setFilterServer(!value || value === "__all__" ? "" : value)}
           >
             <SelectTrigger className="h-10">
-              <SelectValue />
+              <SelectValue>
+                {(val) => (!val || val === "__all__") ? "All servers" : (servers.find((s) => s.id === val)?.displayName ?? String(val))}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">All servers</SelectItem>
               {servers.map((s) => (
-                <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>
+                <SelectItem key={s.id} value={s.id} label={s.displayName}>{s.displayName}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -338,11 +321,13 @@ export default function LogView() {
             onValueChange={(value) => setFilterOutcome(!value || value === "__all__" ? "" : value)}
           >
             <SelectTrigger className="h-10">
-              <SelectValue />
+              <SelectValue>
+                {(val) => OUTCOME_CHIPS.find((c) => (c.value || "__all__") === val)?.label ?? String(val)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {OUTCOME_CHIPS.map(({ value, label }) => (
-                <SelectItem key={value || "__all__"} value={value || "__all__"}>{label}</SelectItem>
+                <SelectItem key={value || "__all__"} value={value || "__all__"} label={label}>{label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -427,7 +412,7 @@ export default function LogView() {
                   title={e.errorMessage ?? undefined}
                 >
                   <td className="px-5 py-2.5 text-muted whitespace-nowrap font-mono text-xs">
-                    {fmt(e.sessionStart)}
+                    {fmtDate(e.sessionStart)}
                   </td>
                   <td className="px-3 py-2.5 text-white max-w-[160px] truncate" title={e.serverDisplayName}>
                     {e.serverDisplayName}

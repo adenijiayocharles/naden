@@ -12,29 +12,9 @@ import type { SessionLog } from "../../types/sessionLog";
 import { sessionLogCommands } from "../../lib/tauriCommands";
 import { useServerStore } from "../../store/serverStore";
 import { formatError } from "../../lib/errors";
+import { duration, fmtDate } from "../../lib/formatTime";
 
 const PAGE_SIZE = 50;
-
-function duration(start: string, end: string | null): string {
-  if (!end) return "—";
-  const ms = new Date(end).getTime() - new Date(start).getTime();
-  if (ms < 0) return "—";
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  return `${m}m ${s % 60}s`;
-}
-
-function fmt(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString(undefined, {
-      month: "short", day: "numeric",
-      hour: "2-digit", minute: "2-digit", second: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
-}
 
 function fmtBytes(bytes: number | null): string {
   if (bytes === null) return "—";
@@ -99,12 +79,14 @@ export default function RecordingsView() {
           onValueChange={(v) => setFilterServer(!v || v === "__all__" ? "" : v)}
         >
           <SelectTrigger className="h-10">
-            <SelectValue />
+            <SelectValue>
+              {(val) => (!val || val === "__all__") ? "All servers" : (servers.find((s) => s.id === val)?.displayName ?? String(val))}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">All servers</SelectItem>
             {servers.map((s) => (
-              <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>
+              <SelectItem key={s.id} value={s.id} label={s.displayName}>{s.displayName}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -145,7 +127,7 @@ export default function RecordingsView() {
               {logs.map((log) => (
                 <tr key={log.id} className="border-b border-stroke-subtle hover:bg-surface-0 transition-colors">
                   <td className="px-5 py-2.5 text-muted whitespace-nowrap font-mono text-xs">
-                    {fmt(log.startTime)}
+                    {fmtDate(log.startTime)}
                   </td>
                   <td className="px-3 py-2.5 text-white max-w-[160px] truncate">{log.serverDisplayName}</td>
                   <td className="px-3 py-2.5 text-faint font-mono text-xs">

@@ -223,7 +223,17 @@ pub async fn cross_copy_sftp_file(
     overwrite: bool,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
+    const MAX_PATHS: usize = 1000;
+    const MAX_PATH_LEN: usize = 4096;
+    if src_paths.len() > MAX_PATHS {
+        return Err(AppError::Validation(format!(
+            "too many source paths (max {MAX_PATHS})"
+        )));
+    }
     for src_path in src_paths {
+        if src_path.len() > MAX_PATH_LEN {
+            return Err(AppError::Validation("source path too long".into()));
+        }
         let filename = std::path::Path::new(&src_path)
             .file_name()
             .ok_or_else(|| AppError::Io(format!("invalid source path: {src_path}")))?
