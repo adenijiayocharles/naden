@@ -1,44 +1,24 @@
 import { useState, useEffect, useRef } from "react";
-import { FolderOpen } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { homeDir, join } from "@tauri-apps/api/path";
 import type { AuthMethod, Tag } from "../../types/server";
-import { TERMINAL_THEMES, type TerminalThemeId } from "../../lib/terminalSettings";
+import type { TerminalThemeId } from "../../lib/terminalSettings";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import { vaultCommands } from "../../lib/tauriCommands";
 import { useVaultStore } from "../../store/vaultStore";
 import { useSshKeyStore } from "../../store/sshKeyStore";
 import { formatError } from "../../lib/errors";
-import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { Checkbox } from "../ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
 import PortForwardsSection from "./PortForwardsSection";
-
-interface EnvVar { key: string; value: string; }
-
-interface FormData {
-  displayName: string;
-  hostname: string;
-  port: number;
-  username: string;
-  authMethod: AuthMethod;
-  identityFilePath: string;
-  groupId: string;
-  isJumpHost: boolean;
-  jumpHostId: string;
-  initialDir: string;
-  preConnectHook: string;
-  postDisconnectHook: string;
-  terminalTheme: TerminalThemeId | "";
-}
+import type { FormData, EnvVar } from "./serverFormTypes";
+import { ConnectionTab } from "./tabs/ConnectionTab";
+import { AuthTab } from "./tabs/AuthTab";
+import { ThemeTab } from "./tabs/ThemeTab";
+import { OrganizeTab } from "./tabs/OrganizeTab";
+import { NetworkTab } from "./tabs/NetworkTab";
+import { SessionTab } from "./tabs/SessionTab";
+import { HooksTab } from "./tabs/HooksTab";
 
 const DEFAULT_FORM: FormData = {
   displayName: "",
@@ -70,7 +50,9 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function ServerForm() {
-  const { activeView, editingServerId, closeForm } = useUiStore();
+  const activeView = useUiStore((s) => s.activeView);
+  const editingServerId = useUiStore((s) => s.editingServerId);
+  const closeForm = useUiStore((s) => s.closeForm);
   const isEdit = activeView === "edit";
 
   const servers = useServerStore((s) => s.servers);
@@ -345,483 +327,73 @@ export default function ServerForm() {
 
         {/* Form */}
         <form id="server-form" onSubmit={(e) => { void handleSubmit(e); }} className="px-6 py-4 space-y-4">
-
-          {/* ── Connection ── */}
           {activeTab === "connection" && (
-            <>
-              <Field label="Display Name" error={errors.displayName} required>
-                <Input
-                  id="displayName"
-                  value={form.displayName}
-                  onChange={set("displayName")}
-                  onBlur={(e) => validateField("displayName", e.target.value)}
-                  placeholder="Production Web Server"
-                  aria-invalid={!!errors.displayName}
-                  autoComplete="off"
-                />
-              </Field>
-
-              <Field label="Hostname / IP" error={errors.hostname} required>
-                <Input
-                  id="hostname"
-                  value={form.hostname}
-                  onChange={set("hostname")}
-                  onBlur={(e) => validateField("hostname", e.target.value)}
-                  placeholder="web.example.com"
-                  aria-invalid={!!errors.hostname}
-                  autoComplete="off"
-                />
-              </Field>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Port" error={errors.port} required>
-                  <Input
-                    id="port"
-                    type="number"
-                    min={1}
-                    max={65535}
-                    value={form.port}
-                    onChange={set("port")}
-                    onBlur={(e) => validateField("port", e.target.value)}
-                    aria-invalid={!!errors.port}
-                    autoComplete="off"
-                  />
-                </Field>
-                <Field label="Username">
-                  <Input
-                    id="username"
-                    value={form.username}
-                    onChange={set("username")}
-                    placeholder="ubuntu"
-                    autoComplete="off"
-                  />
-                </Field>
-              </div>
-
-            </>
+            <ConnectionTab form={form} set={set} errors={errors} validateField={validateField} />
           )}
-
-          {/* ── Auth ── */}
           {activeTab === "auth" && (
-            <>
-              <Field label="Auth Method">
-                <div className="flex h-10 rounded border border-stroke overflow-hidden">
-                  {(["key", "password", "agent"] as const).map((method) => (
-                    <button
-                      key={method}
-                      type="button"
-                      onClick={() => { setForm((f) => ({ ...f, authMethod: method })); setDirty(true); }}
-                      className={`flex-1 h-full text-sm transition-colors ${
-                        form.authMethod === method
-                          ? "bg-accent text-black font-semibold"
-                          : "bg-surface-3 text-muted hover:text-white hover:bg-surface-4"
-                      }`}
-                    >
-                      {method === "key" ? "SSH Key" : method === "password" ? "Password" : "SSH Agent"}
-                    </button>
-                  ))}
-                </div>
-                {form.authMethod === "agent" && (
-                  <p className="mt-1.5 text-xs text-muted">
-                    Uses your running ssh-agent. Run <code className="text-accent-fg">ssh-add</code> to load keys into the agent.
-                  </p>
-                )}
-              </Field>
-
-              {form.authMethod === "password" && (
-                <Field label={isEdit && existingServer?.vaultCredentialId ? "New Password (leave blank to keep existing)" : "Password"}>
-                  {!vaultAvailable ? (
-                    <p className="text-xs text-yellow-500">Unlock the vault to store a password.</p>
-                  ) : (
-                    <Input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder={isEdit && existingServer?.vaultCredentialId ? "Enter new password to change…" : "SSH password"}
-                      autoComplete="new-password"
-                    />
-                  )}
-                </Field>
-              )}
-
-              {form.authMethod === "key" && (
-                <Field label="Identity File">
-                  {managedKeys.length > 0 && (
-                    <Select
-                      value={managedKeys.some((k) => k.keyPath === form.identityFilePath) ? form.identityFilePath : "__none__"}
-                      onValueChange={(value) => {
-                        if (value && value !== "__none__") {
-                          setForm((f) => ({ ...f, identityFilePath: value }));
-                          setDirty(true);
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-full h-10 mb-2">
-                        <SelectValue placeholder="— pick a managed key —" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">— pick a managed key —</SelectItem>
-                        {managedKeys.map((k) => (
-                          <SelectItem key={k.id} value={k.keyPath}>
-                            {k.name} ({k.keyType.toUpperCase()})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  <div className="relative">
-                    <Input
-                      id="identityFilePath"
-                      value={form.identityFilePath}
-                      onChange={set("identityFilePath")}
-                      placeholder="~/.ssh/id_ed25519"
-                      className="pr-9"
-                      autoComplete="off"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => { void pickIdentityFile(); }}
-                      className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 text-muted hover:text-white rounded transition-colors"
-                      aria-label="Browse for identity file"
-                    >
-                      <FolderOpen className="size-4" />
-                    </button>
-                  </div>
-                </Field>
-              )}
-
-              {form.authMethod === "key" && (
-                <Field label={isEdit && existingServer?.vaultCredentialId ? "New Passphrase (leave blank to keep existing)" : "Passphrase (optional)"}>
-                  {!vaultAvailable ? (
-                    <p className="text-xs text-yellow-500">Unlock the vault to store a passphrase.</p>
-                  ) : (
-                    <Input
-                      type="password"
-                      value={passphrase}
-                      onChange={(e) => setPassphrase(e.target.value)}
-                      placeholder={isEdit && existingServer?.vaultCredentialId ? "Enter new passphrase to change…" : "Leave empty if the key has no passphrase"}
-                      autoComplete="new-password"
-                    />
-                  )}
-                </Field>
-              )}
-            </>
+            <AuthTab
+              form={form}
+              set={set}
+              setForm={setForm}
+              setDirty={setDirty}
+              password={password}
+              setPassword={setPassword}
+              passphrase={passphrase}
+              setPassphrase={setPassphrase}
+              isEdit={isEdit}
+              existingCredentialId={existingServer?.vaultCredentialId}
+              vaultAvailable={vaultAvailable}
+              managedKeys={managedKeys}
+              pickIdentityFile={pickIdentityFile}
+            />
           )}
-
-          {/* ── Theme ── */}
           {activeTab === "theme" && (
-            <>
-              <p className="text-xs text-muted mb-3">
-                Override the global terminal colour scheme for this server. Leave on <span className="text-secondary">Global</span> to use Settings → Terminal.
-              </p>
-              <div className="grid grid-cols-4 gap-2">
-                {[{ id: "" as const, label: "Global", bg: "#111111", fg: "#CDFF00" }, ...TERMINAL_THEMES].map(({ id, label, bg, fg }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => { setForm((f) => ({ ...f, terminalTheme: id as TerminalThemeId | "" })); setDirty(true); }}
-                    title={label}
-                    className={`rounded-xl border-2 overflow-hidden transition-all ${
-                      form.terminalTheme === id ? "border-accent" : "border-transparent hover:border-stroke"
-                    }`}
-                  >
-                    <div className="h-14 flex items-center justify-center gap-1 px-2" style={{ backgroundColor: bg }}>
-                      <span className="font-mono text-[11px] leading-none select-none" style={{ color: fg }}>{">"}</span>
-                      <span className="inline-block w-[6px] h-[12px] rounded-[1px]" style={{ backgroundColor: fg, opacity: 0.85 }} />
-                    </div>
-                    <div className="bg-surface-2 py-1 px-2">
-                      <p className={`text-xs leading-tight truncate ${form.terminalTheme === id ? "text-accent-fg font-medium" : "text-secondary"}`}>{label}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </>
+            <ThemeTab form={form} setForm={setForm} setDirty={setDirty} />
           )}
-
-          {/* ── Organize ── */}
           {activeTab === "organize" && (
-            <>
-              <Field label="Group" error={errors.group}>
-                {!showNewGroup ? (
-                  <Select
-                    value={form.groupId || "__none__"}
-                    onValueChange={(value) => {
-                      if (value === "__create_new__") {
-                        setShowNewGroup(true);
-                        setForm((f) => ({ ...f, groupId: "" }));
-                      } else {
-                        setShowNewGroup(false);
-                        setForm((f) => ({ ...f, groupId: value && value !== "__none__" ? value : "" }));
-                      }
-                      setDirty(true);
-                    }}
-                  >
-                    <SelectTrigger id="groupId" className="w-full h-10">
-                      <SelectValue placeholder="No Group" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">No Group</SelectItem>
-                      {groups.map((g) => (
-                        <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                      ))}
-                      <SelectItem value="__create_new__">＋ Create new group…</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <div className="flex gap-2">
-                    <Input
-                      autoFocus
-                      value={newGroupName}
-                      onChange={(e) => setNewGroupName(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void handleCreateGroup(); } }}
-                      placeholder="Group name"
-                      className="flex-1"
-                      autoComplete="off"
-                    />
-                    <Button
-                      type="button"
-                      onClick={() => { void handleCreateGroup(); }}
-                      className="px-3 shrink-0"
-                    >
-                      Add
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => { setShowNewGroup(false); setNewGroupName(""); }}
-                      className="px-3 shrink-0"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                )}
-              </Field>
-
-              <Field label="Tags" error={errors.tag}>
-                {tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {tags.map((t) => (
-                      <span key={t.id} className="flex items-center gap-1 bg-surface-3 border border-stroke text-muted text-xs px-2 py-1 rounded-full">
-                        #{t.name}
-                        <button
-                          type="button"
-                          onClick={() => setTags((ts) => ts.filter((x) => x.id !== t.id))}
-                          className="text-muted hover:text-white leading-none"
-                          aria-label={`Remove tag ${t.name}`}
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="relative" ref={tagDropdownRef}>
-                  <Input
-                    ref={tagInputRef}
-                    value={tagInput}
-                    onChange={(e) => { setTagInput(e.target.value); setTagDropdownOpen(true); }}
-                    onFocus={() => setTagDropdownOpen(true)}
-                    onBlur={() => setTimeout(() => setTagDropdownOpen(false), 150)}
-                    onKeyDown={handleTagKeyDown}
-                    placeholder="Type a tag and press Enter"
-                    autoComplete="off"
-                  />
-                  {tagDropdownOpen && tagSuggestions.length > 0 && (
-                    <div className="absolute z-20 top-full mt-1 w-full bg-surface-2 border border-stroke rounded-lg shadow-overlay max-h-40 overflow-y-auto">
-                      {tagSuggestions.map((t) => (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onMouseDown={(e) => { e.preventDefault(); setTags((ts) => [...ts, t]); setTagInput(""); setTagDropdownOpen(false); }}
-                          className="w-full text-left px-3 py-2 text-sm text-secondary hover:bg-surface-4 hover:text-white transition-colors"
-                        >
-                          #{t.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </Field>
-            </>
+            <OrganizeTab
+              form={form}
+              setForm={setForm}
+              setDirty={setDirty}
+              errors={errors}
+              tags={tags}
+              setTags={setTags}
+              tagInput={tagInput}
+              setTagInput={setTagInput}
+              tagDropdownOpen={tagDropdownOpen}
+              setTagDropdownOpen={setTagDropdownOpen}
+              tagSuggestions={tagSuggestions}
+              tagInputRef={tagInputRef}
+              tagDropdownRef={tagDropdownRef}
+              handleTagKeyDown={handleTagKeyDown}
+              groups={groups}
+              newGroupName={newGroupName}
+              setNewGroupName={setNewGroupName}
+              showNewGroup={showNewGroup}
+              setShowNewGroup={setShowNewGroup}
+              handleCreateGroup={handleCreateGroup}
+            />
           )}
-
-          {/* ── Network ── */}
           {activeTab === "network" && (
-            <>
-              <Field label="">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={form.isJumpHost}
-                    onCheckedChange={(checked) => {
-                      setForm((f) => ({ ...f, isJumpHost: checked === true }));
-                      setDirty(true);
-                    }}
-                  />
-                  <span className="text-sm text-secondary">This server is a jump host / bastion</span>
-                </label>
-              </Field>
-
-              {!form.isJumpHost && (
-                <Field label="Jump Through (optional)">
-                  <Select
-                    value={form.jumpHostId || "__none__"}
-                    onValueChange={(value) => {
-                      setForm((f) => ({ ...f, jumpHostId: value && value !== "__none__" ? value : "" }));
-                      setDirty(true);
-                    }}
-                  >
-                    <SelectTrigger id="jumpHostId" className="w-full h-10">
-                      <SelectValue placeholder="Direct connection" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Direct connection</SelectItem>
-                      {servers
-                        .filter((s) => s.isJumpHost && s.id !== editingServerId)
-                        .map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-
-                  {form.jumpHostId && (() => {
-                    const chain: string[] = ["Your machine"];
-                    let id: string | undefined = form.jumpHostId;
-                    const visited = new Set<string>();
-                    while (id && !visited.has(id)) {
-                      visited.add(id);
-                      const hop = servers.find((s) => s.id === id);
-                      if (!hop) break;
-                      chain.push(hop.displayName);
-                      id = hop.jumpHostId ?? undefined;
-                    }
-                    const target = form.displayName.trim() || "this server";
-                    chain.push(target);
-                    return (
-                      <div className="mt-2 flex items-center flex-wrap gap-1 text-meta text-faint">
-                        {chain.map((label, i) => (
-                          <span key={i} className="flex items-center gap-1">
-                            <span className={i === 0 || i === chain.length - 1 ? "text-muted" : "text-secondary font-medium"}>
-                              {label}
-                            </span>
-                            {i < chain.length - 1 && <span className="text-dim">→</span>}
-                          </span>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </Field>
-              )}
-            </>
+            <NetworkTab
+              form={form}
+              setForm={setForm}
+              setDirty={setDirty}
+              servers={servers}
+              editingServerId={editingServerId}
+            />
           )}
-
-          {/* ── Session ── */}
           {activeTab === "session" && (
-            <>
-              <Field label="Initial Directory">
-                <Input
-                  id="initialDir"
-                  value={form.initialDir}
-                  onChange={set("initialDir")}
-                  placeholder="/var/www/html"
-                  autoComplete="off"
-                />
-                <p className="mt-1 text-xs text-muted">
-                  Shell will <code className="text-accent-fg">cd</code> here immediately after connecting.
-                </p>
-              </Field>
-
-              <div>
-                <label className="block text-sm font-medium text-secondary mb-1">
-                  Environment Variables
-                </label>
-                <p className="text-xs text-muted mb-2">
-                  Exported to the shell immediately after connecting.
-                </p>
-                <div className="space-y-1.5">
-                  {envVars.map((v, i) => (
-                    <div key={i} className="flex gap-1.5 items-center">
-                      <Input
-                        value={v.key}
-                        onChange={(e) => setEnvVars((prev) => prev.map((ev, j) => j === i ? { ...ev, key: e.target.value } : ev))}
-                        placeholder="KEY"
-                        className="w-32 shrink-0 font-mono text-xs h-8"
-                        autoComplete="off"
-                        spellCheck={false}
-                      />
-                      <span className="text-dim text-xs shrink-0">=</span>
-                      <Input
-                        value={v.value}
-                        onChange={(e) => setEnvVars((prev) => prev.map((ev, j) => j === i ? { ...ev, value: e.target.value } : ev))}
-                        placeholder="value"
-                        className="flex-1 font-mono text-xs h-8"
-                        autoComplete="off"
-                        spellCheck={false}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setEnvVars((prev) => prev.filter((_, j) => j !== i))}
-                        className="text-dim hover:text-red-400 transition-colors shrink-0 text-sm leading-none px-1"
-                        title="Remove"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setEnvVars((prev) => [...prev, { key: "", value: "" }])}
-                    className="mt-1"
-                  >
-                    + Add variable
-                  </Button>
-                </div>
-              </div>
-            </>
+            <SessionTab form={form} set={set} envVars={envVars} setEnvVars={setEnvVars} />
           )}
-
-          {/* ── Hooks ── */}
           {activeTab === "hooks" && (
-            <>
-              <Field label="Pre-connect Hook">
-                <textarea
-                  value={form.preConnectHook}
-                  onChange={set("preConnectHook")}
-                  placeholder={"#!/bin/sh\n# Runs locally before connecting\naws sso login --profile prod"}
-                  rows={4}
-                  spellCheck={false}
-                  className="w-full rounded-md border border-stroke bg-surface-2 px-3 py-2 text-xs font-mono text-white placeholder-[#555] focus:outline-none focus:ring-1 focus:ring-accent resize-none"
-                />
-                <p className="mt-1 text-xs text-muted">
-                  Runs locally before the SSH connection. Non-zero exit cancels the connection.
-                  Env: <code className="text-accent-fg">NADEN_HOST</code>, <code className="text-accent-fg">NADEN_PORT</code>, <code className="text-accent-fg">NADEN_USER</code>.
-                </p>
-              </Field>
-
-              <Field label="Post-disconnect Hook">
-                <textarea
-                  value={form.postDisconnectHook}
-                  onChange={set("postDisconnectHook")}
-                  placeholder={"#!/bin/sh\n# Runs locally after session ends\nnotify-send \"Disconnected from $NADEN_HOST\""}
-                  rows={4}
-                  spellCheck={false}
-                  className="w-full rounded-md border border-stroke bg-surface-2 px-3 py-2 text-xs font-mono text-white placeholder-[#555] focus:outline-none focus:ring-1 focus:ring-accent resize-none"
-                />
-                <p className="mt-1 text-xs text-muted">
-                  Runs locally after disconnect. Spawned in the background — does not block cleanup.
-                </p>
-              </Field>
-            </>
+            <HooksTab form={form} set={set} />
           )}
-
-          {/* ── Tunnels ── */}
           {activeTab === "tunnels" && (
             isEdit && editingServerId
               ? <PortForwardsSection serverId={editingServerId} />
               : <p className="text-meta text-faint px-1">Port forwards can be configured after saving the server.</p>
           )}
-
         </form>
 
         {/* Footer */}
@@ -842,33 +414,6 @@ export default function ServerForm() {
         </div>
       </div>
       </div>
-    </div>
-  );
-}
-
-// ── helpers ───────────────────────────────────────────────────────────────────
-
-function Field({
-  label,
-  children,
-  error,
-  required,
-}: {
-  label: string;
-  children: React.ReactNode;
-  error?: string;
-  required?: boolean;
-}) {
-  return (
-    <div>
-      {label && (
-        <label className="block text-sm font-medium text-secondary mb-1">
-          {label}
-          {required && <span className="text-error ml-0.5">*</span>}
-        </label>
-      )}
-      {children}
-      {error && <p className="text-xs text-error mt-1">{error}</p>}
     </div>
   );
 }
