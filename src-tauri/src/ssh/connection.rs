@@ -661,16 +661,33 @@ fn run_session(
         session.set_blocking(false);
 
         let mut buf = vec![0u8; 32768];
-        let mut active;
         let mut last_keepalive = std::time::Instant::now();
 
-        'io: loop {
-            active = false;
+        // Ceiling on how long the leading read below blocks when idle. libssh2
+        // selects() on the real socket internally, so this read returns the instant
+        // data arrives rather than waiting out a fixed poll interval — the wait only
+        // hits this ceiling when the connection is genuinely idle.
+        const IDLE_WAIT_MS: u32 = 8;
 
+        'io: loop {
             // Drain SSH channel output, coalescing all available chunks into one emit.
+            // The first read blocks briefly (event-driven, bounded by IDLE_WAIT_MS) for
+            // new data; the rest of the drain is non-blocking, mopping up whatever else
+            // is already buffered.
             let mut coalesced: Vec<u8> = Vec::new();
+            let mut first_read = true;
             loop {
-                match channel.read(&mut buf) {
+                if first_read {
+                    session.set_blocking(true);
+                    session.set_timeout(IDLE_WAIT_MS);
+                }
+                let result = channel.read(&mut buf);
+                if first_read {
+                    session.set_blocking(false);
+                    session.set_timeout(0);
+                    first_read = false;
+                }
+                match result {
                     Ok(0) => {
                         // In non-blocking mode libssh2 returns Ok(0) to mean "no data
                         // available right now", not true EOF. Only exit the session
@@ -686,10 +703,14 @@ fn run_session(
                         break;
                     }
                     Ok(n) => {
-                        active = true;
                         coalesced.extend_from_slice(&buf[..n]);
                     }
-                    Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => break,
+                    Err(ref e)
+                        if e.kind() == std::io::ErrorKind::WouldBlock
+                            || e.kind() == std::io::ErrorKind::TimedOut =>
+                    {
+                        break;
+                    }
                     Err(e) => return Err(AppError::Ssh(format!("Connection lost: {e}"))),
                 }
             }
@@ -702,7 +723,6 @@ fn run_session(
             loop {
                 match rx.try_recv() {
                     Ok(SessionMessage::Input(data)) => {
-                        active = true;
                         session.set_blocking(true);
                         session.set_timeout(2000);
                         if let Err(e) = channel.write_all(&data) {
@@ -717,7 +737,6 @@ fn run_session(
                         session.set_timeout(0);
                     }
                     Ok(SessionMessage::Resize(cols, rows)) => {
-                        active = true;
                         let _ = channel.request_pty_size(cols.into(), rows.into(), None, None);
                     }
                     Ok(SessionMessage::Close)
@@ -730,22 +749,18 @@ fn run_session(
                 break;
             }
 
-            // When idle, sleep longer to reduce CPU wakeups (200 → 50 wakeups/s).
-            // When active, just yield so other threads can run without adding latency.
-            if active {
-                std::thread::yield_now();
-            } else {
-                if keepalive_interval > 0
-                    && last_keepalive.elapsed().as_secs() >= u64::from(keepalive_interval)
-                {
-                    session.set_blocking(true);
-                    session.set_timeout(2000);
-                    let _ = session.keepalive_send();
-                    session.set_blocking(false);
-                    session.set_timeout(0);
-                    last_keepalive = std::time::Instant::now();
-                }
-                std::thread::sleep(std::time::Duration::from_millis(20));
+            // No explicit sleep here: the leading read above already waited
+            // (event-driven, bounded by IDLE_WAIT_MS) for new data, so the loop
+            // naturally paces itself without polling on a fixed timer.
+            if keepalive_interval > 0
+                && last_keepalive.elapsed().as_secs() >= u64::from(keepalive_interval)
+            {
+                session.set_blocking(true);
+                session.set_timeout(2000);
+                let _ = session.keepalive_send();
+                session.set_blocking(false);
+                session.set_timeout(0);
+                last_keepalive = std::time::Instant::now();
             }
         }
 
