@@ -124,7 +124,8 @@
       "Bash(sed -n '80,105p' /Users/adenijiayocharles/Projects/SSHManager/src/components/servers/ServerCard.tsx)",
       "Bash(sed -n '85,115p' /Users/adenijiayocharles/Projects/SSHManager/src/components/servers/ServerRow.tsx)",
       "Bash(docker --version)",
-      "Bash(docker compose *)"
+      "Bash(docker compose *)",
+      "Bash(ssh *)"
     ]
   }
 }
