@@ -812,15 +812,15 @@ export default function SettingsPage() {
               <Row>
                 <RowLabel title="Copy on select" description="Automatically copy selected text to clipboard" />
                 <Select
-                  value={copyOnSelect ? "on" : "off"}
-                  onValueChange={(value) => { setCopyOnSelect(value === "on"); flashSaved(); }}
+                  value={copyOnSelect ? "enabled" : "disabled"}
+                  onValueChange={(value) => { setCopyOnSelect(value === "enabled"); flashSaved(); }}
                 >
                   <SelectTrigger aria-label="Copy on select" className="h-10 shrink-0">
-                    <SelectValue>{(val) => val === "on" ? "On" : "Off"}</SelectValue>
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="on">On</SelectItem>
-                    <SelectItem value="off">Off</SelectItem>
+                    <SelectItem value="enabled">Enabled</SelectItem>
+                    <SelectItem value="disabled">Disabled</SelectItem>
                   </SelectContent>
                 </Select>
               </Row>
@@ -828,15 +828,15 @@ export default function SettingsPage() {
               <Row>
                 <RowLabel title="Ghost suggestions" description="Show dimmed command completions from history; accept with →" />
                 <Select
-                  value={ghostSuggestions ? "on" : "off"}
-                  onValueChange={(value) => { setGhostSuggestions(value === "on"); flashSaved(); }}
+                  value={ghostSuggestions ? "enabled" : "disabled"}
+                  onValueChange={(value) => { setGhostSuggestions(value === "enabled"); flashSaved(); }}
                 >
                   <SelectTrigger aria-label="Ghost suggestions" className="h-10 shrink-0">
-                    <SelectValue>{(val) => val === "on" ? "On" : "Off"}</SelectValue>
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="on">On</SelectItem>
-                    <SelectItem value="off">Off</SelectItem>
+                    <SelectItem value="enabled">Enabled</SelectItem>
+                    <SelectItem value="disabled">Disabled</SelectItem>
                   </SelectContent>
                 </Select>
               </Row>
