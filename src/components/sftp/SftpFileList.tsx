@@ -89,21 +89,30 @@ function SortIndicator({ active, dir }: { active: boolean; dir: SortDir }) {
   return <span className="ml-1 text-accent-fg">{dir === "asc" ? "↑" : "↓"}</span>;
 }
 
-function ColHeader({ label, colKey, sortKey, sortDir, align = "left", className = "px-2", onSort }: {
+function ColHeader({ label, colKey, sortKey, sortDir, align = "left", className = "px-2", onSort, onResizeStart }: {
   label: string; colKey: SortKey; sortKey: SortKey; sortDir: SortDir;
   align?: "left" | "center" | "right"; className?: string; onSort: (k: SortKey) => void;
+  onResizeStart?: (e: React.PointerEvent) => void;
 }) {
   const active = sortKey === colKey;
-  const btnAlign = align === "right" ? "ml-auto" : align === "center" ? "mx-auto" : "";
+  const justify = align === "right" ? "justify-end" : align === "center" ? "justify-center" : "";
   return (
-    <div className={`${className} py-2 font-medium text-sm uppercase tracking-wider text-${align}`}>
+    <div className={`relative ${className} py-1 font-medium text-xs uppercase tracking-wider flex items-center ${justify}`}>
       <button
         onClick={() => onSort(colKey)}
-        className={`flex items-center gap-0.5 transition-colors ${btnAlign} ${active ? "text-white" : "text-faint hover:text-muted"}`}
+        className={`flex items-center gap-0.5 transition-colors ${active ? "text-white" : "text-faint hover:text-muted"}`}
       >
         {label}
         <SortIndicator active={active} dir={sortDir} />
       </button>
+      {onResizeStart && (
+        <div
+          className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize z-20 group"
+          onPointerDown={onResizeStart}
+        >
+          <div className="absolute inset-y-1 left-1/2 -translate-x-1/2 w-px bg-stroke-subtle group-hover:bg-accent/60 transition-colors rounded-full" />
+        </div>
+      )}
     </div>
   );
 }
@@ -156,8 +165,6 @@ export function ContextMenuPopup({ x, y, onClose, children }: {
   );
 }
 
-const GRID_COLS = "1fr 1fr 1fr 1fr";
-
 // NOTE: defined outside SftpFileList so it doesn't get recreated on every render.
 const Row = ({ index, style, entries, selectedSet, renaming, renameValue, dblClickRef, onSelect, onNavigate, onRenameStart, onRenameChange, onRenameCommit, onRenameCancel, onChmod, onContextMenu, onDragStart }: RowComponentProps<RowData>) => {
   const entry = entries[index];
@@ -188,7 +195,7 @@ const Row = ({ index, style, entries, selectedSet, renaming, renameValue, dblCli
 
   return (
     <div
-      style={{ ...style, gridTemplateColumns: GRID_COLS }}
+      style={{ ...style, gridTemplateColumns: "var(--sftp-col)" }}
       draggable={!isRenaming}
       onClick={handleClick}
       onDragStart={handleDragStart}
@@ -234,7 +241,7 @@ const Row = ({ index, style, entries, selectedSet, renaming, renameValue, dblCli
       </div>
 
       {/* Permissions cell */}
-      <div className="pl-2 pr-4 flex items-center justify-center">
+      <div className="px-2 flex items-center justify-center">
         {entry.permissions != null ? (
           <button
             onClick={(e) => { e.stopPropagation(); onChmod?.(entry.path, entry.permissions ?? 0o644); }}
@@ -262,6 +269,40 @@ export default function SftpFileList({
   const closeMenu = () => setContextMenu(null);
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const dblClickRef = useRef<DblClickState>({ path: "", t: 0 });
+
+  const [colFracs, setColFracs] = useState([2.0, 1.0, 1.5, 1.0]);
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  const handleResizeStart = (colIndex: number) => (e: React.PointerEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const containerWidth = headerRef.current?.offsetWidth ?? 0;
+    if (containerWidth === 0) return;
+    const startFracs = [...colFracs];
+    const totalFr = startFracs.reduce((a, b) => a + b, 0);
+    const col0 = startFracs[colIndex];
+    const col1 = startFracs[colIndex + 1];
+    const onMove = (me: PointerEvent) => {
+      const deltaFr = ((me.clientX - startX) / containerWidth) * totalFr;
+      const clamped = Math.max(0.3 - col0, Math.min(col1 - 0.3, deltaFr));
+      const next = [...startFracs];
+      next[colIndex] = col0 + clamped;
+      next[colIndex + 1] = col1 - clamped;
+      setColFracs(next);
+    };
+    const onUp = () => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  };
+
+  const gridTemplateColumns = colFracs.map((f) => `${f}fr`).join(" ");
 
   const handleContextMenu = (entry: FileEntry, e: React.MouseEvent) => {
     e.preventDefault();
@@ -307,17 +348,21 @@ export default function SftpFileList({
   const hasPerms = cm?.entry.permissions != null;
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div
+      className="flex flex-col flex-1 min-h-0"
+      style={{ "--sftp-col": gridTemplateColumns } as React.CSSProperties}
+    >
       {/* Column header — always visible, outside the virtual list */}
       {entries.length > 0 && (
         <div
+          ref={headerRef}
           className="grid sticky top-0 z-10 bg-surface-1 border-b border-stroke-subtle shrink-0"
-          style={{ gridTemplateColumns: GRID_COLS }}
+          style={{ gridTemplateColumns: "var(--sftp-col)" }}
         >
-          <ColHeader label="NAME"     colKey="name"     sortKey={sortKey} sortDir={sortDir} className="px-2" onSort={onSort} />
-          <ColHeader label="SIZE"     colKey="size"     sortKey={sortKey} sortDir={sortDir} align="center" className="px-2" onSort={onSort} />
-          <ColHeader label="MODIFIED" colKey="modified" sortKey={sortKey} sortDir={sortDir} align="center" className="px-2" onSort={onSort} />
-          <div className="pl-2 pr-4 py-2 font-medium text-sm tracking-wider text-center">
+          <ColHeader label="NAME"     colKey="name"     sortKey={sortKey} sortDir={sortDir} className="px-2" onSort={onSort} onResizeStart={handleResizeStart(0)} />
+          <ColHeader label="SIZE"     colKey="size"     sortKey={sortKey} sortDir={sortDir} align="center" className="px-2" onSort={onSort} onResizeStart={handleResizeStart(1)} />
+          <ColHeader label="MODIFIED" colKey="modified" sortKey={sortKey} sortDir={sortDir} align="center" className="px-2" onSort={onSort} onResizeStart={handleResizeStart(2)} />
+          <div className="px-2 py-1 font-medium text-xs tracking-wider flex items-center justify-center">
             <span className="text-faint">PERMISSIONS</span>
           </div>
         </div>

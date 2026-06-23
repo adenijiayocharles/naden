@@ -42,8 +42,6 @@ interface LocalRowData {
   onDragStart: (entry: LocalFileEntry, e: React.DragEvent) => void;
 }
 
-const GRID_COLS = "1fr 1fr 1fr";
-
 // NOTE: defined outside LocalFileBrowser so it doesn't get recreated on every render.
 const Row = ({ index, style, entries, selectedSet, renaming, renameValue, onRowClick, onContextMenu, onRenameChange, onRenameCommit, onRenameCancel, onDragStart }: RowComponentProps<LocalRowData>) => {
   const entry = entries[index];
@@ -52,7 +50,7 @@ const Row = ({ index, style, entries, selectedSet, renaming, renameValue, onRowC
 
   return (
     <div
-      style={{ ...style, gridTemplateColumns: GRID_COLS }}
+      style={{ ...style, gridTemplateColumns: "var(--local-col)" }}
       draggable={!isRenaming}
       onClick={(e) => onRowClick(entry, e)}
       onDragStart={(e) => onDragStart(entry, e)}
@@ -302,6 +300,40 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
 
   const closeMenu = () => setContextMenu(null);
 
+  const [colFracs, setColFracs] = useState([2.0, 1.0, 1.5]);
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  const handleResizeStart = (colIndex: number) => (e: React.PointerEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const containerWidth = headerRef.current?.offsetWidth ?? 0;
+    if (containerWidth === 0) return;
+    const startFracs = [...colFracs];
+    const totalFr = startFracs.reduce((a, b) => a + b, 0);
+    const col0 = startFracs[colIndex];
+    const col1 = startFracs[colIndex + 1];
+    const onMove = (me: PointerEvent) => {
+      const deltaFr = ((me.clientX - startX) / containerWidth) * totalFr;
+      const clamped = Math.max(0.3 - col0, Math.min(col1 - 0.3, deltaFr));
+      const next = [...startFracs];
+      next[colIndex] = col0 + clamped;
+      next[colIndex + 1] = col1 - clamped;
+      setColFracs(next);
+    };
+    const onUp = () => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  };
+
+  const gridTemplateColumns = colFracs.map((f) => `${f}fr`).join(" ");
+
   const rowData = useMemo<LocalRowData>(() => ({
     entries: visibleEntries,
     selectedSet,
@@ -382,16 +414,30 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
       {creatingFile && <InlineCreateInput label="New file:" placeholder="filename.txt" onCommit={(v) => { void commitNewFile(v); }} onCancel={() => setCreatingFile(false)} />}
 
       {/* File list */}
-      <div className="flex flex-col flex-1 min-h-0">
+      <div
+        className="flex flex-col flex-1 min-h-0"
+        style={{ "--local-col": gridTemplateColumns } as React.CSSProperties}
+      >
         {/* Column header — always visible, outside the virtual list */}
         {visibleEntries.length > 0 && (
           <div
+            ref={headerRef}
             className="grid sticky top-0 z-10 bg-surface-1 border-b border-stroke-subtle shrink-0"
-            style={{ gridTemplateColumns: GRID_COLS }}
+            style={{ gridTemplateColumns: "var(--local-col)" }}
           >
-            <div className="px-2 py-2 font-medium text-sm uppercase tracking-wider text-left text-faint">Name</div>
-            <div className="px-2 py-2 font-medium text-sm uppercase tracking-wider text-center text-faint">Size</div>
-            <div className="px-2 py-2 font-medium text-sm uppercase tracking-wider text-center text-faint">Modified</div>
+            <div className="relative px-2 py-1 font-medium text-xs uppercase tracking-wider flex items-center text-faint">
+              Name
+              <div className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize z-20 group" onPointerDown={handleResizeStart(0)}>
+                <div className="absolute inset-y-1 left-1/2 -translate-x-1/2 w-px bg-stroke-subtle group-hover:bg-accent/60 transition-colors rounded-full" />
+              </div>
+            </div>
+            <div className="relative px-2 py-1 font-medium text-xs uppercase tracking-wider flex items-center justify-center text-faint">
+              Size
+              <div className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize z-20 group" onPointerDown={handleResizeStart(1)}>
+                <div className="absolute inset-y-1 left-1/2 -translate-x-1/2 w-px bg-stroke-subtle group-hover:bg-accent/60 transition-colors rounded-full" />
+              </div>
+            </div>
+            <div className="px-2 py-1 font-medium text-xs uppercase tracking-wider flex items-center justify-center text-faint">Modified</div>
           </div>
         )}
 
