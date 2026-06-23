@@ -56,7 +56,7 @@ export const useHealthStore = create<HealthStore>((set, get) => ({
 let prevKey = "";
 useTerminalStore.subscribe((state) => {
   const nowKey = state.sessions
-    .filter((s) => s.status === "connected")
+    .filter((s) => s.status === "connected" && s.kind === "ssh")
     .map((s) => s.serverId)
     .sort()
     .join("\0");

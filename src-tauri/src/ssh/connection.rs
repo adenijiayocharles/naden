@@ -316,13 +316,13 @@ pub fn remove_known_host(host: &str, port: u16) -> Result<usize, AppError> {
     Ok(matches.len())
 }
 
-enum SessionMessage {
+pub(crate) enum SessionMessage {
     Input(Vec<u8>),
     Resize(u16, u16),
     Close,
 }
 
-struct ActiveSession {
+pub(crate) struct ActiveSession {
     tx: std::sync::mpsc::SyncSender<SessionMessage>,
 }
 
@@ -392,6 +392,41 @@ impl SessionManager {
                     Arc::clone(&sessions),
                     keepalive_interval,
                     confirmations,
+                );
+            }));
+            if result.is_err() {
+                recover_lock(sessions.lock()).remove(&sid);
+                let _ = app_handle.emit(&format!("terminal:closed:{sid}"), ());
+            }
+        });
+
+        Ok(())
+    }
+
+    /// Opens a local shell session in a PTY, reusing the same `ActiveSession`/
+    /// `SessionMessage` plumbing as `open_session` so `send_input`, `resize`, and
+    /// `close_session` work unchanged regardless of session kind.
+    pub fn open_local_session(
+        &self,
+        session_id: String,
+        initial_dir: Option<String>,
+        app_handle: tauri::AppHandle,
+    ) -> Result<(), AppError> {
+        let (tx, rx) = std::sync::mpsc::sync_channel(256);
+
+        recover_lock(self.sessions.lock()).insert(session_id.clone(), ActiveSession { tx });
+
+        let sessions = Arc::clone(&self.sessions);
+        let sid = session_id.clone();
+
+        std::thread::spawn(move || {
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                crate::local_terminal::run_local_session(
+                    sid.clone(),
+                    initial_dir,
+                    rx,
+                    app_handle.clone(),
+                    Arc::clone(&sessions),
                 );
             }));
             if result.is_err() {

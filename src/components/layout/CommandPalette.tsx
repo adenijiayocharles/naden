@@ -31,6 +31,7 @@ interface Section {
 
 const STATIC_ACTIONS: ActionItem[] = [
   { kind: "action", id: "add-server",   label: "Add server",        shortcut: "⌘N" },
+  { kind: "action", id: "local-terminal", label: "Open Local Terminal" },
   { kind: "action", id: "settings",     label: "Settings",          shortcut: "⌘," },
   { kind: "action", id: "import-ssh",   label: "Import SSH Config" },
   { kind: "action", id: "discover",     label: "Discover Hosts" },
@@ -136,8 +137,9 @@ export default function CommandPalette({ onActivateSession }: Props) {
   const openTunnels        = useUiStore((s) => s.openTunnels);
   const openKeys           = useUiStore((s) => s.openKeys);
 
-  const sessions    = useTerminalStore((s) => s.sessions);
-  const openSession = useTerminalStore((s) => s.openSession);
+  const sessions         = useTerminalStore((s) => s.sessions);
+  const openSession      = useTerminalStore((s) => s.openSession);
+  const openLocalSession = useTerminalStore((s) => s.openLocalSession);
 
   const snippets  = useSnippetStore((s) => s.snippets);
   const playbooks = usePlaybookStore((s) => s.playbooks);
@@ -266,6 +268,7 @@ export default function CommandPalette({ onActivateSession }: Props) {
     (id: string) => {
       switch (id) {
         case "add-server":  openAdd();            break;
+        case "local-terminal": void openLocalSession(); break;
         case "settings":    openSettings();       break;
         case "import-ssh":  openImportSshConfig(); break;
         case "discover":    openDiscoverHosts();   break;
@@ -276,7 +279,7 @@ export default function CommandPalette({ onActivateSession }: Props) {
         case "keys":        openKeys();            break;
       }
     },
-    [openAdd, openSettings, openImportSshConfig, openDiscoverHosts,
+    [openAdd, openLocalSession, openSettings, openImportSshConfig, openDiscoverHosts,
      openLogs, openSnippets, openPlaybooks, openTunnels, openKeys],
   );
 

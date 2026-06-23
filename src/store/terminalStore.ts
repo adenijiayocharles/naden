@@ -14,6 +14,7 @@ export interface HostKeyPrompt {
 
 export interface TerminalSession {
   id: string;
+  kind: "ssh" | "local";
   serverId: string;
   serverName: string;
   customName?: string;
@@ -23,6 +24,10 @@ export interface TerminalSession {
   broadcastGroupId?: string; // if set, session lives only inside a broadcast group tab
   hostKeyPrompt?: HostKeyPrompt;
 }
+
+// serverId/serverName for local-shell sessions, which have no backing Server record.
+export const LOCAL_SESSION_SERVER_ID = "local-shell";
+const LOCAL_SESSION_SERVER_NAME = "Local Shell";
 
 const MAX_TABS = 20;
 // Backoff delays in ms for successive reconnect attempts (5 s → 10 s → 20 s → 40 s).
@@ -43,6 +48,7 @@ interface TerminalStore {
   activeSessionId: string | null;
 
   openSession: (serverId: string, serverName: string, broadcastGroupId?: string) => Promise<string | null>;
+  openLocalSession: () => Promise<string | null>;
   closeSession: (sessionId: string) => Promise<void>;
   reconnectSession: (sessionId: string) => Promise<void>;
   setActive: (sessionId: string) => void;
@@ -237,7 +243,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     set((state) => ({
       sessions: [
         ...state.sessions,
-        { id: sessionId, serverId, serverName, status: "connecting", broadcastGroupId },
+        { id: sessionId, kind: "ssh", serverId, serverName, status: "connecting", broadcastGroupId },
       ],
       // Broadcast-group sessions live inside the group tab — don't switch the active tab
       activeSessionId: broadcastGroupId ? state.activeSessionId : sessionId,
@@ -248,6 +254,69 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     } catch (e) {
       // Synchronous Rust error (e.g. server not found, vault locked) — clean up
       // then re-throw so the caller gets the real error, not a null.
+      teardownResources(sessionId);
+      set((state) => dropFromState(state, sessionId));
+      throw e;
+    }
+
+    return sessionId;
+  },
+
+  openLocalSession: async () => {
+    if (get().sessions.length >= MAX_TABS) return null;
+
+    const sessionId = crypto.randomUUID();
+
+    const [, ...unlisteners] = await Promise.all([
+      sessionBuffer.attach(sessionId),
+      listen<string>(`terminal:status:${sessionId}`, ({ payload }) => {
+        if (payload === "connected") {
+          set((state) => ({
+            sessions: state.sessions.map((s) =>
+              s.id === sessionId ? { ...s, status: "connected" } : s,
+            ),
+          }));
+        }
+      }),
+
+      // Local shells have no remote connection to retry, so any close — clean
+      // exit or unexpected failure — just removes the tab. The one exception:
+      // an initial-launch failure should keep showing its error overlay rather
+      // than vanish, mirroring the SSH path's "never connected" behaviour.
+      listen<boolean>(`terminal:closed:${sessionId}`, () => {
+        const session = get().sessions.find((s) => s.id === sessionId);
+        if (!session || session.status === "error") return;
+        get().removeSession(sessionId);
+      }),
+
+      listen<string>(`terminal:error:${sessionId}`, ({ payload }) => {
+        set((state) => ({
+          sessions: state.sessions.map((s) =>
+            s.id === sessionId ? { ...s, status: "error", errorMessage: payload } : s,
+          ),
+        }));
+      }),
+    ]);
+
+    sessionUnlisteners.set(sessionId, unlisteners);
+
+    set((state) => ({
+      sessions: [
+        ...state.sessions,
+        {
+          id: sessionId,
+          kind: "local",
+          serverId: LOCAL_SESSION_SERVER_ID,
+          serverName: LOCAL_SESSION_SERVER_NAME,
+          status: "connecting",
+        },
+      ],
+      activeSessionId: sessionId,
+    }));
+
+    try {
+      await terminalCommands.openLocalSession(sessionId);
+    } catch (e) {
       teardownResources(sessionId);
       set((state) => dropFromState(state, sessionId));
       throw e;
@@ -273,10 +342,14 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   reconnectSession: async (sessionId) => {
     const session = get().sessions.find((s) => s.id === sessionId);
     if (!session) return;
-    const { serverId, serverName, broadcastGroupId } = session;
+    const { kind, serverId, serverName, broadcastGroupId } = session;
     teardownResources(sessionId);
     set((state) => dropFromState(state, sessionId));
-    await get().openSession(serverId, serverName, broadcastGroupId);
+    if (kind === "local") {
+      await get().openLocalSession();
+    } else {
+      await get().openSession(serverId, serverName, broadcastGroupId);
+    }
   },
 
   setActive: (sessionId) => set({ activeSessionId: sessionId }),

@@ -722,8 +722,9 @@ export default function TerminalPane({ sessionId }: Props) {
         </div>
       )}
 
-      {/* Tunnel picker — port forward manager for the active session */}
-      {tunnelPickerOpen && session?.serverId && (
+      {/* Tunnel picker — port forward manager for the active session; not
+          applicable to local-shell sessions, which have no remote server */}
+      {tunnelPickerOpen && session?.kind === "ssh" && session.serverId && (
         <TunnelPickerPanel serverId={session.serverId} />
       )}
 

@@ -114,6 +114,9 @@ export const terminalCommands = {
   openTerminalSession: (serverId: string, sessionId: string) =>
     invoke<void>("open_terminal_session", { serverId, sessionId }),
 
+  openLocalSession: (sessionId: string, initialDir?: string) =>
+    invoke<void>("open_local_session", { sessionId, initialDir: initialDir ?? null }),
+
   closeTerminalSession: (sessionId: string) =>
     invoke<void>("close_terminal_session", { sessionId }),
 

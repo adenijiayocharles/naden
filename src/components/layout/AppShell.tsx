@@ -792,14 +792,16 @@ export default function AppShell() {
                     </Button>
                     <SessionRecordingButton
                       sessionId={terminalActiveId}
-                      serverId={activeTerminalSession?.serverId}
+                      serverId={activeTerminalSession?.kind === "ssh" ? activeTerminalSession.serverId : undefined}
                       serverName={activeTerminalSession?.serverName ?? "Unknown"}
                     />
                   </div>
                 )}
 
-                {/* Open SFTP browser for the active terminal session */}
-                {!activeBroadcastGroupId && activePanelType === "terminal" && terminalActiveId && (
+                {/* Open SFTP browser for the active terminal session — not
+                    applicable to local-shell sessions, which have no remote server */}
+                {!activeBroadcastGroupId && activePanelType === "terminal" && terminalActiveId &&
+                  activeTerminalSession?.kind === "ssh" && (
                   <div className="px-1.5 shrink-0 border-l border-stroke-subtle">
                     <Button
                       variant="ghost"

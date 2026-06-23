@@ -7,6 +7,7 @@ mod commands;
 mod db;
 mod discovery;
 pub mod error;
+mod local_terminal;
 mod models;
 mod platform;
 mod power;
@@ -164,6 +165,7 @@ pub fn run() {
             commands::local_commands::delete_local,
             commands::local_commands::reveal_in_finder,
             commands::local_commands::open_local,
+            commands::local_commands::open_local_session,
             // SSH
             commands::ssh_commands::launch_in_terminal,
             commands::ssh_commands::import_ssh_config,

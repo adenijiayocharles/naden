@@ -1,6 +1,7 @@
 use std::os::unix::fs::PermissionsExt;
 
 use crate::error::AppError;
+use crate::AppState;
 
 pub(crate) fn home_boundary() -> std::path::PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
@@ -101,6 +102,22 @@ pub struct LocalFileEntry {
 #[tauri::command]
 pub fn get_local_home_dir() -> String {
     std::env::var("HOME").unwrap_or_else(|_| "/".to_string())
+}
+
+/// Opens a built-in terminal session running the user's local shell instead of
+/// an SSH session. Shares the `terminal:*:{session_id}` event contract and the
+/// `send_terminal_input`/`resize_terminal`/`close_terminal_session` commands
+/// with SSH sessions — only how the session is opened differs.
+#[tauri::command]
+pub async fn open_local_session(
+    session_id: String,
+    initial_dir: Option<String>,
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+) -> Result<(), AppError> {
+    state
+        .session_manager
+        .open_local_session(session_id, initial_dir, app_handle)
 }
 
 #[tauri::command]
