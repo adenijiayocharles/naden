@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { Switch } from "../ui/switch";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import { useVaultStore } from "../../store/vaultStore";
 import { useUiStore, type SettingsSection } from "../../store/uiStore";
@@ -560,18 +561,11 @@ export default function SettingsPage() {
                     ? "App is locked with a password on launch."
                     : "App opens without a password. Credentials still use the OS keychain."}
                 />
-                <Select
-                  value={isPasswordRequired ? "enabled" : "disabled"}
-                  onValueChange={(value) => { if ((value === "enabled") !== isPasswordRequired) handleToggle(); }}
-                >
-                  <SelectTrigger aria-label="Require master password" className="h-10 shrink-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="enabled">Enabled</SelectItem>
-                    <SelectItem value="disabled">Disabled</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Switch
+                  aria-label="Require master password"
+                  checked={isPasswordRequired}
+                  onCheckedChange={handleToggle}
+                />
               </Row>
 
               {activeForm === "disable" && (
@@ -811,34 +805,20 @@ export default function SettingsPage() {
 
               <Row>
                 <RowLabel title="Copy on select" description="Automatically copy selected text to clipboard" />
-                <Select
-                  value={copyOnSelect ? "enabled" : "disabled"}
-                  onValueChange={(value) => { setCopyOnSelect(value === "enabled"); flashSaved(); }}
-                >
-                  <SelectTrigger aria-label="Copy on select" className="h-10 shrink-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="enabled">Enabled</SelectItem>
-                    <SelectItem value="disabled">Disabled</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Switch
+                  aria-label="Copy on select"
+                  checked={copyOnSelect}
+                  onCheckedChange={(checked) => { setCopyOnSelect(checked); flashSaved(); }}
+                />
               </Row>
 
               <Row>
                 <RowLabel title="Ghost suggestions" description="Show dimmed command completions from history; accept with →" />
-                <Select
-                  value={ghostSuggestions ? "enabled" : "disabled"}
-                  onValueChange={(value) => { setGhostSuggestions(value === "enabled"); flashSaved(); }}
-                >
-                  <SelectTrigger aria-label="Ghost suggestions" className="h-10 shrink-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="enabled">Enabled</SelectItem>
-                    <SelectItem value="disabled">Disabled</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Switch
+                  aria-label="Ghost suggestions"
+                  checked={ghostSuggestions}
+                  onCheckedChange={(checked) => { setGhostSuggestions(checked); flashSaved(); }}
+                />
               </Row>
 
               <Row>
@@ -970,18 +950,11 @@ export default function SettingsPage() {
                 <>
                   <Row>
                     <RowLabel title="Enable assistant" />
-                    <Select
-                      value={(assistantStatus?.enabled ?? false) ? "enabled" : "disabled"}
-                      onValueChange={(value) => { void toggleAssistantEnabled(value === "enabled"); }}
-                    >
-                      <SelectTrigger aria-label="Enable AI assistant" className="h-10 shrink-0">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="enabled">Enabled</SelectItem>
-                        <SelectItem value="disabled">Disabled</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Switch
+                      aria-label="Enable AI assistant"
+                      checked={assistantStatus?.enabled ?? false}
+                      onCheckedChange={(checked) => { void toggleAssistantEnabled(checked); }}
+                    />
                   </Row>
                   <Row>
                     <RowLabel
