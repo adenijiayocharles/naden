@@ -22,7 +22,7 @@ jobs:
         run: |
           gh release download "$TAG" \
             --repo "$REPO" \
-            --pattern "naden_*_aarch64.dmg" \
+            --pattern "naden_*_universal.dmg" \
             --output naden.dmg
 
       - name: Compute sha256
