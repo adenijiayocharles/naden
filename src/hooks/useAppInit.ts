@@ -5,6 +5,7 @@ import { useUiStore } from "../store/uiStore";
 import { useTunnelStore } from "../store/tunnelStore";
 import { useBroadcastStore } from "../store/broadcastStore";
 import { useTerminalSettings } from "../lib/terminalSettings";
+import { useUiFontSettings, applyUiFont } from "../lib/uiFontSettings";
 import { settingsCommands } from "../lib/tauriCommands";
 import { promptForUpdate } from "../lib/checkForUpdates";
 import { shiftLightness } from "../lib/accentColor";
@@ -36,6 +37,7 @@ export function useAppInit() {
   const fetchAll = useServerStore((s) => s.fetchAll);
   const { check } = useVaultStore();
   const loadTerminalSettings = useTerminalSettings((s) => s.load);
+  const loadUiFontSettings = useUiFontSettings((s) => s.load);
   const setOnboardingComplete = useUiStore((s) => s.setOnboardingComplete);
   const setOnboardingChecked = useUiStore((s) => s.setOnboardingChecked);
   const loadTunnels = useTunnelStore((s) => s.load);
@@ -45,6 +47,10 @@ export function useAppInit() {
     void fetchAll();
     void check();
     void loadTerminalSettings();
+    void loadUiFontSettings().then(() => {
+      const { fontFamily, fontSize } = useUiFontSettings.getState();
+      applyUiFont(fontFamily, fontSize);
+    });
     void loadTunnels();
     void loadSavedBroadcastGroups();
 
@@ -80,7 +86,7 @@ export function useAppInit() {
       .catch(() => {
         setOnboardingChecked();
       });
-  }, [fetchAll, check, loadTerminalSettings, loadTunnels, loadSavedBroadcastGroups, setOnboardingComplete, setOnboardingChecked]);
+  }, [fetchAll, check, loadTerminalSettings, loadUiFontSettings, loadTunnels, loadSavedBroadcastGroups, setOnboardingComplete, setOnboardingChecked]);
 
   // Schedule the startup update check once the vault is unlocked (or
   // immediately if no master password is set), then recheck periodically.

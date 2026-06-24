@@ -14,6 +14,7 @@ import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import { useVaultStore } from "../../store/vaultStore";
 import { useUiStore, type SettingsSection } from "../../store/uiStore";
 import { useTerminalSettings, TERMINAL_FONTS, TERMINAL_THEMES, CURSOR_STYLES, fontCss } from "../../lib/terminalSettings";
+import { useUiFontSettings, UI_FONTS, UI_FONT_SIZES, uiFontCss, applyUiFont } from "../../lib/uiFontSettings";
 import { settingsCommands, assistantCommands, updaterCommands, type AssistantStatus, type UpdateInfo } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
 import { passwordStrength } from "../../lib/passwordStrength";
@@ -153,6 +154,8 @@ export default function SettingsPage() {
   const setVaultTimeoutMins = useUiStore((s) => s.setVaultTimeoutMins);
   const { fontSize, lineHeight, scrollback, copyOnSelect, ghostSuggestions, fontFamily, termTheme, cursorStyle, setFontSize, setLineHeight, setScrollback, setCopyOnSelect, setGhostSuggestions, setFontFamily, setTermTheme, setCursorStyle } =
     useTerminalSettings();
+  const { fontFamily: uiFontFamily, fontSize: uiFontSize, setFontFamily: setUiFontFamily, setFontSize: setUiFontSize } =
+    useUiFontSettings();
 
   const [activeForm, setActiveForm] = useState<ActiveForm>("none");
   const [error, setError] = useState<string | null>(null);
@@ -546,6 +549,55 @@ export default function SettingsPage() {
                   aria-label="Custom accent colour"
                 />
               </div>
+
+              <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3 mt-6">Typography</p>
+              <Row>
+                <div className="min-w-0 mr-6">
+                  <p className="text-sm text-white font-medium">App font</p>
+                  <p className="text-meta text-muted mt-0.5 truncate" style={{ fontFamily: uiFontCss(uiFontFamily) }}>the quick brown fox</p>
+                </div>
+                <Select
+                  value={uiFontFamily}
+                  onValueChange={(value) => {
+                    const id = value as typeof uiFontFamily;
+                    setUiFontFamily(id);
+                    applyUiFont(id, uiFontSize);
+                    flashSaved();
+                  }}
+                >
+                  <SelectTrigger className="h-10 shrink-0">
+                    <SelectValue>
+                      {(val) => UI_FONTS.find((f) => f.id === val)?.label ?? String(val)}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {UI_FONTS.map(({ id, label }) => (
+                      <SelectItem key={id} value={id} label={label}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Row>
+              <Row>
+                <RowLabel title="App font size" />
+                <Select
+                  value={String(uiFontSize)}
+                  onValueChange={(value) => {
+                    const n = Number(value);
+                    setUiFontSize(n);
+                    applyUiFont(uiFontFamily, n);
+                    flashSaved();
+                  }}
+                >
+                  <SelectTrigger className="h-10 shrink-0">
+                    <SelectValue>{(val) => `${val}px`}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {UI_FONT_SIZES.map((n) => (
+                      <SelectItem key={n} value={String(n)} label={`${n}px`}>{n}px</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Row>
             </div>
           )}
 

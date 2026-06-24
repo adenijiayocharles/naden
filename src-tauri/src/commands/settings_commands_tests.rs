@@ -30,6 +30,8 @@ fn allows_every_key_the_frontend_writes() {
         "terminal_font_family",
         "terminal_theme",
         "terminal_cursor_style",
+        "ui_font_family",
+        "ui_font_size",
         "default_terminal",
         "accent_custom_color",
         "ssh_keepalive_interval",
