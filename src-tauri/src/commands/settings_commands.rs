@@ -10,6 +10,7 @@ const ALLOWED_SETTINGS: &[&str] = &[
     "terminal_line_height",
     "terminal_scrollback",
     "terminal_copy_on_select",
+    "terminal_ghost_suggestions",
     "terminal_font_family",
     "terminal_theme",
     "terminal_cursor_style",
@@ -17,6 +18,10 @@ const ALLOWED_SETTINGS: &[&str] = &[
     "accent_custom_color",
     "ssh_keepalive_interval",
 ];
+
+fn is_allowed_setting(key: &str) -> bool {
+    ALLOWED_SETTINGS.contains(&key)
+}
 
 /// Reads a setting value directly from the db — used by commands that need
 /// settings outside the `get_setting`/`set_setting` IPC boundary.
@@ -31,12 +36,21 @@ pub async fn get_setting_value(
     Ok(val)
 }
 
+async fn set_setting_value(db: &sqlx::SqlitePool, key: &str, value: &str) -> Result<(), AppError> {
+    sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+        .bind(key)
+        .bind(value)
+        .execute(db)
+        .await?;
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn get_setting(
     key: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<Option<String>, AppError> {
-    if !ALLOWED_SETTINGS.contains(&key.as_str()) {
+    if !is_allowed_setting(&key) {
         return Err(AppError::Validation(format!("unknown setting key: {key}")));
     }
     get_setting_value(&state.db, &key).await
@@ -48,15 +62,10 @@ pub async fn set_setting(
     value: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    if !ALLOWED_SETTINGS.contains(&key.as_str()) {
+    if !is_allowed_setting(&key) {
         return Err(AppError::Validation(format!("unknown setting key: {key}")));
     }
-    sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-        .bind(&key)
-        .bind(&value)
-        .execute(&state.db)
-        .await?;
-    Ok(())
+    set_setting_value(&state.db, &key, &value).await
 }
 
 #[tauri::command]
@@ -68,7 +77,7 @@ pub async fn get_all_settings(
         .await?;
     Ok(rows
         .into_iter()
-        .filter(|(k, _)| ALLOWED_SETTINGS.contains(&k.as_str()))
+        .filter(|(k, _)| is_allowed_setting(k))
         .collect())
 }
 
@@ -78,3 +87,7 @@ pub async fn vault_heartbeat(state: tauri::State<'_, AppState>) -> Result<(), Ap
     *state.last_vault_activity.lock().await = std::time::Instant::now();
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "settings_commands_tests.rs"]
+mod tests;
