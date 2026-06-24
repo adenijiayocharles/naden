@@ -88,10 +88,20 @@ export default function ServerForm() {
   const [, setTouched] = useState<Set<keyof FormData>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showSavedBanner, setShowSavedBanner] = useState(false);
+  const savedBannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [dirty, setDirty] = useState(false);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const tagDropdownRef = useRef<HTMLDivElement>(null);
   const allTags = useServerStore((s) => s.tags);
+
+  const flashSavedBanner = () => {
+    setShowSavedBanner(true);
+    if (savedBannerTimer.current) clearTimeout(savedBannerTimer.current);
+    savedBannerTimer.current = setTimeout(() => setShowSavedBanner(false), 2500);
+  };
+
+  useEffect(() => () => { if (savedBannerTimer.current) clearTimeout(savedBannerTimer.current); }, []);
 
   useEffect(() => {
     if (existingServer) {
@@ -129,7 +139,14 @@ export default function ServerForm() {
     setShowNewGroup(false);
     setNewGroupName("");
     setActiveTab("connection");
-  }, [existingServer, activeView]);
+    setSaved(false);
+    setShowSavedBanner(false);
+    if (savedBannerTimer.current) clearTimeout(savedBannerTimer.current);
+    // existingServer is intentionally excluded: the modal stays open after a
+    // successful save, and re-syncing here would reset the active tab and
+    // discard in-progress edits every time the store updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingServerId, activeView]);
 
   const set = (field: keyof FormData) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -272,12 +289,17 @@ export default function ServerForm() {
         await createServer(payload);
       }
       setSaved(true);
-      setTimeout(closeForm, 600);
+      setDirty(false);
+      flashSavedBanner();
+      setErrors((errs) => { const next = { ...errs }; delete next.submit; return next; });
     } catch (e) {
       // Clean up the freshly-stored credential if the server row was never created.
       if (freshCredentialId) {
         vaultCommands.deleteCredential(freshCredentialId).catch(() => {});
       }
+      setSaved(false);
+      setShowSavedBanner(false);
+      if (savedBannerTimer.current) clearTimeout(savedBannerTimer.current);
       setErrors((errs) => ({ ...errs, submit: formatError(e) }));
     } finally {
       setSubmitting(false);
@@ -403,12 +425,17 @@ export default function ServerForm() {
               {errors.submit}
             </p>
           )}
+          {showSavedBanner && !dirty && !errors.submit && (
+            <p className="text-sm text-success bg-success-subtle border border-success-subtle rounded-md px-3 py-2 mb-3">
+              {isEdit ? "Changes saved." : "Server added."}
+            </p>
+          )}
           <div className="flex justify-end gap-3">
             <Button type="button" variant="secondary" size="lg" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" form="server-form" size="lg" disabled={submitting}>
-              {saved ? "Saved ✓" : submitting ? "Saving…" : isEdit ? "Save Changes" : "Add Server"}
+            <Button type="submit" form="server-form" size="lg" disabled={submitting || (saved && !dirty)}>
+              {submitting ? "Saving…" : saved && !dirty ? "Saved ✓" : isEdit ? "Save Changes" : "Add Server"}
             </Button>
           </div>
         </div>
