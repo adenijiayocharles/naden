@@ -67,7 +67,7 @@ export default function ServerCard({ server, groupColor, lastConnected, isHighli
             )}
             <ReachabilityDot serverId={server.id} />
           </div>
-          <p className="text-sm text-muted font-mono truncate">{formatHost(server)}</p>
+          <p className="text-xs text-muted font-mono truncate">{formatHost(server)}</p>
           <div className="flex items-center gap-1.5 mt-1">
             {server.authMethod === "password" ? (
               <svg className="w-3.5 h-3.5 text-muted" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}><title>Password auth</title>
