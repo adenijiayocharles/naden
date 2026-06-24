@@ -513,6 +513,7 @@ export default function SftpBrowser({ sessionId }: Props) {
                         onCopy={peerPane.handleCopy}
                         onPaste={peerPane.handlePaste}
                         onDelete={peerPane.handleDelete}
+                        onNewFolder={peerPane.handleNewFolder}
                         onEdit={peerPane.handleOpenEdit}
                         onChmod={peerPane.handleChmod}
                       />
@@ -769,6 +770,7 @@ export default function SftpBrowser({ sessionId }: Props) {
         onCopy={handleCopy}
         onPaste={handlePaste}
         onDelete={handleDelete}
+        onNewFolder={handleRemoteNewFolder}
         onEdit={handleOpenEdit}
         onChmod={handleChmod}
       />

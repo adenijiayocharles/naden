@@ -496,6 +496,9 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
             <MenuItem onClick={() => { void localCommands.revealInFinder(cm.entry.path); closeMenu(); }}>
               Reveal in Finder
             </MenuItem>
+            <MenuItem onClick={() => { setCreatingFolder(true); closeMenu(); }}>
+              New Folder
+            </MenuItem>
 
             <div className="my-1 border-t border-stroke-subtle" />
 

@@ -30,6 +30,7 @@ interface Props {
   onCopy: () => void;
   onPaste: () => void;
   onDelete: () => void;
+  onNewFolder: () => void;
   onEdit?: (path: string) => void;
   onChmod?: (path: string, currentMode: number) => void;
   onDragStart?: (paths: string[]) => void;
@@ -265,7 +266,7 @@ export default function SftpFileList({
   entries, selected, scrollCursor, renaming, renameValue, sortKey, sortDir, hasClipboard,
   onSort, onSelect, onNavigate,
   onRenameChange, onRenameCommit, onRenameCancel, onRenameStart,
-  onCut, onCopy, onPaste, onDelete, onEdit, onChmod, onDragStart,
+  onCut, onCopy, onPaste, onDelete, onNewFolder, onEdit, onChmod, onDragStart,
 }: Props) {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const closeMenu = () => setContextMenu(null);
@@ -409,6 +410,9 @@ export default function SftpFileList({
           </MenuItem>
           <MenuItem onClick={() => { onPaste(); closeMenu(); }} disabled={!hasClipboard}>
             Paste here
+          </MenuItem>
+          <MenuItem onClick={() => { onNewFolder(); closeMenu(); }}>
+            New Folder
           </MenuItem>
 
           <div className="my-1 border-t border-stroke-subtle" />
