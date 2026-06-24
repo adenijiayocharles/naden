@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useMemo } from "react";
 import { setDragImage } from "../../lib/dragImage";
-import { List, type RowComponentProps } from "react-window";
+import { List, type RowComponentProps, type ListImperativeAPI } from "react-window";
 import { AutoSizer } from "react-virtualized-auto-sizer";
 import type { FileEntry } from "../../types/sftp";
 import { formatSize, formatDate } from "../../lib/format";
@@ -12,6 +12,8 @@ export type SortDir = "asc" | "desc";
 interface Props {
   entries: FileEntry[];
   selected: string[];
+  /** Path of the keyboard-navigation cursor (shift+arrow range end); scrolled into view when it changes. */
+  scrollCursor?: string | null;
   renaming: string | null;
   renameValue: string;
   sortKey: SortKey;
@@ -260,7 +262,7 @@ const Row = ({ index, style, entries, selectedSet, renaming, renameValue, dblCli
 };
 
 export default function SftpFileList({
-  entries, selected, renaming, renameValue, sortKey, sortDir, hasClipboard,
+  entries, selected, scrollCursor, renaming, renameValue, sortKey, sortDir, hasClipboard,
   onSort, onSelect, onNavigate,
   onRenameChange, onRenameCommit, onRenameCancel, onRenameStart,
   onCut, onCopy, onPaste, onDelete, onEdit, onChmod, onDragStart,
@@ -269,6 +271,13 @@ export default function SftpFileList({
   const closeMenu = () => setContextMenu(null);
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const dblClickRef = useRef<DblClickState>({ path: "", t: 0 });
+  const listRef = useRef<ListImperativeAPI>(null);
+
+  useEffect(() => {
+    if (!scrollCursor) return;
+    const index = entries.findIndex((e) => e.path === scrollCursor);
+    if (index !== -1) listRef.current?.scrollToRow({ index, align: "auto" });
+  }, [scrollCursor, entries]);
 
   const [colFracs, setColFracs] = useState([2.0, 1.0, 1.5, 1.0]);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -377,6 +386,7 @@ export default function SftpFileList({
           <AutoSizer
             renderProp={({ height, width }) => (
               <List
+                listRef={listRef}
                 style={{ height: height ?? 0, width: width ?? 0 }}
                 rowCount={entries.length}
                 rowHeight={40}

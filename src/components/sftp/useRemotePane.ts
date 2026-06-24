@@ -5,6 +5,7 @@ import { useSftpStore, type SftpSession } from "../../store/sftpStore";
 import { sftpCommands } from "../../lib/tauriCommands";
 import { formatError, isAlreadyExistsError, isCancelledError } from "../../lib/errors";
 import { joinPath, parentPath } from "../../lib/path";
+import { arrowSelect } from "../../lib/rangeSelect";
 import type { SortKey, SortDir } from "./SftpFileList";
 import type { FileEntry } from "../../types/sftp";
 
@@ -35,6 +36,7 @@ interface RemotePaneOutput {
   visibleEntries: FileEntry[];
   selected: string[];
   lastClickedPath: string | null;
+  cursorPath: string | null;
   selectedEntries: FileEntry[];
   selectedHasDir: boolean;
   clipboard: Clipboard | null;
@@ -98,6 +100,8 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
   // Selection
   const [selected, setSelected] = useState<string[]>([]);
   const [lastClickedPath, setLastClickedPath] = useState<string | null>(null);
+  // Tracks the moving end of a shift+arrow range; the anchor (lastClickedPath) stays fixed.
+  const [cursorPath, setCursorPath] = useState<string | null>(null);
 
   // Clipboard (cut/paste = move)
   const [clipboard, setClipboard] = useState<Clipboard | null>(null);
@@ -153,6 +157,7 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
   const navigate = useCallback(async (path: string) => {
     setSelected([]);
     setLastClickedPath(null);
+    setCursorPath(null);
     setError(null);
     try {
       await navigateTo(sessionId, path);
@@ -187,6 +192,7 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
         const [start, end] = from <= to ? [from, to] : [to, from];
         const range = allPaths.slice(start, end + 1);
         setSelected((prev) => [...new Set([...prev, ...range])]);
+        setCursorPath(path);
         return;
       }
     }
@@ -200,6 +206,15 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
     }
 
     setLastClickedPath(path);
+    setCursorPath(path);
+  };
+
+  const handleArrowSelect = (direction: 1 | -1) => {
+    const result = arrowSelect(visibleEntries.map((e) => e.path), lastClickedPath, cursorPath, direction);
+    if (!result) return;
+    setSelected(result.selected);
+    setLastClickedPath(result.anchorPath);
+    setCursorPath(result.cursorPath);
   };
 
   // ── Upload / Download ──────────────────────────────────────────────────────
@@ -637,6 +652,11 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
       e.preventDefault();
       setSelected(visibleEntries.map((entry) => entry.path));
     }
+    if (e.shiftKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      if (!isActive) return;
+      e.preventDefault();
+      handleArrowSelect(e.key === "ArrowDown" ? 1 : -1);
+    }
   };
 
   useEffect(() => {
@@ -674,6 +694,7 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
     visibleEntries,
     selected,
     lastClickedPath,
+    cursorPath,
     selectedEntries,
     selectedHasDir,
     clipboard,

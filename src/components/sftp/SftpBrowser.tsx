@@ -132,6 +132,7 @@ export default function SftpBrowser({ sessionId }: Props) {
     isBusy,
     visibleEntries,
     selected,
+    cursorPath,
     selectedEntries,
     selectedHasDir,
     clipboard,
@@ -495,6 +496,7 @@ export default function SftpBrowser({ sessionId }: Props) {
                       <SftpFileList
                         entries={peerPane.visibleEntries}
                         selected={peerPane.selected}
+                        scrollCursor={peerPane.cursorPath}
                         renaming={peerPane.renaming}
                         renameValue={peerPane.renameValue}
                         sortKey={sortKeyPeer}
@@ -750,6 +752,7 @@ export default function SftpBrowser({ sessionId }: Props) {
       <SftpFileList
         entries={visibleEntries}
         selected={selected}
+        scrollCursor={cursorPath}
         renaming={renaming}
         renameValue={renameValue}
         sortKey={sortKey}

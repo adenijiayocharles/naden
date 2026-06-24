@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { List, type RowComponentProps } from "react-window";
+import { List, type RowComponentProps, type ListImperativeAPI } from "react-window";
 import { AutoSizer } from "react-virtualized-auto-sizer";
 import type { LocalFileEntry } from "../../types/local";
 import { localCommands } from "../../lib/tauriCommands";
@@ -11,6 +11,7 @@ import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import ErrorBanner from "./ErrorBanner";
 import InlineCreateInput from "./InlineCreateInput";
 import { joinPath, parentPath } from "../../lib/path";
+import { arrowSelect } from "../../lib/rangeSelect";
 import { setDragImage } from "../../lib/dragImage";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
@@ -100,6 +101,8 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
   const [entries, setEntries] = useState<LocalFileEntry[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [lastClickedPath, setLastClickedPath] = useState<string | null>(null);
+  // Tracks the moving end of a shift+arrow range; the anchor (lastClickedPath) stays fixed.
+  const [cursorPath, setCursorPath] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -110,11 +113,13 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
   const [creatingFile, setCreatingFile] = useState(false);
   const [dropCount, setDropCount] = useState(0);
   const initialised = useRef(false);
+  const listRef = useRef<ListImperativeAPI>(null);
 
   const navigateTo = useCallback(async (path: string) => {
     setLoading(true);
     setError(null);
     setSelected([]);
+    setCursorPath(null);
     setRenaming(null);
     try {
       const result = await localCommands.listLocalDir(path);
@@ -190,6 +195,15 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
   );
   const isDragOver = dropCount > 0;
 
+  const handleArrowSelect = (direction: 1 | -1) => {
+    const result = arrowSelect(visibleEntries.map((e) => e.path), lastClickedPath, cursorPath, direction);
+    if (!result) return;
+    setSelected(result.selected);
+    setLastClickedPath(result.anchorPath);
+    setCursorPath(result.cursorPath);
+    listRef.current?.scrollToRow({ index: result.cursorIndex, align: "auto" });
+  };
+
   // Ref keeps the handler current without re-registering the listener on every render.
   const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
   keyHandlerRef.current = (e: KeyboardEvent) => {
@@ -198,6 +212,10 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
     if ((e.metaKey || e.ctrlKey) && e.key === "a") {
       e.preventDefault();
       setSelected(visibleEntries.map((entry) => entry.path));
+    }
+    if (e.shiftKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      e.preventDefault();
+      handleArrowSelect(e.key === "ArrowDown" ? 1 : -1);
     }
   };
 
@@ -273,6 +291,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
         const [start, end] = from <= to ? [from, to] : [to, from];
         const range = allPaths.slice(start, end + 1);
         setSelected((prev) => [...new Set([...prev, ...range])]);
+        setCursorPath(entry.path);
         return;
       }
     }
@@ -284,6 +303,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
       setSelected([entry.path]);
     }
     setLastClickedPath(entry.path);
+    setCursorPath(entry.path);
   }, [onActivate, navigateTo, visibleEntries, lastClickedPath, selectedSet]);
 
   const handleContextMenu = useCallback((entry: LocalFileEntry, e: React.MouseEvent) => {
@@ -452,6 +472,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
             <AutoSizer
               renderProp={({ height, width }) => (
                 <List
+                  listRef={listRef}
                   style={{ height: height ?? 0, width: width ?? 0 }}
                   rowCount={visibleEntries.length}
                   rowHeight={40}
