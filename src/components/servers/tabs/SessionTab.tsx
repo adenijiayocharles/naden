@@ -9,11 +9,13 @@ export function SessionTab({
   set,
   envVars,
   setEnvVars,
+  setDirty,
 }: {
   form: FormData;
   set: FieldSetter;
   envVars: EnvVar[];
   setEnvVars: Dispatch<SetStateAction<EnvVar[]>>;
+  setDirty: Dispatch<SetStateAction<boolean>>;
 }) {
   return (
     <>
@@ -42,7 +44,7 @@ export function SessionTab({
             <div key={i} className="flex gap-1.5 items-center">
               <Input
                 value={v.key}
-                onChange={(e) => setEnvVars((prev) => prev.map((ev, j) => j === i ? { ...ev, key: e.target.value } : ev))}
+                onChange={(e) => { setEnvVars((prev) => prev.map((ev, j) => j === i ? { ...ev, key: e.target.value } : ev)); setDirty(true); }}
                 placeholder="KEY"
                 className="w-32 shrink-0 font-mono text-xs h-8"
                 autoComplete="off"
@@ -51,7 +53,7 @@ export function SessionTab({
               <span className="text-dim text-xs shrink-0">=</span>
               <Input
                 value={v.value}
-                onChange={(e) => setEnvVars((prev) => prev.map((ev, j) => j === i ? { ...ev, value: e.target.value } : ev))}
+                onChange={(e) => { setEnvVars((prev) => prev.map((ev, j) => j === i ? { ...ev, value: e.target.value } : ev)); setDirty(true); }}
                 placeholder="value"
                 className="flex-1 font-mono text-xs h-8"
                 autoComplete="off"
@@ -59,7 +61,7 @@ export function SessionTab({
               />
               <button
                 type="button"
-                onClick={() => setEnvVars((prev) => prev.filter((_, j) => j !== i))}
+                onClick={() => { setEnvVars((prev) => prev.filter((_, j) => j !== i)); setDirty(true); }}
                 className="text-dim hover:text-red-400 transition-colors shrink-0 text-sm leading-none px-1"
                 title="Remove"
               >
@@ -71,7 +73,7 @@ export function SessionTab({
             type="button"
             variant="secondary"
             size="sm"
-            onClick={() => setEnvVars((prev) => [...prev, { key: "", value: "" }])}
+            onClick={() => { setEnvVars((prev) => [...prev, { key: "", value: "" }]); setDirty(true); }}
             className="mt-1"
           >
             + Add variable

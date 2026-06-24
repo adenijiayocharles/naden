@@ -1,11 +1,24 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTunnelStore } from "../../store/tunnelStore";
 import { formatError } from "../../lib/errors";
 import type { ForwardType, PortForward } from "../../types/portForward";
+import type { DraftPortForward } from "./serverFormTypes";
+import { validatePortForwardDraft, upsertDraft, removeDraft } from "./portForwardDraft";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
+
+type PortForwardLike = Pick<PortForward, "id" | "label" | "forwardType" | "localPort" | "remoteHost" | "remotePort" | "autoStart">;
+
+// Either pass `serverId` to manage real, persisted port forwards, or pass
+// `draftForwards`/`onDraftForwardsChange` to queue forwards locally before
+// the server exists (Add Server flow — flushed once the server is created).
+interface PortForwardsSectionProps {
+  serverId?: string;
+  draftForwards?: DraftPortForward[];
+  onDraftForwardsChange?: (next: DraftPortForward[]) => void;
+}
 
 const FORWARD_TYPES: { value: ForwardType; label: string; hint: string }[] = [
   { value: "local",   label: "Local",   hint: "localhost:localPort → remoteHost:remotePort" },
@@ -31,9 +44,14 @@ const BLANK_FWD: FwdFormState = {
   autoStart: false,
 };
 
-export default function PortForwardsSection({ serverId }: { serverId: string }) {
+export default function PortForwardsSection({ serverId, draftForwards, onDraftForwardsChange }: PortForwardsSectionProps) {
+  const isDraftMode = serverId === undefined;
   const { forwards, create, update, remove } = useTunnelStore();
-  const serverForwards = forwards.filter((f) => f.serverId === serverId);
+  const persistedForwards = useMemo(
+    () => forwards.filter((f) => f.serverId === serverId),
+    [forwards, serverId],
+  );
+  const items: PortForwardLike[] = isDraftMode ? (draftForwards ?? []) : persistedForwards;
 
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -58,7 +76,7 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
     setAdding(true);
   };
 
-  const openEdit = (fwd: PortForward) => {
+  const openEdit = (fwd: PortForwardLike) => {
     setFwdForm({
       label: fwd.label,
       forwardType: fwd.forwardType,
@@ -78,37 +96,31 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
     setFwdError(null);
   };
 
-  const validateFwd = (): string | null => {
-    const lp = Number(fwdForm.localPort);
-    if (!fwdForm.localPort || isNaN(lp) || lp < 1 || lp > 65535)
-      return "Local port must be 1–65535";
-    if (fwdForm.forwardType !== "dynamic") {
-      if (!fwdForm.remoteHost.trim()) return "Remote host is required";
-      const rp = Number(fwdForm.remotePort);
-      if (!fwdForm.remotePort || isNaN(rp) || rp < 1 || rp > 65535)
-        return "Remote port must be 1–65535";
-    }
-    return null;
-  };
-
   const handleSave = async () => {
-    const err = validateFwd();
+    const err = validatePortForwardDraft(fwdForm);
     if (err) { setFwdError(err); return; }
+    const payload = {
+      label: fwdForm.label.trim(),
+      forwardType: fwdForm.forwardType,
+      localPort: Number(fwdForm.localPort),
+      remoteHost: fwdForm.forwardType === "dynamic" ? "" : fwdForm.remoteHost.trim(),
+      remotePort: fwdForm.forwardType === "dynamic" ? 0 : Number(fwdForm.remotePort),
+      autoStart: fwdForm.autoStart,
+    };
+
+    if (isDraftMode) {
+      onDraftForwardsChange?.(upsertDraft(draftForwards ?? [], editingId, payload));
+      cancelEdit();
+      return;
+    }
+
     setSaving(true);
     setFwdError(null);
     try {
-      const payload = {
-        label: fwdForm.label.trim(),
-        forwardType: fwdForm.forwardType,
-        localPort: Number(fwdForm.localPort),
-        remoteHost: fwdForm.forwardType === "dynamic" ? "" : fwdForm.remoteHost.trim(),
-        remotePort: fwdForm.forwardType === "dynamic" ? 0 : Number(fwdForm.remotePort),
-        autoStart: fwdForm.autoStart,
-      };
       if (editingId) {
         await update(editingId, payload);
       } else {
-        await create({ serverId, ...payload });
+        await create({ serverId: serverId!, ...payload });
       }
       cancelEdit();
     } catch (e) {
@@ -119,6 +131,11 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
   };
 
   const handleDelete = async (id: string) => {
+    if (isDraftMode) {
+      onDraftForwardsChange?.(removeDraft(draftForwards ?? [], id));
+      if (editingId === id) cancelEdit();
+      return;
+    }
     await remove(id).catch(() => {});
     if (editingId === id) cancelEdit();
   };
@@ -127,7 +144,7 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
 
   return (
     <div className="border-t border-stroke-subtle pt-4">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-1">
         <p className="text-sm font-medium text-secondary">Port Forwards</p>
         {!adding && (
           <Button
@@ -141,9 +158,15 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
         )}
       </div>
 
-      {serverForwards.length > 0 && (
+      {isDraftMode && (
+        <p className="text-meta text-faint mb-3">
+          Queued here — created together with the server once you save.
+        </p>
+      )}
+
+      {items.length > 0 && (
         <div className="space-y-1 mb-3">
-          {serverForwards.map((fwd) => (
+          {items.map((fwd) => (
             <div
               key={fwd.id}
               className="flex items-center justify-between gap-2 px-3 py-2 bg-surface-0 rounded-lg text-xs"
@@ -181,7 +204,7 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
                   type="button"
                   variant="ghost"
                   size="icon-xs"
-                  onClick={() => setPendingDeleteId(fwd.id)}
+                  onClick={() => (isDraftMode ? void handleDelete(fwd.id) : setPendingDeleteId(fwd.id))}
                   className="text-muted hover:text-red-400"
                   aria-label="Delete"
                 >
@@ -291,7 +314,7 @@ export default function PortForwardsSection({ serverId }: { serverId: string }) 
         </div>
       )}
 
-      {serverForwards.length === 0 && !adding && (
+      {items.length === 0 && !adding && (
         <p className="text-meta text-faint">No port forwards. Click + Add to create one.</p>
       )}
 

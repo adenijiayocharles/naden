@@ -75,7 +75,7 @@ export function AuthTab({
             <Input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setDirty(true); }}
               placeholder={isEdit && existingCredentialId ? "Enter new password to change…" : "SSH password"}
               autoComplete="new-password"
             />
@@ -143,7 +143,7 @@ export function AuthTab({
             <Input
               type="password"
               value={passphrase}
-              onChange={(e) => setPassphrase(e.target.value)}
+              onChange={(e) => { setPassphrase(e.target.value); setDirty(true); }}
               placeholder={isEdit && existingCredentialId ? "Enter new passphrase to change…" : "Leave empty if the key has no passphrase"}
               autoComplete="new-password"
             />

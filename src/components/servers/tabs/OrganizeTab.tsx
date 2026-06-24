@@ -123,7 +123,7 @@ export function OrganizeTab({
                 #{t.name}
                 <button
                   type="button"
-                  onClick={() => setTags((ts) => ts.filter((x) => x.id !== t.id))}
+                  onClick={() => { setTags((ts) => ts.filter((x) => x.id !== t.id)); setDirty(true); }}
                   className="text-muted hover:text-white leading-none"
                   aria-label={`Remove tag ${t.name}`}
                 >
@@ -150,7 +150,7 @@ export function OrganizeTab({
                 <button
                   key={t.id}
                   type="button"
-                  onMouseDown={(e) => { e.preventDefault(); setTags((ts) => [...ts, t]); setTagInput(""); setTagDropdownOpen(false); }}
+                  onMouseDown={(e) => { e.preventDefault(); setTags((ts) => [...ts, t]); setTagInput(""); setTagDropdownOpen(false); setDirty(true); }}
                   className="w-full text-left px-3 py-2 text-sm text-secondary hover:bg-surface-4 hover:text-white transition-colors"
                 >
                   #{t.name}

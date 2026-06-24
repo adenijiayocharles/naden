@@ -5,13 +5,14 @@ import type { AuthMethod, Tag } from "../../types/server";
 import type { TerminalThemeId } from "../../lib/terminalSettings";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
+import { useTunnelStore } from "../../store/tunnelStore";
 import { vaultCommands } from "../../lib/tauriCommands";
 import { useVaultStore } from "../../store/vaultStore";
 import { useSshKeyStore } from "../../store/sshKeyStore";
 import { formatError } from "../../lib/errors";
 import { Button } from "../ui/button";
 import PortForwardsSection from "./PortForwardsSection";
-import type { FormData, EnvVar } from "./serverFormTypes";
+import type { FormData, EnvVar, DraftPortForward } from "./serverFormTypes";
 import { ConnectionTab } from "./tabs/ConnectionTab";
 import { AuthTab } from "./tabs/AuthTab";
 import { ThemeTab } from "./tabs/ThemeTab";
@@ -66,6 +67,16 @@ export default function ServerForm() {
     ? servers.find((s) => s.id === editingServerId)
     : undefined;
 
+  // Once an "Add Server" submit succeeds, the row exists even though the
+  // modal is still in "add" mode (it no longer auto-closes). These track
+  // that so the rest of the form treats further saves as edits rather than
+  // creating duplicate servers.
+  const [createdServerId, setCreatedServerId] = useState<string | null>(null);
+  const [createdServerCredentialId, setCreatedServerCredentialId] = useState<string | undefined>(undefined);
+  const effectiveServerId = isEdit ? editingServerId : createdServerId;
+  const effectiveIsEdit = isEdit || createdServerId !== null;
+  const effectiveCredentialId = isEdit ? existingServer?.vaultCredentialId : createdServerCredentialId;
+
   const isVaultUnlocked = useVaultStore((s) => s.isUnlocked);
   const isPasswordRequired = useVaultStore((s) => s.isPasswordRequired);
   const vaultAvailable = !isPasswordRequired || isVaultUnlocked;
@@ -84,24 +95,31 @@ export default function ServerForm() {
   const [newGroupName, setNewGroupName] = useState("");
   const [showNewGroup, setShowNewGroup] = useState(false);
   const [envVars, setEnvVars] = useState<EnvVar[]>([]);
+  const [draftForwards, setDraftForwards] = useState<DraftPortForward[]>([]);
+  const createTunnel = useTunnelStore((s) => s.create);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [, setTouched] = useState<Set<keyof FormData>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showSavedBanner, setShowSavedBanner] = useState(false);
+  const [lastSaveWasCreate, setLastSaveWasCreate] = useState(false);
   const savedBannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [dirty, setDirty] = useState(false);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const tagDropdownRef = useRef<HTMLDivElement>(null);
   const allTags = useServerStore((s) => s.tags);
 
+  const clearSavedBannerTimer = () => {
+    if (savedBannerTimer.current) clearTimeout(savedBannerTimer.current);
+  };
+
   const flashSavedBanner = () => {
     setShowSavedBanner(true);
-    if (savedBannerTimer.current) clearTimeout(savedBannerTimer.current);
+    clearSavedBannerTimer();
     savedBannerTimer.current = setTimeout(() => setShowSavedBanner(false), 2500);
   };
 
-  useEffect(() => () => { if (savedBannerTimer.current) clearTimeout(savedBannerTimer.current); }, []);
+  useEffect(() => clearSavedBannerTimer, []);
 
   useEffect(() => {
     if (existingServer) {
@@ -141,7 +159,13 @@ export default function ServerForm() {
     setActiveTab("connection");
     setSaved(false);
     setShowSavedBanner(false);
-    if (savedBannerTimer.current) clearTimeout(savedBannerTimer.current);
+    clearSavedBannerTimer();
+    setDraftForwards([]);
+    setCreatedServerId(null);
+    setCreatedServerCredentialId(undefined);
+    setLastSaveWasCreate(false);
+    setPassword("");
+    setPassphrase("");
     // existingServer is intentionally excluded: the modal stays open after a
     // successful save, and re-syncing here would reset the active tab and
     // discard in-progress edits every time the store updates.
@@ -205,6 +229,7 @@ export default function ServerForm() {
       const tag = await createTag(name);
       setTags((ts) => (ts.some((t) => t.id === tag.id) ? ts : [...ts, tag]));
       setTagInput("");
+      setDirty(true);
       tagInputRef.current?.focus();
     } catch (e) {
       setErrors((errs) => ({ ...errs, tag: formatError(e) }));
@@ -250,8 +275,9 @@ export default function ServerForm() {
     setSubmitting(true);
     let freshCredentialId: string | undefined;
     try {
-      let vaultCredentialId: string | undefined = isEdit
-        ? existingServer?.vaultCredentialId
+      const previousCredentialId = effectiveCredentialId;
+      let vaultCredentialId: string | undefined = effectiveIsEdit
+        ? effectiveCredentialId
         : undefined;
       if (form.authMethod === "password" && password.trim()) {
         freshCredentialId = await vaultCommands.storeCredential(password.trim());
@@ -283,15 +309,60 @@ export default function ServerForm() {
         tagIds: tags.map((t) => t.id),
       };
 
-      if (isEdit && editingServerId) {
-        await updateServer(editingServerId, payload);
+      let newServerId: string | undefined;
+      if (effectiveIsEdit && effectiveServerId) {
+        await updateServer(effectiveServerId, payload);
       } else {
-        await createServer(payload);
+        const server = await createServer(payload);
+        newServerId = server.id;
+        setCreatedServerId(server.id);
       }
+      setLastSaveWasCreate(!!newServerId);
+      // Deliberately keyed on isEdit, not effectiveIsEdit: this needs to keep
+      // tracking the latest credential on every save made within an Add-session
+      // (including the second, third, ... save after the row already exists),
+      // whereas effectiveIsEdit would flip true after the first create and stop
+      // updating it.
+      if (!isEdit) setCreatedServerCredentialId(vaultCredentialId);
+
+      // The previous credential (if any) has just been replaced by vaultCredentialId
+      // above — delete it so it doesn't linger in the vault unreferenced.
+      if (previousCredentialId && previousCredentialId !== vaultCredentialId) {
+        vaultCommands.deleteCredential(previousCredentialId).catch(() => {});
+      }
+
+      let tunnelFailures = 0;
+      if (newServerId && draftForwards.length > 0) {
+        const results = await Promise.allSettled(
+          draftForwards.map((draft) =>
+            createTunnel({
+              serverId: newServerId,
+              label: draft.label,
+              forwardType: draft.forwardType,
+              localPort: draft.localPort,
+              remoteHost: draft.remoteHost,
+              remotePort: draft.remotePort,
+              autoStart: draft.autoStart,
+            }),
+          ),
+        );
+        tunnelFailures = results.filter((r) => r.status === "rejected").length;
+        setDraftForwards([]);
+      }
+
       setSaved(true);
       setDirty(false);
-      flashSavedBanner();
-      setErrors((errs) => { const next = { ...errs }; delete next.submit; return next; });
+      setPassword("");
+      setPassphrase("");
+      if (tunnelFailures > 0) {
+        setErrors((errs) => ({
+          ...errs,
+          submit: `Server saved, but ${tunnelFailures} port forward${tunnelFailures > 1 ? "s" : ""} failed to create. Add ${tunnelFailures > 1 ? "them" : "it"} again from the Tunnels tab.`,
+        }));
+      } else {
+        flashSavedBanner();
+        setErrors((errs) => { const next = { ...errs }; delete next.submit; return next; });
+      }
     } catch (e) {
       // Clean up the freshly-stored credential if the server row was never created.
       if (freshCredentialId) {
@@ -299,7 +370,7 @@ export default function ServerForm() {
       }
       setSaved(false);
       setShowSavedBanner(false);
-      if (savedBannerTimer.current) clearTimeout(savedBannerTimer.current);
+      clearSavedBannerTimer();
       setErrors((errs) => ({ ...errs, submit: formatError(e) }));
     } finally {
       setSubmitting(false);
@@ -315,7 +386,7 @@ export default function ServerForm() {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-stroke-subtle shrink-0">
           <h2 className="text-lg font-semibold text-white">
-            {isEdit ? "Edit Server" : "Add Server"}
+            {effectiveIsEdit ? "Edit Server" : "Add Server"}
           </h2>
           <button
             onClick={handleClose}
@@ -343,6 +414,11 @@ export default function ServerForm() {
               {tab.id === "connection" && connectionHasError && (
                 <span className="size-1.5 rounded-full bg-error inline-block" />
               )}
+              {tab.id === "tunnels" && !effectiveServerId && draftForwards.length > 0 && (
+                <span className="min-w-3.5 h-3.5 px-1 rounded-full bg-accent text-black text-[10px] font-semibold leading-3.5 inline-block text-center">
+                  {draftForwards.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -362,8 +438,8 @@ export default function ServerForm() {
               setPassword={setPassword}
               passphrase={passphrase}
               setPassphrase={setPassphrase}
-              isEdit={isEdit}
-              existingCredentialId={existingServer?.vaultCredentialId}
+              isEdit={effectiveIsEdit}
+              existingCredentialId={effectiveCredentialId}
               vaultAvailable={vaultAvailable}
               managedKeys={managedKeys}
               pickIdentityFile={pickIdentityFile}
@@ -402,19 +478,19 @@ export default function ServerForm() {
               setForm={setForm}
               setDirty={setDirty}
               servers={servers}
-              editingServerId={editingServerId}
+              editingServerId={effectiveServerId}
             />
           )}
           {activeTab === "session" && (
-            <SessionTab form={form} set={set} envVars={envVars} setEnvVars={setEnvVars} />
+            <SessionTab form={form} set={set} envVars={envVars} setEnvVars={setEnvVars} setDirty={setDirty} />
           )}
           {activeTab === "hooks" && (
             <HooksTab form={form} set={set} />
           )}
           {activeTab === "tunnels" && (
-            isEdit && editingServerId
-              ? <PortForwardsSection serverId={editingServerId} />
-              : <p className="text-meta text-faint px-1">Port forwards can be configured after saving the server.</p>
+            effectiveServerId
+              ? <PortForwardsSection key={effectiveServerId} serverId={effectiveServerId} />
+              : <PortForwardsSection key="draft" draftForwards={draftForwards} onDraftForwardsChange={setDraftForwards} />
           )}
         </form>
 
@@ -427,7 +503,7 @@ export default function ServerForm() {
           )}
           {showSavedBanner && !dirty && !errors.submit && (
             <p className="text-sm text-success bg-success-subtle border border-success-subtle rounded-md px-3 py-2 mb-3">
-              {isEdit ? "Changes saved." : "Server added."}
+              {lastSaveWasCreate ? "Server added." : "Changes saved."}
             </p>
           )}
           <div className="flex justify-end gap-3">
@@ -435,7 +511,7 @@ export default function ServerForm() {
               Cancel
             </Button>
             <Button type="submit" form="server-form" size="lg" disabled={submitting || (saved && !dirty)}>
-              {submitting ? "Saving…" : saved && !dirty ? "Saved ✓" : isEdit ? "Save Changes" : "Add Server"}
+              {submitting ? "Saving…" : saved && !dirty && !errors.submit ? "Saved ✓" : effectiveIsEdit ? "Save Changes" : "Add Server"}
             </Button>
           </div>
         </div>
