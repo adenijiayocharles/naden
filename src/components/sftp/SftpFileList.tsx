@@ -36,7 +36,7 @@ interface Props {
   onDragStart?: (paths: string[]) => void;
 }
 
-interface ContextMenu { x: number; y: number; entry: FileEntry }
+interface ContextMenu { x: number; y: number; entry: FileEntry | null }
 
 interface DblClickState { path: string; t: number }
 
@@ -202,7 +202,7 @@ const Row = ({ index, style, entries, selectedSet, renaming, renameValue, dblCli
       draggable={!isRenaming}
       onClick={handleClick}
       onDragStart={handleDragStart}
-      onContextMenu={(e) => onContextMenu(entry, e)}
+      onContextMenu={(e) => { e.stopPropagation(); onContextMenu(entry, e); }}
       className={`grid cursor-pointer border-b border-stroke-subtle transition-colors select-none ${
         isSelected ? "bg-accent/10 text-accent-fg" : "text-secondary hover:bg-surface-2 hover:text-white"
       }`}
@@ -322,6 +322,14 @@ export default function SftpFileList({
     setContextMenu({ x, y, entry });
   };
 
+  // Right-click on empty space (below the rows, or an empty directory) — directory-scoped actions only.
+  const handleBackgroundContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const x = Math.min(e.clientX, window.innerWidth - 180);
+    const y = Math.min(e.clientY, window.innerHeight - 100);
+    setContextMenu({ x, y, entry: null });
+  };
+
   const rowData = useMemo<RowData>(() => ({
     entries,
     selectedSet,
@@ -352,10 +360,11 @@ export default function SftpFileList({
   ]);
 
   const cm = contextMenu;
+  const entry = cm?.entry ?? null;
   const selCount = selected.length;
-  const canRename = selCount === 1;
-  const canEdit = selCount === 1 && cm && !cm.entry.isDir;
-  const hasPerms = cm?.entry.permissions != null;
+  const canRename = selCount === 1 && !!entry;
+  const canEdit = selCount === 1 && !!entry && !entry.isDir;
+  const hasPerms = entry?.permissions != null;
 
   return (
     <div
@@ -378,7 +387,7 @@ export default function SftpFileList({
         </div>
       )}
 
-      <div className="flex-1 min-h-0 relative">
+      <div className="flex-1 min-h-0 relative" onContextMenu={handleBackgroundContextMenu}>
         {entries.length === 0 && (
           <div className="flex items-center justify-center h-full text-dim text-sm">Empty directory</div>
         )}
@@ -417,25 +426,25 @@ export default function SftpFileList({
 
           <div className="my-1 border-t border-stroke-subtle" />
 
-          <MenuItem onClick={() => { if (cm) onRenameStart(cm.entry.path); closeMenu(); }} disabled={!canRename}>
+          <MenuItem onClick={() => { if (entry) onRenameStart(entry.path); closeMenu(); }} disabled={!canRename}>
             Rename
           </MenuItem>
           <MenuItem onClick={() => { onDelete(); closeMenu(); }} disabled={selCount === 0} danger>
             Delete{selCount > 1 ? ` (${selCount})` : ""}
           </MenuItem>
 
-          {(onEdit || (onChmod && hasPerms)) && (
+          {((onEdit && entry) || (onChmod && hasPerms)) && (
             <div className="my-1 border-t border-stroke-subtle" />
           )}
 
-          {onEdit && (
-            <MenuItem onClick={() => { if (cm) onEdit(cm.entry.path); closeMenu(); }} disabled={!canEdit}>
+          {onEdit && entry && (
+            <MenuItem onClick={() => { if (entry) onEdit(entry.path); closeMenu(); }} disabled={!canEdit}>
               Edit in default app
             </MenuItem>
           )}
 
-          {onChmod && hasPerms && (
-            <MenuItem onClick={() => { if (cm) onChmod(cm.entry.path, cm.entry.permissions ?? 0o644); closeMenu(); }}>
+          {onChmod && hasPerms && entry && (
+            <MenuItem onClick={() => { if (entry) onChmod(entry.path, entry.permissions ?? 0o644); closeMenu(); }}>
               Permissions…
             </MenuItem>
           )}

@@ -28,7 +28,7 @@ interface Props {
   onDropRemotePaths?: (remotePaths: string[]) => void;
 }
 
-interface ContextMenu { x: number; y: number; entry: LocalFileEntry }
+interface ContextMenu { x: number; y: number; entry: LocalFileEntry | null }
 
 interface LocalRowData {
   entries: LocalFileEntry[];
@@ -55,7 +55,7 @@ const Row = ({ index, style, entries, selectedSet, renaming, renameValue, onRowC
       draggable={!isRenaming}
       onClick={(e) => onRowClick(entry, e)}
       onDragStart={(e) => onDragStart(entry, e)}
-      onContextMenu={(e) => onContextMenu(entry, e)}
+      onContextMenu={(e) => { e.stopPropagation(); onContextMenu(entry, e); }}
       className={`grid cursor-pointer border-b border-stroke-subtle transition-colors select-none ${
         isSelected ? "bg-accent/10 text-accent-fg" : "text-secondary hover:bg-surface-2 hover:text-white"
       }`}
@@ -318,6 +318,15 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
     setContextMenu({ x, y, entry });
   }, [onActivate, selectedSet]);
 
+  // Right-click on empty space (below the rows, or an empty directory) — directory-scoped actions only.
+  const handleBackgroundContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    onActivate();
+    const x = Math.min(e.clientX, window.innerWidth - 180);
+    const y = Math.min(e.clientY, window.innerHeight - 100);
+    setContextMenu({ x, y, entry: null });
+  }, [onActivate]);
+
   const closeMenu = () => setContextMenu(null);
 
   const [colFracs, setColFracs] = useState([2.0, 1.0, 1.5]);
@@ -368,6 +377,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
   }), [visibleEntries, selectedSet, renaming, renameValue, handleRowClick, handleContextMenu, commitRename, handleDragStart]);
 
   const cm = contextMenu;
+  const entry = cm?.entry ?? null;
   const selCount = selected.length;
 
   return (
@@ -461,7 +471,7 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
           </div>
         )}
 
-        <div className="flex-1 min-h-0 relative">
+        <div className="flex-1 min-h-0 relative" onContextMenu={handleBackgroundContextMenu}>
           {!error && visibleEntries.length === 0 && !loading && (
             <div className="flex items-center justify-center h-full text-dim text-sm">
               Empty directory
@@ -487,15 +497,19 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
         {/* Context menu — fixed-position, safe outside the virtual list */}
         {cm && (
           <ContextMenuPopup x={cm.x} y={cm.y} onClose={closeMenu}>
-            <MenuItem
-              onClick={() => { void localCommands.openLocal(cm.entry.path); closeMenu(); }}
-              disabled={cm.entry.isDir}
-            >
-              Open
-            </MenuItem>
-            <MenuItem onClick={() => { void localCommands.revealInFinder(cm.entry.path); closeMenu(); }}>
-              Reveal in Finder
-            </MenuItem>
+            {entry && (
+              <>
+                <MenuItem
+                  onClick={() => { if (entry) void localCommands.openLocal(entry.path); closeMenu(); }}
+                  disabled={entry.isDir}
+                >
+                  Open
+                </MenuItem>
+                <MenuItem onClick={() => { if (entry) void localCommands.revealInFinder(entry.path); closeMenu(); }}>
+                  Reveal in Finder
+                </MenuItem>
+              </>
+            )}
             <MenuItem onClick={() => { setCreatingFolder(true); closeMenu(); }}>
               New Folder
             </MenuItem>
@@ -504,12 +518,13 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
 
             <MenuItem
               onClick={() => {
-                setRenaming(cm.entry.path);
-                setRenameValue(cm.entry.name);
-                setSelected([cm.entry.path]);
+                if (!entry) return;
+                setRenaming(entry.path);
+                setRenameValue(entry.name);
+                setSelected([entry.path]);
                 closeMenu();
               }}
-              disabled={selCount !== 1}
+              disabled={selCount !== 1 || !entry}
             >
               Rename
             </MenuItem>
