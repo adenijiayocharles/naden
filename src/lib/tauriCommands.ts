@@ -131,6 +131,9 @@ export const terminalCommands = {
 
   confirmHostKey: (sessionId: string, accepted: boolean) =>
     invoke<void>("confirm_host_key", { sessionId, accepted }),
+
+  confirmHooks: (sessionId: string, accepted: boolean) =>
+    invoke<void>("confirm_hooks", { sessionId, accepted }),
 };
 
 export const settingsCommands = {

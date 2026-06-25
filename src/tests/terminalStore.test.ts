@@ -13,6 +13,7 @@ vi.mock("../lib/tauriCommands", () => ({
     resizeTerminal: vi.fn(),
     removeKnownHostEntry: vi.fn(),
     confirmHostKey: vi.fn(),
+    confirmHooks: vi.fn(),
   },
 }));
 

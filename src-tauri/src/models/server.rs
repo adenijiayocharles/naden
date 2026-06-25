@@ -20,6 +20,13 @@ pub struct Server {
     pub pre_connect_hook: Option<String>,
     pub post_disconnect_hook: Option<String>,
     pub terminal_theme: Option<String>,
+    /// Snapshot of the hook text last explicitly confirmed by the user.
+    /// Written only by `queries::confirm_server_hooks_db` — deliberately
+    /// absent from `CreateServerPayload`/`UpdateServerPayload` so no IPC
+    /// caller can set a hook and its own "confirmed" snapshot in the same
+    /// call (the same class of bug as the `vault_credential_id` IDOR).
+    pub pre_connect_hook_confirmed: Option<String>,
+    pub post_disconnect_hook_confirmed: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }

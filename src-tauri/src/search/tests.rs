@@ -29,6 +29,8 @@ fn make_server_in_group(
             env_vars: None,
             pre_connect_hook: None,
             post_disconnect_hook: None,
+            pre_connect_hook_confirmed: None,
+            post_disconnect_hook_confirmed: None,
             terminal_theme: None,
             created_at: "".to_string(),
             updated_at: "".to_string(),

@@ -109,6 +109,60 @@ async fn update_server_changes_fields() {
 }
 
 #[tokio::test]
+async fn confirm_server_hooks_db_persists_the_snapshot() {
+    let db = make_pool().await;
+    let s = create_server_db(&db, &payload("X", "x.example.com"))
+        .await
+        .unwrap();
+
+    confirm_server_hooks_db(&db, &s.server.id, Some("echo hi"), Some("echo bye"))
+        .await
+        .unwrap();
+
+    let fetched = get_server_db(&db, &s.server.id).await.unwrap();
+    assert_eq!(
+        fetched.server.pre_connect_hook_confirmed.as_deref(),
+        Some("echo hi")
+    );
+    assert_eq!(
+        fetched.server.post_disconnect_hook_confirmed.as_deref(),
+        Some("echo bye")
+    );
+}
+
+#[tokio::test]
+async fn update_server_db_never_touches_hook_confirmation_columns() {
+    // UpdateServerPayload has no field for these columns at all, so this
+    // mainly guards against a future UPDATE statement accidentally
+    // including them — which would let an IPC caller set a hook and its own
+    // "confirmed" snapshot in the same call, skipping the confirmation
+    // prompt entirely (the vault_credential_id IDOR's exact shape).
+    let db = make_pool().await;
+    let s = create_server_db(&db, &payload("X", "x.example.com"))
+        .await
+        .unwrap();
+    confirm_server_hooks_db(&db, &s.server.id, Some("echo confirmed"), None)
+        .await
+        .unwrap();
+
+    let updated = update_server_db(
+        &db,
+        &s.server.id,
+        &UpdateServerPayload {
+            pre_connect_hook: Some("echo something-else".into()),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(
+        updated.server.pre_connect_hook_confirmed.as_deref(),
+        Some("echo confirmed")
+    );
+}
+
+#[tokio::test]
 async fn update_server_replaces_tags() {
     let db = make_pool().await;
     let t1 = create_tag_db(&db, "staging").await.unwrap();

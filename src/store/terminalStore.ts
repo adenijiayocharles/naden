@@ -12,6 +12,11 @@ export interface HostKeyPrompt {
   keyType: string;
 }
 
+export interface HookConfirmPrompt {
+  preConnectHook?: string;
+  postDisconnectHook?: string;
+}
+
 export interface TerminalSession {
   id: string;
   kind: "ssh" | "local";
@@ -23,6 +28,7 @@ export interface TerminalSession {
   reconnectAt?: number; // epoch ms when the auto-reconnect will fire
   broadcastGroupId?: string; // if set, session lives only inside a broadcast group tab
   hostKeyPrompt?: HostKeyPrompt;
+  hookConfirmPrompt?: HookConfirmPrompt;
 }
 
 // serverId/serverName for local-shell sessions, which have no backing Server record.
@@ -56,6 +62,7 @@ interface TerminalStore {
   reorderSessions: (sessions: TerminalSession[]) => void;
   renameSession: (sessionId: string, name: string) => void;
   confirmHostKey: (sessionId: string, accepted: boolean) => Promise<void>;
+  confirmHooks: (sessionId: string, accepted: boolean) => Promise<void>;
 }
 
 function teardownResources(sessionId: string) {
@@ -236,6 +243,25 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
           }));
         },
       ),
+
+      listen<{ pre_connect_hook?: string; post_disconnect_hook?: string }>(
+        `ssh:hook-confirm-prompt:${sessionId}`,
+        ({ payload }) => {
+          set((state) => ({
+            sessions: state.sessions.map((s) =>
+              s.id === sessionId
+                ? {
+                    ...s,
+                    hookConfirmPrompt: {
+                      preConnectHook: payload.pre_connect_hook,
+                      postDisconnectHook: payload.post_disconnect_hook,
+                    },
+                  }
+                : s,
+            ),
+          }));
+        },
+      ),
     ]);
 
     sessionUnlisteners.set(sessionId, unlisteners);
@@ -377,5 +403,14 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       ),
     }));
     await terminalCommands.confirmHostKey(sessionId, accepted);
+  },
+
+  confirmHooks: async (sessionId, accepted) => {
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === sessionId ? { ...s, hookConfirmPrompt: undefined } : s,
+      ),
+    }));
+    await terminalCommands.confirmHooks(sessionId, accepted);
   },
 }));

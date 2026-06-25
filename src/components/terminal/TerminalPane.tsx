@@ -56,6 +56,7 @@ export default function TerminalPane({ sessionId }: Props) {
   const closeSession = useTerminalStore((s) => s.closeSession);
   const reconnectSession = useTerminalStore((s) => s.reconnectSession);
   const confirmHostKey = useTerminalStore((s) => s.confirmHostKey);
+  const confirmHooks = useTerminalStore((s) => s.confirmHooks);
 
   // Per-server terminal theme override — takes precedence over the global setting.
   const serverTermTheme = useServerStore((s) =>
@@ -757,6 +758,48 @@ export default function TerminalPane({ sessionId }: Props) {
             className="h-auto text-muted px-1 text-sm leading-none">↓</Button>
           <Button variant="ghost" onClick={closeSearch} aria-label="Close search"
             className="h-auto text-faint px-1 text-base leading-none ml-0.5">×</Button>
+        </div>
+      )}
+
+      {session?.hookConfirmPrompt && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-surface-2 border border-stroke rounded-xl p-6 max-w-md w-full mx-4 shadow-overlay">
+            <h3 className="text-base font-semibold text-white mb-2">Confirm connection hook</h3>
+            <p className="text-sm text-text-muted mb-4">
+              This server runs the command below {session.hookConfirmPrompt.postDisconnectHook && !session.hookConfirmPrompt.preConnectHook ? "after you disconnect" : "before connecting"} — new or changed since you last approved it. Review it before continuing.
+            </p>
+            {session.hookConfirmPrompt.preConnectHook && (
+              <div className="mb-3">
+                <span className="text-text-subtle text-xs block mb-1">Pre-connect</span>
+                <div className="bg-surface-1 rounded-lg p-3 font-mono text-xs text-text-muted break-all">
+                  {session.hookConfirmPrompt.preConnectHook}
+                </div>
+              </div>
+            )}
+            {session.hookConfirmPrompt.postDisconnectHook && (
+              <div className="mb-4">
+                <span className="text-text-subtle text-xs block mb-1">Post-disconnect</span>
+                <div className="bg-surface-1 rounded-lg p-3 font-mono text-xs text-text-muted break-all">
+                  {session.hookConfirmPrompt.postDisconnectHook}
+                </div>
+              </div>
+            )}
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { void confirmHooks(sessionId, false); }}
+              >
+                Cancel connection
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => { void confirmHooks(sessionId, true); }}
+              >
+                Run &amp; connect
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

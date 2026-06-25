@@ -382,6 +382,33 @@ pub async fn update_server_db(
     get_server_db(db, id).await
 }
 
+/// Records that the user has explicitly confirmed the exact hook commands
+/// currently set on `server_id`, so future connections skip the prompt
+/// until either hook's content changes again.
+///
+/// Deliberately a standalone function rather than a field on
+/// `UpdateServerPayload` — these snapshot columns must never be settable via
+/// the general create/update payload, or a malicious webview script could
+/// set a hook and its own "confirmed" snapshot in the same call and skip
+/// the prompt entirely (the same class of bug as the `vault_credential_id`
+/// IDOR fixed in migration 0019).
+pub async fn confirm_server_hooks_db(
+    db: &SqlitePool,
+    server_id: &str,
+    pre_connect_hook: Option<&str>,
+    post_disconnect_hook: Option<&str>,
+) -> Result<(), AppError> {
+    sqlx::query(
+        "UPDATE servers SET pre_connect_hook_confirmed = ?, post_disconnect_hook_confirmed = ? WHERE id = ?",
+    )
+    .bind(pre_connect_hook)
+    .bind(post_disconnect_hook)
+    .bind(server_id)
+    .execute(db)
+    .await?;
+    Ok(())
+}
+
 pub async fn move_server_group_db(
     db: &SqlitePool,
     server_id: &str,

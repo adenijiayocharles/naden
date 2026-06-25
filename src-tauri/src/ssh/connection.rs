@@ -328,9 +328,19 @@ pub(crate) struct ActiveSession {
 
 pub type HostKeyConfirmations = Arc<Mutex<HashMap<String, std::sync::mpsc::SyncSender<bool>>>>;
 
+/// Pending "confirm this exact hook before running it" prompts, keyed by
+/// `session_id`. Lives alongside `host_key_confirmations` since both gate
+/// whether a session is allowed to proceed, but uses a `tokio::oneshot`
+/// rather than a blocking `mpsc` channel — unlike host-key confirmation,
+/// which is awaited from `run_session` on a plain `std::thread`, this one is
+/// awaited directly from the async `open_terminal_session` command.
+pub type HookConfirmations =
+    Arc<tokio::sync::Mutex<HashMap<String, tokio::sync::oneshot::Sender<bool>>>>;
+
 pub struct SessionManager {
     sessions: Arc<Mutex<HashMap<String, ActiveSession>>>,
     pub host_key_confirmations: HostKeyConfirmations,
+    pub hook_confirmations: HookConfirmations,
 }
 
 pub(crate) fn recover_lock<T>(
@@ -347,6 +357,7 @@ impl SessionManager {
         Self {
             sessions: Arc::new(Mutex::new(HashMap::new())),
             host_key_confirmations: Arc::new(Mutex::new(HashMap::new())),
+            hook_confirmations: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
         }
     }
 
