@@ -67,6 +67,22 @@ fn validate_username(username: &str) -> Result<(), AppError> {
     Ok(())
 }
 
+/// Reject identity file paths containing characters that would let
+/// `build_managed_block` inject extra directives (e.g. `ProxyCommand`,
+/// `LocalCommand`) into the user's real `~/.ssh/config` on export. Unlike
+/// hostname/username, file paths legitimately contain a wide range of
+/// characters (spaces, parens, unicode, ...), so this only blocks the
+/// specific control characters that have no legitimate use in a path and
+/// would otherwise terminate or split the `IdentityFile` config line.
+fn validate_identity_file_path(path: &str) -> Result<(), AppError> {
+    if path.contains(['\n', '\r', '\0']) {
+        return Err(AppError::Validation(
+            "identity file path cannot contain newline or null characters".into(),
+        ));
+    }
+    Ok(())
+}
+
 async fn tags_for_server(db: &SqlitePool, server_id: &str) -> Result<Vec<Tag>, AppError> {
     Ok(sqlx::query_as(
         "SELECT t.id, t.name FROM tags t
@@ -157,6 +173,9 @@ pub async fn create_server_db(
     if let Some(ref u) = payload.username {
         validate_username(u)?;
     }
+    if let Some(ref p) = payload.identity_file_path {
+        validate_identity_file_path(p)?;
+    }
     let port = payload.port.unwrap_or(22);
     if !(1..=65535).contains(&port) {
         return Err(AppError::Validation(
@@ -241,6 +260,9 @@ pub async fn update_server_db(
     }
     if let Some(ref u) = payload.username {
         validate_username(u)?;
+    }
+    if let Some(ref p) = payload.identity_file_path {
+        validate_identity_file_path(p)?;
     }
     if let Some(port) = payload.port {
         if !(1..=65535).contains(&port) {

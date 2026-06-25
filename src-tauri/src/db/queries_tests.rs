@@ -295,6 +295,53 @@ async fn validation_rejects_invalid_port() {
 }
 
 #[tokio::test]
+async fn create_server_rejects_identity_file_path_with_newline_injection() {
+    let db = make_pool().await;
+    let p = CreateServerPayload {
+        identity_file_path: Some("/home/user/.ssh/id_rsa\nProxyCommand evil".into()),
+        ..payload("X", "x.example.com")
+    };
+    assert!(matches!(
+        create_server_db(&db, &p).await,
+        Err(AppError::Validation(_))
+    ));
+}
+
+#[tokio::test]
+async fn update_server_rejects_identity_file_path_with_newline_injection() {
+    let db = make_pool().await;
+    let s = create_server_db(&db, &payload("X", "x.example.com"))
+        .await
+        .unwrap();
+
+    let result = update_server_db(
+        &db,
+        &s.server.id,
+        &UpdateServerPayload {
+            identity_file_path: Some("/home/user/.ssh/id_rsa\nProxyCommand evil".into()),
+            ..Default::default()
+        },
+    )
+    .await;
+
+    assert!(matches!(result, Err(AppError::Validation(_))));
+}
+
+#[tokio::test]
+async fn create_server_accepts_identity_file_path_with_spaces() {
+    let db = make_pool().await;
+    let p = CreateServerPayload {
+        identity_file_path: Some("/Users/me/My Drive/keys/id_ed25519".into()),
+        ..payload("X", "x.example.com")
+    };
+    let s = create_server_db(&db, &p).await.unwrap();
+    assert_eq!(
+        s.server.identity_file_path,
+        Some("/Users/me/My Drive/keys/id_ed25519".into())
+    );
+}
+
+#[tokio::test]
 async fn create_and_list_groups() {
     let db = make_pool().await;
     let g = create_group_db(&db, "Production", Some("#e53e3e"))
