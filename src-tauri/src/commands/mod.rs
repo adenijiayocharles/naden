@@ -1,4 +1,5 @@
 pub mod assistant_commands;
+pub mod backup_commands;
 pub mod broadcast_commands;
 pub mod discovery_commands;
 pub mod health_commands;

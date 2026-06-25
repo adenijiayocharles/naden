@@ -196,6 +196,9 @@ pub fn run() {
             commands::vault_commands::store_credential,
             commands::vault_commands::retrieve_credential,
             commands::vault_commands::delete_credential,
+            // Vault backup
+            commands::backup_commands::backup_vault_db,
+            commands::backup_commands::restore_vault_db,
             // SSH Key vault
             commands::key_commands::list_ssh_keys,
             commands::key_commands::add_ssh_key,

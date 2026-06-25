@@ -11,7 +11,12 @@ use uuid::Uuid;
 
 /// Reject hostnames that contain shell metacharacters. Allows RFC 1123 names,
 /// IPv4, and bracketed IPv6 (e.g. [::1]). Blocks backticks, $, ;, &, |, etc.
-fn validate_hostname(hostname: &str) -> Result<(), AppError> {
+///
+/// `pub(crate)` so the backup/restore flow can re-validate every row of a
+/// candidate file with the exact same rule create_server_db/update_server_db
+/// enforce on write — a restore writes rows directly and would otherwise
+/// bypass this validation entirely.
+pub(crate) fn validate_hostname(hostname: &str) -> Result<(), AppError> {
     if hostname.is_empty() {
         return Err(AppError::Validation("hostname is required".into()));
     }
@@ -47,7 +52,8 @@ fn map_credential_conflict(e: sqlx::Error) -> AppError {
 }
 
 /// Reject usernames that contain shell metacharacters. Empty is allowed (system default).
-fn validate_username(username: &str) -> Result<(), AppError> {
+/// `pub(crate)`: see `validate_hostname`.
+pub(crate) fn validate_username(username: &str) -> Result<(), AppError> {
     if username.is_empty() {
         return Ok(());
     }
@@ -74,7 +80,8 @@ fn validate_username(username: &str) -> Result<(), AppError> {
 /// characters (spaces, parens, unicode, ...), so this only blocks the
 /// specific control characters that have no legitimate use in a path and
 /// would otherwise terminate or split the `IdentityFile` config line.
-fn validate_identity_file_path(path: &str) -> Result<(), AppError> {
+/// `pub(crate)`: see `validate_hostname`.
+pub(crate) fn validate_identity_file_path(path: &str) -> Result<(), AppError> {
     if path.contains(['\n', '\r', '\0']) {
         return Err(AppError::Validation(
             "identity file path cannot contain newline or null characters".into(),

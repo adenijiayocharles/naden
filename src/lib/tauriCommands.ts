@@ -188,6 +188,14 @@ export const vaultCommands = {
     invoke<void>("vault_change_password", { currentPassword, newPassword }),
 };
 
+export const backupCommands = {
+  backupVaultDb: (destPath: string) =>
+    invoke<void>("backup_vault_db", { destPath }),
+
+  restoreVaultDb: (srcPath: string) =>
+    invoke<void>("restore_vault_db", { srcPath }),
+};
+
 export interface AssistantStatus {
   openaiConfigured: boolean;
   anthropicConfigured: boolean;

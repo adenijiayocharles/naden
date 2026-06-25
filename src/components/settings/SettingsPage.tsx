@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { getVersion } from "@tauri-apps/api/app";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import {
@@ -15,8 +16,8 @@ import { useVaultStore } from "../../store/vaultStore";
 import { useUiStore, type SettingsSection } from "../../store/uiStore";
 import { useTerminalSettings, TERMINAL_FONTS, TERMINAL_THEMES, CURSOR_STYLES, fontCss } from "../../lib/terminalSettings";
 import { useUiFontSettings, UI_FONTS, UI_FONT_SIZES, uiFontCss, applyUiFont } from "../../lib/uiFontSettings";
-import { settingsCommands, assistantCommands, updaterCommands, type AssistantStatus, type UpdateInfo } from "../../lib/tauriCommands";
-import { formatError } from "../../lib/errors";
+import { settingsCommands, assistantCommands, backupCommands, updaterCommands, type AssistantStatus, type UpdateInfo } from "../../lib/tauriCommands";
+import { formatError, isAppError } from "../../lib/errors";
 import { passwordStrength } from "../../lib/passwordStrength";
 import { shiftLightness } from "../../lib/accentColor";
 
@@ -442,6 +443,64 @@ export default function SettingsPage() {
   const { label: strengthLabel, color: strengthColor, pct: strengthPct } =
     passwordStrength(activeForm === "enable" ? enablePwd : changeNew);
 
+  // Vault backup / restore
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const [backupSuccess, setBackupSuccess] = useState<string | null>(null);
+  const [restorePendingPath, setRestorePendingPath] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(false);
+
+  const handleBackup = async () => {
+    setBackupBusy(true); setBackupError(null); setBackupSuccess(null);
+    try {
+      const destPath = await save({
+        defaultPath: `naden-backup-${new Date().toISOString().slice(0, 10)}.db`,
+        filters: [{ name: "naden vault backup", extensions: ["db"] }],
+      });
+      if (!destPath) return;
+      await backupCommands.backupVaultDb(destPath);
+      setBackupSuccess("Vault backed up.");
+    } catch (e) {
+      setBackupError(formatError(e));
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const handlePickRestoreFile = async () => {
+    setBackupError(null); setBackupSuccess(null);
+    const path = await open({
+      multiple: false,
+      title: "Choose a naden vault backup",
+      filters: [{ name: "naden vault backup", extensions: ["db"] }],
+    });
+    if (typeof path === "string") setRestorePendingPath(path);
+  };
+
+  const confirmRestore = async () => {
+    if (!restorePendingPath) return;
+    setRestoring(true); setBackupError(null);
+    try {
+      await backupCommands.restoreVaultDb(restorePendingPath);
+      await updaterCommands.relaunch();
+    } catch (e) {
+      // A Validation error means the backup file was bad and was caught
+      // before the live vault was touched — safe to show and let the user
+      // retry. Anything else means the restore got far enough to close the
+      // live DB pool for the rest of this process, so relaunching is the
+      // only way to recover whether the swap ultimately succeeded or not.
+      if (isAppError(e) && e.kind === "Validation") {
+        setBackupError(formatError(e));
+        setRestoring(false);
+      } else {
+        setBackupError(`${formatError(e)} — restarting to recover…`);
+        await updaterCommands.relaunch();
+      }
+    } finally {
+      setRestorePendingPath(null);
+    }
+  };
+
   return (
     <div className="flex h-full overflow-hidden bg-surface-1">
       {/* Left nav */}
@@ -730,6 +789,47 @@ export default function SettingsPage() {
                 <p className="text-sm text-success bg-success-subtle border border-success-subtle rounded-md px-3 py-2 mt-4">
                   ✓ {success}
                 </p>
+              )}
+
+              <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3 mt-6">Backup &amp; restore</p>
+              <Row>
+                <RowLabel
+                  title="Back up vault"
+                  description="Save an encrypted copy of all servers and credentials to a file"
+                />
+                <Button variant="secondary" onClick={() => { void handleBackup(); }} disabled={backupBusy} className="h-8">
+                  {backupBusy ? "Backing up…" : "Back up…"}
+                </Button>
+              </Row>
+              <Row>
+                <RowLabel
+                  title="Restore vault"
+                  description="Replace everything with a previous backup. The app restarts afterward."
+                />
+                <Button variant="secondary" onClick={() => { void handlePickRestoreFile(); }} className="h-8">
+                  Restore…
+                </Button>
+              </Row>
+              {backupError && (
+                <p className="text-sm text-error bg-error-subtle border border-error-subtle rounded-md px-3 py-2 mt-2">
+                  {backupError}
+                </p>
+              )}
+              {backupSuccess && (
+                <p className="text-sm text-success bg-success-subtle border border-success-subtle rounded-md px-3 py-2 mt-2">
+                  ✓ {backupSuccess}
+                </p>
+              )}
+
+              {restorePendingPath && (
+                <ConfirmDeleteModal
+                  title="Restore vault from backup?"
+                  description="This replaces every saved server and credential with the contents of the backup file, and the app restarts immediately. This cannot be undone."
+                  confirmLabel="Restore & restart"
+                  busy={restoring}
+                  onConfirm={() => { void confirmRestore(); }}
+                  onCancel={() => setRestorePendingPath(null)}
+                />
               )}
             </div>
           )}
