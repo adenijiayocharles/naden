@@ -196,6 +196,11 @@ export const backupCommands = {
     invoke<void>("restore_vault_db", { srcPath }),
 };
 
+export const crashReportingCommands = {
+  isAvailable: () =>
+    invoke<boolean>("crash_reporting_is_available"),
+};
+
 export interface AssistantStatus {
   openaiConfigured: boolean;
   anthropicConfigured: boolean;

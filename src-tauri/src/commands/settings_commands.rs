@@ -19,6 +19,7 @@ const ALLOWED_SETTINGS: &[&str] = &[
     "default_terminal",
     "accent_custom_color",
     "ssh_keepalive_interval",
+    "crash_reporting_enabled",
 ];
 
 fn is_allowed_setting(key: &str) -> bool {

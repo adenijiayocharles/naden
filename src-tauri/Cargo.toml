@@ -51,6 +51,13 @@ thiserror = "1"
 base64 = "0.22"
 # AI assistant (BYOK): HTTP client for provider APIs, streamed as SSE.
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+# Opt-in crash reporting. Uses reqwest+rustls instead of sentry's default
+# curl transport, to avoid OpenSSL/native-tls alongside our rustls — though
+# sentry 0.34 wants reqwest ^0.13 vs. our ^0.12 above and its own rustls
+# 0.22 vs. our 0.23, so this still ends up with two reqwest/rustls/webpki
+# stacks rather than fully sharing the one above. Worth revisiting once a
+# sentry release converges on the same reqwest major version.
+sentry = { version = "0.34", default-features = false, features = ["backtrace", "contexts", "panic", "reqwest", "rustls"] }
 async-trait = "0.1"
 futures-util = "0.3"
 bytes = "1"

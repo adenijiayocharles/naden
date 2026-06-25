@@ -53,6 +53,9 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Opt-in crash reporting stays unavailable (toggle disabled in
+          # Settings) until this secret is added — see src-tauri/src/crash_reporting.rs.
+          NADEN_SENTRY_DSN: ${{ secrets.NADEN_SENTRY_DSN }}
         with:
           tagName: ${{ github.event.inputs.tag || github.ref_name }}
           releaseName: "naden ${{ github.event.inputs.tag || github.ref_name }}"

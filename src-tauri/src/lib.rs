@@ -4,6 +4,7 @@ use tauri::{Emitter, Manager};
 
 mod assistant;
 mod commands;
+mod crash_reporting;
 mod db;
 mod discovery;
 pub mod error;
@@ -129,6 +130,7 @@ pub fn run() {
             commands::settings_commands::get_all_settings,
             commands::settings_commands::set_setting,
             commands::settings_commands::vault_heartbeat,
+            crash_reporting::crash_reporting_is_available,
             // AI Assistant (BYOK)
             commands::assistant_commands::set_assistant_api_key,
             commands::assistant_commands::clear_assistant_api_key,
@@ -251,14 +253,15 @@ pub fn run() {
                 })?;
 
             // These reads are independent of each other — run them concurrently
-            // rather than as three sequential round trips.
+            // rather than as four sequential round trips.
             eprintln!("[naden] setup: loading initial state");
-            let (cache_result, password_required_result, initial_failures) =
+            let (cache_result, password_required_result, initial_failures, crash_reporting_setting) =
                 tauri::async_runtime::block_on(async {
                     tokio::join!(
                         db::queries::list_servers_db(&pool),
                         vault::master_password::is_password_required(&pool),
                         commands::vault_commands::load_lockout(&pool),
+                        commands::settings_commands::get_setting_value(&pool, "crash_reporting_enabled"),
                     )
                 });
 
@@ -297,6 +300,13 @@ pub fn run() {
                 last_vault_activity: tokio::sync::Mutex::new(std::time::Instant::now()),
                 manually_locked: tokio::sync::Mutex::new(false),
             });
+
+            // Installed after the panic hook above, which it chains to —
+            // the local crash log and native alert keep working unchanged
+            // whether or not this actually starts (no DSN compiled in, or
+            // the user has left it off, both leave this as `None`).
+            let crash_reporting_enabled = crash_reporting_setting.unwrap_or_default().as_deref() == Some("true");
+            app.manage(crash_reporting::init(crash_reporting_enabled));
 
             eprintln!("[naden] setup: initialising tray");
             tray::setup_tray(app.handle())

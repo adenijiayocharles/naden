@@ -11,12 +11,13 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Switch } from "../ui/switch";
+import { Checkbox } from "../ui/checkbox";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import { useVaultStore } from "../../store/vaultStore";
 import { useUiStore, type SettingsSection } from "../../store/uiStore";
 import { useTerminalSettings, TERMINAL_FONTS, TERMINAL_THEMES, CURSOR_STYLES, fontCss } from "../../lib/terminalSettings";
 import { useUiFontSettings, UI_FONTS, UI_FONT_SIZES, uiFontCss, applyUiFont } from "../../lib/uiFontSettings";
-import { settingsCommands, assistantCommands, backupCommands, updaterCommands, type AssistantStatus, type UpdateInfo } from "../../lib/tauriCommands";
+import { settingsCommands, assistantCommands, backupCommands, crashReportingCommands, updaterCommands, type AssistantStatus, type UpdateInfo } from "../../lib/tauriCommands";
 import { formatError, isAppError } from "../../lib/errors";
 import { passwordStrength } from "../../lib/passwordStrength";
 import { shiftLightness } from "../../lib/accentColor";
@@ -347,6 +348,18 @@ export default function SettingsPage() {
   // Default terminal for "Open in Terminal"
   const [defaultTerminal, setDefaultTerminal] = useState("Terminal");
 
+  // Crash reporting
+  const [crashReportingAvailable, setCrashReportingAvailable] = useState(false);
+  const [crashReportingEnabled, setCrashReportingEnabled] = useState(false);
+  useEffect(() => {
+    crashReportingCommands.isAvailable().then(setCrashReportingAvailable).catch(() => {});
+  }, []);
+  const saveCrashReporting = (enabled: boolean) => {
+    setCrashReportingEnabled(enabled);
+    settingsCommands.setSetting("crash_reporting_enabled", String(enabled)).catch(() => {});
+    flashSaved();
+  };
+
   // Load all settings in a single IPC call on mount.
   useEffect(() => {
     settingsCommands.getAllSettings().then((s) => {
@@ -373,6 +386,7 @@ export default function SettingsPage() {
       }
       if (s.ssh_keepalive_interval != null) setKeepaliveInterval(s.ssh_keepalive_interval);
       if (s.default_terminal != null) setDefaultTerminal(s.default_terminal);
+      if (s.crash_reporting_enabled != null) setCrashReportingEnabled(s.crash_reporting_enabled === "true");
     }).catch(() => {});
   }, [setVaultTimeoutMins]);
   const saveDefaultTerminal = (v: string | null) => {
@@ -386,13 +400,14 @@ export default function SettingsPage() {
   const [disablePwd, setDisablePwd] = useState("");
   const [enablePwd, setEnablePwd] = useState("");
   const [enableConfirm, setEnableConfirm] = useState("");
+  const [enableAcknowledged, setEnableAcknowledged] = useState(false);
   const [changeCurrent, setChangeCurrent] = useState("");
   const [changeNew, setChangeNew] = useState("");
   const [changeConfirm, setChangeConfirm] = useState("");
 
   const reset = () => {
     setError(null); setSuccess(null);
-    setDisablePwd(""); setEnablePwd(""); setEnableConfirm("");
+    setDisablePwd(""); setEnablePwd(""); setEnableConfirm(""); setEnableAcknowledged(false);
     setChangeCurrent(""); setChangeNew(""); setChangeConfirm("");
   };
   const openForm = (form: ActiveForm) => { reset(); setActiveForm(form); };
@@ -418,11 +433,12 @@ export default function SettingsPage() {
   const submitEnable = async () => {
     if (enablePwd !== enableConfirm) { setError("Passwords do not match."); return; }
     if (enablePwd.length < 8) { setError("Password must be at least 8 characters."); return; }
+    if (!enableAcknowledged) { setError("Please confirm you understand this password can't be recovered."); return; }
     setLoading(true); setError(null);
     try {
       await enablePassword(enablePwd);
       setSuccess("Vault password enabled.");
-      setActiveForm("none"); setEnablePwd(""); setEnableConfirm("");
+      setActiveForm("none"); setEnablePwd(""); setEnableConfirm(""); setEnableAcknowledged(false);
       setAutoLockNeedsPassword(false);
     } catch (e) { setError(formatError(e)); }
     finally { setLoading(false); }
@@ -708,10 +724,22 @@ export default function SettingsPage() {
                     )}
                   </div>
                   <PasswordInput value={enableConfirm} onChange={(v) => { setEnableConfirm(v); setError(null); }} placeholder="Confirm password" />
+                  <div className="rounded-lg border border-warning-subtle bg-warning-subtle px-3 py-2">
+                    <p className="text-xs text-warning">
+                      naden cannot recover this password. If you forget it, your stored credentials are permanently inaccessible.
+                    </p>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-muted">
+                    <Checkbox
+                      checked={enableAcknowledged}
+                      onCheckedChange={(checked) => { setEnableAcknowledged(checked === true); setError(null); }}
+                    />
+                    I understand this can't be undone if I forget my password
+                  </label>
                   {error && <p className="text-xs text-error">{error}</p>}
                   <div className="flex gap-2">
                     <Button variant="secondary" onClick={() => openForm("none")} className="flex-1">Cancel</Button>
-                    <Button onClick={() => { void submitEnable(); }} disabled={loading || enablePwd.length < 8 || enablePwd !== enableConfirm} className="flex-1">
+                    <Button onClick={() => { void submitEnable(); }} disabled={loading || enablePwd.length < 8 || enablePwd !== enableConfirm || !enableAcknowledged} className="flex-1">
                       {loading ? "Setting up…" : "Enable password"}
                     </Button>
                   </div>
@@ -1187,6 +1215,23 @@ export default function SettingsPage() {
                     Check for updates
                   </Button>
                 )}
+              </Row>
+
+              <Row>
+                <RowLabel
+                  title="Crash reporting"
+                  description={
+                    !crashReportingAvailable
+                      ? "Not available in this build."
+                      : "Help fix crashes by sharing anonymous reports. Off by default — never includes credentials, hostnames, or other personal data. Takes effect after restart."
+                  }
+                />
+                <Switch
+                  aria-label="Crash reporting"
+                  checked={crashReportingEnabled}
+                  disabled={!crashReportingAvailable}
+                  onCheckedChange={saveCrashReporting}
+                />
               </Row>
             </div>
           )}
