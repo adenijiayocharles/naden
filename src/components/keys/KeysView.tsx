@@ -18,6 +18,14 @@ import {
 import EmptyState from "../shared/EmptyState";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 
+function useEscapeToClose(onClose: () => void) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+}
+
 // ── Add Existing Key modal ────────────────────────────────────────────────────
 
 function AddKeyModal({ onClose }: { onClose: () => void }) {
@@ -27,11 +35,7 @@ function AddKeyModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
+  useEscapeToClose(onClose);
 
   const browse = async () => {
     try {
@@ -135,11 +139,7 @@ function GenerateKeyModal({ onClose }: { onClose: () => void }) {
   const [saving, setSaving] = useState(false);
   const [pathEdited, setPathEdited] = useState(false);
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
+  useEscapeToClose(onClose);
 
   const set = (field: keyof GenForm) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -273,11 +273,7 @@ function ViewPublicKeyModal({ sshKey, onClose }: { sshKey: SshKey; onClose: () =
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
+  useEscapeToClose(onClose);
 
   useEffect(() => {
     getPublicKey(sshKey.id)

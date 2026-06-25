@@ -5,6 +5,7 @@ import { useVaultStore } from "../../store/vaultStore";
 import { useUiStore } from "../../store/uiStore";
 import { settingsCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
+import { passwordStrength } from "../../lib/passwordStrength";
 import SshConfigImport from "../servers/SshConfigImport";
 import DiscoverHosts from "../servers/DiscoverHosts";
 import { Input } from "../ui/input";
@@ -17,14 +18,6 @@ interface Props {
 }
 
 type Step = "welcome" | "vault" | "import" | "done";
-
-function strength(pwd: string) {
-  if (pwd.length === 0)  return { label: "",         color: "bg-surface-4",      pct: "0%" };
-  if (pwd.length < 8)   return { label: "Too short", color: "bg-red-500",     pct: "25%" };
-  if (pwd.length < 12)  return { label: "Weak",      color: "bg-orange-500",  pct: "50%" };
-  if (pwd.length < 16)  return { label: "Moderate",  color: "bg-yellow-400",  pct: "75%" };
-  return                       { label: "Strong",    color: "bg-accent",      pct: "100%" };
-}
 
 const STEPS: Step[] = ["welcome", "vault", "import", "done"];
 
@@ -44,7 +37,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
 
   const openAdd = useUiStore((s) => s.openAdd);
 
-  const { label: strengthLabel, color: strengthColor, pct: strengthPct } = strength(password);
+  const { label: strengthLabel, color: strengthColor, pct: strengthPct } = passwordStrength(password);
 
   const stepIndex = STEPS.indexOf(step);
   const progress = ((stepIndex + 1) / STEPS.length) * 100;

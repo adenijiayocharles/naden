@@ -10,14 +10,13 @@ interface TrayConnectPayload {
 }
 
 export function useTrayEvents() {
-  const servers = useServerStore((s) => s.servers);
   const openTerminal = useTerminalStore((s) => s.openSession);
   const openSftp = useSftpStore((s) => s.openSession);
 
   useEffect(() => {
     const unlisten = listen<TrayConnectPayload>("tray:connect", async (event) => {
       const { serverId, mode } = event.payload;
-      const server = servers.find((s) => s.id === serverId);
+      const server = useServerStore.getState().servers.find((s) => s.id === serverId);
       if (!server) return;
       if (mode === "terminal") {
         await openTerminal(server.id, server.displayName);
@@ -26,5 +25,5 @@ export function useTrayEvents() {
       }
     });
     return () => { void unlisten.then((fn) => fn()); };
-  }, [servers, openTerminal, openSftp]);
+  }, [openTerminal, openSftp]);
 }
