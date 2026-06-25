@@ -5,9 +5,9 @@ import { useTerminalStore } from "./terminalStore";
 
 export interface ServerHealth {
   serverId: string;
-  cpuPercent: number;
-  memPercent: number;
-  diskPercent: number;
+  cpuPercent: number | null;
+  memPercent: number | null;
+  diskPercent: number | null;
   timestamp: number;
 }
 

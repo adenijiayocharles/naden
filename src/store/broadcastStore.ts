@@ -55,8 +55,8 @@ export const useBroadcastStore = create<BroadcastStore>((set, get) => ({
         const saved = await broadcastCommands.createBroadcastGroup(name, serverIds);
         savedId = saved.id;
         set((state) => ({ savedGroups: [...state.savedGroups, saved] }));
-      } catch {
-        // Persist failure is non-fatal — the in-memory group still works
+      } catch (e) {
+        console.warn("broadcast: createBroadcastGroup persist failed (non-fatal)", e);
       }
     }
     set((state) => ({
@@ -112,8 +112,8 @@ export const useBroadcastStore = create<BroadcastStore>((set, get) => ({
     try {
       const savedGroups = await broadcastCommands.listBroadcastGroups();
       set({ savedGroups });
-    } catch {
-      // Non-fatal — app works without persisted groups
+    } catch (e) {
+      console.warn("broadcast: listBroadcastGroups persist failed (non-fatal)", e);
     }
   },
 

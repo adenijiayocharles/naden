@@ -10,9 +10,9 @@ use crate::AppState;
 #[serde(rename_all = "camelCase")]
 pub struct ServerHealth {
     pub server_id: String,
-    pub cpu_percent: f64,
-    pub mem_percent: f64,
-    pub disk_percent: f64,
+    pub cpu_percent: Option<f64>,
+    pub mem_percent: Option<f64>,
+    pub disk_percent: Option<f64>,
     pub timestamp: i64,
 }
 
@@ -64,9 +64,9 @@ fn run_health_check(
     verify_host_key(&session, &host, port)?;
     authenticate_session(&mut session, &username, &auth)?;
 
-    let cpu_percent = fetch_cpu(&session).unwrap_or(0.0);
-    let mem_percent = fetch_mem(&session).unwrap_or(0.0);
-    let disk_percent = fetch_disk(&session).unwrap_or(0.0);
+    let cpu_percent = fetch_cpu(&session);
+    let mem_percent = fetch_mem(&session);
+    let disk_percent = fetch_disk(&session);
 
     Ok(ServerHealth {
         server_id,

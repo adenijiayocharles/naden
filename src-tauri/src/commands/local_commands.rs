@@ -55,6 +55,11 @@ pub fn create_local_file(path: String) -> Result<(), AppError> {
 pub fn rename_local(from: String, to: String) -> Result<(), AppError> {
     check_home_boundary(&from)?;
     check_parent_home_boundary(&to)?;
+    // If the destination already exists (e.g. as a symlink), canonicalize the
+    // full path too — check_parent_home_boundary only covers the parent directory.
+    if std::path::Path::new(&to).exists() {
+        check_home_boundary(&to)?;
+    }
     std::fs::rename(&from, &to).map_err(|e| AppError::Io(format!("Cannot rename: {e}")))
 }
 

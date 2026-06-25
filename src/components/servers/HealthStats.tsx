@@ -1,7 +1,7 @@
 interface HealthStatsProps {
-  cpu: number;
-  mem: number;
-  disk: number;
+  cpu: number | null;
+  mem: number | null;
+  disk: number | null;
 }
 
 function barColor(pct: number) {
@@ -16,18 +16,20 @@ function textColor(pct: number) {
   return "text-emerald-400";
 }
 
-function StatBar({ label, value }: { label: string; value: number }) {
+function StatBar({ label, value }: { label: string; value: number | null }) {
   return (
     <div className="flex items-center gap-1.5">
       <span className="text-[9px] text-dim font-mono w-5">{label}</span>
       <div className="w-10 h-1 bg-surface-3 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full ${barColor(value)}`}
-          style={{ width: `${Math.min(value, 100)}%` }}
-        />
+        {value !== null && (
+          <div
+            className={`h-full rounded-full ${barColor(value)}`}
+            style={{ width: `${Math.min(value, 100)}%` }}
+          />
+        )}
       </div>
-      <span className={`text-[10px] font-mono tabular-nums ${textColor(value)}`}>
-        {value}%
+      <span className={`text-[10px] font-mono tabular-nums ${value !== null ? textColor(value) : "text-dim"}`}>
+        {value !== null ? `${value}%` : "—"}
       </span>
     </div>
   );
@@ -51,10 +53,13 @@ export function HealthStatsInline({ cpu, mem, disk }: HealthStatsProps) {
           ["cpu", cpu],
           ["mem", mem],
           ["dsk", disk],
-        ] as [string, number][]
+        ] as [string, number | null][]
       ).map(([label, value]) => (
-        <span key={label} className={`text-[10px] font-mono tabular-nums ${textColor(value)}`}>
-          {label} {value}%
+        <span
+          key={label}
+          className={`text-[10px] font-mono tabular-nums ${value !== null ? textColor(value) : "text-dim"}`}
+        >
+          {label} {value !== null ? `${value}%` : "—"}
         </span>
       ))}
     </div>
