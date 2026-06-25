@@ -31,6 +31,21 @@ fn validate_hostname(hostname: &str) -> Result<(), AppError> {
     Ok(())
 }
 
+/// Maps a unique-constraint violation on the partial index over
+/// `servers.vault_credential_id` (migration 0019) to the same validation
+/// error the pre-write ownership check below returns. The pre-check alone
+/// has a TOCTOU gap between two concurrent writers; this is what actually
+/// closes it, since SQLite enforces the index atomically with the write.
+fn map_credential_conflict(e: sqlx::Error) -> AppError {
+    if e.as_database_error()
+        .is_some_and(|db_err| db_err.is_unique_violation())
+    {
+        AppError::Validation("vault_credential_id is already owned by another server".into())
+    } else {
+        e.into()
+    }
+}
+
 /// Reject usernames that contain shell metacharacters. Empty is allowed (system default).
 fn validate_username(username: &str) -> Result<(), AppError> {
     if username.is_empty() {
@@ -149,6 +164,23 @@ pub async fn create_server_db(
         ));
     }
 
+    // A vault_credential_id is only legitimate here if it was just minted by
+    // store_credential and isn't yet linked to any server — otherwise this is
+    // an IDOR attempt to attach (and later decrypt, via retrieve_credential)
+    // a credential that already belongs to someone else's server.
+    if let Some(ref cred_id) = payload.vault_credential_id {
+        let owner: Option<String> =
+            sqlx::query_scalar("SELECT id FROM servers WHERE vault_credential_id = ?")
+                .bind(cred_id)
+                .fetch_optional(db)
+                .await?;
+        if owner.is_some() {
+            return Err(AppError::Validation(
+                "vault_credential_id is already owned by another server".into(),
+            ));
+        }
+    }
+
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
 
@@ -181,7 +213,8 @@ pub async fn create_server_db(
     .bind(&now)
     .bind(&now)
     .execute(db)
-    .await?;
+    .await
+    .map_err(map_credential_conflict)?;
 
     if let Some(tag_ids) = &payload.tag_ids {
         for tag_id in tag_ids {
@@ -233,7 +266,24 @@ pub async fn update_server_db(
 
     let port = payload.port.unwrap_or(s.port);
 
-    // vault_credential_id: if payload provides a new one use it; if not keep existing
+    // vault_credential_id: if payload provides a new one use it; if not keep existing.
+    // A new id is only accepted if it isn't already linked to a *different* server —
+    // otherwise this is an IDOR attempt to repoint this server at another server's
+    // credential and later decrypt it via retrieve_credential.
+    if let Some(ref cred_id) = payload.vault_credential_id {
+        if s.vault_credential_id.as_deref() != Some(cred_id.as_str()) {
+            let owner: Option<String> =
+                sqlx::query_scalar("SELECT id FROM servers WHERE vault_credential_id = ?")
+                    .bind(cred_id)
+                    .fetch_optional(&mut *tx)
+                    .await?;
+            if owner.is_some() {
+                return Err(AppError::Validation(
+                    "vault_credential_id is already owned by another server".into(),
+                ));
+            }
+        }
+    }
     let vault_credential_id = payload
         .vault_credential_id
         .as_deref()
@@ -281,7 +331,8 @@ pub async fn update_server_db(
     .bind(&now)
     .bind(id)
     .execute(&mut *tx)
-    .await?;
+    .await
+    .map_err(map_credential_conflict)?;
 
     if let Some(tag_ids) = &payload.tag_ids {
         sqlx::query("DELETE FROM server_tags WHERE server_id = ?")

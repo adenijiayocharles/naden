@@ -140,6 +140,117 @@ async fn update_server_replaces_tags() {
 }
 
 #[tokio::test]
+async fn update_server_rejects_credential_owned_by_another_server() {
+    let db = make_pool().await;
+    let victim = create_server_db(
+        &db,
+        &CreateServerPayload {
+            vault_credential_id: Some("victim-cred".into()),
+            ..payload("Victim", "victim.example.com")
+        },
+    )
+    .await
+    .unwrap();
+    let attacker = create_server_db(&db, &payload("Attacker", "attacker.example.com"))
+        .await
+        .unwrap();
+
+    let result = update_server_db(
+        &db,
+        &attacker.server.id,
+        &UpdateServerPayload {
+            vault_credential_id: Some(victim.server.vault_credential_id.clone().unwrap()),
+            ..Default::default()
+        },
+    )
+    .await;
+
+    assert!(matches!(result, Err(AppError::Validation(_))));
+}
+
+#[tokio::test]
+async fn create_server_rejects_credential_owned_by_another_server() {
+    let db = make_pool().await;
+    let victim = create_server_db(
+        &db,
+        &CreateServerPayload {
+            vault_credential_id: Some("victim-cred".into()),
+            ..payload("Victim", "victim.example.com")
+        },
+    )
+    .await
+    .unwrap();
+
+    let result = create_server_db(
+        &db,
+        &CreateServerPayload {
+            vault_credential_id: victim.server.vault_credential_id.clone(),
+            ..payload("Attacker", "attacker.example.com")
+        },
+    )
+    .await;
+
+    assert!(matches!(result, Err(AppError::Validation(_))));
+}
+
+#[tokio::test]
+async fn vault_credential_unique_index_rejects_duplicate_at_db_layer() {
+    // create_server_db's ownership pre-check has a TOCTOU gap between two
+    // concurrent writers — it can't be the thing that actually prevents two
+    // servers from ending up with the same vault_credential_id. The partial
+    // unique index from migration 0019 is the real backstop, so exercise it
+    // directly via raw inserts that bypass create_server_db's pre-check.
+    let db = make_pool().await;
+    let now = Utc::now().to_rfc3339();
+    sqlx::query(
+        "INSERT INTO servers (id, display_name, hostname, vault_credential_id, created_at, updated_at)
+         VALUES (?, 'A', 'a.example.com', 'raced-cred', ?, ?)",
+    )
+    .bind(Uuid::new_v4().to_string())
+    .bind(&now)
+    .bind(&now)
+    .execute(&db)
+    .await
+    .unwrap();
+
+    let result = sqlx::query(
+        "INSERT INTO servers (id, display_name, hostname, vault_credential_id, created_at, updated_at)
+         VALUES (?, 'B', 'b.example.com', 'raced-cred', ?, ?)",
+    )
+    .bind(Uuid::new_v4().to_string())
+    .bind(&now)
+    .bind(&now)
+    .execute(&db)
+    .await;
+
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn update_server_accepts_unowned_credential() {
+    let db = make_pool().await;
+    let s = create_server_db(&db, &payload("Fresh", "fresh.example.com"))
+        .await
+        .unwrap();
+
+    let updated = update_server_db(
+        &db,
+        &s.server.id,
+        &UpdateServerPayload {
+            vault_credential_id: Some("freshly-minted-cred".into()),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(
+        updated.server.vault_credential_id,
+        Some("freshly-minted-cred".into())
+    );
+}
+
+#[tokio::test]
 async fn delete_server_removes_it() {
     let db = make_pool().await;
     let s = create_server_db(&db, &payload("Temp", "temp.example.com"))
