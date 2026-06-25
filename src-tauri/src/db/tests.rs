@@ -122,3 +122,30 @@ async fn cascade_delete_removes_server_tags() {
 
     assert_eq!(count, 0, "server_tags not cascade-deleted");
 }
+
+#[tokio::test]
+async fn init_db_creates_pre_migration_backup_for_existing_db() {
+    let dir = std::env::temp_dir().join(format!(
+        "naden_test_{}",
+        uuid::Uuid::new_v4().to_string().replace('-', "")
+    ));
+    std::fs::create_dir_all(&dir).unwrap();
+
+    // First launch — creates and migrates a fresh DB.
+    let pool = init_db(dir.clone()).await.expect("first init_db failed");
+    pool.close().await;
+
+    let backup_path = dir.join("naden.db.pre-migration-backup");
+    assert!(!backup_path.exists(), "backup should not exist after first-ever launch");
+
+    // Second launch against the existing DB — backup must be written.
+    let pool2 = init_db(dir.clone()).await.expect("second init_db failed");
+    pool2.close().await;
+
+    assert!(
+        backup_path.exists(),
+        "pre-migration backup was not created for an existing DB"
+    );
+
+    std::fs::remove_dir_all(&dir).ok();
+}

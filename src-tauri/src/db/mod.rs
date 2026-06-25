@@ -23,6 +23,10 @@ pub async fn init_db(data_dir: PathBuf) -> Result<SqlitePool, AppError> {
     std::fs::create_dir_all(&data_dir)?;
 
     let db_path = db_file_path(&data_dir);
+    let pre_migration_backup = data_dir.join("naden.db.pre-migration-backup");
+    // Snapshot existence *before* we create the file via mode=rwc.
+    let db_existed = db_path.exists();
+
     let db_url = format!("sqlite:{}?mode=rwc", db_path.display());
 
     let pool = SqlitePoolOptions::new()
@@ -38,10 +42,27 @@ pub async fn init_db(data_dir: PathBuf) -> Result<SqlitePool, AppError> {
         .execute(&pool)
         .await?;
 
-    migrator()
-        .run(&pool)
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
+    // Back up before running migrations so a partial/failed migration can be
+    // recovered. Only needed when a DB already exists (first launch has nothing
+    // to lose). Checkpoint consolidates WAL frames into the main file first so
+    // the copy is self-contained and consistent.
+    if db_existed {
+        sqlx::query("PRAGMA wal_checkpoint(TRUNCATE)")
+            .execute(&pool)
+            .await?;
+        std::fs::copy(&db_path, &pre_migration_backup)?;
+    }
+
+    if let Err(e) = migrator().run(&pool).await {
+        if db_existed {
+            // Close the pool before touching the file — sqlx keeps file locks
+            // on the DB. Ignore the restore error: the backup is still at
+            // pre_migration_backup for manual recovery if the copy below fails.
+            pool.close().await;
+            let _ = std::fs::copy(&pre_migration_backup, &db_path);
+        }
+        return Err(AppError::Database(e.to_string()));
+    }
 
     Ok(pool)
 }
