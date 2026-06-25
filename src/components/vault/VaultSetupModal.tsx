@@ -5,11 +5,13 @@ import { formatError } from "../../lib/errors";
 import { passwordStrength } from "../../lib/passwordStrength";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
 
 export default function VaultSetupModal() {
   const { setup, skipSetup } = useVaultStore();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [acknowledged, setAcknowledged] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [skipping, setSkipping] = useState(false);
@@ -19,6 +21,7 @@ export default function VaultSetupModal() {
     e.preventDefault();
     if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
     if (password !== confirm) { setError("Passwords do not match."); return; }
+    if (!acknowledged) { setError("Please confirm you understand this password can't be recovered."); return; }
     setLoading(true);
     setError(null);
     try {
@@ -81,11 +84,25 @@ export default function VaultSetupModal() {
             className="bg-surface-1 px-4"
           />
 
+          <div className="rounded-lg border border-warning-subtle bg-warning-subtle px-3 py-2">
+            <p className="text-xs text-warning">
+              naden cannot recover this password. If you forget it, your stored credentials are permanently inaccessible.
+            </p>
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer text-xs text-muted">
+            <Checkbox
+              checked={acknowledged}
+              onCheckedChange={(checked) => { setAcknowledged(checked === true); setError(null); }}
+            />
+            I understand this can't be undone if I forget my password
+          </label>
+
           {error && <p className="text-sm text-error text-center">{error}</p>}
 
           <Button
             type="submit"
-            disabled={loading || skipping || password.length < 8 || password !== confirm}
+            disabled={loading || skipping || password.length < 8 || password !== confirm || !acknowledged}
             className="w-full h-10"
           >
             {loading ? "Setting up…" : "Set up vault"}

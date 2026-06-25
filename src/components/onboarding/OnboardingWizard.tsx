@@ -38,6 +38,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [skipVault, setSkipVault] = useState(false);
+  const [vaultAcknowledged, setVaultAcknowledged] = useState(false);
   const [vaultError, setVaultError] = useState<string | null>(null);
   const [vaultLoading, setVaultLoading] = useState(false);
 
@@ -57,6 +58,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
     if (skipVault || isSetup) { advance(); return; }
     if (password !== confirm) { setVaultError("Passwords don't match."); return; }
     if (password.length < 8) { setVaultError("Password must be at least 8 characters."); return; }
+    if (!vaultAcknowledged) { setVaultError("Please confirm you understand this password can't be recovered."); return; }
     setVaultLoading(true);
     setVaultError(null);
     try {
@@ -153,6 +155,18 @@ export default function OnboardingWizard({ onComplete }: Props) {
                     onChange={(e) => { setConfirm(e.target.value); setVaultError(null); }}
                     placeholder="Confirm password"
                   />
+                  <div className="rounded-lg border border-warning-subtle bg-warning-subtle px-3 py-2">
+                    <p className="text-xs text-warning">
+                      naden cannot recover this password. If you forget it, your stored credentials are permanently inaccessible.
+                    </p>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-muted">
+                    <Checkbox
+                      checked={vaultAcknowledged}
+                      onCheckedChange={(checked) => { setVaultAcknowledged(checked === true); setVaultError(null); }}
+                    />
+                    I understand this can't be undone if I forget my password
+                  </label>
                   {vaultError && <p className="text-xs text-error">{vaultError}</p>}
                 </div>
               ) : (
@@ -177,7 +191,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                 </Button>
                 <Button
                   onClick={() => { void handleVaultNext(); }}
-                  disabled={vaultLoading || (!skipVault && !isSetup && (password.length < 8 || password !== confirm))}
+                  disabled={vaultLoading || (!skipVault && !isSetup && (password.length < 8 || password !== confirm || !vaultAcknowledged))}
                   className="flex-1 h-9"
                 >
                   {vaultLoading ? "Setting up…" : "Continue"}
