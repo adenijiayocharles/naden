@@ -144,6 +144,7 @@ pub async fn vault_setup(
     }
     let key = crate::vault::master_password::setup(&state.db, &master_password).await?;
     *state.vault_key.lock().await = Some(key);
+    log::info!("[vault] master password configured");
     Ok(())
 }
 
@@ -184,10 +185,12 @@ pub async fn vault_unlock(
             *state.manually_locked.lock().await = false;
             *state.vault_key.lock().await = Some(key);
             *state.last_vault_activity.lock().await = std::time::Instant::now();
+            log::info!("[vault] unlocked");
             Ok(true)
         }
         None => {
             let (count, until) = record_failed_attempt(&mut failures);
+            log::warn!("[vault] unlock failed (attempt {count})");
             drop(failures);
             persist_lockout(&state.db, count, until).await;
             Ok(false)
@@ -221,6 +224,7 @@ pub async fn vault_lock(state: tauri::State<'_, AppState>) -> Result<(), AppErro
     *state.manually_locked.lock().await = true;
     // Assigning None drops the Zeroizing<[u8;32]>, which scrubs the key bytes.
     *state.vault_key.lock().await = None;
+    log::info!("[vault] locked");
     Ok(())
 }
 
@@ -238,7 +242,9 @@ pub async fn store_credential(
             Some(k) => **k,
         }
     };
-    vault::store_credential(&state.db, &key, &secret).await
+    let id = vault::store_credential(&state.db, &key, &secret).await?;
+    log::info!("[vault] credential stored");
+    Ok(id)
 }
 
 #[tauri::command]
@@ -512,7 +518,9 @@ pub async fn delete_credential(
         }
     }
 
-    vault::delete_credential(&state.db, &vault_credential_id).await
+    vault::delete_credential(&state.db, &vault_credential_id).await?;
+    log::info!("[vault] credential deleted");
+    Ok(())
 }
 
 #[cfg(test)]

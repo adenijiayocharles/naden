@@ -10,6 +10,7 @@ use crate::ssh::{
     launcher,
 };
 use crate::{vault, AppState};
+use tauri::Emitter;
 use zeroize::Zeroizing;
 
 /// Expand a leading `~` to the user's home directory using Tauri's path resolver.
@@ -329,6 +330,12 @@ pub async fn confirm_ssh_config_import(
             jump_host_id: None,
             initial_dir: None,
             env_vars: None,
+            // `ImportPreview` has no hook fields today, but if one is ever
+            // added, do not wire it through here — imported servers must
+            // never inherit a hook to run, since `~/.ssh/config` can come
+            // from outside the local user (a shared dotfiles repo, a
+            // company baseline, etc.) and hooks run via `sh -c` with no
+            // allowlist (release_review.md #7).
             pre_connect_hook: None,
             post_disconnect_hook: None,
             terminal_theme: None,
@@ -397,6 +404,52 @@ pub async fn open_terminal_session(
 ) -> Result<(), AppError> {
     let server = get_server_cached(&state, &server_id).await?;
     let s = &server.server;
+    log::info!("[ssh] opening session {session_id} → {}@{}:{}", s.username, s.hostname, s.port);
+
+    // Confirm any pre/post-connect hook whose content hasn't been explicitly
+    // approved yet (new, or edited since the last approval) before doing any
+    // other work. Hooks run via `sh -c` with no allowlist — harmless for
+    // hooks the user authored themselves, but a real injection vector the
+    // moment any future import/sync feature could populate them from
+    // outside the local user (release_review.md #7). Both hooks are
+    // confirmed together up front, rather than waiting until the
+    // post-disconnect hook actually fires from a detached background
+    // thread, by which point there's no session/window left to safely
+    // prompt against.
+    let pending_pre = pending_hook(
+        s.pre_connect_hook.as_deref(),
+        s.pre_connect_hook_confirmed.as_deref(),
+    );
+    let pending_post = pending_hook(
+        s.post_disconnect_hook.as_deref(),
+        s.post_disconnect_hook_confirmed.as_deref(),
+    );
+    if pending_pre.is_some() || pending_post.is_some() {
+        let accepted = confirm_hooks_interactive(
+            &session_id,
+            pending_pre,
+            pending_post,
+            &app_handle,
+            &state.session_manager.hook_confirmations,
+        )
+        .await;
+        if !accepted {
+            return Err(AppError::Ssh(
+                "connection cancelled: hook command was not confirmed".into(),
+            ));
+        }
+        // Persist the trimmed value actually shown/confirmed (and the value
+        // execution itself trims to) — not the raw stored hook — so a later
+        // comparison against an unchanged hook with different surrounding
+        // whitespace doesn't loop back into "pending" forever.
+        queries::confirm_server_hooks_db(
+            &state.db,
+            &server_id,
+            s.pre_connect_hook.as_deref().map(str::trim),
+            s.post_disconnect_hook.as_deref().map(str::trim),
+        )
+        .await?;
+    }
 
     // Auth, jump-chain resolution, the log-entry insert, and the keepalive
     // setting lookup are all independent of each other — run them concurrently
@@ -418,6 +471,7 @@ pub async fn open_terminal_session(
     let db = state.db.clone();
     let on_close = Box::new(move |outcome: String, error_msg: Option<String>| {
         let session_end = chrono::Utc::now().to_rfc3339();
+        log::info!("[ssh] session {} closed: {outcome}", log_id);
         // run_session runs on a std::thread with no async runtime. Dispatch the
         // DB write onto Tauri's existing runtime rather than constructing a new one.
         tauri::async_runtime::spawn(async move {
@@ -530,6 +584,7 @@ pub async fn close_terminal_session(
     session_id: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
+    log::info!("[ssh] closing session {session_id}");
     state.session_manager.close_session(&session_id);
     Ok(())
 }
@@ -644,3 +699,88 @@ pub async fn confirm_host_key(
         ))),
     }
 }
+
+/// Payload emitted when a server's pre/post-connect hook needs explicit
+/// confirmation before its first run (or after being edited). Only includes
+/// whichever hook(s) are actually pending — one that hasn't changed since
+/// its last confirmation is omitted.
+#[derive(serde::Serialize, Clone)]
+pub struct HookConfirmPromptPayload {
+    pub pre_connect_hook: Option<String>,
+    pub post_disconnect_hook: Option<String>,
+}
+
+/// Returns the trimmed hook text if it's non-empty and differs from the
+/// last-confirmed snapshot, compared trim-to-trim since execution always
+/// trims too — i.e. it needs explicit confirmation before running.
+fn pending_hook<'a>(hook: Option<&'a str>, confirmed: Option<&str>) -> Option<&'a str> {
+    let trimmed = hook.map(str::trim).filter(|h| !h.is_empty())?;
+    let confirmed_trimmed = confirmed.map(str::trim).filter(|h| !h.is_empty());
+    (Some(trimmed) != confirmed_trimmed).then_some(trimmed)
+}
+
+/// Emits a `ssh:hook-confirm-prompt:{sessionId}` event showing the exact
+/// hook command(s) about to run, and waits up to 60s for the user to accept
+/// or reject via `confirm_hooks`. Mirrors `verify_host_key_interactive`'s
+/// "pause, prompt, wait" shape; uses `tokio::oneshot` rather than a blocking
+/// `mpsc` channel since this runs in the already-async `open_terminal_session`.
+async fn confirm_hooks_interactive(
+    session_id: &str,
+    pending_pre: Option<&str>,
+    pending_post: Option<&str>,
+    app_handle: &tauri::AppHandle,
+    confirmations: &crate::ssh::connection::HookConfirmations,
+) -> bool {
+    let (tx, rx) = tokio::sync::oneshot::channel::<bool>();
+    confirmations
+        .lock()
+        .await
+        .insert(session_id.to_string(), tx);
+
+    let _ = app_handle.emit(
+        &format!("ssh:hook-confirm-prompt:{session_id}"),
+        HookConfirmPromptPayload {
+            pre_connect_hook: pending_pre.map(str::to_string),
+            post_disconnect_hook: pending_post.map(str::to_string),
+        },
+    );
+
+    let accepted = tokio::time::timeout(std::time::Duration::from_secs(60), rx)
+        .await
+        .ok()
+        .and_then(Result::ok)
+        .unwrap_or(false);
+
+    confirmations.lock().await.remove(session_id);
+    accepted
+}
+
+/// Respond to a `ssh:hook-confirm-prompt:{sessionId}` event. Called by the
+/// frontend after the user accepts or rejects running the displayed hook(s).
+#[tauri::command]
+pub async fn confirm_hooks(
+    session_id: String,
+    accepted: bool,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    let tx = state
+        .session_manager
+        .hook_confirmations
+        .lock()
+        .await
+        .remove(&session_id);
+
+    match tx {
+        Some(sender) => {
+            let _ = sender.send(accepted);
+            Ok(())
+        }
+        None => Err(AppError::Validation(format!(
+            "no pending hook confirmation for session {session_id}"
+        ))),
+    }
+}
+
+#[cfg(test)]
+#[path = "ssh_commands_tests.rs"]
+mod tests;

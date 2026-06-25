@@ -43,6 +43,7 @@ pub async fn open_sftp_session(
     let jump_chain = build_jump_chain(&server, &state, &app_handle).await?;
 
     let s = &server.server;
+    log::info!("[sftp] opening session {session_id} → {}@{}:{}", s.username, s.hostname, u16::try_from(s.port).unwrap_or(22));
     state.sftp_manager.open_session(
         session_id,
         s.hostname.clone(),
@@ -59,6 +60,7 @@ pub async fn close_sftp_session(
     session_id: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
+    log::info!("[sftp] closing session {session_id}");
     state.sftp_manager.close_session(&session_id);
     Ok(())
 }

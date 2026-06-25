@@ -86,7 +86,13 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_log::Builder::new().build())
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Info)
+                .max_file_size(5 * 1024 * 1024)
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepOne)
+                .build(),
+        )
         .plugin(tauri_plugin_clipboard_manager::init())
         .invoke_handler(tauri::generate_handler![
             // Server CRUD
@@ -178,6 +184,7 @@ pub fn run() {
             commands::ssh_commands::send_terminal_input,
             commands::ssh_commands::resize_terminal,
             commands::ssh_commands::confirm_host_key,
+            commands::ssh_commands::confirm_hooks,
             commands::ssh_commands::remove_known_host_entry,
             // Discovery
             commands::discovery_commands::scan_lan_hosts,
