@@ -14,15 +14,11 @@
     "dialog:allow-message",
     {
       "identifier": "fs:allow-write-text-file",
-      "allow": [{ "path": "$HOME/**" }]
-    },
-    {
-      "identifier": "fs:allow-write-file",
-      "allow": [{ "path": "$HOME/**" }]
-    },
-    {
-      "identifier": "fs:allow-read-file",
-      "allow": [{ "path": "$HOME/**" }]
+      "allow": [
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DESKTOP/**" }
+      ]
     },
     "clipboard-manager:allow-write-text",
     "updater:default",
