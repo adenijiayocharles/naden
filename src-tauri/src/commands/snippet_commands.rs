@@ -68,9 +68,12 @@ pub async fn update_snippet(
 
 #[tauri::command]
 pub async fn delete_snippet(id: String, state: tauri::State<'_, AppState>) -> Result<(), AppError> {
-    sqlx::query("DELETE FROM snippets WHERE id = ?")
+    let result = sqlx::query("DELETE FROM snippets WHERE id = ?")
         .bind(&id)
         .execute(&state.db)
         .await?;
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound(format!("snippet '{id}' not found")));
+    }
     Ok(())
 }

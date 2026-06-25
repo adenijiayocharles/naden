@@ -155,10 +155,13 @@ async fn update_playbook_db(
 }
 
 async fn delete_playbook_db(db: &SqlitePool, id: &str) -> Result<(), AppError> {
-    sqlx::query("DELETE FROM playbooks WHERE id = ?")
+    let result = sqlx::query("DELETE FROM playbooks WHERE id = ?")
         .bind(id)
         .execute(db)
         .await?;
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound(format!("playbook '{id}' not found")));
+    }
     Ok(())
 }
 

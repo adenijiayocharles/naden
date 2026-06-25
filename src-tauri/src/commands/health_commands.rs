@@ -27,7 +27,9 @@ pub async fn fetch_server_health(
     let jump_chain = build_jump_chain(&server, &state, &app).await?;
 
     let host = server.server.hostname.clone();
-    let port = u16::try_from(server.server.port).unwrap_or(22);
+    let port = u16::try_from(server.server.port).map_err(|_| {
+        AppError::Validation(format!("port {} is out of valid range", server.server.port))
+    })?;
     let username = server.server.username.clone();
 
     tauri::async_runtime::spawn_blocking(move || {
