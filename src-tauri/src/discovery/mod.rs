@@ -12,7 +12,7 @@ use tokio::net::TcpStream;
 use tokio::sync::Semaphore;
 
 use crate::error::AppError;
-use crate::ssh::connection::known_hosts_path;
+use crate::ssh::connection::{known_hosts_path, recover_lock};
 
 const SCAN_PORT: i64 = 22;
 const CONNECT_TIMEOUT: Duration = Duration::from_millis(300);
@@ -95,7 +95,7 @@ pub async fn scan_lan(app: &tauri::AppHandle) -> Result<Vec<DiscoveredHost>, App
 
             let done = scanned.fetch_add(1, Ordering::Relaxed) + 1;
             let now = Instant::now();
-            let mut last = last_emit.lock().expect("last_emit mutex poisoned");
+            let mut last = recover_lock(last_emit.lock());
             if done == total || now.duration_since(*last) >= PROGRESS_THROTTLE {
                 *last = now;
                 let _ = app.emit(
