@@ -89,7 +89,8 @@ function reorderById<T extends { id: string }>(list: T[], fromId: string, toId: 
 export default function AppShell() {
   useAppInit();
   useWakeReconnect();
-  useKeyboardShortcuts();
+  const [showNewTabPicker, setShowNewTabPicker] = useState(false);
+  useKeyboardShortcuts({ onNewTab: () => setShowNewTabPicker(true) });
   useVaultHeartbeat();
   useMenuEvents();
   useTrayEvents();
@@ -163,7 +164,6 @@ export default function AppShell() {
     ? sftpSessions.find((x) => x.serverId === activeTerminalSession.serverId)
     : undefined;
   const isSftpActive = activePanelType === "sftp" && linkedSftpSession?.id === sftpActiveId;
-  const [showNewTabPicker, setShowNewTabPicker] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
   const [pickerError, setPickerError] = useState<string | null>(null);
   const newTabButtonRef = useRef<HTMLButtonElement>(null);
