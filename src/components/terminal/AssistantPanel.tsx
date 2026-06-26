@@ -192,7 +192,7 @@ export function AssistantPanel({
         useAssistantStore.getState().setPersistEnabled(s.persistHistory);
         if (s.persistHistory) void useAssistantStore.getState().loadPersisted(serverId);
       })
-      .catch(() => { if (!cancelled) setStatus({ openaiConfigured: false, anthropicConfigured: false, activeProvider: null, enabled: false, persistHistory: false }); });
+      .catch(() => { if (!cancelled) setStatus({ openaiConfigured: false, anthropicConfigured: false, openrouterConfigured: false, activeProvider: null, enabled: false, persistHistory: false }); });
     return () => { cancelled = true; };
   }, [serverId]);
 

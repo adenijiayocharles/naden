@@ -214,20 +214,20 @@ export default function SettingsPage() {
 
   // AI Assistant
   const [assistantStatus, setAssistantStatus] = useState<AssistantStatus | null>(null);
-  const [addingProvider, setAddingProvider] = useState<"openai" | "anthropic" | null>(null);
+  const [addingProvider, setAddingProvider] = useState<"openai" | "anthropic" | "openrouter" | null>(null);
   const [addKeyInput, setAddKeyInput] = useState("");
-  const [confirmForgetProvider, setConfirmForgetProvider] = useState<"openai" | "anthropic" | null>(null);
+  const [confirmForgetProvider, setConfirmForgetProvider] = useState<"openai" | "anthropic" | "openrouter" | null>(null);
   const [assistantError, setAssistantError] = useState<string | null>(null);
   const [assistantLoading, setAssistantLoading] = useState(false);
   useEffect(() => {
     assistantCommands.getStatus().then(setAssistantStatus).catch(() => {});
   }, []);
-  const submitAddKey = async (provider: "openai" | "anthropic") => {
+  const submitAddKey = async (provider: "openai" | "anthropic" | "openrouter") => {
     setAssistantLoading(true);
     setAssistantError(null);
     try {
       await assistantCommands.setApiKey(provider, addKeyInput);
-      if (!assistantStatus?.openaiConfigured && !assistantStatus?.anthropicConfigured) {
+      if (!assistantStatus?.openaiConfigured && !assistantStatus?.anthropicConfigured && !assistantStatus?.openrouterConfigured) {
         await assistantCommands.setEnabled(true);
       }
       setAssistantStatus(await assistantCommands.getStatus());
@@ -240,7 +240,7 @@ export default function SettingsPage() {
       setAssistantLoading(false);
     }
   };
-  const forgetProviderKey = async (provider: "openai" | "anthropic") => {
+  const forgetProviderKey = async (provider: "openai" | "anthropic" | "openrouter") => {
     setAssistantLoading(true);
     setAssistantError(null);
     try {
@@ -1047,10 +1047,10 @@ export default function SettingsPage() {
               />
 
               {/* Per-provider rows */}
-              {(["openai", "anthropic"] as const).map((p) => {
-                const isConfigured = p === "openai" ? assistantStatus?.openaiConfigured : assistantStatus?.anthropicConfigured;
+              {(["openai", "anthropic", "openrouter"] as const).map((p) => {
+                const isConfigured = p === "openai" ? assistantStatus?.openaiConfigured : p === "anthropic" ? assistantStatus?.anthropicConfigured : assistantStatus?.openrouterConfigured;
                 const isAdding = addingProvider === p;
-                const label = p === "openai" ? "OpenAI" : "Anthropic";
+                const label = p === "openai" ? "OpenAI" : p === "anthropic" ? "Anthropic" : "OpenRouter";
                 return (
                   <div key={p} className="border-b border-stroke-subtle">
                     <div className="flex items-center justify-between py-3">
@@ -1110,27 +1110,28 @@ export default function SettingsPage() {
                 );
               })}
 
-              {/* Active provider — only when both configured */}
-              {assistantStatus?.openaiConfigured && assistantStatus?.anthropicConfigured && (
+              {/* Active provider — only when more than one is configured */}
+              {[assistantStatus?.openaiConfigured, assistantStatus?.anthropicConfigured, assistantStatus?.openrouterConfigured].filter(Boolean).length > 1 && (
                 <Row>
                   <RowLabel title="Active provider" description="Which provider handles your messages" />
                   <Select
-                    value={assistantStatus.activeProvider ?? "openai"}
+                    value={assistantStatus?.activeProvider ?? "openai"}
                     onValueChange={(value) => { if (value) void switchToProvider(value); }}
                   >
                     <SelectTrigger aria-label="Active AI provider" className="h-10 shrink-0">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="openai">OpenAI</SelectItem>
-                      <SelectItem value="anthropic">Anthropic</SelectItem>
+                      {assistantStatus?.openaiConfigured && <SelectItem value="openai">OpenAI</SelectItem>}
+                      {assistantStatus?.anthropicConfigured && <SelectItem value="anthropic">Anthropic</SelectItem>}
+                      {assistantStatus?.openrouterConfigured && <SelectItem value="openrouter">OpenRouter</SelectItem>}
                     </SelectContent>
                   </Select>
                 </Row>
               )}
 
               {/* Enable + history — only when at least one key configured */}
-              {(assistantStatus?.openaiConfigured || assistantStatus?.anthropicConfigured) && (
+              {(assistantStatus?.openaiConfigured || assistantStatus?.anthropicConfigured || assistantStatus?.openrouterConfigured) && (
                 <>
                   <Row>
                     <RowLabel title="Enable assistant" />
@@ -1164,7 +1165,7 @@ export default function SettingsPage() {
               {/* Per-provider forget confirmation */}
               {confirmForgetProvider && (
                 <ConfirmDeleteModal
-                  title={`Forget ${confirmForgetProvider === "openai" ? "OpenAI" : "Anthropic"} key?`}
+                  title={`Forget ${confirmForgetProvider === "openai" ? "OpenAI" : confirmForgetProvider === "anthropic" ? "Anthropic" : "OpenRouter"} key?`}
                   description="The stored API key will be permanently removed."
                   confirmLabel="Forget key"
                   busy={assistantLoading}

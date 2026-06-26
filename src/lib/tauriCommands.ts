@@ -210,6 +210,7 @@ export const crashReportingCommands = {
 export interface AssistantStatus {
   openaiConfigured: boolean;
   anthropicConfigured: boolean;
+  openrouterConfigured: boolean;
   activeProvider: string | null;
   enabled: boolean;
   persistHistory: boolean;

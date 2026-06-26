@@ -1,5 +1,6 @@
 pub mod anthropic;
 pub mod openai;
+pub mod openrouter;
 
 use async_trait::async_trait;
 use futures_util::{Stream, StreamExt};
@@ -32,11 +33,12 @@ pub trait AssistantProvider: Send + Sync {
     ) -> Result<(), AppError>;
 }
 
-/// Resolves the stored provider id (`"openai"` | `"anthropic"`) to its client.
+/// Resolves the stored provider id (`"openai"` | `"anthropic"` | `"openrouter"`) to its client.
 pub fn provider_for(id: &str) -> Result<Box<dyn AssistantProvider>, AppError> {
     match id {
         "openai" => Ok(Box::new(openai::OpenAiProvider)),
         "anthropic" => Ok(Box::new(anthropic::AnthropicProvider)),
+        "openrouter" => Ok(Box::new(openrouter::OpenRouterProvider)),
         other => Err(AppError::Validation(format!(
             "unknown assistant provider: {other}"
         ))),
