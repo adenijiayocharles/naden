@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import EmptyState from "../shared/EmptyState";
+import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import type { SessionLog } from "../../types/sessionLog";
 import { sessionLogCommands } from "../../lib/tauriCommands";
 import { useServerStore } from "../../store/serverStore";
@@ -29,6 +30,7 @@ export default function RecordingsView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterServer, setFilterServer] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<SessionLog | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -68,6 +70,7 @@ export default function RecordingsView() {
       setError(formatError(e));
     } finally {
       setDeletingId(null);
+      setPendingDelete(null);
     }
   };
 
@@ -155,7 +158,7 @@ export default function RecordingsView() {
                       <Button
                         variant="ghost"
                         size="icon-xs"
-                        onClick={() => void handleDelete(log)}
+                        onClick={() => setPendingDelete(log)}
                         disabled={deletingId === log.id}
                         title="Delete recording"
                         className="text-faint hover:text-red-400"
@@ -186,6 +189,16 @@ export default function RecordingsView() {
             </div>
           )}
         </div>
+      )}
+
+      {pendingDelete && (
+        <ConfirmDeleteModal
+          title="Delete recording?"
+          description={<>Recording from <span className="text-white font-medium">{pendingDelete.serverDisplayName}</span> will be permanently deleted. This cannot be undone.</>}
+          busy={deletingId === pendingDelete.id}
+          onConfirm={() => { void handleDelete(pendingDelete); }}
+          onCancel={() => setPendingDelete(null)}
+        />
       )}
     </div>
   );

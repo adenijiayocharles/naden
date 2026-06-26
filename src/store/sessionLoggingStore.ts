@@ -8,6 +8,21 @@ const FLUSH_THRESHOLD = 64 * 1024;
 // incoming terminal chunk eliminates cascading re-renders during active recording.
 const pending = new Map<string, { chunks: Uint8Array[]; bytes: number }>();
 
+// eslint-disable-next-line no-control-regex -- \x1b is the ESC byte that starts terminal escape sequences
+const ANSI_RE = /\x1b(?:\[[0-9;?]*[a-zA-Z]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[@-_])/g;
+
+const decoder = new TextDecoder();
+const encoder = new TextEncoder();
+
+function stripAnsi(bytes: Uint8Array): Uint8Array {
+  const text = decoder.decode(bytes);
+  const clean = text
+    .replace(ANSI_RE, "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
+  return encoder.encode(clean);
+}
+
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = "";
   const chunk = 8192;
@@ -30,7 +45,7 @@ function concatChunks(chunks: Uint8Array[]): Uint8Array {
 
 async function flushChunks(logId: string, chunks: Uint8Array[]): Promise<void> {
   if (chunks.length === 0) return;
-  const combined = concatChunks(chunks);
+  const combined = stripAnsi(concatChunks(chunks));
   await sessionLogCommands.appendSessionLog(logId, bytesToBase64(combined));
 }
 

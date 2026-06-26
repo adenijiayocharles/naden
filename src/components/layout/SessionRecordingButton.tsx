@@ -10,8 +10,7 @@ interface Props {
 export default function SessionRecordingButton({ sessionId, serverId, serverName }: Props) {
   const startRecording = useSessionLoggingStore((s) => s.startRecording);
   const stopRecording = useSessionLoggingStore((s) => s.stopRecording);
-  const isRecording = useSessionLoggingStore((s) => s.isRecording);
-  const recording = isRecording(sessionId);
+  const recording = useSessionLoggingStore((s) => s.isRecording(sessionId));
 
   return (
     <Button
