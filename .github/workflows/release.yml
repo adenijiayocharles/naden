@@ -11,7 +11,35 @@ on:
         required: true
 
 jobs:
+  test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Lint (Rust)
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+
+      - name: Test (Rust)
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: Test (frontend)
+        run: npx vitest run
+
   release:
+    needs: test
     runs-on: macos-14
     permissions:
       contents: write
@@ -42,6 +70,14 @@ jobs:
             exit 1
           fi
 
+      - name: Warn if Sentry DSN is absent
+        env:
+          NADEN_SENTRY_DSN: ${{ secrets.NADEN_SENTRY_DSN }}
+        run: |
+          if [ -z "$NADEN_SENTRY_DSN" ]; then
+            echo "::warning::NADEN_SENTRY_DSN secret is not set — crash reporting will be disabled in this release."
+          fi
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -56,6 +92,7 @@ jobs:
           # Opt-in crash reporting stays unavailable (toggle disabled in
           # Settings) until this secret is added — see src-tauri/src/crash_reporting.rs.
           NADEN_SENTRY_DSN: ${{ secrets.NADEN_SENTRY_DSN }}
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
         with:
           tagName: ${{ github.event.inputs.tag || github.ref_name }}
           releaseName: "naden ${{ github.event.inputs.tag || github.ref_name }}"

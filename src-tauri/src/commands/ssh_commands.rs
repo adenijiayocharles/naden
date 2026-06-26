@@ -404,7 +404,12 @@ pub async fn open_terminal_session(
 ) -> Result<(), AppError> {
     let server = get_server_cached(&state, &server_id).await?;
     let s = &server.server;
-    log::info!("[ssh] opening session {session_id} → {}@{}:{}", s.username, s.hostname, s.port);
+    log::info!(
+        "[ssh] opening session {session_id} → {}@{}:{}",
+        s.username,
+        s.hostname,
+        s.port
+    );
 
     // Confirm any pre/post-connect hook whose content hasn't been explicitly
     // approved yet (new, or edited since the last approval) before doing any
@@ -684,10 +689,9 @@ pub async fn confirm_host_key(
     accepted: bool,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
-    let tx = crate::ssh::connection::recover_lock(
-        state.session_manager.host_key_confirmations.lock(),
-    )
-    .remove(&session_id);
+    let tx =
+        crate::ssh::connection::recover_lock(state.session_manager.host_key_confirmations.lock())
+            .remove(&session_id);
 
     match tx {
         Some(sender) => {

@@ -136,7 +136,10 @@ async fn init_db_creates_pre_migration_backup_for_existing_db() {
     pool.close().await;
 
     let backup_path = dir.join("naden.db.pre-migration-backup");
-    assert!(!backup_path.exists(), "backup should not exist after first-ever launch");
+    assert!(
+        !backup_path.exists(),
+        "backup should not exist after first-ever launch"
+    );
 
     // Second launch against the existing DB — backup must be written.
     let pool2 = init_db(dir.clone()).await.expect("second init_db failed");

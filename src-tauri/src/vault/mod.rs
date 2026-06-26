@@ -153,8 +153,7 @@ pub async fn reencrypt_all_tx(
         );
 
         let mut new_nonce_bytes = [0u8; 12];
-        getrandom::getrandom(&mut new_nonce_bytes)
-            .map_err(|e| AppError::Vault(e.to_string()))?;
+        getrandom::getrandom(&mut new_nonce_bytes).map_err(|e| AppError::Vault(e.to_string()))?;
 
         let new_ciphertext = new_cipher
             .encrypt(Nonce::from_slice(&new_nonce_bytes), plaintext.as_ref())

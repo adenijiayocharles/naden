@@ -5,6 +5,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::Emitter;
 
+use crate::ssh::connection::recover_lock;
+
 /// Extensions (lowercase, without leading dot) that are safe to open in the
 /// user's default text editor via `open`/`xdg-open`. Files with no extension
 /// are also permitted (treated as plain text).
@@ -175,16 +177,13 @@ impl SftpManager {
         let (tx, rx) = std::sync::mpsc::sync_channel(64);
         let cancel_flag = Arc::new(AtomicBool::new(false));
 
-        self.sessions
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .insert(
-                session_id.clone(),
-                SftpSessionHandle {
-                    tx,
-                    cancel_flag: Arc::clone(&cancel_flag),
-                },
-            );
+        recover_lock(self.sessions.lock()).insert(
+            session_id.clone(),
+            SftpSessionHandle {
+                tx,
+                cancel_flag: Arc::clone(&cancel_flag),
+            },
+        );
 
         let sessions = Arc::clone(&self.sessions);
         let sid = session_id;
@@ -211,12 +210,7 @@ impl SftpManager {
     /// flag is reset at the start of each transfer, so this has no effect
     /// when no transfer is running.
     pub fn cancel_transfer(&self, session_id: &str) {
-        if let Some(handle) = self
-            .sessions
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .get(session_id)
-        {
+        if let Some(handle) = recover_lock(self.sessions.lock()).get(session_id) {
             handle.cancel_flag.store(true, Ordering::Relaxed);
         }
     }
@@ -225,7 +219,7 @@ impl SftpManager {
         // Clone the sender before releasing the lock so we don't hold the mutex
         // during send(), which blocks when the 64-slot channel is full.
         let tx = {
-            let sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
+            let sessions = recover_lock(self.sessions.lock());
             sessions
                 .get(session_id)
                 .ok_or_else(|| AppError::Ssh(format!("SFTP session {session_id} not found")))?
@@ -237,12 +231,7 @@ impl SftpManager {
     }
 
     pub fn close_session(&self, session_id: &str) {
-        if let Some(handle) = self
-            .sessions
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .get(session_id)
-        {
+        if let Some(handle) = recover_lock(self.sessions.lock()).get(session_id) {
             let _ = handle.tx.send(SftpMessage::Close);
         }
     }
@@ -257,10 +246,7 @@ struct SessionGuard<'a> {
 
 impl Drop for SessionGuard<'_> {
     fn drop(&mut self) {
-        self.sessions
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .remove(self.id);
+        recover_lock(self.sessions.lock()).remove(self.id);
     }
 }
 

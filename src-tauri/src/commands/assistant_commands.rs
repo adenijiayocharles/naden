@@ -476,7 +476,8 @@ pub async fn send_assistant_message(
             Some(k) => **k,
         }
     };
-    let api_key = zeroize::Zeroizing::new(vault::retrieve_credential(&state.db, &vault_key, &key_id).await?);
+    let api_key =
+        zeroize::Zeroizing::new(vault::retrieve_credential(&state.db, &vault_key, &key_id).await?);
     let provider = assistant::provider_for(&provider_id)?;
 
     if messages.len() > MAX_MESSAGES {

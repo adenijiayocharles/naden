@@ -18,7 +18,10 @@ fn logs_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, AppError> {
     Ok(dir)
 }
 
-async fn get_log_path(log_id: &str, state: &tauri::State<'_, AppState>) -> Result<Option<String>, AppError> {
+async fn get_log_path(
+    log_id: &str,
+    state: &tauri::State<'_, AppState>,
+) -> Result<Option<String>, AppError> {
     let path: Option<String> =
         sqlx::query_scalar("SELECT file_path FROM session_logs WHERE id = ?")
             .bind(log_id)
@@ -109,15 +112,18 @@ pub async fn finish_session_log(
         .and_then(|p| std::fs::metadata(p).ok())
         .map(|m| m.len() as i64);
 
-    let result = sqlx::query("UPDATE session_logs SET end_time = ?, file_size_bytes = ? WHERE id = ?")
-        .bind(&now)
-        .bind(file_size)
-        .bind(&log_id)
-        .execute(&state.db)
-        .await?;
+    let result =
+        sqlx::query("UPDATE session_logs SET end_time = ?, file_size_bytes = ? WHERE id = ?")
+            .bind(&now)
+            .bind(file_size)
+            .bind(&log_id)
+            .execute(&state.db)
+            .await?;
 
     if result.rows_affected() == 0 {
-        return Err(AppError::NotFound(format!("session log {log_id} not found")));
+        return Err(AppError::NotFound(format!(
+            "session log {log_id} not found"
+        )));
     }
 
     Ok(())

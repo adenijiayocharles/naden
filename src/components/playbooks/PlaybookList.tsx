@@ -306,12 +306,20 @@ export default function PlaybookList() {
   const [deleting, setDeleting] = useState<Playbook | null>(null);
   const [deletingBusy, setDeletingBusy] = useState(false);
 
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const handleConfirmDelete = async () => {
     if (!deleting) return;
     setDeletingBusy(true);
-    await deletePlaybook(deleting.id);
-    setDeleting(null);
-    setDeletingBusy(false);
+    setDeleteError(null);
+    try {
+      await deletePlaybook(deleting.id);
+      setDeleting(null);
+    } catch (e) {
+      setDeleteError(String(e));
+    } finally {
+      setDeletingBusy(false);
+    }
   };
 
   const filtered = useMemo(() => {
@@ -389,10 +397,10 @@ export default function PlaybookList() {
       {deleting && (
         <ConfirmDeleteModal
           title="Delete playbook?"
-          description={`"${deleting.title}" and its ${deleting.steps.length} step${deleting.steps.length === 1 ? "" : "s"} will be permanently deleted.`}
+          description={deleteError ?? `"${deleting.title}" and its ${deleting.steps.length} step${deleting.steps.length === 1 ? "" : "s"} will be permanently deleted.`}
           busy={deletingBusy}
           onConfirm={() => { void handleConfirmDelete(); }}
-          onCancel={() => setDeleting(null)}
+          onCancel={() => { setDeleting(null); setDeleteError(null); }}
         />
       )}
     </div>

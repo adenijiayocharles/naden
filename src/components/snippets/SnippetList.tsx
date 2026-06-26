@@ -164,12 +164,20 @@ export default function SnippetList() {
   const [deleting, setDeleting] = useState<Snippet | null>(null);
   const [deletingBusy, setDeletingBusy] = useState(false);
 
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const handleConfirmDelete = async () => {
     if (!deleting) return;
     setDeletingBusy(true);
-    await deleteSnippet(deleting.id);
-    setDeleting(null);
-    setDeletingBusy(false);
+    setDeleteError(null);
+    try {
+      await deleteSnippet(deleting.id);
+      setDeleting(null);
+    } catch (e) {
+      setDeleteError(String(e));
+    } finally {
+      setDeletingBusy(false);
+    }
   };
 
   const filtered = useMemo(() => {
@@ -245,10 +253,10 @@ export default function SnippetList() {
       {deleting && (
         <ConfirmDeleteModal
           title="Delete snippet?"
-          description={`"${deleting.title}" will be permanently deleted.`}
+          description={deleteError ?? `"${deleting.title}" will be permanently deleted.`}
           busy={deletingBusy}
           onConfirm={() => { void handleConfirmDelete(); }}
-          onCancel={() => setDeleting(null)}
+          onCancel={() => { setDeleting(null); setDeleteError(null); }}
         />
       )}
     </div>

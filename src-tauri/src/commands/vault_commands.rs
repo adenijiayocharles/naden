@@ -91,7 +91,9 @@ pub(crate) async fn get_or_create_device_key(db: &sqlx::SqlitePool) -> Result<[u
             .map_err(|e| AppError::Database(e.to_string()))?;
 
     if let Some(b64) = stored {
-        let bytes = STANDARD.decode(&b64).map_err(|e| AppError::Vault(e.to_string()))?;
+        let bytes = STANDARD
+            .decode(&b64)
+            .map_err(|e| AppError::Vault(e.to_string()))?;
         if bytes.len() == 32 {
             let mut key = [0u8; 32];
             key.copy_from_slice(&bytes);
@@ -292,8 +294,7 @@ pub async fn vault_disable_password(
 
             // Generate a random per-device key for no-password mode.
             let mut device_key = [0u8; 32];
-            getrandom::getrandom(&mut device_key)
-                .map_err(|e| AppError::Vault(e.to_string()))?;
+            getrandom::getrandom(&mut device_key).map_err(|e| AppError::Vault(e.to_string()))?;
             let device_key_b64 = STANDARD.encode(device_key);
 
             // Atomically: re-encrypt credentials + store device key + remove PBKDF2 meta.
@@ -308,12 +309,10 @@ pub async fn vault_disable_password(
                 .execute(&mut *tx)
                 .await
                 .map_err(|e| AppError::Database(e.to_string()))?;
-            sqlx::query(
-                "DELETE FROM vault_meta WHERE key IN ('pbkdf2_salt', 'verification')",
-            )
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
+            sqlx::query("DELETE FROM vault_meta WHERE key IN ('pbkdf2_salt', 'verification')")
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| AppError::Database(e.to_string()))?;
             sqlx::query("INSERT OR REPLACE INTO vault_meta (key, value) VALUES ('password_required', 'false')")
                 .execute(&mut *tx)
                 .await
@@ -375,10 +374,12 @@ pub async fn vault_enable_password(
         .map_err(|e| AppError::Database(e.to_string()))?;
     vault::reencrypt_all_tx(&mut tx, &device_key, &*new_key).await?;
     master_password::commit_setup_tx(&mut tx, &salt_b64, &verification_b64).await?;
-    sqlx::query("INSERT OR REPLACE INTO vault_meta (key, value) VALUES ('password_required', 'true')")
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
+    sqlx::query(
+        "INSERT OR REPLACE INTO vault_meta (key, value) VALUES ('password_required', 'true')",
+    )
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| AppError::Database(e.to_string()))?;
     tx.commit()
         .await
         .map_err(|e| AppError::Database(e.to_string()))?;

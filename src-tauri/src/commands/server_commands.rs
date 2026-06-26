@@ -266,7 +266,9 @@ pub async fn list_tags(state: tauri::State<'_, AppState>) -> Result<Vec<Tag>, Ap
 
 #[tauri::command]
 pub async fn create_tag(name: String, state: tauri::State<'_, AppState>) -> Result<Tag, AppError> {
-    queries::create_tag_db(&state.db, &name).await
+    let tag = queries::create_tag_db(&state.db, &name).await?;
+    refresh_cache(&state).await;
+    Ok(tag)
 }
 
 #[tauri::command]
@@ -275,10 +277,14 @@ pub async fn update_tag(
     name: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<Tag, AppError> {
-    queries::update_tag_db(&state.db, &id, &name).await
+    let tag = queries::update_tag_db(&state.db, &id, &name).await?;
+    refresh_cache(&state).await;
+    Ok(tag)
 }
 
 #[tauri::command]
 pub async fn delete_tag(id: String, state: tauri::State<'_, AppState>) -> Result<(), AppError> {
-    queries::delete_tag_db(&state.db, &id).await
+    queries::delete_tag_db(&state.db, &id).await?;
+    refresh_cache(&state).await;
+    Ok(())
 }

@@ -45,8 +45,8 @@ pub fn derive_key(password: &str, salt: &[u8]) -> Zeroizing<[u8; KEY_LEN]> {
 fn make_verification_tag_v2(key: &[u8; KEY_LEN]) -> Result<Vec<u8>, AppError> {
     let mut nonce_bytes = [0u8; 12];
     getrandom::getrandom(&mut nonce_bytes).map_err(|e| AppError::Vault(e.to_string()))?;
-    let cipher = Aes256Gcm::new_from_slice(key)
-        .map_err(|_| AppError::Vault("invalid key length".into()))?;
+    let cipher =
+        Aes256Gcm::new_from_slice(key).map_err(|_| AppError::Vault("invalid key length".into()))?;
     let ciphertext = cipher
         .encrypt(Nonce::from_slice(&nonce_bytes), VERIFY_V2_PLAINTEXT)
         .map_err(|_| AppError::Vault("verification tag creation failed".into()))?;
@@ -200,36 +200,31 @@ pub async fn verify(
 
     let password_owned = Zeroizing::new(password.to_owned());
     let (key, needs_upgrade) =
-        tokio::task::spawn_blocking(
-            move || -> (Option<Zeroizing<[u8; KEY_LEN]>>, bool) {
-                let key = derive_key_with_rounds(&password_owned, &salt, ROUNDS);
+        tokio::task::spawn_blocking(move || -> (Option<Zeroizing<[u8; KEY_LEN]>>, bool) {
+            let key = derive_key_with_rounds(&password_owned, &salt, ROUNDS);
 
-                if stored.len() == VERIFY_V2_LEN {
-                    // V2 AES-GCM — no upgrade needed
-                    return (
-                        check_verification_tag_v2(&key, &stored).then_some(key),
-                        false,
-                    );
+            if stored.len() == VERIFY_V2_LEN {
+                // V2 AES-GCM — no upgrade needed
+                return (
+                    check_verification_tag_v2(&key, &stored).then_some(key),
+                    false,
+                );
+            }
+
+            // V1 SHA-256 path (32 decoded bytes)
+            if stored.len() == 32 {
+                if bool::from(sha256_verification_hash(&key).ct_eq(stored.as_slice())) {
+                    return (Some(key), true);
                 }
-
-                // V1 SHA-256 path (32 decoded bytes)
-                if stored.len() == 32 {
-                    if bool::from(sha256_verification_hash(&key).ct_eq(stored.as_slice())) {
-                        return (Some(key), true);
-                    }
-                    // Try legacy PBKDF2 round count; `key` (600 k rounds) is already derived.
-                    let legacy_key =
-                        derive_key_with_rounds(&password_owned, &salt, LEGACY_ROUNDS);
-                    if bool::from(
-                        sha256_verification_hash(&legacy_key).ct_eq(stored.as_slice()),
-                    ) {
-                        return (Some(key), true);
-                    }
+                // Try legacy PBKDF2 round count; `key` (600 k rounds) is already derived.
+                let legacy_key = derive_key_with_rounds(&password_owned, &salt, LEGACY_ROUNDS);
+                if bool::from(sha256_verification_hash(&legacy_key).ct_eq(stored.as_slice())) {
+                    return (Some(key), true);
                 }
+            }
 
-                (None, false)
-            },
-        )
+            (None, false)
+        })
         .await
         .map_err(|e| AppError::Vault(e.to_string()))?;
 

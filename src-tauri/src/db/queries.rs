@@ -132,10 +132,9 @@ pub async fn list_servers_db(db: &SqlitePool) -> Result<Vec<ServerWithTags>, App
     }
 
     // Batch-load group names to avoid N+1
-    let group_rows: Vec<(String, String)> =
-        sqlx::query_as("SELECT id, name FROM groups")
-            .fetch_all(db)
-            .await?;
+    let group_rows: Vec<(String, String)> = sqlx::query_as("SELECT id, name FROM groups")
+        .fetch_all(db)
+        .await?;
     let groups_map: HashMap<String, String> = group_rows.into_iter().collect();
 
     Ok(servers
@@ -146,7 +145,11 @@ pub async fn list_servers_db(db: &SqlitePool) -> Result<Vec<ServerWithTags>, App
                 .group_id
                 .as_deref()
                 .and_then(|gid| groups_map.get(gid).cloned());
-            ServerWithTags { server, tags, group_name }
+            ServerWithTags {
+                server,
+                tags,
+                group_name,
+            }
         })
         .collect())
 }
@@ -160,13 +163,19 @@ pub async fn get_server_db(db: &SqlitePool, id: &str) -> Result<ServerWithTags, 
     let server = server.ok_or_else(|| AppError::NotFound(format!("server '{id}' not found")))?;
     let tags = tags_for_server(db, id).await?;
     let group_name = match server.group_id.as_deref() {
-        Some(gid) => sqlx::query_scalar("SELECT name FROM groups WHERE id = ?")
-            .bind(gid)
-            .fetch_optional(db)
-            .await?,
+        Some(gid) => {
+            sqlx::query_scalar("SELECT name FROM groups WHERE id = ?")
+                .bind(gid)
+                .fetch_optional(db)
+                .await?
+        }
         None => None,
     };
-    Ok(ServerWithTags { server, tags, group_name })
+    Ok(ServerWithTags {
+        server,
+        tags,
+        group_name,
+    })
 }
 
 pub async fn create_server_db(
@@ -328,8 +337,14 @@ pub async fn update_server_db(
         .filter(|v| !v.is_empty());
     let initial_dir = payload.initial_dir.as_deref().filter(|v| !v.is_empty());
     let env_vars = payload.env_vars.as_deref().filter(|v| !v.is_empty());
-    let pre_connect_hook = payload.pre_connect_hook.as_deref().filter(|v| !v.is_empty());
-    let post_disconnect_hook = payload.post_disconnect_hook.as_deref().filter(|v| !v.is_empty());
+    let pre_connect_hook = payload
+        .pre_connect_hook
+        .as_deref()
+        .filter(|v| !v.is_empty());
+    let post_disconnect_hook = payload
+        .post_disconnect_hook
+        .as_deref()
+        .filter(|v| !v.is_empty());
     let terminal_theme = payload.terminal_theme.as_deref().filter(|v| !v.is_empty());
 
     sqlx::query(
