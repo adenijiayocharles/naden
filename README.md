@@ -6,20 +6,28 @@ A fast, secure desktop application for managing SSH connections. Built for engin
 
 - **Server inventory** — add, edit, and organise servers with display name, hostname/IP, port, username, tags, and groups
 - **One-click connect** — launch sessions in the built-in terminal or your system terminal
-- **Built-in terminal** — multi-tab terminal emulator (up to 20 concurrent sessions) with drag-to-reorder tabs
-- **SFTP browser** — browse, upload, download, and chmod files over SFTP alongside your terminal sessions
-- **Credential vault** — AES-256 encrypted local storage for SSH keys and passwords; unlocked via master password
+- **Built-in terminal** — multi-tab terminal emulator (up to 20 concurrent sessions) with drag-to-reorder tabs, per-server colour themes, copy-on-select, and in-pane search
+- **SFTP browser** — dual-pane file manager with drag-and-drop from Finder, in-place editing with auto-upload on save, batch transfers, and cross-session copy
+- **Credential vault** — AES-256-GCM encrypted local storage for SSH passwords and key passphrases, derived via PBKDF2 at 600 000 rounds; unlocked via master password or skipped with a per-device random key
+- **SSH key vault** — central registry for private keys; register existing keys, generate Ed25519/RSA/ECDSA in-app, auto-detect type and fingerprint, pick from the server form
 - **Jump host support** — define bastion/proxy-jump chains (A → B → C) that resolve automatically on connect; wired automatically when importing from `~/.ssh/config`
-- **Port forwarding** — manage local, remote, and dynamic (SOCKS5) SSH tunnels per server; start/stop individually with live status
-- **Command snippets** — save and send reusable shell commands to the active terminal session
-- **Fuzzy search** — real-time search across server name, hostname, IP, username, and tags
+- **Port forwarding** — manage local, remote, and dynamic (SOCKS5) SSH tunnels per server; auto-start on connect, start/stop individually with live status
+- **Command snippets** — save and insert reusable shell commands into the active terminal from the `⌘S` panel
+- **Command palette** — `⌘K` fuzzy-search across servers, active sessions, snippets, and playbooks; results in under 100 ms
+- **Fuzzy search** — real-time search across server name, hostname, IP, username, tags, and groups
 - **SSH config import** — parse `~/.ssh/config`, preview hosts, and import with ProxyJump relationships resolved
+- **Host discovery** — scan the local network for open SSH ports or import from `~/.ssh/known_hosts` without typing hostnames by hand
+- **Health monitoring** — live CPU, memory, and disk stats polled from connected servers and shown inline on each server card
+- **Connection hooks** — per-server pre-connect and post-disconnect shell scripts; a non-zero pre-connect exit cancels the connection
+- **Session settings** — per-server initial working directory and environment variables exported on connect
+- **Session recordings** — record terminal output to a plain-text file; view, open in Finder, or delete from the Recordings panel
 - **Audit log** — local log of every connection attempt with timestamp, host, username, duration, and outcome; exportable to CSV
 - **System tray** — quick-connect to any server or open an SFTP session directly from the menu bar
-- **Wake reconnect** — automatically reconnects sessions that drop when the machine sleeps
-- **Broadcast** — fan out terminal input to multiple sessions at once, with a confirmation guard for destructive commands
-- **Playbooks** — save multi-step command sequences with per-step delays and run them against one or more sessions
-- **AI assistant** — bring-your-own-key chat panel (OpenAI or Anthropic) with optional terminal context for troubleshooting
+- **Wake reconnect** — automatically reconnects sessions and tunnels that drop when the machine sleeps
+- **Broadcast** — fan out terminal input to multiple sessions at once, with a confirmation guard for destructive commands; named, saved broadcast groups
+- **Playbooks** — save multi-step command sequences with per-step delays and `{{host}}`/`{{username}}`/`{{port}}` variable substitution; run from the session toolbar with live step progress
+- **AI assistant** — bring-your-own-key chat panel (Anthropic, OpenAI, or OpenRouter) with optional live terminal context per message; off by default, keys stored in OS keychain
+- **Local terminal** — open a local shell session inside the app without a remote connection
 
 ## Tech Stack
 
@@ -88,32 +96,35 @@ Run these from the `src-tauri/` directory, or prefix with `cargo -C src-tauri`.
 ```
 src/
   components/
-    layout/       # AppShell, Sidebar, TopBar, tab bar, vault countdown
-    servers/      # Server list, card, row, form, bulk actions, port forwards section
-    terminal/     # Terminal pane and tab management, broadcast grid, playbook run bar, AI assistant panel
+    layout/       # AppShell, Sidebar, TopBar, tab bar, vault countdown, session recording button
+    servers/      # Server list, card, row, form, bulk actions, port forwards section, host discovery, health stats
+    terminal/     # Terminal pane and tab management, broadcast grid, playbook run bar, AI assistant panel, tunnel picker
     sftp/         # SFTP browser, file list, toolbar, chmod dialog
     tunnels/      # Port forward management panel
+    keys/         # SSH key vault view
     snippets/     # Command snippet list and form
     playbooks/    # Playbook list and editor
     vault/        # Lock screen and setup modal
     settings/     # Settings modal
-    log/          # Audit log view
+    log/          # Audit log view, session recordings view
     onboarding/   # First-run wizard
     shared/       # Error boundary, connection overlay, shared inputs
-  hooks/          # useAppInit, useWakeReconnect, useKeyboardShortcuts, useVaultHeartbeat, useMenuEvents, useTrayEvents
+  hooks/          # useAppInit, useKeyboardShortcuts, useVaultHeartbeat, and other lifecycle hooks
   store/          # Zustand stores (server, terminal, sftp, tunnel, snippet, playbook, broadcast, assistant, ui, vault)
   lib/            # Tauri command wrappers, session buffer, vault activity, clipboard clear
   types/          # Shared TypeScript types
 
 src-tauri/src/
-  commands/       # Tauri command handlers (ssh, sftp, vault, server, settings, log, tunnel, snippet, assistant)
+  commands/       # Tauri command handlers (ssh, sftp, vault, server, settings, log, tunnel, snippet, assistant, health, discovery, backup)
   ssh/            # Connection manager, jump host tunnelling, SSH config parser, launcher
   sftp/           # SFTP session manager
   tunnel/         # Local, remote, and dynamic port-forward engine
   vault/          # AES-256-GCM credential vault, master password
+  assistant/      # AI provider backends (Anthropic, OpenAI, OpenRouter)
+  discovery/      # LAN scanner and known_hosts importer
   db/             # SQLite queries and migrations
   search/         # nucleo-based fuzzy search
-  platform/       # macOS-specific native integrations
+  platform/       # macOS-specific native integrations (CLI install, tray, power)
   models/         # Shared data models
 ```
 
@@ -121,11 +132,19 @@ src-tauri/src/
 
 | Shortcut | Action |
 |---|---|
-| `⌘K` / `Ctrl+K` | Focus search |
-| `⌘N` / `Ctrl+N` | Add new server |
-| `⌘,` / `Ctrl+,` | Open settings |
+| `⌘K` | Command palette — search servers, sessions, snippets, playbooks |
+| `⌘N` | Add new server |
+| `⌘,` | Open settings |
+| `⌘F` | Find in terminal |
+| `⌘T` | New terminal tab |
+| `⌘W` | Close active tab |
+| `⌘S` | Open snippet panel |
+| `⌘↑` | Navigate to parent directory (SFTP) |
 
 ## Security Notes
 
-- Credentials (SSH keys, passwords) are stored AES-256-GCM encrypted in the local SQLite database, keyed by a PBKDF2-derived master password
-- The vault is locked automatically after a period of inactivity
+- Credentials (SSH passwords, key passphrases) are stored AES-256-GCM encrypted in the local SQLite database, keyed by a PBKDF2-HMAC-SHA256-derived master password at 600 000 rounds
+- Alternatively, the master password can be skipped — a random per-device key is generated and used instead; credentials remain encrypted at rest
+- The vault locks automatically after a configurable idle timeout; brute-force lockout applies after 5 failed unlock attempts (exponential backoff, up to 1 hour)
+- AI assistant API keys are stored in the OS keychain and never written to Naden's database
+- No credentials or session data are ever synced or uploaded
