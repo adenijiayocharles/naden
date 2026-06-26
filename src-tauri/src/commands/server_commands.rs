@@ -224,6 +224,16 @@ pub async fn check_reachability(
 }
 
 #[tauri::command]
+pub async fn reorder_servers(
+    ids: Vec<String>,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    queries::reorder_servers_db(&state.db, &ids).await?;
+    refresh_cache(&state).await;
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn list_groups(state: tauri::State<'_, AppState>) -> Result<Vec<Group>, AppError> {
     queries::list_groups_db(&state.db).await
 }

@@ -103,6 +103,7 @@ pub fn run() {
             commands::server_commands::move_server_group,
             commands::server_commands::toggle_favourite,
             commands::server_commands::duplicate_server,
+            commands::server_commands::reorder_servers,
             commands::server_commands::get_recent_server_ids,
             commands::server_commands::check_reachability,
             commands::server_commands::list_groups,

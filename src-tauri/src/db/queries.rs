@@ -105,7 +105,7 @@ async fn tags_for_server(db: &SqlitePool, server_id: &str) -> Result<Vec<Tag>, A
 // ── server queries ────────────────────────────────────────────────────────────
 
 pub async fn list_servers_db(db: &SqlitePool) -> Result<Vec<ServerWithTags>, AppError> {
-    let servers: Vec<Server> = sqlx::query_as("SELECT * FROM servers ORDER BY display_name")
+    let servers: Vec<Server> = sqlx::query_as("SELECT * FROM servers ORDER BY sort_position ASC, created_at ASC")
         .fetch_all(db)
         .await?;
 
@@ -219,14 +219,19 @@ pub async fn create_server_db(
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
 
+    let next_position: i64 =
+        sqlx::query_scalar("SELECT COALESCE(MAX(sort_position) + 1, 0) FROM servers")
+            .fetch_one(db)
+            .await?;
+
     sqlx::query(
         "INSERT INTO servers
          (id, display_name, hostname, port, username, auth_method,
           identity_file_path, vault_credential_id, group_id,
           is_jump_host, jump_host_id, is_favourite, initial_dir,
           env_vars, pre_connect_hook, post_disconnect_hook, terminal_theme,
-          created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          sort_position, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(&payload.display_name)
@@ -245,6 +250,7 @@ pub async fn create_server_db(
     .bind(&payload.pre_connect_hook)
     .bind(&payload.post_disconnect_hook)
     .bind(&payload.terminal_theme)
+    .bind(next_position)
     .bind(&now)
     .bind(&now)
     .execute(db)
@@ -750,6 +756,21 @@ pub async fn delete_port_forward_db(db: &SqlitePool, id: &str) -> Result<(), App
     if rows == 0 {
         return Err(AppError::NotFound(format!("port_forward '{id}' not found")));
     }
+    Ok(())
+}
+
+pub async fn reorder_servers_db(db: &SqlitePool, ids: &[String]) -> Result<(), AppError> {
+    let mut tx = db.begin().await?;
+    for (idx, id) in ids.iter().enumerate() {
+        sqlx::query(
+            "UPDATE servers SET sort_position = ?, updated_at = datetime('now') WHERE id = ?",
+        )
+        .bind(idx as i64)
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
+    }
+    tx.commit().await?;
     Ok(())
 }
 

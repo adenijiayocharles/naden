@@ -27,6 +27,7 @@ pub struct Server {
     /// call (the same class of bug as the `vault_credential_id` IDOR).
     pub pre_connect_hook_confirmed: Option<String>,
     pub post_disconnect_hook_confirmed: Option<String>,
+    pub sort_position: i64,
     pub created_at: String,
     pub updated_at: String,
 }

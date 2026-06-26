@@ -32,6 +32,7 @@ fn make_server_in_group(
             pre_connect_hook_confirmed: None,
             post_disconnect_hook_confirmed: None,
             terminal_theme: None,
+            sort_position: 0,
             created_at: "".to_string(),
             updated_at: "".to_string(),
         },
