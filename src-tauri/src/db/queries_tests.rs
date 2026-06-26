@@ -658,3 +658,76 @@ async fn delete_nonexistent_forward_is_not_found() {
         Err(AppError::NotFound(_))
     ));
 }
+
+#[tokio::test]
+async fn new_servers_get_ascending_sort_positions() {
+    let db = make_pool().await;
+    let a = create_server_db(&db, &payload("Alpha", "alpha.example.com"))
+        .await
+        .unwrap();
+    let b = create_server_db(&db, &payload("Beta", "beta.example.com"))
+        .await
+        .unwrap();
+    let c = create_server_db(&db, &payload("Gamma", "gamma.example.com"))
+        .await
+        .unwrap();
+
+    assert!(a.server.sort_position < b.server.sort_position);
+    assert!(b.server.sort_position < c.server.sort_position);
+}
+
+#[tokio::test]
+async fn reorder_servers_changes_listed_order() {
+    let db = make_pool().await;
+    let a = create_server_db(&db, &payload("Alpha", "alpha.example.com"))
+        .await
+        .unwrap();
+    let b = create_server_db(&db, &payload("Beta", "beta.example.com"))
+        .await
+        .unwrap();
+    let c = create_server_db(&db, &payload("Gamma", "gamma.example.com"))
+        .await
+        .unwrap();
+
+    // Reverse the order: c, a, b
+    reorder_servers_db(&db, &[c.server.id.clone(), a.server.id.clone(), b.server.id.clone()])
+        .await
+        .unwrap();
+
+    let listed: Vec<String> = list_servers_db(&db)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|s| s.server.display_name)
+        .collect();
+
+    assert_eq!(listed, vec!["Gamma", "Alpha", "Beta"]);
+}
+
+#[tokio::test]
+async fn reorder_servers_partial_list_is_idempotent() {
+    let db = make_pool().await;
+    let a = create_server_db(&db, &payload("Alpha", "alpha.example.com"))
+        .await
+        .unwrap();
+    let b = create_server_db(&db, &payload("Beta", "beta.example.com"))
+        .await
+        .unwrap();
+
+    // Reordering with the same IDs does not change the result.
+    reorder_servers_db(&db, &[a.server.id.clone(), b.server.id.clone()])
+        .await
+        .unwrap();
+    reorder_servers_db(&db, &[a.server.id.clone(), b.server.id.clone()])
+        .await
+        .unwrap();
+
+    let listed: Vec<String> = list_servers_db(&db)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|s| s.server.display_name)
+        .collect();
+
+    assert_eq!(listed, vec!["Alpha", "Beta"]);
+}
