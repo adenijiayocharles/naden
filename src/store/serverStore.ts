@@ -27,6 +27,7 @@ interface ServerStore {
   createServer: (payload: CreateServerPayload) => Promise<Server>;
   updateServer: (id: string, payload: UpdateServerPayload) => Promise<Server>;
   deleteServer: (id: string) => Promise<void>;
+  reorderServers: (ids: string[]) => Promise<void>;
   moveServerGroup: (serverId: string, groupId: string | null) => Promise<void>;
   toggleFavourite: (serverId: string) => Promise<void>;
   duplicateServer: (serverId: string) => Promise<Server>;
@@ -85,6 +86,16 @@ export const useServerStore = create<ServerStore>((set) => ({
   deleteServer: async (id) => {
     await serverCommands.deleteServer(id);
     set((s) => ({ servers: s.servers.filter((sv) => sv.id !== id) }));
+  },
+
+  reorderServers: async (ids) => {
+    set((s) => {
+      const byId = new Map(s.servers.map((sv) => [sv.id, sv]));
+      const reordered = ids.map((id) => byId.get(id)).filter(Boolean) as typeof s.servers;
+      const rest = s.servers.filter((sv) => !ids.includes(sv.id));
+      return { servers: [...reordered, ...rest] };
+    });
+    await serverCommands.reorderServers(ids);
   },
 
   moveServerGroup: async (serverId, groupId) => {

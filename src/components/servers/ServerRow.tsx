@@ -1,3 +1,4 @@
+import type React from "react";
 import type { Server } from "../../types/server";
 import { useServerActions, formatHost } from "./useServerActions";
 import { useUiStore } from "../../store/uiStore";
@@ -18,9 +19,10 @@ interface ServerRowProps {
   isHighlighted?: boolean;
   jumpHost?: Server;
   hasActiveTunnel?: boolean;
+  dragHandle?: React.ReactNode;
 }
 
-export default function ServerRow({ server, groupColor, lastConnected, narrow, isHighlighted, jumpHost, hasActiveTunnel }: ServerRowProps) {
+export default function ServerRow({ server, groupColor, lastConnected, narrow, isHighlighted, jumpHost, hasActiveTunnel, dragHandle }: ServerRowProps) {
   const actions = useServerActions(server);
   const bulkMode = useUiStore((s) => s.bulkMode);
   const isSelected = useUiStore((s) => s.bulkSelected.includes(server.id));
@@ -42,6 +44,8 @@ export default function ServerRow({ server, groupColor, lastConnected, narrow, i
         ${isHighlighted && !isSelected ? "border-l-2 border-l-accent/60" : ""}
         ${actions.connecting ? "opacity-60 cursor-wait bg-surface-0" : "cursor-pointer hover:bg-surface-0"}`}
     >
+      {!bulkMode && dragHandle}
+
       {bulkMode ? (
         <div className={`w-4 h-4 rounded border shrink-0 flex items-center justify-center transition-colors ${
           isSelected ? "bg-accent border-accent" : "border-stroke"

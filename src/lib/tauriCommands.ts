@@ -58,6 +58,9 @@ export const serverCommands = {
   checkReachability: (serverId: string) =>
     invoke<ReachabilityResult>("check_reachability", { serverId }),
 
+  reorderServers: (ids: string[]) =>
+    invoke<void>("reorder_servers", { ids }),
+
   listGroups: () =>
     invoke<Group[]>("list_groups"),
 

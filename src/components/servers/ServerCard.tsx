@@ -1,3 +1,4 @@
+import type React from "react";
 import type { Server } from "../../types/server";
 import { useServerActions, formatHost } from "./useServerActions";
 import { useUiStore } from "../../store/uiStore";
@@ -17,9 +18,10 @@ interface ServerCardProps {
   isHighlighted?: boolean;
   jumpHost?: Server;
   hasActiveTunnel?: boolean;
+  dragHandle?: React.ReactNode;
 }
 
-export default function ServerCard({ server, groupColor, lastConnected, isHighlighted, jumpHost, hasActiveTunnel }: ServerCardProps) {
+export default function ServerCard({ server, groupColor, lastConnected, isHighlighted, jumpHost, hasActiveTunnel, dragHandle }: ServerCardProps) {
   const actions = useServerActions(server);
   const bulkMode = useUiStore((s) => s.bulkMode);
   const isSelected = useUiStore((s) => s.bulkSelected.includes(server.id));
@@ -103,6 +105,8 @@ export default function ServerCard({ server, groupColor, lastConnected, isHighli
             )}
           </div>
         </div>
+
+        {!bulkMode && dragHandle}
 
         {!bulkMode && (
           <FavouriteButton

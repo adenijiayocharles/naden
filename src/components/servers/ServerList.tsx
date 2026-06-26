@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore, type SortMode } from "../../store/uiStore";
 import { useTerminalStore } from "../../store/terminalStore";
@@ -33,8 +33,25 @@ function groupColorFor(groups: Group[], groupId: string | undefined): string | u
   return groups.find((g) => g.id === groupId)?.color;
 }
 
+const dragHandle = (
+  <svg
+    className="w-3 h-4 text-dim opacity-0 group-hover:opacity-40 hover:!opacity-80 cursor-grab active:cursor-grabbing shrink-0 transition-opacity"
+    viewBox="0 0 6 16"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <circle cx="1.5" cy="3" r="1.2" />
+    <circle cx="4.5" cy="3" r="1.2" />
+    <circle cx="1.5" cy="7" r="1.2" />
+    <circle cx="4.5" cy="7" r="1.2" />
+    <circle cx="1.5" cy="11" r="1.2" />
+    <circle cx="4.5" cy="11" r="1.2" />
+  </svg>
+);
+
 export default function ServerList() {
   const servers = useServerStore((s) => s.servers);
+  const reorderServers = useServerStore((s) => s.reorderServers);
   const groups = useServerStore((s) => s.groups);
   const lastConnectedMap = useServerStore((s) => s.lastConnectedMap);
   const isLoading = useServerStore((s) => s.isLoading);
@@ -58,6 +75,12 @@ export default function ServerList() {
   const broadcastGroups = useBroadcastStore((s) => s.groups);
   const tunnelForwards = useTunnelStore((s) => s.forwards);
   const tunnelStatuses = useTunnelStore((s) => s.statuses);
+
+  // Drag-to-reorder state — only active in default sort with no search/filter.
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [dropAbove, setDropAbove] = useState(false);
+  const dragCounter = useRef(0);
 
   const serverById = useMemo(
     () => new Map(servers.map((s) => [s.id, s])),
@@ -94,8 +117,9 @@ export default function ServerList() {
     ? "border border-stroke-subtle rounded-lg"
     : "grid gap-3 grid-cols-[repeat(auto-fill,minmax(min(240px,100%),1fr))]";
 
-  const renderItem = (s: Server) =>
-    viewMode === "row" ? (
+  const renderItem = (s: Server, canDrag: boolean) => {
+    const handle = canDrag ? dragHandle : undefined;
+    return viewMode === "row" ? (
       <ServerRow
         key={s.id}
         server={s}
@@ -105,6 +129,7 @@ export default function ServerList() {
         isHighlighted={activeServerIds.has(s.id)}
         jumpHost={s.jumpHostId ? serverById.get(s.jumpHostId) : undefined}
         hasActiveTunnel={activeTunnelServerIds.has(s.id)}
+        dragHandle={handle}
       />
     ) : (
       <ServerCard
@@ -115,8 +140,101 @@ export default function ServerList() {
         isHighlighted={activeServerIds.has(s.id)}
         jumpHost={s.jumpHostId ? serverById.get(s.jumpHostId) : undefined}
         hasActiveTunnel={activeTunnelServerIds.has(s.id)}
+        dragHandle={handle}
       />
     );
+  };
+
+  const wrapDraggable = (s: Server, canDrag: boolean) => {
+    if (!canDrag) return <div key={s.id}>{renderItem(s, false)}</div>;
+
+    const isBeingDragged = dragId === s.id;
+    const isDropTarget = dragOverId === s.id && dragId !== s.id;
+
+    const handleDragStart = (e: React.DragEvent) => {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", s.id);
+      setDragId(s.id);
+    };
+
+    const handleDragEnd = () => {
+      setDragId(null);
+      setDragOverId(null);
+      dragCounter.current = 0;
+    };
+
+    const handleDragEnter = (e: React.DragEvent) => {
+      e.preventDefault();
+      dragCounter.current++;
+      if (dragId && dragId !== s.id) {
+        setDragOverId(s.id);
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setDropAbove(e.clientY < rect.top + rect.height / 2);
+      }
+    };
+
+    const handleDragLeave = () => {
+      dragCounter.current--;
+      if (dragCounter.current === 0) {
+        setDragOverId(null);
+      }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if (dragId && dragId !== s.id) {
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setDropAbove(e.clientY < rect.top + rect.height / 2);
+      }
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+      e.preventDefault();
+      dragCounter.current = 0;
+      const fromId = e.dataTransfer.getData("text/plain");
+      if (!fromId || fromId === s.id) {
+        setDragId(null);
+        setDragOverId(null);
+        return;
+      }
+      // Compute new order: remove fromId, insert at target position.
+      const currentIds = servers.map((sv) => sv.id);
+      const fromIdx = currentIds.indexOf(fromId);
+      const toIdx = currentIds.indexOf(s.id);
+      if (fromIdx === -1 || toIdx === -1) return;
+      const reordered = [...currentIds];
+      reordered.splice(fromIdx, 1);
+      const insertAt = reordered.indexOf(s.id);
+      reordered.splice(dropAbove ? insertAt : insertAt + 1, 0, fromId);
+      void reorderServers(reordered);
+      setDragId(null);
+      setDragOverId(null);
+    };
+
+    const dropIndicator = isDropTarget ? (
+      <div
+        className={`absolute left-0 right-0 h-0.5 bg-accent z-10 pointer-events-none ${dropAbove ? "-top-px" : "-bottom-px"}`}
+      />
+    ) : null;
+
+    return (
+      <div
+        key={s.id}
+        className={`relative group transition-opacity ${isBeingDragged ? "opacity-40" : ""}`}
+        draggable
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
+        {dropIndicator}
+        {renderItem(s, true)}
+      </div>
+    );
+  };
 
   // All hooks must be called before any early return.
   const sortedSearch = useMemo(
@@ -164,6 +282,14 @@ export default function ServerList() {
     );
   }
 
+  // Drag is only available in the default all-servers view (no search, no filter, default sort).
+  const canDrag =
+    !searchQuery.trim() &&
+    !filterFavourites &&
+    !filterGroupId &&
+    !filterTagId &&
+    sortMode === "default";
+
   // Search takes priority over all filters/sorting
   if (searchQuery.trim()) {
     return sortedSearch.length === 0 ? (
@@ -179,7 +305,7 @@ export default function ServerList() {
       />
     ) : (
       <div className={listClass}>
-        {sortedSearch.map((s) => renderItem(s))}
+        {sortedSearch.map((s) => wrapDraggable(s, false))}
       </div>
     );
   }
@@ -310,7 +436,7 @@ export default function ServerList() {
   if (filterFavourites || filterGroupId || filterTagId) {
     return (
       <div className={listClass}>
-        {sortedFiltered.map((s) => renderItem(s))}
+        {sortedFiltered.map((s) => wrapDraggable(s, false))}
       </div>
     );
   }
@@ -318,7 +444,7 @@ export default function ServerList() {
   // ── Default view (All Servers) — flat list, no group sections ──────────────
   return (
     <div className={listClass}>
-      {sortedFiltered.map((s) => renderItem(s))}
+      {sortedFiltered.map((s) => wrapDraggable(s, canDrag))}
     </div>
   );
 }
