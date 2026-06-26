@@ -68,7 +68,7 @@ interface UiStore {
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
 
-export const useUiStore = create<UiStore>((set) => ({
+export const useUiStore = create<UiStore>((set, get) => ({
   activeView: "list",
   viewMode: "card",
   sortMode: "default",
@@ -146,7 +146,11 @@ export const useUiStore = create<UiStore>((set) => ({
 
     searchTimer = setTimeout(() => {
       searchCommands.fuzzySearch(query)
-        .then((results) => set({ searchResults: results }))
+        .then((results) => {
+          if (get().searchQuery === query) {
+            set({ searchResults: results });
+          }
+        })
         .catch((e) => { console.error("[search] fuzzy_search failed:", e); });
     }, 50);
   },

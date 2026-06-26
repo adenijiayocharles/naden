@@ -292,6 +292,9 @@ export default function ServerList() {
 
   // Search takes priority over all filters/sorting
   if (searchQuery.trim()) {
+    // searchResults === null means the debounced request is still in-flight.
+    // Render an empty container instead of "No matches" to avoid a false flash.
+    if (searchResults === null) return <div className={listClass} />;
     return sortedSearch.length === 0 ? (
       <EmptyState
         icon={
