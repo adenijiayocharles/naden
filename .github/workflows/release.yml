@@ -89,9 +89,10 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # Opt-in crash reporting stays unavailable (toggle disabled in
-          # Settings) until this secret is added — see src-tauri/src/crash_reporting.rs.
+          # Crash reporting (opt-out) — both Rust and Vite/frontend read from the same secret.
+          # Without it, the Settings toggle is disabled and no events are sent.
           NADEN_SENTRY_DSN: ${{ secrets.NADEN_SENTRY_DSN }}
+          VITE_SENTRY_DSN: ${{ secrets.NADEN_SENTRY_DSN }}
           MACOSX_DEPLOYMENT_TARGET: "11.0"
         with:
           tagName: ${{ github.event.inputs.tag || github.ref_name }}

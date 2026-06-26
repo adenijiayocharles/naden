@@ -312,7 +312,7 @@ pub fn run() {
             // the local crash log and native alert keep working unchanged
             // whether or not this actually starts (no DSN compiled in, or
             // the user has left it off, both leave this as `None`).
-            let crash_reporting_enabled = crash_reporting_setting.unwrap_or_default().as_deref() == Some("true");
+            let crash_reporting_enabled = crash_reporting_setting.unwrap_or_default().as_deref() != Some("false");
             app.manage(crash_reporting::init(crash_reporting_enabled));
 
             eprintln!("[naden] setup: initialising tray");

@@ -1,7 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { initSentry } from "./lib/sentryClient";
 import App from "./App";
 import "./index.css";
+initSentry();
 import "@xterm/xterm/css/xterm.css";
 import "@fontsource-variable/jetbrains-mono";
 import "@fontsource-variable/fira-code";

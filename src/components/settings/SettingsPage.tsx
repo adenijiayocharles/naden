@@ -18,6 +18,7 @@ import { useUiStore, type SettingsSection } from "../../store/uiStore";
 import { useTerminalSettings, TERMINAL_FONTS, TERMINAL_THEMES, CURSOR_STYLES, fontCss } from "../../lib/terminalSettings";
 import { useUiFontSettings, UI_FONTS, UI_FONT_SIZES, uiFontCss, applyUiFont } from "../../lib/uiFontSettings";
 import { settingsCommands, assistantCommands, backupCommands, crashReportingCommands, updaterCommands, type AssistantStatus, type UpdateInfo } from "../../lib/tauriCommands";
+import { setSentryEnabled } from "../../lib/sentryClient";
 import { formatError, isAppError } from "../../lib/errors";
 import { passwordStrength } from "../../lib/passwordStrength";
 import { shiftLightness } from "../../lib/accentColor";
@@ -348,14 +349,15 @@ export default function SettingsPage() {
   // Default terminal for "Open in Terminal"
   const [defaultTerminal, setDefaultTerminal] = useState("Terminal");
 
-  // Crash reporting
+  // Crash reporting — on by default (opt-out)
   const [crashReportingAvailable, setCrashReportingAvailable] = useState(false);
-  const [crashReportingEnabled, setCrashReportingEnabled] = useState(false);
+  const [crashReportingEnabled, setCrashReportingEnabled] = useState(true);
   useEffect(() => {
     crashReportingCommands.isAvailable().then(setCrashReportingAvailable).catch(() => {});
   }, []);
   const saveCrashReporting = (enabled: boolean) => {
     setCrashReportingEnabled(enabled);
+    setSentryEnabled(enabled);
     settingsCommands.setSetting("crash_reporting_enabled", String(enabled)).catch(() => {});
     flashSaved();
   };
@@ -386,7 +388,9 @@ export default function SettingsPage() {
       }
       if (s.ssh_keepalive_interval != null) setKeepaliveInterval(s.ssh_keepalive_interval);
       if (s.default_terminal != null) setDefaultTerminal(s.default_terminal);
-      if (s.crash_reporting_enabled != null) setCrashReportingEnabled(s.crash_reporting_enabled === "true");
+      const reportingEnabled = s.crash_reporting_enabled !== "false";
+      setCrashReportingEnabled(reportingEnabled);
+      setSentryEnabled(reportingEnabled);
     }).catch(() => {});
   }, [setVaultTimeoutMins]);
   const saveDefaultTerminal = (v: string | null) => {
@@ -1223,7 +1227,7 @@ export default function SettingsPage() {
                   description={
                     !crashReportingAvailable
                       ? "Not available in this build."
-                      : "Help fix crashes by sharing anonymous reports. Off by default — never includes credentials, hostnames, or other personal data. Takes effect after restart."
+                      : "Send anonymous crash reports to help fix bugs. On by default — see below for exactly what's included. Takes effect after restart."
                   }
                 />
                 <Switch
@@ -1233,6 +1237,31 @@ export default function SettingsPage() {
                   onCheckedChange={saveCrashReporting}
                 />
               </Row>
+
+              {crashReportingAvailable && (
+                <div className="mt-1 mb-2 rounded-md border border-stroke-subtle px-3 py-3 space-y-2.5">
+                  <div>
+                    <p className="text-meta font-medium text-white/70 mb-1">What's included</p>
+                    <ul className="text-meta text-muted space-y-0.5 list-disc list-inside">
+                      <li>Crash type and source location within naden's code</li>
+                      <li>Stack trace (line numbers inside naden — no file paths from your machine)</li>
+                      <li>App version, macOS version, and CPU architecture</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-meta font-medium text-white/70 mb-1">What's never included</p>
+                    <ul className="text-meta text-muted space-y-0.5 list-disc list-inside">
+                      <li>Server names, hostnames, or IP addresses</li>
+                      <li>SSH credentials, keys, or passphrases</li>
+                      <li>Panic message content (stripped before transmission)</li>
+                      <li>Your name, email, or any personal identifier</li>
+                    </ul>
+                  </div>
+                  <p className="text-meta text-muted/70">
+                    Reports are sent to Sentry and used only to find and fix crashes in naden.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
