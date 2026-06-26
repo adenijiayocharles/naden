@@ -240,7 +240,7 @@ export function AssistantPanel({
     el.style.height = `${el.scrollHeight}px`;
   }, [input]);
 
-  const isReady = (status?.openaiConfigured || status?.anthropicConfigured) && status?.enabled;
+  const isReady = (status?.openaiConfigured || status?.anthropicConfigured || status?.openrouterConfigured) && status?.enabled;
 
   return (
     <div className="absolute top-0 right-0 bottom-0 w-[480px] z-40 bg-surface-2 border-l border-stroke shadow-overlay flex flex-col">
@@ -315,13 +315,13 @@ export function AssistantPanel({
           <p className="text-sm text-dim">
             {status === null
               ? "Loading…"
-              : !status.openaiConfigured && !status.anthropicConfigured
+              : !status.openaiConfigured && !status.anthropicConfigured && !status.openrouterConfigured
               ? "Bring your own API key to chat with an AI assistant."
               : "The assistant is currently turned off."}
           </p>
           {status !== null && (
             <p className="text-meta text-faint">
-              Open Settings → AI Assistant to {status.openaiConfigured || status.anthropicConfigured ? "turn it on" : "add a key"}.
+              Open Settings → AI Assistant to {status.openaiConfigured || status.anthropicConfigured || status.openrouterConfigured ? "turn it on" : "add a key"}.
             </p>
           )}
         </div>
@@ -362,7 +362,7 @@ export function AssistantPanel({
           </div>
           {activeProvider && status?.activeProvider && activeProvider !== status.activeProvider && messages.length > 0 && (
             <div className="px-2.5 py-2 border-t border-warning-subtle bg-warning-subtle text-xs text-warning shrink-0">
-              This conversation was started with {activeProvider === "anthropic" ? "Anthropic" : "OpenAI"}. Replies will now use {status.activeProvider === "anthropic" ? "Anthropic" : "OpenAI"}.
+              This conversation was started with {activeProvider === "anthropic" ? "Anthropic" : activeProvider === "openrouter" ? "OpenRouter" : "OpenAI"}. Replies will now use {status.activeProvider === "anthropic" ? "Anthropic" : status.activeProvider === "openrouter" ? "OpenRouter" : "OpenAI"}.
             </div>
           )}
           <div className="p-2.5 border-t border-stroke-subtle shrink-0">
