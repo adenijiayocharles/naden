@@ -221,7 +221,8 @@ export default function ServerList() {
     return (
       <div
         key={s.id}
-        className={`relative group transition-opacity ${isBeingDragged ? "opacity-40" : ""}`}
+        className={`relative group ${isBeingDragged ? "opacity-40" : ""}`}
+        style={isBeingDragged ? { transition: "opacity 0.15s" } : undefined}
         draggable
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
