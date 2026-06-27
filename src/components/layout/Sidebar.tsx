@@ -618,7 +618,7 @@ export default function Sidebar() {
   }, [servers]);
 
   return (
-    <aside className="w-60 shrink-0 bg-surface-0 border-r border-stroke-subtle flex flex-col">
+    <aside className="w-52 shrink-0 bg-surface-0 border-r border-stroke-subtle flex flex-col">
       <nav className="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
         {/* All Servers */}
         <NavRow

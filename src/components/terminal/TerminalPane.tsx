@@ -75,9 +75,18 @@ export default function TerminalPane({ sessionId }: Props) {
   const openTool = useTerminalToolsStore((s) => s.openTool);
   const closeTool = useTerminalToolsStore((s) => s.closeTool);
   const assistantPanelOpen = openTool === "assistant";
+  const [assistantClosing, setAssistantClosing] = useState(false);
   const playbookPickerOpen = openTool === "playbooks";
   const snippetPickerOpen = openTool === "snippets";
   const tunnelPickerOpen = openTool === "tunnels";
+
+  const closeAssistant = useCallback(() => {
+    setAssistantClosing(true);
+    setTimeout(() => {
+      closeTool();
+      setAssistantClosing(false);
+    }, 180);
+  }, [closeTool]);
 
   const snippets = useSnippetStore((s) => s.snippets);
   const fetchSnippets = useSnippetStore((s) => s.fetchAll);
@@ -605,15 +614,25 @@ export default function TerminalPane({ sessionId }: Props) {
     return () => document.removeEventListener("mousedown", handler);
   }, [playbookPickerOpen, closeTool]);
 
+  useEffect(() => {
+    if (!assistantPanelOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current?.contains(e.target as Node)) closeAssistant();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [assistantPanelOpen, closeAssistant]);
+
   return (
     <div className="relative h-full w-full bg-surface-1 flex flex-col">
       <PlaybookRunBar />
       <div className="relative flex-1 min-h-0">
       <div ref={containerRef} className="absolute inset-0 overflow-hidden" />
 
-      {assistantPanelOpen && (
+      {(assistantPanelOpen || assistantClosing) && (
         <AssistantPanel
-          onClose={closeTool}
+          onClose={closeAssistant}
+          exiting={assistantClosing}
           serverId={session?.serverId ?? ""}
           serverName={session?.serverName ?? ""}
           connectionStatus={session?.status ?? "connecting"}

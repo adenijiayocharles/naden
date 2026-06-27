@@ -8,6 +8,7 @@ import {
   type AssistantMessage,
   type AssistantMessageContext,
 } from "../../store/assistantStore";
+import { useUiStore } from "../../store/uiStore";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Textarea } from "../ui/textarea";
@@ -29,7 +30,7 @@ function parseBlocks(text: string): MessageBlock[] {
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) blocks.push({ type: "text", content: text.slice(last, m.index) });
-    blocks.push({ type: "code", lang: m[1].toLowerCase(), content: m[2].trimEnd() });
+    blocks.push({ type: "code", lang: m[1].toLowerCase(), content: m[2].trim() });
     last = m.index + m[0].length;
   }
   if (last < text.length) blocks.push({ type: "text", content: text.slice(last) });
@@ -50,7 +51,7 @@ function CodeBlock({ content, isShell, onRunCommand }: {
   };
   return (
     <div className="relative my-1.5 rounded bg-black/40 border border-stroke-subtle overflow-hidden">
-      <pre className={`text-sm font-mono px-3 py-2.5 overflow-x-auto text-secondary leading-relaxed ${isShell && onRunCommand ? "pb-9" : ""}`}>{content}</pre>
+      <pre className="text-sm font-mono px-3 py-2.5 overflow-x-auto text-secondary leading-relaxed">{content}</pre>
       {isShell && onRunCommand && (
         confirming ? (
           <div className="flex items-center justify-between px-3 py-1.5 bg-warning-subtle border-t border-warning-subtle">
@@ -123,6 +124,7 @@ const AssistantMessageContent = memo(function AssistantMessageContent({
 
 interface AssistantPanelProps {
   onClose: () => void;
+  exiting?: boolean;
   serverId: string;
   serverName: string;
   connectionStatus: string;
@@ -154,6 +156,7 @@ function buildContext(
 
 export function AssistantPanel({
   onClose,
+  exiting = false,
   serverId,
   serverName,
   connectionStatus,
@@ -170,6 +173,7 @@ export function AssistantPanel({
   const sendMessage = useAssistantStore((s) => s.sendMessage);
   const startNewChat = useAssistantStore((s) => s.startNewChat);
   const openChat = useAssistantStore((s) => s.openChat);
+  const openSettings = useUiStore((s) => s.openSettings);
 
   const [status, setStatus] = useState<AssistantStatus | null>(null);
   const [input, setInput] = useState("");
@@ -243,7 +247,7 @@ export function AssistantPanel({
   const isReady = (status?.openaiConfigured || status?.anthropicConfigured || status?.openrouterConfigured) && status?.enabled;
 
   return (
-    <div className="absolute top-0 right-0 bottom-0 w-[480px] z-40 bg-surface-2 border-l border-stroke shadow-overlay flex flex-col">
+    <div className={`absolute top-0 right-0 bottom-0 w-[380px] z-40 bg-surface-2 border-l border-stroke shadow-overlay flex flex-col ${exiting ? "animate-panel-out" : "animate-panel-in"}`}>
       <div className="relative flex items-center justify-between px-3 py-2.5 border-b border-stroke-subtle shrink-0">
         <span className="text-sm font-medium text-white">AI Assistant</span>
         <div className="flex items-center gap-1">
@@ -320,9 +324,14 @@ export function AssistantPanel({
               : "The assistant is currently turned off."}
           </p>
           {status !== null && (
-            <p className="text-meta text-faint">
-              Open Settings → AI Assistant to {status.openaiConfigured || status.anthropicConfigured || status.openrouterConfigured ? "turn it on" : "add a key"}.
-            </p>
+            <button
+              onClick={() => openSettings("assistant")}
+              className="text-meta text-accent hover:text-accent-hover underline underline-offset-2 transition-colors"
+            >
+              {status.openaiConfigured || status.anthropicConfigured || status.openrouterConfigured
+                ? "Turn on in AI Assistant settings"
+                : "Add a key in AI Assistant settings"}
+            </button>
           )}
         </div>
       ) : (
