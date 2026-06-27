@@ -1,0 +1,33 @@
+[changelog]
+header = "# Changelog\n\nAll notable changes to naden are documented here.\n"
+body = """
+{% if version %}\
+## [{{ version }}] — {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+## Unreleased
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group }}
+{% for commit in commits %}\
+- {{ commit.message | upper_first }}{% if commit.scope %} *({{ commit.scope }})*{% endif %}
+{% endfor %}\
+{% endfor %}\
+"""
+trim = true
+footer = ""
+postprocessors = []
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+commit_parsers = [
+  { message = "^feat", group = "Features" },
+  { message = "^fix", group = "Bug Fixes" },
+  { message = "^perf", group = "Performance" },
+  { message = "^chore|^ci|^build|^refactor|^style|^test|^docs", skip = true },
+]
+filter_commits = true
+tag_pattern = "v[0-9].*"
+topo_order = false
+sort_commits = "newest"

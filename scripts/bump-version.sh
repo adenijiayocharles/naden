@@ -48,3 +48,11 @@ echo "  package.json"
 echo "  src-tauri/tauri.conf.json"
 echo "  src-tauri/Cargo.toml"
 echo "  src-tauri/Cargo.lock"
+
+if command -v git-cliff &>/dev/null; then
+  git-cliff --tag "v$VERSION" -o CHANGELOG.md
+  echo "  CHANGELOG.md"
+else
+  echo ""
+  echo "Note: install git-cliff to auto-generate CHANGELOG.md (cargo install git-cliff)"
+fi
