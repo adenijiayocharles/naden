@@ -93,6 +93,7 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_window_state::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             // Server CRUD
             commands::server_commands::list_servers,
@@ -341,9 +342,14 @@ pub fn run() {
             #[cfg(unix)]
             std::thread::spawn(platform::cli_install::ensure_installed);
 
-            // Install the native macOS drag region monitor for the custom title bar.
-            #[cfg(target_os = "macos")]
+            // Restore the window's last size and position, falling back to the
+            // defaults in tauri.conf.json if no saved state exists yet.
             if let Some(window) = app.get_webview_window("main") {
+                use tauri_plugin_window_state::WindowExt;
+                let _ = window.restore_state(tauri_plugin_window_state::StateFlags::SIZE | tauri_plugin_window_state::StateFlags::POSITION);
+
+                // Install the native macOS drag region monitor for the custom title bar.
+                #[cfg(target_os = "macos")]
                 platform::macos::install_drag_region(&window);
             }
 
