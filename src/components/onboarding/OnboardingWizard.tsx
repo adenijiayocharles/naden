@@ -30,10 +30,10 @@ export default function OnboardingWizard({ onComplete }: Props) {
   const { setup, isSetup } = useVaultStore();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [skipVault, setSkipVault] = useState(false);
   const [vaultAcknowledged, setVaultAcknowledged] = useState(false);
   const [vaultError, setVaultError] = useState<string | null>(null);
   const [vaultLoading, setVaultLoading] = useState(false);
+  const [vaultSetDuringOnboarding, setVaultSetDuringOnboarding] = useState(false);
 
   const openAdd = useUiStore((s) => s.openAdd);
 
@@ -48,7 +48,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
   };
 
   const handleVaultNext = async () => {
-    if (skipVault || isSetup) { advance(); return; }
+    if (isSetup) { advance(); return; }
     if (password !== confirm) { setVaultError("Passwords don't match."); return; }
     if (password.length < 8) { setVaultError("Password must be at least 8 characters."); return; }
     if (!vaultAcknowledged) { setVaultError("Please confirm you understand this password can't be recovered."); return; }
@@ -56,6 +56,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
     setVaultError(null);
     try {
       await setup(password);
+      setVaultSetDuringOnboarding(true);
       advance();
     } catch (e) {
       setVaultError(formatError(e));
@@ -123,7 +124,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                 You can skip this and enable it later in Settings.
               </p>
 
-              {!skipVault && !isSetup ? (
+              {!isSetup ? (
                 <div className="space-y-3">
                   <div>
                     <Input
@@ -162,29 +163,24 @@ export default function OnboardingWizard({ onComplete }: Props) {
                   </label>
                   {vaultError && <p className="text-xs text-error">{vaultError}</p>}
                 </div>
-              ) : (
+              ) : vaultSetDuringOnboarding ? (
                 <div className="p-3 bg-surface-0 border border-stroke-subtle rounded-lg text-sm text-muted">
-                  {isSetup ? "✓ Vault is already protected with a master password." : "Vault protection skipped — you can enable it anytime in Settings."}
+                  ✓ Vault is already protected with a master password.
                 </div>
-              )}
-
-              {!isSetup && (
-                <label className="flex items-center gap-2 cursor-pointer text-sm text-muted">
-                  <Checkbox
-                    checked={skipVault}
-                    onCheckedChange={(checked) => setSkipVault(checked === true)}
-                  />
-                  Skip for now
-                </label>
-              )}
+              ) : null}
 
               <div className="flex gap-2 pt-2">
                 <Button variant="ghost" onClick={() => setStep("welcome")} className="text-faint">
                   Back
                 </Button>
+                {!isSetup && (
+                  <Button variant="ghost" onClick={advance} className="text-faint">
+                    Skip
+                  </Button>
+                )}
                 <Button
                   onClick={() => { void handleVaultNext(); }}
-                  disabled={vaultLoading || (!skipVault && !isSetup && (password.length < 8 || password !== confirm || !vaultAcknowledged))}
+                  disabled={vaultLoading || (!isSetup && (password.length < 8 || password !== confirm || !vaultAcknowledged))}
                   className="flex-1 h-9"
                 >
                   {vaultLoading ? "Setting up…" : "Continue"}
