@@ -708,7 +708,7 @@ export default function TerminalPane({ sessionId }: Props) {
               className="h-auto px-2.5 py-1.5"
             />
           </div>
-          <div className="overflow-y-auto h-[134px] p-2 flex flex-col gap-1.5">
+          <div className="overflow-y-auto max-h-[280px] p-2 flex flex-col gap-1.5">
             {filteredSnippets.length > 0 ? (
               filteredSnippets.map((sn) => (
                 <Button
