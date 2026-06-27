@@ -1,5 +1,4 @@
 services:
-
   # Reachable from your Mac at localhost:2222.
   # Bridges the external and internal networks — the only route into the
   # private subnet from the host machine.
@@ -26,17 +25,17 @@ services:
 
   # Optional second hop: bastion → relay → target2.
   # Uncomment to test multi-hop chains.
-  # relay:
-  #   build: .
-  #   environment:
-  #     ROOT_PASSWORD: relay-secret
-  #   networks:
-  #     - internal
-  #   hostname: relay
+  relay:
+    build: .
+    environment:
+      ROOT_PASSWORD: relay-secret
+    networks:
+      - internal
+    hostname: relay
 
 networks:
   external:
     driver: bridge
   internal:
     driver: bridge
-    internal: true   # no route to the host or internet from this network
+    internal: true # no route to the host or internet from this network

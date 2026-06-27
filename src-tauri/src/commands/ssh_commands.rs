@@ -621,16 +621,31 @@ pub async fn resize_terminal(
 /// Takes a `server_id` rather than a raw host/port — the hostname and port
 /// are looked up from the app's own server record so a compromised webview
 /// can't strip known_hosts entries for arbitrary hosts (e.g. github.com).
+///
+/// Also removes entries for every jump host in the chain: when containers or
+/// servers are recreated all hop keys change, and a mismatch on any hop would
+/// otherwise keep firing even after the target's entry is cleared.
 #[tauri::command]
 pub async fn remove_known_host_entry(
     server_id: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<usize, AppError> {
     let server = queries::get_server_db(&state.db, &server_id).await?;
-    crate::ssh::connection::remove_known_host(
+    let jump_chain = resolve_jump_chain(&state, &server).await?;
+
+    let mut removed = crate::ssh::connection::remove_known_host(
         &server.server.hostname,
         u16::try_from(server.server.port).unwrap_or(22),
-    )
+    )?;
+
+    for hop in &jump_chain {
+        removed += crate::ssh::connection::remove_known_host(
+            &hop.server.hostname,
+            u16::try_from(hop.server.port).unwrap_or(22),
+        )?;
+    }
+
+    Ok(removed)
 }
 
 #[tauri::command]
