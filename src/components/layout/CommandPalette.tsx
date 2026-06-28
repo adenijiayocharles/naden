@@ -3,10 +3,12 @@ import { useUiStore } from "../../store/uiStore";
 import { useTerminalStore, type TerminalSession } from "../../store/terminalStore";
 import { useSnippetStore } from "../../store/snippetStore";
 import { usePlaybookStore } from "../../store/playbookStore";
+import { useTunnelStore } from "../../store/tunnelStore";
 import { searchCommands } from "../../lib/tauriCommands";
 import type { Server } from "../../types/server";
 import type { Snippet } from "../../types/snippet";
 import type { Playbook } from "../../types/playbook";
+import type { PortForward } from "../../types/portForward";
 
 // ── Item types ─────────────────────────────────────────────────────────────────
 
@@ -20,7 +22,8 @@ type ServerItem  = { kind: "server";   server:   Server };
 type SessionItem = { kind: "session";  session:  TerminalSession };
 type SnippetItem = { kind: "snippet";  snippet:  Snippet };
 type PlaybookItem = { kind: "playbook"; playbook: Playbook };
-type PaletteItem = ActionItem | ServerItem | SessionItem | SnippetItem | PlaybookItem;
+type TunnelItem  = { kind: "tunnel";   tunnel:   PortForward };
+type PaletteItem = ActionItem | ServerItem | SessionItem | SnippetItem | PlaybookItem | TunnelItem;
 
 interface Section {
   title: string;
@@ -100,6 +103,18 @@ function PlaybookIcon() {
   );
 }
 
+function TunnelIcon() {
+  return (
+    <svg className={ITEM_ICON_CLS} fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="3" cy="8" r="1.5" />
+      <circle cx="13" cy="8" r="1.5" />
+      <line x1="4.5" y1="8" x2="11.5" y2="8" />
+      <path d="M6 5.5 C6 3 10 3 10 5.5" />
+      <path d="M6 10.5 C6 13 10 13 10 10.5" />
+    </svg>
+  );
+}
+
 // ── Status dot ─────────────────────────────────────────────────────────────────
 
 const STATUS_DOT: Record<TerminalSession["status"], string> = {
@@ -116,6 +131,7 @@ function itemKey(item: PaletteItem): string {
   if (item.kind === "session")  return `t:${item.session.id}`;
   if (item.kind === "snippet")  return `sn:${item.snippet.id}`;
   if (item.kind === "playbook") return `pb:${item.playbook.id}`;
+  if (item.kind === "tunnel")   return `tn:${item.tunnel.id}`;
   return `a:${item.id}`;
 }
 
@@ -143,6 +159,7 @@ export default function CommandPalette({ onActivateSession }: Props) {
 
   const snippets  = useSnippetStore((s) => s.snippets);
   const playbooks = usePlaybookStore((s) => s.playbooks);
+  const forwards  = useTunnelStore((s) => s.forwards);
 
   const [query, setQuery]             = useState("");
   const [serverResults, setServerResults] = useState<Server[]>([]);
@@ -168,9 +185,6 @@ export default function CommandPalette({ onActivateSession }: Props) {
     }, 50);
     return () => clearTimeout(timer);
   }, [query]);
-
-  // Reset cursor on every query change
-  useEffect(() => { setActiveIndex(0); }, [query]);
 
   // ── Build sections ────────────────────────────────────────────────────────────
 
@@ -229,6 +243,16 @@ export default function CommandPalette({ onActivateSession }: Props) {
       });
     }
 
+    const matchedTunnels = forwards.filter((fwd) =>
+      fwd.label.toLowerCase().includes(q),
+    );
+    if (matchedTunnels.length > 0) {
+      result.push({
+        title: "Tunnels",
+        items: matchedTunnels.map((fwd) => ({ kind: "tunnel", tunnel: fwd })),
+      });
+    }
+
     const matchedActions = STATIC_ACTIONS.filter((a) =>
       a.label.toLowerCase().includes(q),
     );
@@ -237,7 +261,7 @@ export default function CommandPalette({ onActivateSession }: Props) {
     }
 
     return result;
-  }, [query, serverResults, sessions, snippets, playbooks]);
+  }, [query, serverResults, sessions, snippets, playbooks, forwards]);
 
   // Precompute per-section offsets into the flat item list
   const sectionOffsets = useMemo(() => {
@@ -254,6 +278,9 @@ export default function CommandPalette({ onActivateSession }: Props) {
     () => sections.reduce((n, s) => n + s.items.length, 0),
     [sections],
   );
+
+  // Reset cursor whenever sections change (covers query changes and async server results arriving)
+  useEffect(() => { setActiveIndex(0); }, [sections]);
 
   // Scroll active item into view on arrow-key navigation
   useEffect(() => {
@@ -294,11 +321,13 @@ export default function CommandPalette({ onActivateSession }: Props) {
         onActivateSession(item.session.id);
       } else if (item.kind === "snippet") {
         openSnippets();
-      } else {
+      } else if (item.kind === "playbook") {
         openPlaybooks();
+      } else {
+        openTunnels();
       }
     },
-    [closePalette, dispatchAction, openSession, onActivateSession, openSnippets, openPlaybooks],
+    [closePalette, dispatchAction, openSession, onActivateSession, openSnippets, openPlaybooks, openTunnels],
   );
 
   // ── Keyboard handler ──────────────────────────────────────────────────────────
@@ -392,6 +421,7 @@ export default function CommandPalette({ onActivateSession }: Props) {
                         {item.kind === "action"   && <ActionIcon />}
                         {item.kind === "snippet"  && <SnippetIcon />}
                         {item.kind === "playbook" && <PlaybookIcon />}
+                        {item.kind === "tunnel"   && <TunnelIcon />}
 
                         {/* Label */}
                         <span className="flex-1 min-w-0 flex items-center gap-2">
@@ -422,6 +452,16 @@ export default function CommandPalette({ onActivateSession }: Props) {
                           {item.kind === "playbook" && (
                             <span className="truncate">{item.playbook.title}</span>
                           )}
+                          {item.kind === "tunnel" && (
+                            <>
+                              <span className="font-medium text-white truncate">
+                                {item.tunnel.label}
+                              </span>
+                              <span className="text-xs text-muted shrink-0">
+                                :{item.tunnel.localPort} → {item.tunnel.remoteHost}:{item.tunnel.remotePort}
+                              </span>
+                            </>
+                          )}
                           {item.kind === "action" && item.label}
                         </span>
 
@@ -436,6 +476,9 @@ export default function CommandPalette({ onActivateSession }: Props) {
                           <span className="text-xs text-dim shrink-0">Open</span>
                         )}
                         {item.kind === "playbook" && (
+                          <span className="text-xs text-dim shrink-0">Open</span>
+                        )}
+                        {item.kind === "tunnel" && (
                           <span className="text-xs text-dim shrink-0">Open</span>
                         )}
                         {item.kind === "action" && item.shortcut && (

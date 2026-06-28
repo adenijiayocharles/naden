@@ -64,14 +64,15 @@ fn empty_query_returns_all_servers_unchanged() {
 }
 
 #[test]
-fn fuzzy_query_ranks_closer_match_first() {
+fn substring_query_excludes_non_matching_servers() {
     let servers = vec![
-        make_server("Reproduction DB", "repro.example.com", &[]),
+        make_server("Staging Box", "staging.example.com", &[]),
         make_server("Prod Server", "prod.example.com", &[]),
     ];
 
     let results = filter_servers(&servers, "prod");
 
+    assert_eq!(results.len(), 1);
     assert_eq!(results[0].server.display_name, "Prod Server");
 }
 
