@@ -275,11 +275,13 @@ function AddTunnelModal({ onClose }: { onClose: () => void }) {
 
 const TunnelRow = memo(function TunnelRow({
   fwd,
+  serverName,
   onStart,
   onStop,
   onDelete,
 }: {
   fwd: PortForward;
+  serverName: string;
   onStart: (id: string) => void;
   onStop: (id: string) => void;
   onDelete: (id: string) => void;
@@ -293,6 +295,11 @@ const TunnelRow = memo(function TunnelRow({
 
   return (
     <div className="group flex flex-col gap-1 px-3 py-2.5 border-b border-stroke-subtle last:border-b-0 first:rounded-t-lg last:rounded-b-lg select-none hover:bg-surface-1 transition-colors">
+      <div className="pl-[14px] flex items-center gap-2 text-xs">
+        <span className="text-faint">{serverName}</span>
+        {fwd.label && <span className="text-faint">· {fwd.label}</span>}
+        {err && status === "error" && <span className="text-error">{formatError(err)}</span>}
+      </div>
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <span className={dotClass} title={STATUS_LABEL[status]} />
@@ -348,13 +355,6 @@ const TunnelRow = memo(function TunnelRow({
           </Button>
         </div>
       </div>
-
-      {(fwd.label || (err && status === "error")) && (
-        <div className="pl-[14px] flex items-center gap-2 text-xs">
-          {fwd.label && <span className="text-faint">{fwd.label}</span>}
-          {err && status === "error" && <span className="text-error">{formatError(err)}</span>}
-        </div>
-      )}
     </div>
   );
 });
@@ -484,6 +484,7 @@ export default function TunnelPanel() {
                     <TunnelRow
                       key={fwd.id}
                       fwd={fwd}
+                      serverName={server?.displayName ?? serverId}
                       onStart={handleStart}
                       onStop={handleStop}
                       onDelete={handleDelete}
