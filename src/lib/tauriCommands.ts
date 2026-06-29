@@ -328,6 +328,12 @@ export const sftpCommands = {
 
   crossCopySftpFiles: (srcSessionId: string, srcPaths: string[], dstSessionId: string, dstDir: string, overwrite = false) =>
     invoke<void>("cross_copy_sftp_file", { srcSessionId, srcPaths, dstSessionId, dstDir, overwrite }),
+
+  downloadSftpAsZip: (sessionId: string, remotePaths: string[], localPath: string) =>
+    invoke<void>("download_sftp_as_zip", { sessionId, remotePaths, localPath }),
+
+  unzipSftpFile: (sessionId: string, remoteZipPath: string, remoteDir: string) =>
+    invoke<void>("unzip_sftp_file", { sessionId, remoteZipPath, remoteDir }),
 };
 
 export const clipboardCommands = {

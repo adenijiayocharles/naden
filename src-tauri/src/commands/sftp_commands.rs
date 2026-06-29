@@ -217,6 +217,84 @@ pub async fn copy_sftp_file(
     })
 }
 
+/// Downloads each path in `remote_paths` to a temp dir, creates a zip archive
+/// at `local_path`, then cleans up. Uses the same cancel mechanism as ordinary
+/// downloads so the user can abort via the Cancel button.
+#[tauri::command]
+pub async fn download_sftp_as_zip(
+    session_id: String,
+    remote_paths: Vec<String>,
+    local_path: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    const MAX_PATHS: usize = 1_000;
+    const MAX_PATH_LEN: usize = 4_096;
+    if remote_paths.len() > MAX_PATHS {
+        return Err(AppError::Validation(format!(
+            "too many paths (max {MAX_PATHS})"
+        )));
+    }
+    for p in &remote_paths {
+        if p.len() > MAX_PATH_LEN {
+            return Err(AppError::Validation("remote path too long".into()));
+        }
+        if std::path::Path::new(p)
+            .components()
+            .any(|c| c == std::path::Component::ParentDir)
+        {
+            return Err(AppError::Validation(
+                "remote path must not contain '..' components".into(),
+            ));
+        }
+    }
+    check_parent_home_boundary(&local_path)?;
+    // Guard against a pre-planted symlink at the exact output path pointing outside $HOME.
+    if std::path::Path::new(&local_path).exists() {
+        check_home_boundary(&local_path)?;
+    }
+    sftp_call!(state, session_id, |reply| SftpMessage::DownloadAsZip {
+        remote_paths,
+        local_path,
+        reply,
+    })
+}
+
+/// Downloads a remote .zip file, extracts it locally (with path-traversal and
+/// size guards), then uploads the contents back to `remote_dir` via SFTP.
+#[tauri::command]
+pub async fn unzip_sftp_file(
+    session_id: String,
+    remote_zip_path: String,
+    remote_dir: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    const MAX_PATH_LEN: usize = 4_096;
+    if remote_zip_path.len() > MAX_PATH_LEN || remote_dir.len() > MAX_PATH_LEN {
+        return Err(AppError::Validation("path too long".into()));
+    }
+    if std::path::Path::new(&remote_zip_path)
+        .components()
+        .any(|c| c == std::path::Component::ParentDir)
+    {
+        return Err(AppError::Validation(
+            "remote zip path must not contain '..' components".into(),
+        ));
+    }
+    if std::path::Path::new(&remote_dir)
+        .components()
+        .any(|c| c == std::path::Component::ParentDir)
+    {
+        return Err(AppError::Validation(
+            "destination directory must not contain '..' components".into(),
+        ));
+    }
+    sftp_call!(state, session_id, |reply| SftpMessage::UnzipHere {
+        remote_zip_path,
+        remote_dir,
+        reply,
+    })
+}
+
 /// Transfer files between two different SFTP sessions.
 /// Downloads each file from the source session to a local temp file, then
 /// uploads to the destination session. Temp files are cleaned up on both

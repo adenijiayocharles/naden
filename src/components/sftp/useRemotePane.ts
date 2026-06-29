@@ -72,6 +72,8 @@ interface RemotePaneOutput {
   cancelChmod: () => void;
   handleOpenEdit: (path: string) => void;
   handleCloseEdit: (path: string) => void;
+  handleDownloadAsZip: () => void;
+  handleUnzipHere: (path: string) => void;
   handleUploadFromLocal: () => void;
   handleDownloadToLocal: () => void;
   handleUploadPaths: (localPaths: string[]) => void;
@@ -281,6 +283,8 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
     cancelChmod: ops.cancelChmod,
     handleOpenEdit: transfer.handleOpenEdit,
     handleCloseEdit: transfer.handleCloseEdit,
+    handleDownloadAsZip: transfer.handleDownloadAsZip,
+    handleUnzipHere: transfer.handleUnzipHere,
     handleUploadFromLocal: transfer.handleUploadFromLocal,
     handleDownloadToLocal: transfer.handleDownloadToLocal,
     handleUploadPaths: transfer.handleUploadPaths,

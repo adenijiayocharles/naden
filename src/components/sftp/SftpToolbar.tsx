@@ -87,6 +87,7 @@ interface Props {
   onRefresh: () => void;
   onUpload: () => void;
   onDownload: () => void;
+  onDownloadAsZip: () => void;
   onNewFolder: () => void;
   onNewFile: () => void;
   editingCount?: number;
@@ -138,6 +139,7 @@ export default function SftpToolbar({
   onRefresh,
   onUpload,
   onDownload,
+  onDownloadAsZip,
   onNewFolder,
   onNewFile,
   editingCount = 0,
@@ -256,6 +258,14 @@ export default function SftpToolbar({
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 3v7M5 7l3 3 3-3M3 12h10" />
             </svg>
             Download{selectedCount > 1 && !selectedHasDir ? ` (${selectedCount})` : ""}
+          </ToolbarBtn>
+
+          <ToolbarBtn onClick={onDownloadAsZip} disabled={busy || selectedCount === 0} title="Download selected as ZIP archive">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 3v7M5 7l3 3 3-3M3 12h10" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 2h2M7 2h2M5 4h2M7 4h2" strokeWidth={1} />
+            </svg>
+            ZIP
           </ToolbarBtn>
 
           <ToolbarBtn onClick={onNewFolder} disabled={busy} title="New folder on remote">

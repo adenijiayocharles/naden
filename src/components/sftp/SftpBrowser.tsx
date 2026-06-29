@@ -178,6 +178,8 @@ export default function SftpBrowser({ sessionId }: Props) {
     handleDownloadToLocal,
     handleUploadPaths,
     handleDownloadPaths,
+    handleDownloadAsZip,
+    handleUnzipHere,
     commitNewFolder,
     commitNewFile,
     setConfirmingDelete,
@@ -357,6 +359,7 @@ export default function SftpBrowser({ sessionId }: Props) {
         onRefresh={handleRefresh}
         onUpload={handleUpload}
         onDownload={handleDownload}
+        onDownloadAsZip={handleDownloadAsZip}
         onNewFolder={handleNewFolder}
         onNewFile={handleNewFile}
         editingCount={editingFiles.length}
@@ -773,6 +776,8 @@ export default function SftpBrowser({ sessionId }: Props) {
         onNewFolder={handleRemoteNewFolder}
         onEdit={handleOpenEdit}
         onChmod={handleChmod}
+        onDownloadAsZip={handleDownloadAsZip}
+        onUnzipHere={handleUnzipHere}
       />
 
         </div> {/* end remote pane */}

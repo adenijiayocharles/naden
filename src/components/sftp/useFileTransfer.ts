@@ -36,6 +36,8 @@ interface FileTransferOutput {
   handleDownloadPaths: (remotePaths: string[]) => void;
   handleOpenEdit: (path: string) => void;
   handleCloseEdit: (path: string) => void;
+  handleDownloadAsZip: () => void;
+  handleUnzipHere: (remotePath: string) => void;
 }
 
 export function useFileTransfer(input: FileTransferInput): FileTransferOutput {
@@ -310,6 +312,49 @@ export function useFileTransfer(input: FileTransferInput): FileTransferOutput {
     setEditingFiles((prev) => prev.filter((p) => p !== remotePath));
   };
 
+  const handleDownloadAsZip = async () => {
+    if (!session || selected.length === 0) return;
+    const baseName =
+      selected.length === 1
+        ? (selected[0].split("/").pop()?.replace(/\.[^.]+$/, "") ?? "archive")
+        : "archive";
+    const localPath = await save({ defaultPath: `${baseName}.zip`, title: "Save ZIP archive as" });
+    if (!localPath) return;
+    const finalPath = localPath.endsWith(".zip") ? localPath : `${localPath}.zip`;
+    setBusy(true);
+    setTransferProgress("Creating ZIP archive…");
+    setError(null);
+    try {
+      await sftpCommands.downloadSftpAsZip(sessionId, selected, finalPath);
+      setTransferProgress(null);
+    } catch (e) {
+      setTransferProgress(null);
+      if (!isCancelledError(e)) setError(formatError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleUnzipHere = async (remotePath: string) => {
+    if (!session) return;
+    const lastSlash = remotePath.lastIndexOf("/");
+    const remoteDir = lastSlash > 0 ? remotePath.slice(0, lastSlash) : "/";
+    setBusy(true);
+    const name = remotePath.split("/").pop() ?? remotePath;
+    setTransferProgress(`Extracting ${name}…`);
+    setError(null);
+    try {
+      await sftpCommands.unzipSftpFile(sessionId, remotePath, remoteDir);
+      setTransferProgress(null);
+      await navigate(session.currentPath);
+    } catch (e) {
+      setTransferProgress(null);
+      if (!isCancelledError(e)) setError(formatError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return {
     transferProgress,
     transferByteProgress,
@@ -324,5 +369,7 @@ export function useFileTransfer(input: FileTransferInput): FileTransferOutput {
     handleDownloadPaths: (remotePaths: string[]) => { void handleDownloadPaths(remotePaths); },
     handleOpenEdit: (path: string) => { void handleOpenEdit(path); },
     handleCloseEdit: (path: string) => { void handleCloseEdit(path); },
+    handleDownloadAsZip: () => { void handleDownloadAsZip(); },
+    handleUnzipHere: (path: string) => { void handleUnzipHere(path); },
   };
 }

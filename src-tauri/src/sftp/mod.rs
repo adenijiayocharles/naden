@@ -136,6 +136,16 @@ pub(crate) enum SftpMessage {
         overwrite: bool,
         reply: tokio::sync::oneshot::Sender<Result<(), AppError>>,
     },
+    DownloadAsZip {
+        remote_paths: Vec<String>,
+        local_path: String,
+        reply: tokio::sync::oneshot::Sender<Result<(), AppError>>,
+    },
+    UnzipHere {
+        remote_zip_path: String,
+        remote_dir: String,
+        reply: tokio::sync::oneshot::Sender<Result<(), AppError>>,
+    },
     Close,
 }
 
@@ -563,6 +573,34 @@ fn handle_message(
                 result
             })();
             let _ = reply.send(result);
+        }
+        SftpMessage::DownloadAsZip {
+            remote_paths,
+            local_path,
+            reply,
+        } => {
+            let _ = reply.send(download_as_zip_impl(
+                sftp,
+                remote_paths,
+                &local_path,
+                session_id,
+                app_handle,
+                cancel_flag,
+            ));
+        }
+        SftpMessage::UnzipHere {
+            remote_zip_path,
+            remote_dir,
+            reply,
+        } => {
+            let _ = reply.send(unzip_here_impl(
+                sftp,
+                &remote_zip_path,
+                &remote_dir,
+                session_id,
+                app_handle,
+                cancel_flag,
+            ));
         }
         SftpMessage::Close => {}
     }
@@ -1027,6 +1065,232 @@ fn download_file(
         let _ = std::fs::remove_file(local_path);
     }
 
+    result
+}
+
+const MAX_ZIP_ENTRIES: usize = 10_000;
+const MAX_ZIP_UNCOMPRESSED: u64 = 2 * 1024 * 1024 * 1024; // 2 GB
+
+/// Validates a zip entry name, rejecting path traversal and invalid characters.
+/// Returns a safe relative PathBuf on success.
+fn sanitize_zip_entry_name(name: &str) -> Result<std::path::PathBuf, AppError> {
+    if name.contains('\0') {
+        return Err(AppError::Validation(
+            "archive entry name contains invalid characters".into(),
+        ));
+    }
+    let mut safe = std::path::PathBuf::new();
+    for component in name.replace('\\', "/").split('/') {
+        match component {
+            "" | "." => {}
+            ".." => {
+                return Err(AppError::Validation(
+                    "archive contains path traversal components".into(),
+                ))
+            }
+            c => safe.push(c),
+        }
+    }
+    if safe.as_os_str().is_empty() {
+        return Err(AppError::Validation("archive entry has empty name".into()));
+    }
+    Ok(safe)
+}
+
+/// Recursively adds the contents of `dir` to `zip`, using paths relative to `base`.
+/// `depth` guards against stack overflow from deeply nested remote directories.
+fn build_zip(
+    zip: &mut zip::ZipWriter<std::fs::File>,
+    base: &Path,
+    dir: &Path,
+    depth: usize,
+) -> Result<(), AppError> {
+    const MAX_DEPTH: usize = 256;
+    if depth > MAX_DEPTH {
+        return Err(AppError::Validation(format!(
+            "directory nesting too deep (max {MAX_DEPTH} levels)"
+        )));
+    }
+    use zip::write::FileOptions;
+    let entries =
+        std::fs::read_dir(dir).map_err(|e| AppError::Io(format!("cannot read directory: {e}")))?;
+    for entry in entries {
+        let entry = entry.map_err(|e| AppError::Io(format!("directory entry error: {e}")))?;
+        let path = entry.path();
+        let relative = path
+            .strip_prefix(base)
+            .map_err(|_| AppError::Io("path computation error".into()))?;
+        let name = relative.to_string_lossy().replace('\\', "/");
+        if path.is_dir() {
+            zip.add_directory(format!("{name}/"), FileOptions::default())
+                .map_err(|e| AppError::Io(format!("zip error: {e}")))?;
+            build_zip(zip, base, &path, depth + 1)?;
+        } else {
+            let opts = FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+            zip.start_file(&name, opts)
+                .map_err(|e| AppError::Io(format!("zip error: {e}")))?;
+            let mut f = std::fs::File::open(&path)
+                .map_err(|e| AppError::Io(format!("cannot open file for zip: {e}")))?;
+            std::io::copy(&mut f, zip)
+                .map_err(|e| AppError::Io(format!("zip write error: {e}")))?;
+        }
+    }
+    Ok(())
+}
+
+/// Downloads each path in `remote_paths` to a temp directory, then creates a
+/// zip archive at `local_path`. Cleans up the temp directory on both success
+/// and failure.
+fn download_as_zip_impl(
+    sftp: &ssh2::Sftp,
+    remote_paths: Vec<String>,
+    local_path: &str,
+    session_id: &str,
+    app_handle: &tauri::AppHandle,
+    cancel_flag: &Arc<AtomicBool>,
+) -> Result<(), AppError> {
+    let temp_dir = std::env::temp_dir()
+        .join("naden-zip")
+        .join(uuid::Uuid::new_v4().simple().to_string());
+    let _ = std::fs::create_dir_all(&temp_dir);
+
+    let result = (|| {
+        for remote_path in &remote_paths {
+            let name = Path::new(remote_path)
+                .file_name()
+                .ok_or_else(|| AppError::Io(format!("invalid remote path: {remote_path}")))?
+                .to_string_lossy()
+                .into_owned();
+            let local_dest = temp_dir.join(&name);
+            let local_dest_str = local_dest.to_string_lossy().into_owned();
+            download_path(
+                sftp,
+                remote_path,
+                &local_dest_str,
+                session_id,
+                app_handle,
+                true,
+                cancel_flag,
+            )?;
+        }
+
+        let zip_file = std::fs::File::create(local_path)
+            .map_err(|e| AppError::Io(format!("cannot create zip file: {e}")))?;
+        let mut zip = zip::ZipWriter::new(zip_file);
+        build_zip(&mut zip, &temp_dir, &temp_dir, 0)?;
+        zip.finish()
+            .map_err(|e| AppError::Io(format!("cannot finalize zip: {e}")))?;
+        Ok(())
+    })();
+
+    // Remove partial zip on failure
+    if result.is_err() {
+        let _ = std::fs::remove_file(local_path);
+    }
+    let _ = std::fs::remove_dir_all(&temp_dir);
+    result
+}
+
+/// Downloads a remote .zip file, extracts it with path-traversal and size
+/// guards, then uploads the extracted contents to `remote_dir` via SFTP.
+/// Cleans up all temp files on both success and failure.
+fn unzip_here_impl(
+    sftp: &ssh2::Sftp,
+    remote_zip_path: &str,
+    remote_dir: &str,
+    session_id: &str,
+    app_handle: &tauri::AppHandle,
+    cancel_flag: &Arc<AtomicBool>,
+) -> Result<(), AppError> {
+    let temp_base = std::env::temp_dir()
+        .join("naden-zip")
+        .join(uuid::Uuid::new_v4().simple().to_string());
+    let temp_zip = temp_base.join("archive.zip");
+    let extract_dir = temp_base.join("extracted");
+    let _ = std::fs::create_dir_all(&temp_base);
+
+    let result = (|| {
+        let temp_zip_str = temp_zip.to_string_lossy().into_owned();
+        download_file(
+            sftp,
+            remote_zip_path,
+            &temp_zip_str,
+            session_id,
+            app_handle,
+            true,
+            cancel_flag,
+        )?;
+
+        std::fs::create_dir_all(&extract_dir)
+            .map_err(|e| AppError::Io(format!("cannot create extract dir: {e}")))?;
+
+        let file = std::fs::File::open(&temp_zip)
+            .map_err(|e| AppError::Io(format!("cannot open zip: {e}")))?;
+        let mut archive = zip::ZipArchive::new(file)
+            .map_err(|e| AppError::Io(format!("cannot read zip archive: {e}")))?;
+
+        if archive.len() > MAX_ZIP_ENTRIES {
+            return Err(AppError::Validation(format!(
+                "archive contains too many entries (max {MAX_ZIP_ENTRIES})"
+            )));
+        }
+
+        let mut total_extracted: u64 = 0;
+        for i in 0..archive.len() {
+            let entry = archive
+                .by_index(i)
+                .map_err(|e| AppError::Io(format!("cannot read zip entry: {e}")))?;
+
+            let sanitized = sanitize_zip_entry_name(entry.name())?;
+            let out_path = extract_dir.join(&sanitized);
+
+            // Final guard: verify the resolved path is still within extract_dir.
+            if !out_path.starts_with(&extract_dir) {
+                return Err(AppError::Validation(
+                    "archive entry would escape extraction directory".into(),
+                ));
+            }
+
+            if entry.is_dir() {
+                std::fs::create_dir_all(&out_path)
+                    .map_err(|e| AppError::Io(format!("cannot create directory: {e}")))?;
+            } else {
+                if let Some(parent) = out_path.parent() {
+                    std::fs::create_dir_all(parent)
+                        .map_err(|e| AppError::Io(format!("cannot create parent dir: {e}")))?;
+                }
+                let mut out_file = std::fs::File::create(&out_path)
+                    .map_err(|e| AppError::Io(format!("cannot create file: {e}")))?;
+                // Budget the read to remaining bytes + 1 so we detect bombs where
+                // declared entry.size() is 0 but the inflated stream is enormous.
+                let budget = MAX_ZIP_UNCOMPRESSED
+                    .saturating_sub(total_extracted)
+                    .saturating_add(1);
+                let written = std::io::copy(&mut entry.take(budget), &mut out_file)
+                    .map_err(|e| AppError::Io(format!("extraction failed: {e}")))?;
+                total_extracted = total_extracted.saturating_add(written);
+                if total_extracted > MAX_ZIP_UNCOMPRESSED {
+                    return Err(AppError::Validation(format!(
+                        "archive would extract to more than {} GB",
+                        MAX_ZIP_UNCOMPRESSED / 1_073_741_824
+                    )));
+                }
+            }
+        }
+
+        let extract_str = extract_dir.to_string_lossy().into_owned();
+        upload_directory(
+            sftp,
+            &extract_str,
+            remote_dir,
+            session_id,
+            app_handle,
+            true,
+            cancel_flag,
+        )
+    })();
+
+    let _ = std::fs::remove_dir_all(&temp_base);
     result
 }
 
