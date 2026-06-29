@@ -59,6 +59,19 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Install git-cliff
+        run: cargo install git-cliff --locked
+
+      - name: Generate release notes
+        id: notes
+        env:
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          NOTES=$(git cliff --tag "$TAG" --current --strip header 2>/dev/null || echo "")
+          echo "body<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$NOTES" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
       - name: Verify tag matches package version
         env:
           TAG: ${{ github.event.inputs.tag || github.ref_name }}
@@ -97,7 +110,7 @@ jobs:
         with:
           tagName: ${{ github.event.inputs.tag || github.ref_name }}
           releaseName: "naden ${{ github.event.inputs.tag || github.ref_name }}"
-          releaseBody: "See the assets below to download this version."
+          releaseBody: "${{ steps.notes.outputs.body }}"
           releaseDraft: true
           prerelease: false
           args: --target universal-apple-darwin
