@@ -1,17 +1,22 @@
 # Changelog
 
 All notable changes to naden are documented here.
-## [v0.2.6] — 2026-06-27
+## [v0.2.7] — 2026-06-29
 
 ### Bug Fixes
+- Exact substring matching in command palette; add tunnel results *(search)*
+- Remove known-host entries for every hop in the jump chain *(ssh)*
+- Playbook picker height adjusts to number of results *(terminal)*
+- Snippet picker height adjusts to number of results *(terminal)*
 - Apply drag opacity transition conditionally and lift z-index on menu open *(servers)*
 - Fix stale results race condition and flash of No matches *(search)*
 
 ### Features
+- Show server name in each tunnel row; remove creation from terminal panel *(tunnels)*
 - Persist window size and position across sessions *(window)*
 - Assistant panel polish — narrower sidebar/panel, animations, UX fixes *(ui)*
 - Implement ⌘T, ⌘W, ⌘S, ⌘↑ keyboard shortcuts *(shortcuts)*
-## [v0.2.6] — 2026-06-27
+## [v0.2.6] — 2026-06-26
 
 ### Bug Fixes
 - Fix button state, strip ANSI from log files, add delete confirmation *(recording)*
