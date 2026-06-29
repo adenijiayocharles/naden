@@ -16,6 +16,12 @@ interface Props {
 }
 
 export default function SshConfigImport({ onClose }: Props) {
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
   const fetchAll = useServerStore((s) => s.fetchAll);
   const servers = useServerStore((s) => s.servers);
 

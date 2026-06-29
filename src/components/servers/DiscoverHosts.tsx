@@ -46,6 +46,12 @@ function detailsFromHost(host: DiscoveredHost): HostDetails {
 }
 
 export default function DiscoverHosts({ onClose }: Props) {
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
   const fetchAll = useServerStore((s) => s.fetchAll);
   const isVaultUnlocked = useVaultStore((s) => s.isUnlocked);
   const isPasswordRequired = useVaultStore((s) => s.isPasswordRequired);
