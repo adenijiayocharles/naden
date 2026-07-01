@@ -330,10 +330,9 @@ export default function TerminalPane({ sessionId }: Props) {
         // because every pane's suggestion is local to its own shadow line, and
         // fanning this one out would inject the wrong text into the others.
         if (data === "\x1b[C" && useTerminalSettings.getState().ghostSuggestions) {
-          const acceptServerId = useTerminalStore.getState().sessions.find((s) => s.id === sessionId)?.serverId;
           const currentLine = shadowInputBuffer.getLine(sessionId);
-          const activeSuggestion = acceptServerId && currentLine
-            ? useCommandHistoryStore.getState().suggest(acceptServerId, currentLine)
+          const activeSuggestion = serverId && currentLine
+            ? useCommandHistoryStore.getState().suggest(serverId, currentLine)
             : null;
           if (activeSuggestion) {
             const remainder = activeSuggestion.slice(currentLine.length);
@@ -347,9 +346,8 @@ export default function TerminalPane({ sessionId }: Props) {
         // reachable here — never for terminal replies or secret-prompt input —
         // so passwords/passphrases can never end up in suggestion history.
         const completedCommand = shadowInputBuffer.feed(sessionId, data);
-        if (completedCommand) {
-          const serverId = useTerminalStore.getState().sessions.find((s) => s.id === sessionId)?.serverId;
-          if (serverId) useCommandHistoryStore.getState().recordCommand(serverId, completedCommand);
+        if (completedCommand && serverId) {
+          useCommandHistoryStore.getState().recordCommand(serverId, completedCommand);
         }
 
         // Read broadcast state fresh on each keystroke rather than subscribing —
@@ -381,7 +379,6 @@ export default function TerminalPane({ sessionId }: Props) {
           suggestionGhost.style.display = "none";
           return;
         }
-        const serverId = useTerminalStore.getState().sessions.find((s) => s.id === sessionId)?.serverId;
         const suggestion = serverId && line ? useCommandHistoryStore.getState().suggest(serverId, line) : null;
         if (!suggestion) {
           suggestionGhost.style.display = "none";
