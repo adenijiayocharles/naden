@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
+import { WebLinksAddon } from "@xterm/addon-web-links";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { terminalCommands, clipboardCommands } from "../../lib/tauriCommands";
 import { sessionBuffer } from "../../lib/sessionBuffer";
 import { shadowInputBuffer } from "../../lib/shadowInputBuffer";
@@ -201,8 +203,10 @@ export default function TerminalPane({ sessionId }: Props) {
 
       const fitAddon = new FitAddon();
       const searchAddon = new SearchAddon();
+      const webLinksAddon = new WebLinksAddon((_e, uri) => openUrl(uri).catch(() => {}));
       term.loadAddon(fitAddon);
       term.loadAddon(searchAddon);
+      term.loadAddon(webLinksAddon);
       searchAddon.onDidChangeResults((r) => {
         setSearchResults(r.resultCount > 0 ? { index: r.resultIndex, count: r.resultCount } : null);
       });
@@ -474,6 +478,7 @@ export default function TerminalPane({ sessionId }: Props) {
         suggestionGhost.remove();
         dataDisposer.dispose();
         selectionDisposer?.dispose();
+        webLinksAddon.dispose();
         searchAddonRef.current = null;
         termRef.current = null;
         fitAddonRef.current = null;
