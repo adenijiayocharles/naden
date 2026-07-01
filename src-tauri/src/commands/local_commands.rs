@@ -93,6 +93,18 @@ pub fn open_local(path: String) -> Result<(), AppError> {
         .map_err(|e| AppError::Io(format!("Cannot open: {e}")))
 }
 
+#[tauri::command]
+pub fn open_url(url: String) -> Result<(), AppError> {
+    if !url.starts_with("https://") && !url.starts_with("http://") {
+        return Err(AppError::Io("Only http/https URLs are allowed".into()));
+    }
+    std::process::Command::new("open")
+        .arg(&url)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| AppError::Io(format!("Cannot open URL: {e}")))
+}
+
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LocalFileEntry {

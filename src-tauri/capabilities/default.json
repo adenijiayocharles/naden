@@ -21,7 +21,6 @@
     },
     "clipboard-manager:allow-write-text",
     "updater:default",
-    "process:allow-restart",
-    "opener:allow-open-url"
+    "process:allow-restart"
   ]
 }

@@ -93,7 +93,6 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_clipboard_manager::init())
-        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             // Server CRUD
@@ -177,6 +176,7 @@ pub fn run() {
             commands::local_commands::delete_local,
             commands::local_commands::reveal_in_finder,
             commands::local_commands::open_local,
+            commands::local_commands::open_url,
             commands::local_commands::open_local_session,
             // SSH
             commands::ssh_commands::launch_in_terminal,

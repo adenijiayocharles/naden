@@ -281,6 +281,9 @@ export const localCommands = {
 
   openLocal: (path: string) =>
     invoke<void>("open_local", { path }),
+
+  openUrl: (url: string) =>
+    invoke<void>("open_url", { url }),
 };
 
 export const sftpCommands = {

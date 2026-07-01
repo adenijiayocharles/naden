@@ -3,8 +3,7 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { openUrl } from "@tauri-apps/plugin-opener";
-import { terminalCommands, clipboardCommands } from "../../lib/tauriCommands";
+import { terminalCommands, clipboardCommands, localCommands } from "../../lib/tauriCommands";
 import { sessionBuffer } from "../../lib/sessionBuffer";
 import { shadowInputBuffer } from "../../lib/shadowInputBuffer";
 import { useTerminalStore } from "../../store/terminalStore";
@@ -203,7 +202,7 @@ export default function TerminalPane({ sessionId }: Props) {
 
       const fitAddon = new FitAddon();
       const searchAddon = new SearchAddon();
-      const webLinksAddon = new WebLinksAddon((_e, uri) => openUrl(uri).catch(() => {}));
+      const webLinksAddon = new WebLinksAddon((_e, uri) => localCommands.openUrl(uri).catch(() => {}));
       term.loadAddon(fitAddon);
       term.loadAddon(searchAddon);
       term.loadAddon(webLinksAddon);
