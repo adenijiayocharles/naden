@@ -1,6 +1,11 @@
 # Changelog
 
 All notable changes to naden are documented here.
+## [v1.0.1] — 2026-07-01
+
+### Features
+- Close on Escape key *(modals)*
+- Add download-as-zip and unzip-here to remote pane *(sftp)*
 ## [v0.2.7] — 2026-06-29
 
 ### Bug Fixes
