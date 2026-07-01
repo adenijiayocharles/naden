@@ -1,6 +1,10 @@
 # Changelog
 
 All notable changes to naden are documented here.
+## [v1.0.2] — 2026-07-01
+
+### Features
+- Make links clickable via WebLinksAddon *(terminal)*
 ## [v1.0.1] — 2026-07-01
 
 ### Features
