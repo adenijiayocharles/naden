@@ -10,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { useVaultStore } from "../../store/vaultStore";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useBroadcastStore } from "../../store/broadcastStore";
 import { useTerminalToolsStore } from "../../store/terminalToolsStore";
@@ -25,10 +24,10 @@ import { useTrayEvents } from "../../hooks/useTrayEvents";
 import { trayCommands } from "../../lib/commands/tray";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
+import VaultGate from "./VaultGate";
 import TabItem from "./TabItem";
 import ServerList from "../servers/ServerList";
 import ServerForm from "../servers/ServerForm";
-import VaultLockScreen from "../vault/VaultLockScreen";
 import BulkActionBar from "../servers/BulkActionBar";
 import ClipboardClearBanner from "./ClipboardClearBanner";
 import SshConfigChangedBanner from "./SshConfigChangedBanner";
@@ -43,7 +42,6 @@ import type { SftpStatus } from "../../store/sftpStore";
 const SshConfigImport = lazy(() => import("../servers/SshConfigImport"));
 const DiscoverHosts = lazy(() => import("../servers/DiscoverHosts"));
 const SettingsPage = lazy(() => import("../settings/SettingsPage"));
-const VaultSetupModal = lazy(() => import("../vault/VaultSetupModal"));
 const TerminalPane = lazy(() => import("../terminal/TerminalPane"));
 const BroadcastGrid = lazy(() => import("../terminal/BroadcastGrid"));
 const LogView = lazy(() => import("../log/LogView"));
@@ -120,11 +118,6 @@ export default function AppShell() {
   const closeImportSshConfig = useUiStore((s) => s.closeImportSshConfig);
   const discoverHostsOpen = useUiStore((s) => s.discoverHostsOpen);
   const closeDiscoverHosts = useUiStore((s) => s.closeDiscoverHosts);
-  const isSetup = useVaultStore((s) => s.isSetup);
-  const isUnlocked = useVaultStore((s) => s.isUnlocked);
-  const isChecking = useVaultStore((s) => s.isChecking);
-  const isPasswordRequired = useVaultStore((s) => s.isPasswordRequired);
-
   const terminalSessions = useTerminalStore((s) => s.sessions);
   const terminalActiveId = useTerminalStore((s) => s.activeSessionId);
   const terminalSetActive = useTerminalStore((s) => s.setActive);
@@ -327,24 +320,8 @@ export default function AppShell() {
     });
   }, [terminalActiveId, sftpActiveId, activePanelType, updateTabFade]);
 
-  if (isChecking) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-surface-base text-muted text-sm">
-        Loading…
-      </div>
-    );
-  }
-
-  if (!isSetup && isPasswordRequired) {
-    return (
-      <Suspense fallback={null}>
-        <VaultSetupModal />
-      </Suspense>
-    );
-  }
-  if (isSetup && !isUnlocked && isPasswordRequired) return <VaultLockScreen />;
-
   return (
+    <VaultGate>
     <div className="flex flex-col h-screen bg-surface-base text-white overflow-hidden">
       <TopBar />
 
@@ -875,5 +852,6 @@ export default function AppShell() {
         </Suspense>
       </ErrorBoundary>
     </div>
+    </VaultGate>
   );
 }
