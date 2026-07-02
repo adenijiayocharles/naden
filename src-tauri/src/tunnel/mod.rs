@@ -24,11 +24,9 @@ use tauri::Emitter;
 use crate::error::AppError;
 use crate::models::port_forward::PortForward;
 use crate::ssh::{
-    connection::{
-        authenticate_session, recover_lock, tcp_connect, verify_host_key_interactive, AuthInfo,
-        HostKeyConfirmations,
-    },
+    connection::{authenticate_session, recover_lock, tcp_connect, AuthInfo},
     jump_host::{self, JumpInfo},
+    known_hosts::{verify_host_key_interactive, HostKeyConfirmations},
 };
 
 // ── Event payload emitted on tunnel:status:{forward_id} ─────────────────────

@@ -60,10 +60,9 @@ fn is_edit_allowed(filename: &str) -> bool {
 }
 
 use crate::error::AppError;
-use crate::ssh::connection::{
-    authenticate_session, verify_host_key_interactive, AuthInfo, HostKeyConfirmations,
-};
+use crate::ssh::connection::{authenticate_session, AuthInfo};
 use crate::ssh::jump_host::{self, JumpInfo};
+use crate::ssh::known_hosts::{verify_host_key_interactive, HostKeyConfirmations};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]

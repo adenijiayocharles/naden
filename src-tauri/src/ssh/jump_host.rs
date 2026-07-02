@@ -4,7 +4,8 @@ use std::os::unix::io::{FromRawFd, IntoRawFd};
 use std::os::unix::net::UnixStream;
 
 use crate::error::AppError;
-use crate::ssh::connection::{authenticate_session, verify_host_key, AuthInfo};
+use crate::ssh::connection::{authenticate_session, AuthInfo};
+use crate::ssh::known_hosts::verify_host_key;
 
 #[derive(Clone)]
 pub struct JumpInfo {

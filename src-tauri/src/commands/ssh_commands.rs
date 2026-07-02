@@ -640,13 +640,13 @@ pub async fn remove_known_host_entry(
     let server = queries::get_server_db(&state.db, &server_id).await?;
     let jump_chain = resolve_jump_chain(&state, &server).await?;
 
-    let mut removed = crate::ssh::connection::remove_known_host(
+    let mut removed = crate::ssh::known_hosts::remove_known_host(
         &server.server.hostname,
         u16::try_from(server.server.port).unwrap_or(22),
     )?;
 
     for hop in &jump_chain {
-        removed += crate::ssh::connection::remove_known_host(
+        removed += crate::ssh::known_hosts::remove_known_host(
             &hop.server.hostname,
             u16::try_from(hop.server.port).unwrap_or(22),
         )?;

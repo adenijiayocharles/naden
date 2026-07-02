@@ -1,4 +1,5 @@
 use super::*;
+use crate::ssh::connection::recover_lock;
 
 fn fresh_known_hosts() -> ssh2::KnownHosts {
     ssh2::Session::new().unwrap().known_hosts().unwrap()

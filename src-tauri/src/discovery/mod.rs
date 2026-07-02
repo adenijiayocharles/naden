@@ -12,7 +12,8 @@ use tokio::net::TcpStream;
 use tokio::sync::Semaphore;
 
 use crate::error::AppError;
-use crate::ssh::connection::{known_hosts_path, recover_lock};
+use crate::ssh::connection::recover_lock;
+use crate::ssh::known_hosts::known_hosts_path;
 
 const SCAN_PORT: i64 = 22;
 const CONNECT_TIMEOUT: Duration = Duration::from_millis(300);

@@ -2,7 +2,8 @@ use std::io::Read;
 
 use crate::commands::ssh_commands::{auth_for_server, build_jump_chain, get_server_cached};
 use crate::error::AppError;
-use crate::ssh::connection::{authenticate_session, tcp_connect, verify_host_key};
+use crate::ssh::connection::{authenticate_session, tcp_connect};
+use crate::ssh::known_hosts::verify_host_key;
 use crate::ssh::jump_host;
 use crate::AppState;
 
