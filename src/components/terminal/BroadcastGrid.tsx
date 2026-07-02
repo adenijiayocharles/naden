@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { terminalCommands } from "../../lib/tauriCommands";
+import { terminalCommands } from "../../lib/commands/terminal";
 import { useBroadcastStore } from "../../store/broadcastStore";
 import { useTerminalStore } from "../../store/terminalStore";
 import type { TerminalSession } from "../../store/terminalStore";

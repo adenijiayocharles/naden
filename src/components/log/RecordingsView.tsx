@@ -10,7 +10,7 @@ import {
 import EmptyState from "../shared/EmptyState";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import type { SessionLog } from "../../types/sessionLog";
-import { sessionLogCommands } from "../../lib/tauriCommands";
+import { sessionLogCommands } from "../../lib/commands/logs";
 import { useServerStore } from "../../store/serverStore";
 import { formatError } from "../../lib/errors";
 import { duration, fmtDate } from "../../lib/formatTime";

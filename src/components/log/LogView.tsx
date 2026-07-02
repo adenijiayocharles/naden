@@ -13,7 +13,7 @@ import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
 import EmptyState from "../shared/EmptyState";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import type { LogEntry, LogOutcome } from "../../types/log";
-import { logCommands } from "../../lib/tauriCommands";
+import { logCommands } from "../../lib/commands/logs";
 import RecordingsView from "./RecordingsView";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";

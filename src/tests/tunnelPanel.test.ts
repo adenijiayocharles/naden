@@ -5,7 +5,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn().mockResolvedValue(() => {}),
 }));
-vi.mock("../lib/tauriCommands", () => ({
+vi.mock("../lib/commands/tunnels", () => ({
   tunnelCommands: {
     listPortForwards: vi.fn(),
     createPortForward: vi.fn(),

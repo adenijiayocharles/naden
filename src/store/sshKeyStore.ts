@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { keyCommands } from "../lib/tauriCommands";
+import { keyCommands } from "../lib/commands/keys";
 import type { SshKey, GenerateKeyPayload } from "../types/sshKey";
 
 interface SshKeyStore {

@@ -3,7 +3,7 @@ import { XIcon } from "lucide-react";
 import AppLogo from "../shared/AppLogo";
 import { useVaultStore } from "../../store/vaultStore";
 import { useUiStore } from "../../store/uiStore";
-import { settingsCommands } from "../../lib/tauriCommands";
+import { settingsCommands } from "../../lib/commands/settings";
 import { formatError } from "../../lib/errors";
 import { passwordStrength } from "../../lib/passwordStrength";
 import SshConfigImport from "../servers/SshConfigImport";

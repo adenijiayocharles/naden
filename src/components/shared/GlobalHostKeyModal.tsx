@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useTerminalStore } from "../../store/terminalStore";
-import { terminalCommands } from "../../lib/tauriCommands";
+import { terminalCommands } from "../../lib/commands/terminal";
 import { Button } from "../ui/button";
 
 interface HostKeyPrompt {

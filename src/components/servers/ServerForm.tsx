@@ -6,7 +6,7 @@ import type { TerminalThemeId } from "../../lib/terminalSettings";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
 import { useTunnelStore } from "../../store/tunnelStore";
-import { vaultCommands } from "../../lib/tauriCommands";
+import { vaultCommands } from "../../lib/commands/vault";
 import { useVaultStore } from "../../store/vaultStore";
 import { useSshKeyStore } from "../../store/sshKeyStore";
 import { formatError } from "../../lib/errors";

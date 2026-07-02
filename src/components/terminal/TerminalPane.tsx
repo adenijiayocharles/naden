@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
-import { terminalCommands } from "../../lib/tauriCommands";
+import { terminalCommands } from "../../lib/commands/terminal";
 import { useTerminalStore } from "../../store/terminalStore";
 import { useTerminalToolsStore } from "../../store/terminalToolsStore";
 import { type TerminalThemeId } from "../../lib/terminalSettings";

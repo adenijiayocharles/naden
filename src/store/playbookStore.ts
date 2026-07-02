@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { playbookCommands } from "../lib/tauriCommands";
+import { playbookCommands } from "../lib/commands/content";
 import type { Playbook, CreatePlaybookPayload, UpdatePlaybookPayload } from "../types/playbook";
 
 interface PlaybookStore {

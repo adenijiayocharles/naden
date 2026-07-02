@@ -4,7 +4,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn().mockResolvedValue(() => {}),
 }));
-vi.mock("../lib/tauriCommands", () => ({
+vi.mock("../lib/commands/tunnels", () => ({
   tunnelCommands: {
     listPortForwards: vi.fn(),
     createPortForward: vi.fn(),
@@ -17,7 +17,7 @@ vi.mock("../lib/tauriCommands", () => ({
 }));
 
 import { useTunnelStore } from "../store/tunnelStore";
-import { tunnelCommands } from "../lib/tauriCommands";
+import { tunnelCommands } from "../lib/commands/tunnels";
 import type { PortForward } from "../types/portForward";
 
 const mockList = vi.mocked(tunnelCommands.listPortForwards);

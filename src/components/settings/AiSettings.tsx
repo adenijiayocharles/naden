@@ -9,7 +9,7 @@ import {
 } from "../ui/select";
 import { Switch } from "../ui/switch";
 import ConfirmDeleteModal from "../shared/ConfirmDeleteModal";
-import { assistantCommands, type AssistantStatus } from "../../lib/tauriCommands";
+import { assistantCommands, type AssistantStatus } from "../../lib/commands/assistant";
 import { formatError } from "../../lib/errors";
 import { SectionHeader, Row, RowLabel, PasswordInput } from "./SettingsShared";
 

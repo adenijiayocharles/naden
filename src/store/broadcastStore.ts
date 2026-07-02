@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { broadcastCommands, type SavedBroadcastGroup } from "../lib/tauriCommands";
-import { terminalCommands } from "../lib/tauriCommands";
+import { broadcastCommands, type SavedBroadcastGroup } from "../lib/commands/broadcast";
+import { terminalCommands } from "../lib/commands/terminal";
 import { isDestructiveCommand } from "../lib/destructiveCommands";
 import { useTerminalStore } from "./terminalStore";
 import { useServerStore } from "./serverStore";

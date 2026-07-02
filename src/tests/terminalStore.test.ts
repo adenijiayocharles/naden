@@ -4,7 +4,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn().mockResolvedValue(() => {}),
 }));
-vi.mock("../lib/tauriCommands", () => ({
+vi.mock("../lib/commands/terminal", () => ({
   terminalCommands: {
     openTerminalSession: vi.fn(),
     openLocalSession: vi.fn(),
@@ -19,7 +19,7 @@ vi.mock("../lib/tauriCommands", () => ({
 
 import { listen } from "@tauri-apps/api/event";
 import { useTerminalStore, LOCAL_SESSION_SERVER_ID } from "../store/terminalStore";
-import { terminalCommands } from "../lib/tauriCommands";
+import { terminalCommands } from "../lib/commands/terminal";
 
 const mockListen = vi.mocked(listen);
 const mockOpenTerminalSession = vi.mocked(terminalCommands.openTerminalSession);

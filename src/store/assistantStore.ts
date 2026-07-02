@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { assistantCommands } from "../lib/tauriCommands";
+import { assistantCommands } from "../lib/commands/assistant";
 import { formatError } from "../lib/errors";
 
 export type AssistantMessageStatus = "streaming" | "done" | "error";

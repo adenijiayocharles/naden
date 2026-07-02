@@ -5,13 +5,13 @@ vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn().mockResolvedValue(() => {}),
 }));
 
-vi.mock("../lib/tauriCommands", () => ({
+vi.mock("../lib/commands/server", () => ({
   serverCommands: {
     reorderServers: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
-import { serverCommands } from "../lib/tauriCommands";
+import { serverCommands } from "../lib/commands/server";
 import { useServerStore } from "../store/serverStore";
 import type { Server } from "../types/server";
 

@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState } from "react";
 
-import { assistantCommands, type AssistantStatus } from "../../lib/tauriCommands";
+import { assistantCommands, type AssistantStatus } from "../../lib/commands/assistant";
 import { timeAgo } from "../../lib/format";
 import {
   useAssistantStore,

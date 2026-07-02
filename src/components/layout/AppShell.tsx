@@ -22,7 +22,7 @@ import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { useVaultHeartbeat } from "../../hooks/useVaultHeartbeat";
 import { useMenuEvents } from "../../hooks/useMenuEvents";
 import { useTrayEvents } from "../../hooks/useTrayEvents";
-import { trayCommands } from "../../lib/tauriCommands";
+import { trayCommands } from "../../lib/commands/tray";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import TabItem from "./TabItem";

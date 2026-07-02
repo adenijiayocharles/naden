@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { settingsCommands } from "./tauriCommands";
+import { settingsCommands } from "./commands/settings";
 import type { ITheme } from "@xterm/xterm";
 
 export const TERMINAL_FONTS = [

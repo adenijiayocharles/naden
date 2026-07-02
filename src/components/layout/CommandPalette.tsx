@@ -4,7 +4,7 @@ import { useTerminalStore, type TerminalSession } from "../../store/terminalStor
 import { useSnippetStore } from "../../store/snippetStore";
 import { usePlaybookStore } from "../../store/playbookStore";
 import { useTunnelStore } from "../../store/tunnelStore";
-import { searchCommands } from "../../lib/tauriCommands";
+import { searchCommands } from "../../lib/commands/server";
 import type { Server } from "../../types/server";
 import type { Snippet } from "../../types/snippet";
 import type { Playbook } from "../../types/playbook";

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import { healthCommands } from "../lib/tauriCommands";
+import { healthCommands } from "../lib/commands/health";
 import { useTerminalStore } from "./terminalStore";
 
 export interface ServerHealth {

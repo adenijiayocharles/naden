@@ -6,7 +6,7 @@ import { useTunnelStore } from "../store/tunnelStore";
 import { useBroadcastStore } from "../store/broadcastStore";
 import { useTerminalSettings } from "../lib/terminalSettings";
 import { useUiFontSettings, applyUiFont } from "../lib/uiFontSettings";
-import { settingsCommands } from "../lib/tauriCommands";
+import { settingsCommands } from "../lib/commands/settings";
 import { promptForUpdate } from "../lib/checkForUpdates";
 import { shiftLightness } from "../lib/accentColor";
 import { setSentryEnabled } from "../lib/sentryClient";

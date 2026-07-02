@@ -5,7 +5,7 @@ import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { homeDir, join } from "@tauri-apps/api/path";
 import type { ImportPreview } from "../../types/server";
-import { sshCommands } from "../../lib/tauriCommands";
+import { sshCommands } from "../../lib/commands/ssh";
 import { useServerStore } from "../../store/serverStore";
 import { formatError } from "../../lib/errors";
 

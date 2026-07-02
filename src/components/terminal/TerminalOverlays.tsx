@@ -1,4 +1,4 @@
-import { terminalCommands } from "../../lib/tauriCommands";
+import { terminalCommands } from "../../lib/commands/terminal";
 import { useServerStore } from "../../store/serverStore";
 import { ConnectingOverlay, ErrorOverlay, ReconnectingOverlay } from "../shared/ConnectionOverlay";
 import { Button } from "../ui/button";

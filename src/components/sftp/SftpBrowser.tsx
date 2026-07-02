@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useSftpStore } from "../../store/sftpStore";
 import { useServerStore } from "../../store/serverStore";
-import { sftpCommands, terminalCommands } from "../../lib/tauriCommands";
+import { sftpCommands } from "../../lib/commands/sftp";
+import { terminalCommands } from "../../lib/commands/terminal";
 import { formatError, isAlreadyExistsError, isCancelledError } from "../../lib/errors";
 import type { SortKey, SortDir } from "./SftpFileList";
 import SftpFileList from "./SftpFileList";

@@ -1,5 +1,5 @@
 import { ask, message } from "@tauri-apps/plugin-dialog";
-import { updaterCommands } from "./tauriCommands";
+import { updaterCommands } from "./commands/updater";
 import { formatError } from "./errors";
 
 interface PromptForUpdateOptions {

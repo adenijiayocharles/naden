@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { sftpCommands } from "../lib/tauriCommands";
+import { sftpCommands } from "../lib/commands/sftp";
 import type { FileEntry } from "../types/sftp";
 
 export type SftpStatus = "connecting" | "connected" | "error";

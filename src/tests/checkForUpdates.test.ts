@@ -5,7 +5,7 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
   message: vi.fn(),
 }));
 
-vi.mock("../lib/tauriCommands", () => ({
+vi.mock("../lib/commands/updater", () => ({
   updaterCommands: {
     checkForUpdate: vi.fn(),
     relaunch: vi.fn(),
@@ -13,7 +13,7 @@ vi.mock("../lib/tauriCommands", () => ({
 }));
 
 import { ask, message } from "@tauri-apps/plugin-dialog";
-import { updaterCommands } from "../lib/tauriCommands";
+import { updaterCommands } from "../lib/commands/updater";
 import { promptForUpdate } from "../lib/checkForUpdates";
 
 const mockAsk = vi.mocked(ask);

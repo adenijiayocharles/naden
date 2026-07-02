@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
-import { sftpCommands } from "../../lib/tauriCommands";
+import { sftpCommands } from "../../lib/commands/sftp";
 import { formatError, isAlreadyExistsError, isCancelledError } from "../../lib/errors";
 import { joinPath } from "../../lib/path";
 import type { SftpSession } from "../../store/sftpStore";

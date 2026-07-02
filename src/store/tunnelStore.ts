@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { listen } from "@tauri-apps/api/event";
-import { tunnelCommands } from "../lib/tauriCommands";
+import { tunnelCommands } from "../lib/commands/tunnels";
 import type {
   CreatePortForwardPayload,
   PortForward,

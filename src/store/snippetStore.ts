@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { snippetCommands } from "../lib/tauriCommands";
+import { snippetCommands } from "../lib/commands/content";
 import type { Snippet, CreateSnippetPayload, UpdateSnippetPayload } from "../types/snippet";
 
 interface SnippetStore {

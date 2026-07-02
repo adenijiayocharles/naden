@@ -13,7 +13,7 @@ function notify() {
   listeners.forEach((fn) => fn());
 }
 
-import { clipboardCommands } from "./tauriCommands";
+import { clipboardCommands } from "./commands/local";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 // NOTE: Force-kill (SIGKILL) cannot be caught — the 30-second timer is the

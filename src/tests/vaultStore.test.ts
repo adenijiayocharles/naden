@@ -4,7 +4,7 @@ vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn().mockResolvedValue(() => {}),
 }));
 
-vi.mock("../lib/tauriCommands", () => ({
+vi.mock("../lib/commands/vault", () => ({
   vaultCommands: {
     isSetup: vi.fn(),
     isUnlocked: vi.fn(),
@@ -20,7 +20,7 @@ vi.mock("../lib/tauriCommands", () => ({
   },
 }));
 
-import { vaultCommands } from "../lib/tauriCommands";
+import { vaultCommands } from "../lib/commands/vault";
 import { useVaultStore } from "../store/vaultStore";
 
 const mockIsSetup = vi.mocked(vaultCommands.isSetup);

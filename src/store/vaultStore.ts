@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { listen } from "@tauri-apps/api/event";
-import { vaultCommands } from "../lib/tauriCommands";
+import { vaultCommands } from "../lib/commands/vault";
 
 interface VaultStore {
   isSetup: boolean;

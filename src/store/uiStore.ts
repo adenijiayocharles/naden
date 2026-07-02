@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { searchCommands } from "../lib/tauriCommands";
+import { searchCommands } from "../lib/commands/server";
 import type { Server } from "../types/server";
 
 type ActiveView = "list" | "add" | "edit" | "logs" | "snippets" | "playbooks" | "tunnels" | "settings" | "keys";

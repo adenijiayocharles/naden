@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { sftpCommands } from "../../lib/tauriCommands";
+import { sftpCommands } from "../../lib/commands/sftp";
 import { formatError, isAlreadyExistsError } from "../../lib/errors";
 import { joinPath } from "../../lib/path";
 import type { SftpSession } from "../../store/sftpStore";

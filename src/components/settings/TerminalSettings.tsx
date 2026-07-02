@@ -8,7 +8,7 @@ import {
 } from "../ui/select";
 import { Switch } from "../ui/switch";
 import { useTerminalSettings, TERMINAL_FONTS, TERMINAL_THEMES, CURSOR_STYLES, fontCss } from "../../lib/terminalSettings";
-import { settingsCommands } from "../../lib/tauriCommands";
+import { settingsCommands } from "../../lib/commands/settings";
 import { SectionHeader, Row, RowLabel } from "./SettingsShared";
 
 const LINE_HEIGHT_OPTIONS = Array.from({ length: 30 }, (_, i) => i + 1);

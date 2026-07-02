@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useUiStore, type SettingsSection } from "../../store/uiStore";
-import { settingsCommands } from "../../lib/tauriCommands";
+import { settingsCommands } from "../../lib/commands/settings";
 import { setSentryEnabled } from "../../lib/sentryClient";
 import AppearanceSettings from "./AppearanceSettings";
 import SecuritySettings from "./SecuritySettings";

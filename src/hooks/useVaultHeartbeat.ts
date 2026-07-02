@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { settingsCommands } from "../lib/tauriCommands";
+import { settingsCommands } from "../lib/commands/settings";
 import { recordHeartbeat } from "../lib/vaultActivity";
 
 export function useVaultHeartbeat() {

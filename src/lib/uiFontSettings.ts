@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { settingsCommands } from "./tauriCommands";
+import { settingsCommands } from "./commands/settings";
 
 export const UI_FONTS = [
   {

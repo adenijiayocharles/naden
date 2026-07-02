@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { terminalCommands } from "../lib/tauriCommands";
+import { terminalCommands } from "../lib/commands/terminal";
 import { sessionBuffer } from "../lib/sessionBuffer";
 
 export type SessionStatus = "connecting" | "connected" | "disconnected" | "error";

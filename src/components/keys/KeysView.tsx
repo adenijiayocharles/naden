@@ -3,7 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { homeDir, join } from "@tauri-apps/api/path";
 import { useSshKeyStore } from "../../store/sshKeyStore";
 import { useServerStore } from "../../store/serverStore";
-import { clipboardCommands } from "../../lib/tauriCommands";
+import { clipboardCommands } from "../../lib/commands/local";
 import { formatError } from "../../lib/errors";
 import type { SshKey } from "../../types/sshKey";
 import { Button } from "../ui/button";

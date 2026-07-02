@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { List, type RowComponentProps, type ListImperativeAPI } from "react-window";
 import { AutoSizer } from "react-virtualized-auto-sizer";
 import type { LocalFileEntry } from "../../types/local";
-import { localCommands } from "../../lib/tauriCommands";
+import { localCommands } from "../../lib/commands/local";
 import { formatSize, formatDate } from "../../lib/format";
 import { formatError } from "../../lib/errors";
 import { PathBar } from "./SftpToolbar";

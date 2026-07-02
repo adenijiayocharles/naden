@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { serverCommands, logCommands, type ReachabilityResult } from "../lib/tauriCommands";
+import { serverCommands, type ReachabilityResult } from "../lib/commands/server";
+import { logCommands } from "../lib/commands/logs";
 import { formatError } from "../lib/errors";
 import type {
   Server,

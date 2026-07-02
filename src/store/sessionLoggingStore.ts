@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { sessionBuffer } from "../lib/sessionBuffer";
-import { sessionLogCommands } from "../lib/tauriCommands";
+import { sessionLogCommands } from "../lib/commands/logs";
 
 const FLUSH_THRESHOLD = 64 * 1024;
 

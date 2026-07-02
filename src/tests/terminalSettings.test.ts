@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
-vi.mock("../lib/tauriCommands", () => ({
+vi.mock("../lib/commands/settings", () => ({
   settingsCommands: {
     getSetting: vi.fn(),
     setSetting: vi.fn(),
@@ -9,7 +9,7 @@ vi.mock("../lib/tauriCommands", () => ({
 }));
 
 import { useTerminalSettings } from "../lib/terminalSettings";
-import { settingsCommands } from "../lib/tauriCommands";
+import { settingsCommands } from "../lib/commands/settings";
 
 const mockGetSetting = vi.mocked(settingsCommands.getSetting);
 

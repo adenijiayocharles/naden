@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
-import { crashReportingCommands, updaterCommands, type UpdateInfo } from "../../lib/tauriCommands";
+import { crashReportingCommands } from "../../lib/commands/settings";
+import { updaterCommands, type UpdateInfo } from "../../lib/commands/updater";
 import { setSentryEnabled } from "../../lib/sentryClient";
 import { formatError } from "../../lib/errors";
-import { settingsCommands } from "../../lib/tauriCommands";
+import { settingsCommands } from "../../lib/commands/settings";
 import { SectionHeader, Row, RowLabel } from "./SettingsShared";
 
 interface AboutSettingsProps {

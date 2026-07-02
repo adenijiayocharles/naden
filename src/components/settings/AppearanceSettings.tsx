@@ -7,7 +7,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { useUiFontSettings, UI_FONTS, UI_FONT_SIZES, uiFontCss, applyUiFont } from "../../lib/uiFontSettings";
-import { settingsCommands } from "../../lib/tauriCommands";
+import { settingsCommands } from "../../lib/commands/settings";
 import { shiftLightness } from "../../lib/accentColor";
 import { SectionHeader, Row } from "./SettingsShared";
 
