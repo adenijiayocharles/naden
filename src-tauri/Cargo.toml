@@ -1,6 +1,6 @@
 [package]
 name = "naden"
-version = "1.0.2"
+version = "1.0.3"
 description = "SSH connection manager desktop app"
 authors = []
 license = "MIT"
