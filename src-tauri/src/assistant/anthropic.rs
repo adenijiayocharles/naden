@@ -16,6 +16,7 @@ pub struct AnthropicProvider;
 impl AssistantProvider for AnthropicProvider {
     async fn stream_reply(
         &self,
+        client: &reqwest::Client,
         api_key: &str,
         messages: &[ChatMessage],
         on_token: &mut (dyn FnMut(String) + Send),
@@ -29,7 +30,7 @@ impl AssistantProvider for AnthropicProvider {
                 .collect::<Vec<_>>(),
         });
 
-        let response = reqwest::Client::new()
+        let response = client
             .post(ENDPOINT)
             .header("x-api-key", api_key)
             .header("anthropic-version", ANTHROPIC_VERSION)

@@ -8,7 +8,7 @@ import { useSftpStore } from "../../store/sftpStore";
 import { useVaultStore } from "../../store/vaultStore";
 import { sshCommands, vaultCommands } from "../../lib/tauriCommands";
 import { formatError } from "../../lib/errors";
-import { copyWithAutoClear } from "../../lib/clipboardClear";
+import { activateAutoClear } from "../../lib/clipboardClear";
 export { formatHost } from "../../lib/format";
 
 export function useServerActions(server: Server) {
@@ -78,8 +78,8 @@ export function useServerActions(server: Server) {
     setMenuOpen(false);
     if (!server.vaultCredentialId) return;
     try {
-      const password = await vaultCommands.retrieveCredential(server.id, server.vaultCredentialId);
-      copyWithAutoClear(password);
+      await vaultCommands.copyCredentialToClipboard(server.id, server.vaultCredentialId);
+      activateAutoClear();
     } catch (e) {
       setError(formatError(e));
     }

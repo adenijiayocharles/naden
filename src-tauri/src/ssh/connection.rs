@@ -114,6 +114,7 @@ fn load_known_hosts_cached(known_hosts: &mut ssh2::KnownHosts, path: &std::path:
 /// Payload emitted when a new host key is seen for the first time.
 #[derive(serde::Serialize, Clone)]
 pub struct HostKeyPromptPayload {
+    pub session_id: String,
     pub host: String,
     pub port: u16,
     pub fingerprint: String,
@@ -163,8 +164,9 @@ pub(crate) fn verify_host_key_interactive(
             recover_lock(confirmations.lock()).insert(session_id.to_string(), tx);
 
             let _ = app_handle.emit(
-                &format!("ssh:host-key-prompt:{session_id}"),
+                "ssh:host-key-prompt",
                 HostKeyPromptPayload {
+                    session_id: session_id.to_string(),
                     host: host.to_string(),
                     port,
                     fingerprint,
@@ -376,6 +378,7 @@ impl SessionManager {
         on_close: Option<OnCloseCallback>,
         app_handle: tauri::AppHandle,
         keepalive_interval: u32,
+        server_id: String,
     ) -> Result<(), AppError> {
         let (tx, rx) = std::sync::mpsc::sync_channel(256);
 
@@ -403,6 +406,7 @@ impl SessionManager {
                     Arc::clone(&sessions),
                     keepalive_interval,
                     confirmations,
+                    server_id,
                 );
             }));
             if result.is_err() {
@@ -629,6 +633,7 @@ fn run_session(
     sessions: Arc<Mutex<HashMap<String, ActiveSession>>>,
     keepalive_interval: u32,
     host_key_confirmations: HostKeyConfirmations,
+    server_id: String,
 ) {
     let output_event = format!("terminal:output:{session_id}");
     let closed_event = format!("terminal:closed:{session_id}");
@@ -841,6 +846,7 @@ fn run_session(
             let h = host.clone();
             let u = username.clone();
             let p = port;
+            let sid = server_id.clone();
             std::thread::spawn(move || {
                 if let Ok(mut child) = std::process::Command::new("sh")
                     .arg("-c")
@@ -848,6 +854,7 @@ fn run_session(
                     .env("NADEN_HOST", &h)
                     .env("NADEN_PORT", p.to_string())
                     .env("NADEN_USER", &u)
+                    .env("NADEN_SERVER_ID", &sid)
                     .spawn()
                 {
                     let deadline = std::time::Instant::now() + POST_HOOK_TIMEOUT;

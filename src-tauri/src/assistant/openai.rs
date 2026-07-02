@@ -15,6 +15,7 @@ pub struct OpenAiProvider;
 impl AssistantProvider for OpenAiProvider {
     async fn stream_reply(
         &self,
+        client: &reqwest::Client,
         api_key: &str,
         messages: &[ChatMessage],
         on_token: &mut (dyn FnMut(String) + Send),
@@ -27,7 +28,7 @@ impl AssistantProvider for OpenAiProvider {
                 .collect::<Vec<_>>(),
         });
 
-        let response = reqwest::Client::new()
+        let response = client
             .post(ENDPOINT)
             .bearer_auth(api_key)
             .json(&body)

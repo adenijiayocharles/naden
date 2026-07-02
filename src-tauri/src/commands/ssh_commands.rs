@@ -120,14 +120,14 @@ pub(crate) async fn auth_for_server(
                 .vault_credential_id
                 .as_deref()
                 .ok_or_else(|| AppError::Vault("no vault credential for password auth".into()))?;
-            let key: [u8; 32] = {
+            let key = {
                 let guard = state.vault_key.lock().await;
                 match guard.as_ref() {
                     None => return Err(AppError::Vault("vault is locked".into())),
-                    Some(k) => **k,
+                    Some(k) => zeroize::Zeroizing::new(**k),
                 }
             };
-            let password = vault::retrieve_credential(&state.db, &key, vault_id).await?;
+            let password = vault::retrieve_credential(&state.db, &*key, vault_id).await?;
             Ok(AuthInfo::Password(Zeroizing::new(password)))
         }
         "key" => {
@@ -164,12 +164,12 @@ pub(crate) async fn auth_for_server(
             }
 
             let passphrase = if let Some(vid) = &s.vault_credential_id {
-                let key_opt: Option<[u8; 32]> = {
+                let key_opt = {
                     let guard = state.vault_key.lock().await;
-                    guard.as_ref().map(|k| **k)
+                    guard.as_ref().map(|k| zeroize::Zeroizing::new(**k))
                 };
                 if let Some(key) = key_opt {
-                    vault::retrieve_credential(&state.db, &key, vid).await.ok()
+                    vault::retrieve_credential(&state.db, &*key, vid).await.ok()
                 } else {
                     None
                 }
@@ -269,7 +269,7 @@ fn validate_import_hostname(hostname: &str) -> Result<(), AppError> {
 /// Uses logical path normalization so the file does not need to exist yet.
 fn validate_import_identity_path(path: &str, app: &tauri::AppHandle) -> Result<(), AppError> {
     let expanded = expand_path(path, app);
-    let home = crate::commands::local_commands::home_boundary();
+    let home = crate::commands::local_commands::home_boundary()?;
     // Normalize without hitting the filesystem so missing-key imports still pass.
     let mut clean = std::path::PathBuf::new();
     for component in expanded.components() {
@@ -532,6 +532,7 @@ pub async fn open_terminal_session(
         Some(on_close),
         app_handle.clone(),
         keepalive_interval,
+        server_id.clone(),
     )?;
 
     // Auto-start any port forwards configured for this server in the background —
@@ -564,6 +565,7 @@ pub async fn open_terminal_session(
             .await
             .unwrap_or_default();
 
+        let confirmations = std::sync::Arc::clone(&state.session_manager.host_key_confirmations);
         for fwd in auto_fwds {
             let fwd_auth = base_auth.clone();
             let fwd_jumps = base_jumps.clone();
@@ -577,6 +579,7 @@ pub async fn open_terminal_session(
                     jump_chain: fwd_jumps,
                 },
                 app_handle.clone(),
+                std::sync::Arc::clone(&confirmations),
             );
         }
     });
@@ -600,6 +603,10 @@ pub async fn send_terminal_input(
     data: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), AppError> {
+    const MAX_INPUT_BYTES: usize = 64 * 1024;
+    if data.len() > MAX_INPUT_BYTES {
+        return Err(AppError::Validation("terminal input too large".into()));
+    }
     state
         .session_manager
         .send_input(&session_id, data.into_bytes())

@@ -57,6 +57,7 @@ pub async fn open_sftp_session(
         auth,
         jump_chain,
         app_handle,
+        std::sync::Arc::clone(&state.session_manager.host_key_confirmations),
     )
 }
 

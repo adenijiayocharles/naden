@@ -1,3 +1,5 @@
+use std::sync::{atomic::Ordering, Arc};
+
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use tauri::Emitter;
@@ -152,11 +154,11 @@ pub async fn set_assistant_api_key(
     }
     let key_id_key = key_id_setting(&provider)?;
 
-    let vault_key: [u8; 32] = {
+    let vault_key = {
         let guard = state.vault_key.lock().await;
         match guard.as_ref() {
             None => return Err(AppError::Vault("vault is locked".into())),
-            Some(k) => **k,
+            Some(k) => zeroize::Zeroizing::new(**k),
         }
     };
 
@@ -165,7 +167,7 @@ pub async fn set_assistant_api_key(
         vault::delete_credential(&state.db, &old_id).await?;
     }
 
-    let id = vault::store_credential(&state.db, &vault_key, &api_key).await?;
+    let id = vault::store_credential(&state.db, &*vault_key,&api_key).await?;
     write_setting(&state.db, key_id_key, &id).await?;
 
     // First key added becomes the default active provider.
@@ -365,11 +367,11 @@ pub async fn save_assistant_chat_history(
         ));
     }
 
-    let vault_key: [u8; 32] = {
+    let vault_key = {
         let guard = state.vault_key.lock().await;
         match guard.as_ref() {
             None => return Err(AppError::Vault("vault is locked".into())),
-            Some(k) => **k,
+            Some(k) => zeroize::Zeroizing::new(**k),
         }
     };
 
@@ -382,7 +384,7 @@ pub async fn save_assistant_chat_history(
 
     if let Some(credential_id) = existing {
         // Update ciphertext in place — same ID, new nonce, zero orphan risk.
-        vault::update_credential(&state.db, &vault_key, &credential_id, &payload).await?;
+        vault::update_credential(&state.db, &*vault_key,&credential_id, &payload).await?;
         sqlx::query("UPDATE assistant_chat_archive SET updated_at = ? WHERE server_id = ?")
             .bind(chrono::Utc::now().timestamp())
             .bind(&server_id)
@@ -390,7 +392,7 @@ pub async fn save_assistant_chat_history(
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
     } else {
-        let credential_id = vault::store_credential(&state.db, &vault_key, &payload).await?;
+        let credential_id = vault::store_credential(&state.db, &*vault_key,&payload).await?;
         sqlx::query(
             "INSERT INTO assistant_chat_archive (server_id, credential_id, updated_at) VALUES (?, ?, ?)",
         )
@@ -440,15 +442,15 @@ pub async fn load_assistant_chat_history(
         return Ok(None);
     };
 
-    let vault_key: [u8; 32] = {
+    let vault_key = {
         let guard = state.vault_key.lock().await;
         match guard.as_ref() {
             None => return Err(AppError::Vault("vault is locked".into())),
-            Some(k) => **k,
+            Some(k) => zeroize::Zeroizing::new(**k),
         }
     };
 
-    let payload = vault::retrieve_credential(&state.db, &vault_key, &credential_id).await?;
+    let payload = vault::retrieve_credential(&state.db, &*vault_key,&credential_id).await?;
     Ok(Some(payload))
 }
 
@@ -485,16 +487,21 @@ pub async fn send_assistant_message(
         .await?
         .ok_or_else(|| AppError::Validation(format!("no API key configured for {provider_id}")))?;
 
-    let vault_key: [u8; 32] = {
+    let vault_key = {
         let guard = state.vault_key.lock().await;
         match guard.as_ref() {
             None => return Err(AppError::Vault("vault is locked".into())),
-            Some(k) => **k,
+            Some(k) => zeroize::Zeroizing::new(**k),
         }
     };
     let api_key =
-        zeroize::Zeroizing::new(vault::retrieve_credential(&state.db, &vault_key, &key_id).await?);
+        zeroize::Zeroizing::new(vault::retrieve_credential(&state.db, &*vault_key,&key_id).await?);
     let provider = assistant::provider_for(&provider_id)?;
+    let http_client = state.http_client.clone();
+    if state.assistant_in_flight.swap(true, Ordering::AcqRel) {
+        return Err(AppError::Validation("assistant request already in progress".into()));
+    }
+    let in_flight = Arc::clone(&state.assistant_in_flight);
 
     if messages.len() > MAX_MESSAGES {
         return Err(AppError::Validation(format!(
@@ -528,10 +535,11 @@ pub async fn send_assistant_message(
         };
 
         match provider
-            .stream_reply(&api_key, &chat_messages, &mut on_token)
+            .stream_reply(&http_client, &api_key, &chat_messages, &mut on_token)
             .await
         {
             Ok(()) => {
+                in_flight.store(false, Ordering::Release);
                 let _ = app_handle.emit(&format!("assistant:done:{request_id}"), ());
             }
             // `Validation` messages here are ones we constructed ourselves
@@ -540,10 +548,12 @@ pub async fn send_assistant_message(
             // errors, so they're logged only and replaced with a generic
             // message before reaching the frontend.
             Err(AppError::Validation(message)) => {
+                in_flight.store(false, Ordering::Release);
                 log::error!("[assistant] stream error for {request_id}: {message}");
                 let _ = app_handle.emit(&format!("assistant:error:{request_id}"), message);
             }
             Err(e) => {
+                in_flight.store(false, Ordering::Release);
                 log::error!("[assistant] stream error for {request_id}: {e}");
                 let _ = app_handle.emit(
                     &format!("assistant:error:{request_id}"),

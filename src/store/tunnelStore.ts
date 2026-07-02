@@ -51,6 +51,11 @@ export const useTunnelStore = create<TunnelStore>((set, get) => ({
         statuses: { ...s.statuses, ...statuses },
       }));
     } else {
+      // Full reload: clean up any stale listeners before replacing state.
+      for (const unlisten of unlisteners.values()) {
+        unlisten();
+      }
+      unlisteners.clear();
       set({ forwards, statuses });
     }
 

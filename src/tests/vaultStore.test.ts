@@ -9,6 +9,7 @@ vi.mock("../lib/tauriCommands", () => ({
     isSetup: vi.fn(),
     isUnlocked: vi.fn(),
     isPasswordRequired: vi.fn(),
+    needsFormatUpgrade: vi.fn(),
     setup: vi.fn(),
     skipSetup: vi.fn(),
     unlock: vi.fn(),
@@ -25,6 +26,7 @@ import { useVaultStore } from "../store/vaultStore";
 const mockIsSetup = vi.mocked(vaultCommands.isSetup);
 const mockIsUnlocked = vi.mocked(vaultCommands.isUnlocked);
 const mockIsPasswordRequired = vi.mocked(vaultCommands.isPasswordRequired);
+const mockNeedsFormatUpgrade = vi.mocked(vaultCommands.needsFormatUpgrade);
 const mockSetup = vi.mocked(vaultCommands.setup);
 const mockSkipSetup = vi.mocked(vaultCommands.skipSetup);
 const mockUnlock = vi.mocked(vaultCommands.unlock);
@@ -36,6 +38,7 @@ const RESET_STATE = {
   isUnlocked: false,
   isSetup: false,
   isPasswordRequired: true,
+  needsFormatUpgrade: false,
 };
 
 beforeEach(() => {
@@ -48,6 +51,7 @@ describe("check()", () => {
     mockIsSetup.mockResolvedValueOnce(true);
     mockIsUnlocked.mockResolvedValueOnce(true);
     mockIsPasswordRequired.mockResolvedValueOnce(false);
+    mockNeedsFormatUpgrade.mockResolvedValueOnce(false);
 
     await useVaultStore.getState().check();
 
@@ -62,6 +66,7 @@ describe("check()", () => {
     mockIsSetup.mockResolvedValueOnce(false);
     mockIsUnlocked.mockResolvedValueOnce(false);
     mockIsPasswordRequired.mockResolvedValueOnce(true);
+    mockNeedsFormatUpgrade.mockResolvedValueOnce(false);
 
     await useVaultStore.getState().check();
 

@@ -91,6 +91,33 @@ function dropFromState(
   };
 }
 
+// Global listener for host key prompts — covers terminal, SFTP, and tunnel
+// sessions. Registered once; terminal sessions update store state so the
+// existing per-pane overlay still renders. Non-terminal sessions are handled
+// by GlobalHostKeyModal in App.tsx.
+void listen<{ session_id: string; host: string; port: number; fingerprint: string; key_type: string }>(
+  "ssh:host-key-prompt",
+  ({ payload }) => {
+    const store = useTerminalStore.getState();
+    if (!store.sessions.find((s) => s.id === payload.session_id)) return;
+    useTerminalStore.setState((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === payload.session_id
+          ? {
+              ...s,
+              hostKeyPrompt: {
+                host: payload.host,
+                port: payload.port,
+                fingerprint: payload.fingerprint,
+                keyType: payload.key_type,
+              },
+            }
+          : s,
+      ),
+    }));
+  },
+);
+
 export const useTerminalStore = create<TerminalStore>((set, get) => ({
   sessions: [],
   activeSessionId: null,
@@ -223,27 +250,6 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
         }));
       }),
 
-      listen<{ host: string; port: number; fingerprint: string; key_type: string }>(
-        `ssh:host-key-prompt:${sessionId}`,
-        ({ payload }) => {
-          set((state) => ({
-            sessions: state.sessions.map((s) =>
-              s.id === sessionId
-                ? {
-                    ...s,
-                    hostKeyPrompt: {
-                      host: payload.host,
-                      port: payload.port,
-                      fingerprint: payload.fingerprint,
-                      keyType: payload.key_type,
-                    },
-                  }
-                : s,
-            ),
-          }));
-        },
-      ),
-
       listen<{ pre_connect_hook?: string; post_disconnect_hook?: string }>(
         `ssh:hook-confirm-prompt:${sessionId}`,
         ({ payload }) => {
@@ -358,8 +364,8 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
 
     try {
       await terminalCommands.closeTerminalSession(sessionId);
-    } catch {
-      // Session may have already closed naturally
+    } catch (e) {
+      console.debug("[terminal] closeSession:", e);
     }
 
     set((state) => dropFromState(state, sessionId));

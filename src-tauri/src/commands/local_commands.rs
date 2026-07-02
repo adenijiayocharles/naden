@@ -3,16 +3,17 @@ use std::os::unix::fs::PermissionsExt;
 use crate::error::AppError;
 use crate::AppState;
 
-pub(crate) fn home_boundary() -> std::path::PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
-    std::fs::canonicalize(&home).unwrap_or_else(|_| std::path::PathBuf::from(home))
+pub(crate) fn home_boundary() -> Result<std::path::PathBuf, AppError> {
+    let home = std::env::var("HOME")
+        .map_err(|_| AppError::Io("HOME environment variable is not set".into()))?;
+    Ok(std::fs::canonicalize(&home).unwrap_or_else(|_| std::path::PathBuf::from(home)))
 }
 
 /// Canonicalizes `path` and verifies it is under the home directory.
 /// Use for paths that must already exist.
 pub(crate) fn check_home_boundary(path: &str) -> Result<std::path::PathBuf, AppError> {
     let canonical = std::fs::canonicalize(path).map_err(|e| AppError::Io(e.to_string()))?;
-    if !canonical.starts_with(home_boundary()) {
+    if !canonical.starts_with(home_boundary()?) {
         return Err(AppError::Io(format!(
             "Path is outside home directory: {path}"
         )));
@@ -29,7 +30,7 @@ pub(crate) fn check_parent_home_boundary(path: &str) -> Result<(), AppError> {
         .ok_or_else(|| AppError::Io(format!("Invalid path: {path}")))?;
     let canonical_parent =
         std::fs::canonicalize(parent).map_err(|e| AppError::Io(e.to_string()))?;
-    if !canonical_parent.starts_with(home_boundary()) {
+    if !canonical_parent.starts_with(home_boundary()?) {
         return Err(AppError::Io(format!(
             "Path is outside home directory: {path}"
         )));
@@ -95,8 +96,11 @@ pub fn open_local(path: String) -> Result<(), AppError> {
 
 #[tauri::command]
 pub fn open_url(url: String) -> Result<(), AppError> {
-    if !url.starts_with("https://") && !url.starts_with("http://") {
-        return Err(AppError::Io("Only http/https URLs are allowed".into()));
+    if url.len() > 2048 {
+        return Err(AppError::Io("URL too long".into()));
+    }
+    if !url.starts_with("https://") {
+        return Err(AppError::Io("Only https URLs are allowed".into()));
     }
     std::process::Command::new("open")
         .arg(&url)

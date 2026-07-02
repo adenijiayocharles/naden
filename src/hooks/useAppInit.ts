@@ -9,6 +9,7 @@ import { useUiFontSettings, applyUiFont } from "../lib/uiFontSettings";
 import { settingsCommands } from "../lib/tauriCommands";
 import { promptForUpdate } from "../lib/checkForUpdates";
 import { shiftLightness } from "../lib/accentColor";
+import { setSentryEnabled } from "../lib/sentryClient";
 
 // Delay the startup update check, measured from when the vault unlocks, so
 // it doesn't compete with initial data loading right after launch/unlock.
@@ -86,6 +87,13 @@ export function useAppInit() {
       .catch(() => {
         setOnboardingChecked();
       });
+
+    settingsCommands
+      .getSetting("crash_reporting_enabled")
+      .then((v) => {
+        setSentryEnabled(v === "true");
+      })
+      .catch(() => {});
   }, [fetchAll, check, loadTerminalSettings, loadUiFontSettings, loadTunnels, loadSavedBroadcastGroups, setOnboardingComplete, setOnboardingChecked]);
 
   // Schedule the startup update check once the vault is unlocked (or

@@ -157,8 +157,8 @@ export const vaultCommands = {
   storeCredential: (secret: string) =>
     invoke<string>("store_credential", { secret }),
 
-  retrieveCredential: (serverId: string, vaultCredentialId: string) =>
-    invoke<string>("retrieve_credential", { serverId, vaultCredentialId }),
+  copyCredentialToClipboard: (serverId: string, vaultCredentialId: string) =>
+    invoke<void>("copy_credential_to_clipboard", { serverId, vaultCredentialId }),
 
   deleteCredential: (vaultCredentialId: string, serverId?: string) =>
     invoke<void>("delete_credential", { vaultCredentialId, serverId }),
@@ -192,6 +192,9 @@ export const vaultCommands = {
 
   changePassword: (currentPassword: string, newPassword: string) =>
     invoke<void>("vault_change_password", { currentPassword, newPassword }),
+
+  needsFormatUpgrade: () =>
+    invoke<boolean>("vault_needs_format_upgrade"),
 };
 
 export const backupCommands = {

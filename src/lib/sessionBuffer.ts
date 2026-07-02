@@ -8,7 +8,7 @@ function base64ToBytes(encoded: string): Uint8Array {
 }
 
 class SessionBuffer {
-  private static readonly MAX_BYTES = 1 * 1024 * 1024; // 1 MB scrollback per session
+  private static readonly MAX_BYTES = 512 * 1024; // 512 KB scrollback per session
 
   private readonly chunks = new Map<string, Uint8Array[]>();
   private readonly chunkBytes = new Map<string, number>();

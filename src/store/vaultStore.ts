@@ -7,6 +7,7 @@ interface VaultStore {
   isUnlocked: boolean;
   isChecking: boolean;
   isPasswordRequired: boolean;
+  needsFormatUpgrade: boolean;
 
   check: () => Promise<void>;
   setup: (password: string) => Promise<void>;
@@ -23,16 +24,18 @@ export const useVaultStore = create<VaultStore>((set) => ({
   isUnlocked: false,
   isChecking: true,
   isPasswordRequired: true,
+  needsFormatUpgrade: false,
 
   check: async () => {
     set({ isChecking: true });
     try {
-      const [isSetup, isUnlocked, isPasswordRequired] = await Promise.all([
+      const [isSetup, isUnlocked, isPasswordRequired, needsFormatUpgrade] = await Promise.all([
         vaultCommands.isSetup(),
         vaultCommands.isUnlocked(),
         vaultCommands.isPasswordRequired(),
+        vaultCommands.needsFormatUpgrade(),
       ]);
-      set({ isSetup, isUnlocked, isPasswordRequired });
+      set({ isSetup, isUnlocked, isPasswordRequired, needsFormatUpgrade });
     } finally {
       set({ isChecking: false });
     }
@@ -50,7 +53,7 @@ export const useVaultStore = create<VaultStore>((set) => ({
 
   unlock: async (password) => {
     const ok = await vaultCommands.unlock(password);
-    if (ok) set({ isUnlocked: true });
+    if (ok) set({ isUnlocked: true, needsFormatUpgrade: false });
     return ok;
   },
 

@@ -11,11 +11,21 @@ async fn assemble_playbooks(
     db: &SqlitePool,
     rows: Vec<PlaybookRow>,
 ) -> Result<Vec<Playbook>, AppError> {
-    let steps: Vec<(String, PlaybookStep)> =
-        sqlx::query_as::<_, (String, String, i64, String, i64)>(
-            "SELECT playbook_id, id, position, command, delay_ms
-         FROM playbook_steps ORDER BY playbook_id ASC, position ASC",
-        )
+    if rows.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let placeholders = rows.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
+    let sql = format!(
+        "SELECT playbook_id, id, position, command, delay_ms
+         FROM playbook_steps WHERE playbook_id IN ({placeholders})
+         ORDER BY playbook_id ASC, position ASC"
+    );
+    let mut q = sqlx::query_as::<_, (String, String, i64, String, i64)>(&sql);
+    for row in &rows {
+        q = q.bind(&row.id);
+    }
+    let steps: Vec<(String, PlaybookStep)> = q
         .fetch_all(db)
         .await?
         .into_iter()

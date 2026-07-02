@@ -27,6 +27,7 @@ pub struct ChatMessage {
 pub trait AssistantProvider: Send + Sync {
     async fn stream_reply(
         &self,
+        client: &reqwest::Client,
         api_key: &str,
         messages: &[ChatMessage],
         on_token: &mut (dyn FnMut(String) + Send),

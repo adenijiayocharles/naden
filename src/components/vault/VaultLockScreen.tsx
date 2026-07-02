@@ -9,6 +9,7 @@ import { Button } from "../ui/button";
 export default function VaultLockScreen() {
   const unlock = useVaultStore((s) => s.unlock);
   const check = useVaultStore((s) => s.check);
+  const needsFormatUpgrade = useVaultStore((s) => s.needsFormatUpgrade);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -59,6 +60,14 @@ export default function VaultLockScreen() {
           </div>
           <p className="text-muted text-sm">Enter your master password to continue</p>
         </div>
+
+        {needsFormatUpgrade && (
+          <div className="mb-4 p-3 bg-amber-950/40 border border-amber-700/40 rounded-lg text-center">
+            <p className="text-xs text-amber-300">
+              Your vault uses an older security format. Unlock to upgrade it automatically.
+            </p>
+          </div>
+        )}
 
         <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-3">
           <div className="relative">

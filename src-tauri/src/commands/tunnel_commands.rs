@@ -66,6 +66,7 @@ pub async fn start_tunnel(
             jump_chain,
         },
         app_handle,
+        std::sync::Arc::clone(&state.session_manager.host_key_confirmations),
     )
 }
 

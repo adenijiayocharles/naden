@@ -824,6 +824,9 @@ export default function SettingsPage() {
               )}
 
               <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3 mt-6">Backup &amp; restore</p>
+              <p className="text-xs text-text-muted mb-3">
+                Backups are encrypted with your master password (AES-256-GCM). Security depends entirely on password strength — use a long passphrase, not a short word.
+              </p>
               <Row>
                 <RowLabel
                   title="Back up vault"

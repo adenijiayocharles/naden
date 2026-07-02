@@ -43,6 +43,10 @@ pub struct AppState {
     /// Set to true when the user explicitly calls vault_lock so the heartbeat
     /// does not auto-restore the key when password protection is disabled.
     pub manually_locked: tokio::sync::Mutex<bool>,
+    /// Shared HTTP client — reqwest::Client is Arc-backed so cloning is O(1).
+    pub http_client: reqwest::Client,
+    /// True while an AI assistant stream is in progress — prevents concurrent requests.
+    pub assistant_in_flight: Arc<std::sync::atomic::AtomicBool>,
 }
 
 #[tauri::command]
@@ -208,7 +212,9 @@ pub fn run() {
             commands::vault_commands::vault_change_password,
             commands::vault_commands::store_credential,
             commands::vault_commands::retrieve_credential,
+            commands::vault_commands::copy_credential_to_clipboard,
             commands::vault_commands::delete_credential,
+            commands::vault_commands::vault_needs_format_upgrade,
             // Vault backup
             commands::backup_commands::backup_vault_db,
             commands::backup_commands::restore_vault_db,
@@ -310,6 +316,8 @@ pub fn run() {
                 tunnel_manager: tunnel::TunnelManager::new(),
                 last_vault_activity: tokio::sync::Mutex::new(std::time::Instant::now()),
                 manually_locked: tokio::sync::Mutex::new(false),
+                http_client: reqwest::Client::new(),
+                assistant_in_flight: Arc::new(std::sync::atomic::AtomicBool::new(false)),
             });
 
             // Installed after the panic hook above, which it chains to —

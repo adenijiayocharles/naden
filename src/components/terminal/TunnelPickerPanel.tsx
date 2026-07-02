@@ -45,6 +45,14 @@ function TunnelPickerRow({
             {fwd.forwardType}
           </span>
           {fwd.label && <span className="text-[10px] text-dim truncate">{fwd.label}</span>}
+          {isRunning && (fwd.forwardType === "local" || fwd.forwardType === "dynamic") && (
+            <span
+              className="text-[9px] text-amber-400/70 shrink-0"
+              title="Single-connection mode — only one client is proxied at a time"
+            >
+              single-client
+            </span>
+          )}
           {error && status === "error" && (
             <span className="text-[10px] text-error truncate">{formatError(error)}</span>
           )}

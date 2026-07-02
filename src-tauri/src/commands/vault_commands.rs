@@ -237,15 +237,15 @@ pub async fn store_credential(
     secret: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<String, AppError> {
-    let key: [u8; 32] = {
+    let key = {
         let guard = state.vault_key.lock().await;
         match guard.as_ref() {
             None => return Err(AppError::Vault("vault is locked".into())),
-            Some(k) => **k,
+            Some(k) => zeroize::Zeroizing::new(**k),
         }
     };
-    let id = vault::store_credential(&state.db, &key, &secret).await?;
-    log::info!("[vault] credential stored");
+    let id = vault::store_credential(&state.db, &*key, &secret).await?;
+    log::debug!("[vault] credential stored");
     Ok(id)
 }
 
@@ -472,14 +472,53 @@ pub async fn retrieve_credential(
         ));
     }
 
-    let key: [u8; 32] = {
+    let key = {
         let guard = state.vault_key.lock().await;
         match guard.as_ref() {
             None => return Err(AppError::Vault("vault is locked".into())),
-            Some(k) => **k,
+            Some(k) => zeroize::Zeroizing::new(**k),
         }
     };
-    vault::retrieve_credential(&state.db, &key, &vault_credential_id).await
+    vault::retrieve_credential(&state.db, &*key, &vault_credential_id).await
+}
+
+/// Decrypts a server's stored credential and writes it to the OS clipboard.
+/// No plaintext crosses the IPC bridge — the renderer only receives success/error.
+/// Schedules an automatic clipboard clear after 30 seconds.
+#[tauri::command]
+pub async fn copy_credential_to_clipboard(
+    server_id: String,
+    vault_credential_id: String,
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+) -> Result<(), AppError> {
+    let server = crate::db::queries::get_server_db(&state.db, &server_id).await?;
+    if server.server.vault_credential_id.as_deref() != Some(vault_credential_id.as_str()) {
+        return Err(AppError::Validation(
+            "vault_credential_id does not belong to server_id".into(),
+        ));
+    }
+    let key = {
+        let guard = state.vault_key.lock().await;
+        match guard.as_ref() {
+            None => return Err(AppError::Vault("vault is locked".into())),
+            Some(k) => zeroize::Zeroizing::new(**k),
+        }
+    };
+    let credential =
+        zeroize::Zeroizing::new(vault::retrieve_credential(&state.db, &*key, &vault_credential_id).await?);
+    use tauri_plugin_clipboard_manager::ClipboardExt;
+    app_handle
+        .clipboard()
+        .write_text(credential.as_str())
+        .map_err(|e| AppError::Io(format!("clipboard write failed: {e}")))?;
+    // Clear clipboard after 30 seconds regardless of app state.
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
+        use tauri_plugin_clipboard_manager::ClipboardExt;
+        let _ = app_handle.clipboard().write_text("");
+    });
+    Ok(())
 }
 
 /// Deletes a stored credential.
@@ -522,6 +561,23 @@ pub async fn delete_credential(
     vault::delete_credential(&state.db, &vault_credential_id).await?;
     log::info!("[vault] credential deleted");
     Ok(())
+}
+
+/// Returns true when the vault's verification tag is still in the V1 (SHA-256) format.
+/// Used on launch to show a one-time prompt asking the user to unlock and auto-upgrade.
+#[tauri::command]
+pub async fn vault_needs_format_upgrade(
+    state: tauri::State<'_, AppState>,
+) -> Result<bool, AppError> {
+    let stored_b64: Option<String> =
+        sqlx::query_scalar("SELECT value FROM vault_meta WHERE key = 'verification'")
+            .fetch_optional(&state.db)
+            .await?;
+    let Some(b64) = stored_b64 else { return Ok(false) };
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
+    let bytes = STANDARD.decode(&b64).unwrap_or_default();
+    // V1 verification tag is exactly 32 bytes (raw SHA-256); V2 is longer.
+    Ok(bytes.len() == 32)
 }
 
 #[cfg(test)]

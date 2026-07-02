@@ -60,7 +60,9 @@ fn is_edit_allowed(filename: &str) -> bool {
 }
 
 use crate::error::AppError;
-use crate::ssh::connection::{authenticate_session, verify_host_key, AuthInfo};
+use crate::ssh::connection::{
+    authenticate_session, verify_host_key_interactive, AuthInfo, HostKeyConfirmations,
+};
 use crate::ssh::jump_host::{self, JumpInfo};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -183,6 +185,7 @@ impl SftpManager {
         auth: AuthInfo,
         jump_chain: Vec<JumpInfo>,
         app_handle: tauri::AppHandle,
+        confirmations: HostKeyConfirmations,
     ) -> Result<(), AppError> {
         let (tx, rx) = std::sync::mpsc::sync_channel(64);
         let cancel_flag = Arc::new(AtomicBool::new(false));
@@ -210,6 +213,7 @@ impl SftpManager {
                 app_handle,
                 sessions,
                 cancel_flag,
+                confirmations,
             );
         });
 
@@ -272,6 +276,7 @@ fn run_sftp_session(
     app_handle: tauri::AppHandle,
     sessions: Arc<Mutex<HashMap<String, SftpSessionHandle>>>,
     cancel_flag: Arc<AtomicBool>,
+    confirmations: HostKeyConfirmations,
 ) {
     // Guarantees removal from the sessions map on exit, including panics.
     let _guard = SessionGuard {
@@ -295,7 +300,14 @@ fn run_sftp_session(
             .handshake()
             .map_err(|e| AppError::Ssh(format!("SSH handshake failed: {e}")))?;
 
-        verify_host_key(&session, &host, port)?;
+        verify_host_key_interactive(
+            &session,
+            &host,
+            port,
+            &session_id,
+            &app_handle,
+            &confirmations,
+        )?;
         authenticate_session(&mut session, &username, &auth)?;
 
         if !session.authenticated() {

@@ -15,6 +15,7 @@ pub struct OpenRouterProvider;
 impl AssistantProvider for OpenRouterProvider {
     async fn stream_reply(
         &self,
+        client: &reqwest::Client,
         api_key: &str,
         messages: &[ChatMessage],
         on_token: &mut (dyn FnMut(String) + Send),
@@ -27,7 +28,7 @@ impl AssistantProvider for OpenRouterProvider {
                 .collect::<Vec<_>>(),
         });
 
-        let response = reqwest::Client::new()
+        let response = client
             .post(ENDPOINT)
             .bearer_auth(api_key)
             // Identifies the app to OpenRouter for analytics/rate-limit attribution.

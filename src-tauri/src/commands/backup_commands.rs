@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use tauri::Manager;
 
+use crate::commands::local_commands::{check_home_boundary, check_parent_home_boundary};
 use crate::db::queries;
 use crate::error::AppError;
 use crate::AppState;
@@ -36,6 +37,7 @@ pub async fn backup_vault_db(
         .execute(&state.db)
         .await?;
 
+    check_parent_home_boundary(&dest_path)?;
     let live_path = live_db_path(&app)?;
     tokio::fs::copy(&live_path, &dest_path)
         .await
@@ -61,6 +63,7 @@ pub async fn restore_vault_db(
         .ok_or_else(|| AppError::Io("could not resolve the app data directory".into()))?;
     let staging_path = data_dir.join("naden.db.restore-staging");
 
+    check_home_boundary(&src_path)?;
     tokio::fs::copy(&src_path, &staging_path)
         .await
         .map_err(|e| AppError::Io(e.to_string()))?;

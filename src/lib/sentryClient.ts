@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/react";
 
-// Gate checked in beforeSend — starts enabled (opt-out default).
-let enabled = true;
+// Gate checked in beforeSend — disabled until the user's stored preference is loaded.
+let enabled = false;
 
 export function initSentry(): void {
   const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;

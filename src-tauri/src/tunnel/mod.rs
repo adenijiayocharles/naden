@@ -24,7 +24,10 @@ use tauri::Emitter;
 use crate::error::AppError;
 use crate::models::port_forward::PortForward;
 use crate::ssh::{
-    connection::{authenticate_session, recover_lock, tcp_connect, verify_host_key, AuthInfo},
+    connection::{
+        authenticate_session, recover_lock, tcp_connect, verify_host_key_interactive, AuthInfo,
+        HostKeyConfirmations,
+    },
     jump_host::{self, JumpInfo},
 };
 
@@ -82,6 +85,7 @@ impl TunnelManager {
         fwd: PortForward,
         target: TunnelTarget,
         app: tauri::AppHandle,
+        confirmations: HostKeyConfirmations,
     ) -> Result<(), AppError> {
         let fid = fwd.id.clone();
         let shutdown = Arc::new(AtomicBool::new(false));
@@ -101,7 +105,7 @@ impl TunnelManager {
         std::thread::spawn(move || {
             emit_status(&app, &fid, "connecting", None);
 
-            let result = run_session(fwd, target, sd, &app, &fid);
+            let result = run_session(fwd, target, sd, &app, &fid, &confirmations);
 
             recover_lock(tunnels.lock()).remove(&fid);
 
@@ -145,6 +149,7 @@ fn run_session(
     shutdown: Arc<AtomicBool>,
     app: &tauri::AppHandle,
     forward_id: &str,
+    confirmations: &HostKeyConfirmations,
 ) -> Result<(), AppError> {
     let TunnelTarget {
         host,
@@ -167,7 +172,7 @@ fn run_session(
         .handshake()
         .map_err(|e| AppError::Ssh(format!("SSH handshake with {host} failed: {e}")))?;
 
-    verify_host_key(&session, &host, port)?;
+    verify_host_key_interactive(&session, &host, port, forward_id, app, confirmations)?;
     authenticate_session(&mut session, &username, &auth)?;
     drop(auth); // zeroize key material
 

@@ -74,6 +74,9 @@ pub async fn scan_lan(app: &tauri::AppHandle) -> Result<Vec<DiscoveredHost>, App
     }
     candidates.sort_unstable();
     candidates.dedup();
+    // Restrict to RFC 1918 / link-local ranges so a VPN or misconfigured bridge
+    // interface can't cause the scanner to probe public IP addresses.
+    candidates.retain(|&ip| ip.is_private() || ip.is_link_local());
 
     let total = candidates.len() as u32;
     let scanned = Arc::new(AtomicU32::new(0));
