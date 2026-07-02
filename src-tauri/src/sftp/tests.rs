@@ -440,3 +440,53 @@ fn build_zip_includes_multiple_files() {
     assert_eq!(archive.len(), 2);
     std::fs::remove_dir_all(&src).ok();
 }
+
+// ── extract_zip_to_dir: zip bomb guards ──────────────────────────────────────
+
+/// Builds a zip at `zip_path` containing `n` empty stored entries named "0.txt", "1.txt", …
+fn make_zip_with_n_entries(zip_path: &std::path::Path, n: usize) {
+    let file = std::fs::File::create(zip_path).unwrap();
+    let mut writer = zip::ZipWriter::new(file);
+    let opts = zip::write::FileOptions::default();
+    for i in 0..n {
+        writer.start_file(format!("{i}.txt"), opts).unwrap();
+    }
+    writer.finish().unwrap();
+}
+
+#[test]
+fn extract_zip_rejects_archive_exceeding_entry_limit() {
+    let dir = make_tmp_dir();
+    let zip_path = dir.join("bomb.zip");
+    make_zip_with_n_entries(&zip_path, MAX_ZIP_ENTRIES + 1);
+    let extract_dir = make_tmp_dir();
+    let result = extract_zip_to_dir(
+        &zip_path,
+        &extract_dir,
+        MAX_ZIP_ENTRIES,
+        MAX_ZIP_UNCOMPRESSED,
+    );
+    assert!(result.is_err());
+    std::fs::remove_dir_all(&dir).ok();
+    std::fs::remove_dir_all(&extract_dir).ok();
+}
+
+#[test]
+fn extract_zip_rejects_archive_exceeding_uncompressed_size_limit() {
+    let dir = make_tmp_dir();
+    let zip_path = dir.join("bomb.zip");
+    {
+        let file = std::fs::File::create(&zip_path).unwrap();
+        let mut writer = zip::ZipWriter::new(file);
+        let opts = zip::write::FileOptions::default();
+        writer.start_file("data.txt", opts).unwrap();
+        writer.write_all(b"hello world").unwrap(); // 11 bytes
+        writer.finish().unwrap();
+    }
+    let extract_dir = make_tmp_dir();
+    // Limit to 10 bytes — the 11-byte entry must trip the size guard.
+    let result = extract_zip_to_dir(&zip_path, &extract_dir, MAX_ZIP_ENTRIES, 10);
+    assert!(result.is_err());
+    std::fs::remove_dir_all(&dir).ok();
+    std::fs::remove_dir_all(&extract_dir).ok();
+}

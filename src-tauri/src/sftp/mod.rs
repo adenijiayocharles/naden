@@ -1202,6 +1202,72 @@ fn download_as_zip_impl(
     result
 }
 
+/// Validates and extracts a zip archive at `zip_path` into `extract_dir`.
+/// Rejects archives that exceed `max_entries` entries or would decompress to
+/// more than `max_uncompressed_bytes` total. Both limits are parameterised so
+/// callers can pass the production constants and tests can use small values.
+fn extract_zip_to_dir(
+    zip_path: &std::path::Path,
+    extract_dir: &std::path::Path,
+    max_entries: usize,
+    max_uncompressed_bytes: u64,
+) -> Result<(), AppError> {
+    let file =
+        std::fs::File::open(zip_path).map_err(|e| AppError::Io(format!("cannot open zip: {e}")))?;
+    let mut archive = zip::ZipArchive::new(file)
+        .map_err(|e| AppError::Io(format!("cannot read zip archive: {e}")))?;
+
+    if archive.len() > max_entries {
+        return Err(AppError::Validation(format!(
+            "archive contains too many entries (max {max_entries})"
+        )));
+    }
+
+    let mut total_extracted: u64 = 0;
+    for i in 0..archive.len() {
+        let entry = archive
+            .by_index(i)
+            .map_err(|e| AppError::Io(format!("cannot read zip entry: {e}")))?;
+
+        let sanitized = sanitize_zip_entry_name(entry.name())?;
+        let out_path = extract_dir.join(&sanitized);
+
+        // Final guard: verify the resolved path is still within extract_dir.
+        if !out_path.starts_with(extract_dir) {
+            return Err(AppError::Validation(
+                "archive entry would escape extraction directory".into(),
+            ));
+        }
+
+        if entry.is_dir() {
+            std::fs::create_dir_all(&out_path)
+                .map_err(|e| AppError::Io(format!("cannot create directory: {e}")))?;
+        } else {
+            if let Some(parent) = out_path.parent() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| AppError::Io(format!("cannot create parent dir: {e}")))?;
+            }
+            let mut out_file = std::fs::File::create(&out_path)
+                .map_err(|e| AppError::Io(format!("cannot create file: {e}")))?;
+            // Budget the read to remaining bytes + 1 so we detect bombs where
+            // declared entry.size() is 0 but the inflated stream is enormous.
+            let budget = max_uncompressed_bytes
+                .saturating_sub(total_extracted)
+                .saturating_add(1);
+            let written = std::io::copy(&mut entry.take(budget), &mut out_file)
+                .map_err(|e| AppError::Io(format!("extraction failed: {e}")))?;
+            total_extracted = total_extracted.saturating_add(written);
+            if total_extracted > max_uncompressed_bytes {
+                return Err(AppError::Validation(format!(
+                    "archive would extract to more than {} GB",
+                    max_uncompressed_bytes / 1_073_741_824
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Downloads a remote .zip file, extracts it with path-traversal and size
 /// guards, then uploads the extracted contents to `remote_dir` via SFTP.
 /// Cleans up all temp files on both success and failure.
@@ -1235,59 +1301,12 @@ fn unzip_here_impl(
         std::fs::create_dir_all(&extract_dir)
             .map_err(|e| AppError::Io(format!("cannot create extract dir: {e}")))?;
 
-        let file = std::fs::File::open(&temp_zip)
-            .map_err(|e| AppError::Io(format!("cannot open zip: {e}")))?;
-        let mut archive = zip::ZipArchive::new(file)
-            .map_err(|e| AppError::Io(format!("cannot read zip archive: {e}")))?;
-
-        if archive.len() > MAX_ZIP_ENTRIES {
-            return Err(AppError::Validation(format!(
-                "archive contains too many entries (max {MAX_ZIP_ENTRIES})"
-            )));
-        }
-
-        let mut total_extracted: u64 = 0;
-        for i in 0..archive.len() {
-            let entry = archive
-                .by_index(i)
-                .map_err(|e| AppError::Io(format!("cannot read zip entry: {e}")))?;
-
-            let sanitized = sanitize_zip_entry_name(entry.name())?;
-            let out_path = extract_dir.join(&sanitized);
-
-            // Final guard: verify the resolved path is still within extract_dir.
-            if !out_path.starts_with(&extract_dir) {
-                return Err(AppError::Validation(
-                    "archive entry would escape extraction directory".into(),
-                ));
-            }
-
-            if entry.is_dir() {
-                std::fs::create_dir_all(&out_path)
-                    .map_err(|e| AppError::Io(format!("cannot create directory: {e}")))?;
-            } else {
-                if let Some(parent) = out_path.parent() {
-                    std::fs::create_dir_all(parent)
-                        .map_err(|e| AppError::Io(format!("cannot create parent dir: {e}")))?;
-                }
-                let mut out_file = std::fs::File::create(&out_path)
-                    .map_err(|e| AppError::Io(format!("cannot create file: {e}")))?;
-                // Budget the read to remaining bytes + 1 so we detect bombs where
-                // declared entry.size() is 0 but the inflated stream is enormous.
-                let budget = MAX_ZIP_UNCOMPRESSED
-                    .saturating_sub(total_extracted)
-                    .saturating_add(1);
-                let written = std::io::copy(&mut entry.take(budget), &mut out_file)
-                    .map_err(|e| AppError::Io(format!("extraction failed: {e}")))?;
-                total_extracted = total_extracted.saturating_add(written);
-                if total_extracted > MAX_ZIP_UNCOMPRESSED {
-                    return Err(AppError::Validation(format!(
-                        "archive would extract to more than {} GB",
-                        MAX_ZIP_UNCOMPRESSED / 1_073_741_824
-                    )));
-                }
-            }
-        }
+        extract_zip_to_dir(
+            &temp_zip,
+            &extract_dir,
+            MAX_ZIP_ENTRIES,
+            MAX_ZIP_UNCOMPRESSED,
+        )?;
 
         let extract_str = extract_dir.to_string_lossy().into_owned();
         upload_directory(
