@@ -1,6 +1,13 @@
 # Changelog
 
 All notable changes to naden are documented here.
+## [v1.0.4] — 2026-07-03
+
+### Bug Fixes
+- Lift card stacking context when kebab menu is open *(servers)*
+
+### Features
+- Unify drag handle, favourite, and kebab to consistent 24px icons *(servers)*
 ## [v1.0.2] — 2026-07-01
 
 ### Bug Fixes
