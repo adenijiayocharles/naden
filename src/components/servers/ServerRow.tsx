@@ -166,7 +166,7 @@ export default function ServerRow({ server, groupColor, lastConnected, narrow, i
           onDuplicate={() => { void actions.handleDuplicate(); }}
           onCheckReachability={() => { void actions.handleCheckReachability(); }}
           onDelete={actions.handleDelete}
-          buttonClassName="text-dim hover:text-white p-1 rounded hover:bg-surface-3 transition-colors transition-opacity duration-150 text-base leading-none opacity-0 group-hover:opacity-100"
+          buttonClassName="text-dim hover:text-white rounded hover:bg-surface-3 transition-colors transition-opacity duration-150 opacity-0 group-hover:opacity-100"
         />
       )}
     </div>

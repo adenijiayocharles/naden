@@ -106,17 +106,14 @@ export default function ServerCard({ server, groupColor, lastConnected, isHighli
           </div>
         </div>
 
-        {!bulkMode && dragHandle}
-
         {!bulkMode && (
-          <FavouriteButton
-            isFavourite={server.isFavourite}
-            onToggle={() => { void actions.handleToggleFavourite(); }}
-          />
-        )}
-
-        {!bulkMode && (
-          <ServerKebabMenu
+          <div className="flex items-center gap-0.5 shrink-0">
+            {dragHandle}
+            <FavouriteButton
+              isFavourite={server.isFavourite}
+              onToggle={() => { void actions.handleToggleFavourite(); }}
+            />
+            <ServerKebabMenu
             menuRef={actions.menuRef}
             menuOpen={actions.menuOpen}
             setMenuOpen={actions.setMenuOpen}
@@ -136,6 +133,7 @@ export default function ServerCard({ server, groupColor, lastConnected, isHighli
             onCheckReachability={() => { void actions.handleCheckReachability(); }}
             onDelete={actions.handleDelete}
           />
+          </div>
         )}
       </div>
 

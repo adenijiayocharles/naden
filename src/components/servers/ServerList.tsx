@@ -34,19 +34,17 @@ function groupColorFor(groups: Group[], groupId: string | undefined): string | u
 }
 
 const dragHandle = (
-  <svg
-    className="w-3 h-4 text-dim opacity-0 group-hover:opacity-40 hover:!opacity-80 cursor-grab active:cursor-grabbing shrink-0 transition-opacity"
-    viewBox="0 0 6 16"
-    fill="currentColor"
+  <div
+    className="w-6 h-6 flex items-center justify-center shrink-0 opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-white/8 rounded-sm transition-[opacity,background-color] duration-150 cursor-grab active:cursor-grabbing"
+    title="Drag to reorder"
     aria-hidden="true"
   >
-    <circle cx="1.5" cy="3" r="1.2" />
-    <circle cx="4.5" cy="3" r="1.2" />
-    <circle cx="1.5" cy="7" r="1.2" />
-    <circle cx="4.5" cy="7" r="1.2" />
-    <circle cx="1.5" cy="11" r="1.2" />
-    <circle cx="4.5" cy="11" r="1.2" />
-  </svg>
+    <svg className="w-3 h-3.5 text-dim" viewBox="0 0 10 12" fill="currentColor">
+      <rect x="0" y="0.5" width="10" height="1.5" rx="0.75" />
+      <rect x="0" y="5" width="10" height="1.5" rx="0.75" />
+      <rect x="0" y="9.5" width="10" height="1.5" rx="0.75" />
+    </svg>
+  </div>
 );
 
 export default function ServerList() {
@@ -283,12 +281,11 @@ export default function ServerList() {
     );
   }
 
-  // Drag is only available in the default all-servers view (no search, no filter, default sort).
+  // Drag is available in default sort with no search and no favourites filter.
+  // Group and tag filters are allowed — reorder still applies to the global list.
   const canDrag =
     !searchQuery.trim() &&
     !filterFavourites &&
-    !filterGroupId &&
-    !filterTagId &&
     sortMode === "default";
 
   // Search takes priority over all filters/sorting
@@ -440,7 +437,7 @@ export default function ServerList() {
   if (filterFavourites || filterGroupId || filterTagId) {
     return (
       <div className={listClass}>
-        {sortedFiltered.map((s) => wrapDraggable(s, false))}
+        {sortedFiltered.map((s) => wrapDraggable(s, canDrag))}
       </div>
     );
   }

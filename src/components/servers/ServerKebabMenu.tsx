@@ -22,6 +22,7 @@ interface Props {
   onCheckReachability: () => void;
   onDelete: () => void;
   buttonClassName?: string;
+  buttonSize?: "icon-xs" | "icon-sm" | "icon";
 }
 
 export default function ServerKebabMenu({
@@ -30,7 +31,8 @@ export default function ServerKebabMenu({
   deleting, openingTerminal, openingBrowser, duplicating, checkingReachability,
   onEdit, onCopyPassword, onSystemTerminal, onBrowseFiles, onMoveToGroup,
   onDuplicate, onCheckReachability, onDelete,
-  buttonClassName = "text-faint hover:text-white p-1 rounded hover:bg-surface-3 transition-colors text-lg leading-none",
+  buttonClassName = "text-faint hover:text-white hover:bg-surface-3 transition-colors",
+  buttonSize = "icon-xs",
 }: Props) {
   const groups = useServerStore((s) => s.groups);
   const [showGroupPicker, setShowGroupPicker] = useState(false);
@@ -66,11 +68,16 @@ export default function ServerKebabMenu({
     >
       <Button
         variant="ghost"
+        size={buttonSize}
         onClick={() => { setMenuOpen(!menuOpen); setShowGroupPicker(false); }}
         className={buttonClassName}
         aria-label="Server options"
       >
-        ⋮
+        <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
+          <circle cx="7" cy="2" r="1.25" />
+          <circle cx="7" cy="7" r="1.25" />
+          <circle cx="7" cy="12" r="1.25" />
+        </svg>
       </Button>
 
       {menuOpen && (
