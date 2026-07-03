@@ -2,6 +2,8 @@
 
 A fast, secure desktop application for managing SSH connections. Built for engineers who manage many servers and need an organised, keyboard-driven workflow without scattered config files or plaintext credentials.
 
+![naden server list](screenshots/ph-ready/01-server-list.png)
+
 ## Features
 
 - **Server inventory** — add, edit, and organise servers with display name, hostname/IP, port, username, tags, and groups
