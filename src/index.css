@@ -108,14 +108,14 @@ body {
   --color-card-foreground: var(--color-white);
   --color-foreground: var(--color-white);
   --color-background: var(--color-surface-0);
-  --radius: 0.625rem;
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius: 0rem;
+  --radius-sm: 0rem;
+  --radius-md: 0rem;
+  --radius-lg: 0rem;
+  --radius-xl: 0rem;
+  --radius-2xl: 0rem;
+  --radius-3xl: 0rem;
+  --radius-4xl: 0rem;
 }
 
 @keyframes panel-slide-in {
@@ -328,7 +328,6 @@ body {
 
 .xterm-viewport::-webkit-scrollbar-thumb {
   background: rgba(128, 128, 128, 0.3);
-  border-radius: 2px;
 }
 
 [data-theme="light"] .xterm-viewport::-webkit-scrollbar-thumb {
