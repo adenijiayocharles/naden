@@ -12,7 +12,7 @@ import { useSshKeyStore } from "../../store/sshKeyStore";
 import { formatError } from "../../lib/errors";
 import { Button } from "../ui/button";
 import PortForwardsSection from "./PortForwardsSection";
-import type { FormData, EnvVar, DraftPortForward } from "./serverFormTypes";
+import type { FormData, EnvVar, DraftPortForward, PickKeyResult } from "./serverFormTypes";
 import { ConnectionTab } from "./tabs/ConnectionTab";
 import { AuthTab } from "./tabs/AuthTab";
 import { ThemeTab } from "./tabs/ThemeTab";
@@ -83,6 +83,7 @@ export default function ServerForm() {
 
   const managedKeys = useSshKeyStore((s) => s.keys);
   const loadKeys = useSshKeyStore((s) => s.load);
+  const addManagedKey = useSshKeyStore((s) => s.addKey);
   useEffect(() => { void loadKeys(); }, [loadKeys]);
 
   const [activeTab, setActiveTab] = useState<Tab>("connection");
@@ -214,7 +215,13 @@ export default function ServerForm() {
     (t) => !tags.some((x) => x.id === t.id) && t.name.toLowerCase().includes(tagInput.toLowerCase()),
   );
 
-  const pickIdentityFile = async () => {
+  // Browsing to a key from ~/.ssh both sets the identity file path and tries
+  // to register it as a managed vault key, so it shows up in the vault picker
+  // next time. A key already in the vault, or one that fails validation
+  // (e.g. not a recognizable private key), still gets used by path — the
+  // vault entry is a convenience, not a requirement for connecting.
+  const pickAndAddIdentityKey = async (): Promise<PickKeyResult | null> => {
+    let path: string;
     try {
       const home = await homeDir();
       const sshDir = await join(home, ".ssh");
@@ -223,11 +230,21 @@ export default function ServerForm() {
         title: "Select SSH Identity File",
         defaultPath: sshDir,
       });
-      if (typeof result === "string") {
-        setForm((f) => ({ ...f, identityFilePath: result }));
-      }
+      if (typeof result !== "string") return null;
+      path = result;
     } catch {
-      // User cancelled — no action needed
+      return null;
+    }
+
+    try {
+      const key = await addManagedKey(path);
+      return { path: key.keyPath, addedToVault: true };
+    } catch (e) {
+      const message = formatError(e);
+      if (message.includes("already in the vault")) {
+        return { path, addedToVault: true };
+      }
+      return { path, addedToVault: false, error: message };
     }
   };
 
@@ -451,7 +468,7 @@ export default function ServerForm() {
               existingCredentialId={effectiveCredentialId}
               vaultAvailable={vaultAvailable}
               managedKeys={managedKeys}
-              pickIdentityFile={pickIdentityFile}
+              pickAndAddIdentityKey={pickAndAddIdentityKey}
             />
           )}
           {activeTab === "theme" && (

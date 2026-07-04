@@ -1,7 +1,8 @@
+import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { FolderOpen } from "lucide-react";
 import type { SshKey } from "../../../types/sshKey";
-import type { FormData, FieldSetter } from "../serverFormTypes";
+import type { FormData, FieldSetter, PickKeyResult } from "../serverFormTypes";
 import { Field } from "../Field";
 import { Input } from "../../ui/input";
 import {
@@ -11,6 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../ui/select";
+
+type KeySource = "vault" | "browse";
 
 export function AuthTab({
   form,
@@ -25,7 +28,7 @@ export function AuthTab({
   existingCredentialId,
   vaultAvailable,
   managedKeys,
-  pickIdentityFile,
+  pickAndAddIdentityKey,
 }: {
   form: FormData;
   set: FieldSetter;
@@ -39,8 +42,33 @@ export function AuthTab({
   existingCredentialId: string | undefined;
   vaultAvailable: boolean;
   managedKeys: SshKey[];
-  pickIdentityFile: () => Promise<void>;
+  pickAndAddIdentityKey: () => Promise<PickKeyResult | null>;
 }) {
+  // Defaults to whichever source already matches the current identity file
+  // path, falling back to the vault when keys are available. Recomputed each
+  // time the Auth tab mounts (it's conditionally rendered, so this only runs
+  // when the user actually switches to it).
+  const [keySource, setKeySource] = useState<KeySource>(() =>
+    form.identityFilePath && !managedKeys.some((k) => k.keyPath === form.identityFilePath)
+      ? "browse"
+      : managedKeys.length > 0
+        ? "vault"
+        : "browse",
+  );
+  const [browseNotice, setBrowseNotice] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  const handleBrowse = async () => {
+    const result = await pickAndAddIdentityKey();
+    if (!result) return;
+    setForm((f) => ({ ...f, identityFilePath: result.path }));
+    setDirty(true);
+    if (result.error) {
+      setBrowseNotice({ type: "error", message: `Not added to vault: ${result.error}` });
+    } else {
+      setBrowseNotice({ type: "success", message: "Key added to vault." });
+      setKeySource("vault");
+    }
+  };
   return (
     <>
       <Field label="Auth Method">
@@ -85,53 +113,84 @@ export function AuthTab({
 
       {form.authMethod === "key" && (
         <Field label="Identity File">
-          {managedKeys.length > 0 && (
-            <Select
-              value={managedKeys.some((k) => k.keyPath === form.identityFilePath) ? form.identityFilePath : "__none__"}
-              onValueChange={(value) => {
-                if (value && value !== "__none__") {
-                  setForm((f) => ({ ...f, identityFilePath: value }));
-                  setDirty(true);
-                }
-              }}
-            >
-              <SelectTrigger className="w-full h-10 mb-2">
-                <SelectValue placeholder="— pick a managed key —">
-                  {(val) => {
-                    if (!val || val === "__none__") return "— pick a managed key —";
-                    const k = managedKeys.find((mk) => mk.keyPath === val);
-                    return k ? `${k.name} (${k.keyType.toUpperCase()})` : String(val);
-                  }}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">— pick a managed key —</SelectItem>
-                {managedKeys.map((k) => (
-                  <SelectItem key={k.id} value={k.keyPath} label={`${k.name} (${k.keyType.toUpperCase()})`}>
-                    {k.name} ({k.keyType.toUpperCase()})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <div className="relative">
-            <Input
-              id="identityFilePath"
-              value={form.identityFilePath}
-              onChange={set("identityFilePath")}
-              placeholder="~/.ssh/id_ed25519"
-              className="pr-9"
-              autoComplete="off"
-            />
-            <button
-              type="button"
-              onClick={() => { void pickIdentityFile(); }}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 text-muted hover:text-white rounded transition-colors"
-              aria-label="Browse for identity file"
-            >
-              <FolderOpen className="size-4" />
-            </button>
+          <div className="flex h-9 rounded border border-stroke overflow-hidden mb-2 text-sm">
+            {(["vault", "browse"] as const).map((source) => (
+              <button
+                key={source}
+                type="button"
+                onClick={() => { setKeySource(source); setBrowseNotice(null); }}
+                className={`flex-1 h-full transition-colors ${
+                  keySource === source
+                    ? "bg-accent text-black font-semibold"
+                    : "bg-surface-3 text-muted hover:text-white hover:bg-surface-4"
+                }`}
+              >
+                {source === "vault" ? "Select from Vault" : "Add from ~/.ssh"}
+              </button>
+            ))}
           </div>
+
+          {keySource === "vault" ? (
+            managedKeys.length > 0 ? (
+              <Select
+                value={managedKeys.some((k) => k.keyPath === form.identityFilePath) ? form.identityFilePath : "__none__"}
+                onValueChange={(value) => {
+                  if (value && value !== "__none__") {
+                    setForm((f) => ({ ...f, identityFilePath: value }));
+                    setDirty(true);
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full h-10">
+                  <SelectValue placeholder="— pick a managed key —">
+                    {(val) => {
+                      if (!val || val === "__none__") return "— pick a managed key —";
+                      const k = managedKeys.find((mk) => mk.keyPath === val);
+                      return k ? `${k.name} (${k.keyType.toUpperCase()})` : String(val);
+                    }}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— pick a managed key —</SelectItem>
+                  {managedKeys.map((k) => (
+                    <SelectItem key={k.id} value={k.keyPath} label={`${k.name} (${k.keyType.toUpperCase()})`}>
+                      {k.name} ({k.keyType.toUpperCase()})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="text-xs text-muted">
+                No keys in the vault yet — switch to "Add from ~/.ssh" to import one.
+              </p>
+            )
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              <div className="relative">
+                <Input
+                  id="identityFilePath"
+                  value={form.identityFilePath}
+                  onChange={set("identityFilePath")}
+                  placeholder="~/.ssh/id_ed25519"
+                  className="pr-9"
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  onClick={() => { void handleBrowse(); }}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 text-muted hover:text-white rounded transition-colors"
+                  aria-label="Browse for identity file"
+                >
+                  <FolderOpen className="size-4" />
+                </button>
+              </div>
+              {browseNotice && (
+                <p className={`text-xs ${browseNotice.type === "error" ? "text-error" : "text-success"}`}>
+                  {browseNotice.message}
+                </p>
+              )}
+            </div>
+          )}
         </Field>
       )}
 

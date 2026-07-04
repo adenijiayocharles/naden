@@ -35,3 +35,11 @@ export interface FormData {
 }
 
 export type FieldSetter = (field: keyof FormData) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
+
+// Result of browsing to a private key file and attempting to register it as
+// a managed vault key. `null` means the user cancelled the file picker.
+export interface PickKeyResult {
+  path: string;
+  addedToVault: boolean;
+  error?: string;
+}
