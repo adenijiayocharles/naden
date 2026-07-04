@@ -15,6 +15,7 @@ const ACTIVE_PROVIDER_KEY: &str = "ai_assistant_active_provider";
 const OPENAI_KEY_ID_KEY: &str = "ai_assistant_openai_key_id";
 const ANTHROPIC_KEY_ID_KEY: &str = "ai_assistant_anthropic_key_id";
 const OPENROUTER_KEY_ID_KEY: &str = "ai_assistant_openrouter_key_id";
+const GEMINI_KEY_ID_KEY: &str = "ai_assistant_gemini_key_id";
 // Shared toggles.
 const ENABLED_KEY: &str = "ai_assistant_enabled";
 const PERSIST_HISTORY_KEY: &str = "ai_assistant_persist_history";
@@ -34,6 +35,7 @@ pub struct AssistantStatus {
     pub openai_configured: bool,
     pub anthropic_configured: bool,
     pub openrouter_configured: bool,
+    pub gemini_configured: bool,
     pub active_provider: Option<String>,
     pub enabled: bool,
     pub persist_history: bool,
@@ -71,6 +73,7 @@ fn key_id_setting(provider: &str) -> Result<&'static str, AppError> {
         "openai" => Ok(OPENAI_KEY_ID_KEY),
         "anthropic" => Ok(ANTHROPIC_KEY_ID_KEY),
         "openrouter" => Ok(OPENROUTER_KEY_ID_KEY),
+        "gemini" => Ok(GEMINI_KEY_ID_KEY),
         other => Err(AppError::Validation(format!(
             "unknown assistant provider: {other}"
         ))),
@@ -201,6 +204,7 @@ pub async fn clear_assistant_provider_key(
             ("openai", OPENAI_KEY_ID_KEY),
             ("anthropic", ANTHROPIC_KEY_ID_KEY),
             ("openrouter", OPENROUTER_KEY_ID_KEY),
+            ("gemini", GEMINI_KEY_ID_KEY),
         ];
         let mut fallback: Option<&str> = None;
         for &(pid, key_id_key) in ALL {
@@ -242,7 +246,12 @@ pub async fn switch_assistant_provider(
 /// everything" path (currently unused by the UI but kept for completeness).
 #[tauri::command]
 pub async fn clear_assistant_api_key(state: tauri::State<'_, AppState>) -> Result<(), AppError> {
-    for key_id_key in [OPENAI_KEY_ID_KEY, ANTHROPIC_KEY_ID_KEY, OPENROUTER_KEY_ID_KEY] {
+    for key_id_key in [
+        OPENAI_KEY_ID_KEY,
+        ANTHROPIC_KEY_ID_KEY,
+        OPENROUTER_KEY_ID_KEY,
+        GEMINI_KEY_ID_KEY,
+    ] {
         if let Some(id) = read_setting(&state.db, key_id_key).await? {
             vault::delete_credential(&state.db, &id).await?;
         }
@@ -281,6 +290,7 @@ pub async fn get_assistant_status(
     let openrouter_configured = read_setting(&state.db, OPENROUTER_KEY_ID_KEY)
         .await?
         .is_some();
+    let gemini_configured = read_setting(&state.db, GEMINI_KEY_ID_KEY).await?.is_some();
     let active_provider = read_setting(&state.db, ACTIVE_PROVIDER_KEY).await?;
     let enabled = read_setting(&state.db, ENABLED_KEY)
         .await?
@@ -295,6 +305,7 @@ pub async fn get_assistant_status(
         openai_configured,
         anthropic_configured,
         openrouter_configured,
+        gemini_configured,
         active_provider,
         enabled,
         persist_history,

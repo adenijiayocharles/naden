@@ -4,6 +4,7 @@ export interface AssistantStatus {
   openaiConfigured: boolean;
   anthropicConfigured: boolean;
   openrouterConfigured: boolean;
+  geminiConfigured: boolean;
   activeProvider: string | null;
   enabled: boolean;
   persistHistory: boolean;

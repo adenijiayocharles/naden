@@ -1,4 +1,5 @@
 pub mod anthropic;
+pub mod gemini;
 pub mod openai;
 pub mod openrouter;
 
@@ -34,12 +35,13 @@ pub trait AssistantProvider: Send + Sync {
     ) -> Result<(), AppError>;
 }
 
-/// Resolves the stored provider id (`"openai"` | `"anthropic"` | `"openrouter"`) to its client.
+/// Resolves the stored provider id (`"openai"` | `"anthropic"` | `"openrouter"` | `"gemini"`) to its client.
 pub fn provider_for(id: &str) -> Result<Box<dyn AssistantProvider>, AppError> {
     match id {
         "openai" => Ok(Box::new(openai::OpenAiProvider)),
         "anthropic" => Ok(Box::new(anthropic::AnthropicProvider)),
         "openrouter" => Ok(Box::new(openrouter::OpenRouterProvider)),
+        "gemini" => Ok(Box::new(gemini::GeminiProvider)),
         other => Err(AppError::Validation(format!(
             "unknown assistant provider: {other}"
         ))),

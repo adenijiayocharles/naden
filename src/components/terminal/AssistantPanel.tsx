@@ -17,6 +17,13 @@ import { Textarea } from "../ui/textarea";
 const EMPTY_MESSAGES: AssistantMessage[] = [];
 const EMPTY_HISTORY: AssistantConversation[] = [];
 
+const PROVIDER_LABELS: Record<string, string> = {
+  openai: "OpenAI",
+  anthropic: "Anthropic",
+  openrouter: "OpenRouter",
+  gemini: "Gemini",
+};
+
 const SHELL_LANGS = new Set(["", "bash", "sh", "shell", "zsh", "fish", "console", "terminal"]);
 
 type MessageBlock =
@@ -196,7 +203,7 @@ export function AssistantPanel({
         useAssistantStore.getState().setPersistEnabled(s.persistHistory);
         if (s.persistHistory) void useAssistantStore.getState().loadPersisted(serverId);
       })
-      .catch(() => { if (!cancelled) setStatus({ openaiConfigured: false, anthropicConfigured: false, openrouterConfigured: false, activeProvider: null, enabled: false, persistHistory: false }); });
+      .catch(() => { if (!cancelled) setStatus({ openaiConfigured: false, anthropicConfigured: false, openrouterConfigured: false, geminiConfigured: false, activeProvider: null, enabled: false, persistHistory: false }); });
     return () => { cancelled = true; };
   }, [serverId]);
 
@@ -244,7 +251,7 @@ export function AssistantPanel({
     el.style.height = `${el.scrollHeight}px`;
   }, [input]);
 
-  const isReady = (status?.openaiConfigured || status?.anthropicConfigured || status?.openrouterConfigured) && status?.enabled;
+  const isReady = (status?.openaiConfigured || status?.anthropicConfigured || status?.openrouterConfigured || status?.geminiConfigured) && status?.enabled;
 
   return (
     <div className={`absolute top-0 right-0 bottom-0 w-[380px] z-40 bg-surface-2 border-l border-stroke shadow-overlay flex flex-col ${exiting ? "animate-panel-out" : "animate-panel-in"}`}>
@@ -319,7 +326,7 @@ export function AssistantPanel({
           <p className="text-sm text-dim">
             {status === null
               ? "Loading…"
-              : !status.openaiConfigured && !status.anthropicConfigured && !status.openrouterConfigured
+              : !status.openaiConfigured && !status.anthropicConfigured && !status.openrouterConfigured && !status.geminiConfigured
               ? "Bring your own API key to chat with an AI assistant."
               : "The assistant is currently turned off."}
           </p>
@@ -328,7 +335,7 @@ export function AssistantPanel({
               onClick={() => openSettings("assistant")}
               className="text-meta text-accent hover:text-accent-hover underline underline-offset-2 transition-colors"
             >
-              {status.openaiConfigured || status.anthropicConfigured || status.openrouterConfigured
+              {status.openaiConfigured || status.anthropicConfigured || status.openrouterConfigured || status.geminiConfigured
                 ? "Turn on in AI Assistant settings"
                 : "Add a key in AI Assistant settings"}
             </button>
@@ -346,7 +353,7 @@ export function AssistantPanel({
                     <p className="text-meta text-faint italic">{m.contextLabel}</p>
                   )}
                   <div
-                    className={`max-w-[90%] rounded-lg px-3 py-2 text-sm ${
+                    className={`max-w-[90%] rounded-lg px-3 py-1 text-sm leading-loose ${
                       m.role === "user"
                         ? "bg-accent/35 text-white border border-accent/40 whitespace-pre-wrap break-words"
                         : "bg-surface-3 text-white border border-stroke"
@@ -371,7 +378,7 @@ export function AssistantPanel({
           </div>
           {activeProvider && status?.activeProvider && activeProvider !== status.activeProvider && messages.length > 0 && (
             <div className="px-2.5 py-2 border-t border-warning-subtle bg-warning-subtle text-xs text-warning shrink-0">
-              This conversation was started with {activeProvider === "anthropic" ? "Anthropic" : activeProvider === "openrouter" ? "OpenRouter" : "OpenAI"}. Replies will now use {status.activeProvider === "anthropic" ? "Anthropic" : status.activeProvider === "openrouter" ? "OpenRouter" : "OpenAI"}.
+              This conversation was started with {PROVIDER_LABELS[activeProvider] ?? activeProvider}. Replies will now use {PROVIDER_LABELS[status.activeProvider] ?? status.activeProvider}.
             </div>
           )}
           <div className="p-2.5 border-t border-stroke-subtle shrink-0">

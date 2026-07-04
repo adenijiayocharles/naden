@@ -19,9 +19,9 @@ interface AiSettingsProps {
 
 export default function AiSettings({ flashSaved }: AiSettingsProps) {
   const [assistantStatus, setAssistantStatus] = useState<AssistantStatus | null>(null);
-  const [addingProvider, setAddingProvider] = useState<"openai" | "anthropic" | "openrouter" | null>(null);
+  const [addingProvider, setAddingProvider] = useState<"openai" | "anthropic" | "openrouter" | "gemini" | null>(null);
   const [addKeyInput, setAddKeyInput] = useState("");
-  const [confirmForgetProvider, setConfirmForgetProvider] = useState<"openai" | "anthropic" | "openrouter" | null>(null);
+  const [confirmForgetProvider, setConfirmForgetProvider] = useState<"openai" | "anthropic" | "openrouter" | "gemini" | null>(null);
   const [assistantError, setAssistantError] = useState<string | null>(null);
   const [assistantLoading, setAssistantLoading] = useState(false);
 
@@ -29,12 +29,12 @@ export default function AiSettings({ flashSaved }: AiSettingsProps) {
     assistantCommands.getStatus().then(setAssistantStatus).catch(() => {});
   }, []);
 
-  const submitAddKey = async (provider: "openai" | "anthropic" | "openrouter") => {
+  const submitAddKey = async (provider: "openai" | "anthropic" | "openrouter" | "gemini") => {
     setAssistantLoading(true);
     setAssistantError(null);
     try {
       await assistantCommands.setApiKey(provider, addKeyInput);
-      if (!assistantStatus?.openaiConfigured && !assistantStatus?.anthropicConfigured && !assistantStatus?.openrouterConfigured) {
+      if (!assistantStatus?.openaiConfigured && !assistantStatus?.anthropicConfigured && !assistantStatus?.openrouterConfigured && !assistantStatus?.geminiConfigured) {
         await assistantCommands.setEnabled(true);
       }
       setAssistantStatus(await assistantCommands.getStatus());
@@ -48,7 +48,7 @@ export default function AiSettings({ flashSaved }: AiSettingsProps) {
     }
   };
 
-  const forgetProviderKey = async (provider: "openai" | "anthropic" | "openrouter") => {
+  const forgetProviderKey = async (provider: "openai" | "anthropic" | "openrouter" | "gemini") => {
     setAssistantLoading(true);
     setAssistantError(null);
     try {
@@ -99,10 +99,10 @@ export default function AiSettings({ flashSaved }: AiSettingsProps) {
         description="Bring your own API key. Off by default — when enabled, prompts you send may include terminal context and are sent to the provider you choose below."
       />
 
-      {(["openai", "anthropic", "openrouter"] as const).map((p) => {
-        const isConfigured = p === "openai" ? assistantStatus?.openaiConfigured : p === "anthropic" ? assistantStatus?.anthropicConfigured : assistantStatus?.openrouterConfigured;
+      {(["openai", "anthropic", "openrouter", "gemini"] as const).map((p) => {
+        const isConfigured = p === "openai" ? assistantStatus?.openaiConfigured : p === "anthropic" ? assistantStatus?.anthropicConfigured : p === "openrouter" ? assistantStatus?.openrouterConfigured : assistantStatus?.geminiConfigured;
         const isAdding = addingProvider === p;
-        const label = p === "openai" ? "OpenAI" : p === "anthropic" ? "Anthropic" : "OpenRouter";
+        const label = p === "openai" ? "OpenAI" : p === "anthropic" ? "Anthropic" : p === "openrouter" ? "OpenRouter" : "Gemini";
         return (
           <div key={p} className="border-b border-stroke-subtle">
             <div className="flex items-center justify-between py-3">
@@ -162,7 +162,7 @@ export default function AiSettings({ flashSaved }: AiSettingsProps) {
         );
       })}
 
-      {[assistantStatus?.openaiConfigured, assistantStatus?.anthropicConfigured, assistantStatus?.openrouterConfigured].filter(Boolean).length > 1 && (
+      {[assistantStatus?.openaiConfigured, assistantStatus?.anthropicConfigured, assistantStatus?.openrouterConfigured, assistantStatus?.geminiConfigured].filter(Boolean).length > 1 && (
         <Row>
           <RowLabel title="Active provider" description="Which provider handles your messages" />
           <Select
@@ -176,12 +176,13 @@ export default function AiSettings({ flashSaved }: AiSettingsProps) {
               {assistantStatus?.openaiConfigured && <SelectItem value="openai">OpenAI</SelectItem>}
               {assistantStatus?.anthropicConfigured && <SelectItem value="anthropic">Anthropic</SelectItem>}
               {assistantStatus?.openrouterConfigured && <SelectItem value="openrouter">OpenRouter</SelectItem>}
+              {assistantStatus?.geminiConfigured && <SelectItem value="gemini">Gemini</SelectItem>}
             </SelectContent>
           </Select>
         </Row>
       )}
 
-      {(assistantStatus?.openaiConfigured || assistantStatus?.anthropicConfigured || assistantStatus?.openrouterConfigured) && (
+      {(assistantStatus?.openaiConfigured || assistantStatus?.anthropicConfigured || assistantStatus?.openrouterConfigured || assistantStatus?.geminiConfigured) && (
         <>
           <Row>
             <RowLabel title="Enable assistant" />
@@ -214,7 +215,7 @@ export default function AiSettings({ flashSaved }: AiSettingsProps) {
 
       {confirmForgetProvider && (
         <ConfirmDeleteModal
-          title={`Forget ${confirmForgetProvider === "openai" ? "OpenAI" : confirmForgetProvider === "anthropic" ? "Anthropic" : "OpenRouter"} key?`}
+          title={`Forget ${confirmForgetProvider === "openai" ? "OpenAI" : confirmForgetProvider === "anthropic" ? "Anthropic" : confirmForgetProvider === "openrouter" ? "OpenRouter" : "Gemini"} key?`}
           description="The stored API key will be permanently removed."
           confirmLabel="Forget key"
           busy={assistantLoading}
