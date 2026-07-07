@@ -5,6 +5,7 @@ import { useTerminalStore } from "../../store/terminalStore";
 import { useSftpStore } from "../../store/sftpStore";
 import { useBroadcastStore } from "../../store/broadcastStore";
 import { useTunnelStore } from "../../store/tunnelStore";
+import { applyActiveFilter } from "../../lib/serverFilter";
 import ServerCard from "./ServerCard";
 import ServerRow from "./ServerRow";
 import EmptyState from "../shared/EmptyState";
@@ -236,17 +237,21 @@ export default function ServerList() {
   };
 
   // All hooks must be called before any early return.
-  const sortedSearch = useMemo(
-    () => sortServers(searchResults ?? [], sortMode, lastConnectedMap),
-    [searchResults, sortMode, lastConnectedMap],
+  // Search results are scoped to the active group/tag/favourites filter, if any.
+  const searchWithinFilter = useMemo(
+    () => applyActiveFilter(searchResults ?? [], filterFavourites, filterGroupId, filterTagId),
+    [searchResults, filterFavourites, filterGroupId, filterTagId],
   );
 
-  const filtered = useMemo(() => {
-    if (filterFavourites) return servers.filter((s) => s.isFavourite);
-    if (filterGroupId) return servers.filter((s) => s.groupId === filterGroupId);
-    if (filterTagId) return servers.filter((s) => s.tags.some((t) => t.id === filterTagId));
-    return servers;
-  }, [servers, filterFavourites, filterGroupId, filterTagId]);
+  const sortedSearch = useMemo(
+    () => sortServers(searchWithinFilter, sortMode, lastConnectedMap),
+    [searchWithinFilter, sortMode, lastConnectedMap],
+  );
+
+  const filtered = useMemo(
+    () => applyActiveFilter(servers, filterFavourites, filterGroupId, filterTagId),
+    [servers, filterFavourites, filterGroupId, filterTagId],
+  );
 
   const sortedFiltered = useMemo(
     () => sortServers(filtered, sortMode, lastConnectedMap),
@@ -288,7 +293,8 @@ export default function ServerList() {
     !filterFavourites &&
     sortMode === "default";
 
-  // Search takes priority over all filters/sorting
+  // Search renders instead of the plain filtered view, but stays scoped to
+  // whichever group/tag/favourites filter is active (see searchWithinFilter above).
   if (searchQuery.trim()) {
     // searchResults === null means the debounced request is still in-flight.
     // Render an empty container instead of "No matches" to avoid a false flash.
