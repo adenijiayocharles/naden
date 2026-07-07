@@ -1,6 +1,15 @@
 # Changelog
 
 All notable changes to naden are documented here.
+## [v1.0.6] — 2026-07-07
+
+### Bug Fixes
+- Only scan completed commands for destructive-command detection *(broadcast)*
+- Scope search results to active group/tag/favourites filter *(servers)*
+
+### Features
+- Let SSH key auth choose vault key or import from ~/.ssh *(servers)*
+- Add Gemini as an AI provider *(assistant)*
 ## [v1.0.4] — 2026-07-03
 
 ### Bug Fixes
