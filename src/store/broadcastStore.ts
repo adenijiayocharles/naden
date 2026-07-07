@@ -31,7 +31,7 @@ interface BroadcastStore {
   disbandGroup: (groupId: string) => void;
   setActiveGroup: (groupId: string | null) => void;
   toggleExcluded: (sessionId: string) => void;
-  broadcastInput: (data: string) => Promise<void>;
+  broadcastInput: (data: string, completedCommand?: string | null) => Promise<void>;
   confirmPendingInput: () => Promise<void>;
   cancelPendingInput: () => void;
   loadSaved: () => Promise<void>;
@@ -91,8 +91,11 @@ export const useBroadcastStore = create<BroadcastStore>((set, get) => ({
       return { excludedSessionIds: next };
     }),
 
-  broadcastInput: async (data) => {
-    if (isDestructiveCommand(data)) {
+  broadcastInput: async (data, completedCommand) => {
+    // Only the finalized line (known once Enter is pressed) is checked — earlier
+    // keystrokes just sit unexecuted on the remote prompt, so there's nothing to
+    // guard against yet.
+    if (completedCommand && isDestructiveCommand(completedCommand)) {
       set({ pendingInput: data });
       return;
     }

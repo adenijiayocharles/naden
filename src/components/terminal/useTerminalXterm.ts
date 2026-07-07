@@ -272,7 +272,7 @@ export function useTerminalXterm({
         const isSynced = group?.sessionIds.includes(sessionId) && !broadcast.excludedSessionIds.has(sessionId);
 
         if (isSynced) {
-          void broadcast.broadcastInput(data);
+          void broadcast.broadcastInput(data, completedCommand);
         } else {
           terminalCommands.sendTerminalInput(sessionId, data).catch(() => {});
         }
