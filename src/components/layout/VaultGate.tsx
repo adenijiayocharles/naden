@@ -5,7 +5,9 @@ import VaultLockScreen from "../vault/VaultLockScreen";
 const VaultSetupModal = lazy(() => import("../vault/VaultSetupModal"));
 
 /**
- * Renders children only when the vault is ready and unlocked.
+ * Gates interaction with children until the vault is ready and unlocked, covering
+ * them with VaultLockScreen while locked. Children stay mounted throughout (see
+ * `locked` below) rather than being unmounted, so open sessions aren't lost.
  * Must be used INSIDE AppShell so initialization hooks run first —
  * useAppInit populates the vault state that this component reads.
  */
@@ -29,6 +31,15 @@ export default function VaultGate({ children }: { children: React.ReactNode }) {
       </Suspense>
     );
   }
-  if (isSetup && !isUnlocked && isPasswordRequired) return <VaultLockScreen />;
-  return <>{children}</>;
+  const locked = isSetup && !isUnlocked && isPasswordRequired;
+
+  // Keep children mounted even while locked, so open terminal/SFTP sessions and their
+  // in-progress UI state (split panes, hidden peer sessions, scroll position) survive
+  // an auto-lock instead of being torn down — VaultLockScreen fully covers them until unlock.
+  return (
+    <>
+      <div className={locked ? "hidden" : "contents"}>{children}</div>
+      {locked && <VaultLockScreen />}
+    </>
+  );
 }
