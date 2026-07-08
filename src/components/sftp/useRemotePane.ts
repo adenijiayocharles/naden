@@ -20,6 +20,9 @@ interface RemotePaneInput {
   showLocalPane: boolean;
   /** Whether this pane is the one currently focused — gates global shortcuts like Cmd/Ctrl+A. */
   isActive: boolean;
+  /** Whether this pane's tab is the one currently visible — gates ALL global shortcuts, since
+   *  every open SFTP tab stays mounted and would otherwise react to keystrokes in the background. */
+  isTabActive: boolean;
   /** Called after a download to the local pane completes, so the local file list can refresh. */
   refreshLocalPane?: () => void;
 }
@@ -88,7 +91,7 @@ interface RemotePaneOutput {
 }
 
 export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
-  const { sessionId, showHidden, sortKey, sortDir, localCurrentPath, localSelected, activePane, showLocalPane, isActive, refreshLocalPane } = input;
+  const { sessionId, showHidden, sortKey, sortDir, localCurrentPath, localSelected, activePane, showLocalPane, isActive, isTabActive, refreshLocalPane } = input;
 
   const session = useSftpStore((s) => s.sessions.find((t) => t.id === sessionId));
   const navigateTo = useSftpStore((s) => s.navigateTo);
@@ -182,6 +185,7 @@ export function useRemotePane(input: RemotePaneInput): RemotePaneOutput {
 
   const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
   keyHandlerRef.current = (e: KeyboardEvent) => {
+    if (!isTabActive) return;
     if (document.activeElement?.tagName === "INPUT") return;
     const mod = e.metaKey || e.ctrlKey;
     if (e.key === "Escape") {

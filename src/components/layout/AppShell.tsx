@@ -817,9 +817,14 @@ export default function AppShell() {
                     ) : activePanelType === "terminal" && terminalActiveId && (
                       <TerminalPane key={terminalActiveId} sessionId={terminalActiveId} />
                     )}
-                    {activePanelType === "sftp" && sftpActiveId && (
-                      <SftpBrowser key={sftpActiveId} sessionId={sftpActiveId} />
-                    )}
+                    {sftpSessions.map((s) => {
+                      const isTabActive = activePanelType === "sftp" && s.id === sftpActiveId;
+                      return (
+                        <div key={s.id} className={isTabActive ? "h-full" : "hidden"}>
+                          <SftpBrowser sessionId={s.id} isActive={isTabActive} />
+                        </div>
+                      );
+                    })}
                   </Suspense>
                 </ErrorBoundary>
               </div>

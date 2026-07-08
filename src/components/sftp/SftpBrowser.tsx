@@ -18,9 +18,13 @@ import { Button } from "../ui/button";
 
 interface Props {
   sessionId: string;
+  /** Whether this browser's tab is the one currently visible. Every open SFTP tab stays
+   *  mounted in the background (to preserve split-pane state and hidden peer sessions),
+   *  so global keyboard shortcuts must be gated on this rather than just on component mount. */
+  isActive: boolean;
 }
 
-export default function SftpBrowser({ sessionId }: Props) {
+export default function SftpBrowser({ sessionId, isActive }: Props) {
   const closeSession = useSftpStore((s) => s.closeSession);
   const reconnectSession = useSftpStore((s) => s.reconnectSession);
   const openHiddenSession = useSftpStore((s) => s.openHiddenSession);
@@ -198,6 +202,7 @@ export default function SftpBrowser({ sessionId }: Props) {
     activePane,
     showLocalPane,
     isActive: activePane === "remote",
+    isTabActive: isActive,
     refreshLocalPane: () => setLocalRefreshTrigger((n) => n + 1),
   });
 
@@ -214,6 +219,7 @@ export default function SftpBrowser({ sessionId }: Props) {
     activePane: "remote",
     showLocalPane: false,
     isActive: !leftPaneIsLocal && activePane === "local",
+    isTabActive: isActive,
   });
 
   if (!session) return null;
@@ -449,7 +455,7 @@ export default function SftpBrowser({ sessionId }: Props) {
                   onSelectedChange={setLocalSelected}
                   onPathChange={setLocalCurrentPath}
                   onActivate={() => setActivePane("local")}
-                  isActive={activePane === "local"}
+                  isActive={isActive && activePane === "local"}
                   showHidden={showHidden}
                   newFolderTrigger={localNewFolderTrigger}
                   newFileTrigger={localNewFileTrigger}
