@@ -26,6 +26,7 @@ interface Props {
   newFileTrigger?: number;
   refreshTrigger?: number;
   onDropRemotePaths?: (remotePaths: string[]) => void;
+  onUpload?: () => void;
 }
 
 interface ContextMenu { x: number; y: number; entry: LocalFileEntry | null }
@@ -96,7 +97,7 @@ const Row = ({ index, style, entries, selectedSet, renaming, renameValue, onRowC
   );
 };
 
-export default function LocalFileBrowser({ onSelectedChange, onPathChange, onActivate, isActive, showHidden = true, newFolderTrigger = 0, newFileTrigger = 0, refreshTrigger = 0, onDropRemotePaths }: Props) {
+export default function LocalFileBrowser({ onSelectedChange, onPathChange, onActivate, isActive, showHidden = true, newFolderTrigger = 0, newFileTrigger = 0, refreshTrigger = 0, onDropRemotePaths, onUpload }: Props) {
   const [currentPath, setCurrentPath] = useState("");
   const [entries, setEntries] = useState<LocalFileEntry[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
@@ -535,6 +536,15 @@ export default function LocalFileBrowser({ onSelectedChange, onPathChange, onAct
             >
               Delete{selCount > 1 ? ` (${selCount})` : ""}
             </MenuItem>
+
+            {onUpload && (
+              <>
+                <div className="my-1 border-t border-stroke-subtle" />
+                <MenuItem onClick={() => { onUpload(); closeMenu(); }} disabled={selCount === 0}>
+                  Upload{selCount > 1 ? ` (${selCount})` : ""}
+                </MenuItem>
+              </>
+            )}
           </ContextMenuPopup>
         )}
       </div>

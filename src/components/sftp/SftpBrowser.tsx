@@ -234,6 +234,11 @@ export default function SftpBrowser({ sessionId, isActive }: Props) {
   const canDownloadToLocal =
     leftPaneIsLocal && activePane === "remote" && selectedEntries.length > 0 && !!localCurrentPath && !isBusy;
 
+  // Context-menu variants — a right-click inside a pane is itself an unambiguous
+  // pane selector, so these skip the activePane gate the toolbar strip buttons need.
+  const canUploadFromLocalMenu = leftPaneIsLocal && localSelected.length > 0 && !isBusy;
+  const canDownloadToLocalMenu = leftPaneIsLocal && selectedEntries.length > 0 && !!localCurrentPath && !isBusy;
+
   const canCopyPeerToRemote =
     validPeer && peerPane.selectedEntries.some((e) => !e.isDir) && !crossTransferBusy && !isBusy;
   const canCopyRemoteToPeer =
@@ -461,6 +466,7 @@ export default function SftpBrowser({ sessionId, isActive }: Props) {
                   newFileTrigger={localNewFileTrigger}
                   refreshTrigger={localRefreshTrigger}
                   onDropRemotePaths={handleDownloadPaths}
+                  onUpload={canUploadFromLocalMenu ? handleUploadFromLocal : undefined}
                 />
               ) : (
                 <div className="flex flex-col flex-1 min-h-0">
@@ -783,6 +789,7 @@ export default function SftpBrowser({ sessionId, isActive }: Props) {
         onNewFolder={handleRemoteNewFolder}
         onEdit={handleOpenEdit}
         onChmod={handleChmod}
+        onDownload={canDownloadToLocalMenu ? handleDownloadToLocal : undefined}
         onDownloadAsZip={handleDownloadAsZip}
         onUnzipHere={handleUnzipHere}
       />

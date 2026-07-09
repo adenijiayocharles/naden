@@ -34,6 +34,7 @@ interface Props {
   onEdit?: (path: string) => void;
   onChmod?: (path: string, currentMode: number) => void;
   onDragStart?: (paths: string[]) => void;
+  onDownload?: () => void;
   onDownloadAsZip?: () => void;
   onUnzipHere?: (path: string) => void;
 }
@@ -269,7 +270,7 @@ export default function SftpFileList({
   onSort, onSelect, onNavigate,
   onRenameChange, onRenameCommit, onRenameCancel, onRenameStart,
   onCut, onCopy, onPaste, onDelete, onNewFolder, onEdit, onChmod, onDragStart,
-  onDownloadAsZip, onUnzipHere,
+  onDownload, onDownloadAsZip, onUnzipHere,
 }: Props) {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const closeMenu = () => setContextMenu(null);
@@ -452,8 +453,14 @@ export default function SftpFileList({
             </MenuItem>
           )}
 
-          {(onDownloadAsZip || (onUnzipHere && entry && !entry.isDir && entry.name.toLowerCase().endsWith(".zip"))) && (
+          {(onDownload || onDownloadAsZip || (onUnzipHere && entry && !entry.isDir && entry.name.toLowerCase().endsWith(".zip"))) && (
             <div className="my-1 border-t border-stroke-subtle" />
+          )}
+
+          {onDownload && selCount > 0 && (
+            <MenuItem onClick={() => { onDownload(); closeMenu(); }}>
+              Download{selCount > 1 ? ` (${selCount})` : ""}
+            </MenuItem>
           )}
 
           {onDownloadAsZip && selCount > 0 && (
