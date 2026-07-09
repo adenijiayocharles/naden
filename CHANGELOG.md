@@ -1,6 +1,15 @@
 # Changelog
 
 All notable changes to naden are documented here.
+## [v1.0.7] — 2026-07-09
+
+### Bug Fixes
+- Stop background input from firing while the vault is locked *(vault)*
+- Keep terminal/sftp tabs mounted while the vault is locked *(vault)*
+- Keep split-pane tabs mounted so switching tabs doesn't lose progress *(sftp)*
+
+### Features
+- Add upload/download to split-pane context menus *(sftp)*
 ## [v1.0.6] — 2026-07-07
 
 ### Bug Fixes
