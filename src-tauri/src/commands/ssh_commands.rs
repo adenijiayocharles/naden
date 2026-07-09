@@ -120,13 +120,7 @@ pub(crate) async fn auth_for_server(
                 .vault_credential_id
                 .as_deref()
                 .ok_or_else(|| AppError::Vault("no vault credential for password auth".into()))?;
-            let key = {
-                let guard = state.vault_key.lock().await;
-                match guard.as_ref() {
-                    None => return Err(AppError::Vault("vault is locked".into())),
-                    Some(k) => zeroize::Zeroizing::new(**k),
-                }
-            };
+            let key = state.require_vault_key().await?;
             let password = vault::retrieve_credential(&state.db, &*key, vault_id).await?;
             Ok(AuthInfo::Password(Zeroizing::new(password)))
         }
@@ -569,7 +563,8 @@ pub async fn open_terminal_session(
         for fwd in auto_fwds {
             let fwd_auth = base_auth.clone();
             let fwd_jumps = base_jumps.clone();
-            let _ = state.tunnel_manager.start(
+            let fwd_id = fwd.id.clone();
+            if let Err(e) = state.tunnel_manager.start(
                 fwd,
                 crate::tunnel::TunnelTarget {
                     host: s.hostname.clone(),
@@ -580,7 +575,9 @@ pub async fn open_terminal_session(
                 },
                 app_handle.clone(),
                 std::sync::Arc::clone(&confirmations),
-            );
+            ) {
+                log::warn!("[auto-start] could not start port forward {fwd_id}: {e}");
+            }
         }
     });
 

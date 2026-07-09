@@ -49,6 +49,17 @@ pub struct AppState {
     pub assistant_in_flight: Arc<std::sync::atomic::AtomicBool>,
 }
 
+impl AppState {
+    /// Returns the in-memory vault key, or `AppError::Vault` if the vault is locked.
+    pub async fn require_vault_key(&self) -> Result<zeroize::Zeroizing<[u8; 32]>, error::AppError> {
+        let guard = self.vault_key.lock().await;
+        match guard.as_ref() {
+            None => Err(error::AppError::Vault("vault is locked".into())),
+            Some(k) => Ok(zeroize::Zeroizing::new(**k)),
+        }
+    }
+}
+
 #[tauri::command]
 fn update_tray_menu(app: tauri::AppHandle, servers: Vec<tray::TrayServer>) -> Result<(), String> {
     tray::rebuild(&app, &servers).map_err(|e| e.to_string())

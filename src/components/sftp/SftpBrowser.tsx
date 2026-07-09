@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import { useSftpStore } from "../../store/sftpStore";
 import { useServerStore } from "../../store/serverStore";
 import { sftpCommands } from "../../lib/commands/sftp";
@@ -24,7 +24,7 @@ interface Props {
   isActive: boolean;
 }
 
-export default function SftpBrowser({ sessionId, isActive }: Props) {
+function SftpBrowser({ sessionId, isActive }: Props) {
   const closeSession = useSftpStore((s) => s.closeSession);
   const reconnectSession = useSftpStore((s) => s.reconnectSession);
   const openHiddenSession = useSftpStore((s) => s.openHiddenSession);
@@ -841,3 +841,5 @@ export default function SftpBrowser({ sessionId, isActive }: Props) {
     </div>
   );
 }
+
+export default memo(SftpBrowser);

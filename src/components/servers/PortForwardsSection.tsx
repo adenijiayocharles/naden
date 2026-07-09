@@ -136,7 +136,13 @@ export default function PortForwardsSection({ serverId, draftForwards, onDraftFo
       if (editingId === id) cancelEdit();
       return;
     }
-    await remove(id).catch(() => {});
+    setFwdError(null);
+    try {
+      await remove(id);
+    } catch (e) {
+      setFwdError(formatError(e));
+      return;
+    }
     if (editingId === id) cancelEdit();
   };
 
@@ -317,6 +323,8 @@ export default function PortForwardsSection({ serverId, draftForwards, onDraftFo
       {items.length === 0 && !adding && (
         <p className="text-meta text-faint">No port forwards. Click + Add to create one.</p>
       )}
+
+      {!adding && fwdError && <p className="text-xs text-error">{fwdError}</p>}
 
       {pendingDeleteId && (
         <ConfirmDeleteModal

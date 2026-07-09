@@ -111,15 +111,9 @@ pub async fn duplicate_server(
     // credential — sharing would cause a double-delete when either server is deleted.
     let new_vault_credential_id = if s.auth_method == "password" {
         if let Some(cred_id) = &s.vault_credential_id {
-            let key: [u8; 32] = {
-                let guard = state.vault_key.lock().await;
-                match guard.as_ref() {
-                    None => return Err(AppError::Vault("vault is locked".into())),
-                    Some(k) => **k,
-                }
-            };
-            match vault::retrieve_credential(&state.db, &key, cred_id).await {
-                Ok(secret) => Some(vault::store_credential(&state.db, &key, &secret).await?),
+            let key = state.require_vault_key().await?;
+            match vault::retrieve_credential(&state.db, &*key, cred_id).await {
+                Ok(secret) => Some(vault::store_credential(&state.db, &*key, &secret).await?),
                 Err(_) => None,
             }
         } else {

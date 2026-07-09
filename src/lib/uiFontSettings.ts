@@ -24,6 +24,32 @@ export function uiFontCss(id: UiFontId): string {
   return UI_FONTS.find((f) => f.id === id)?.css ?? UI_FONTS[0].css;
 }
 
+// "system" needs no webfont file. Every other UI font ships as a separate
+// @fontsource-variable package — dynamically imported here instead of
+// eagerly in main.tsx, since only one is ever active per user and most
+// never leave the "system" default.
+const UI_FONT_MODULES: Partial<Record<UiFontId, () => Promise<unknown>>> = {
+  inter: () => import("@fontsource-variable/inter"),
+  geist: () => import("@fontsource-variable/geist"),
+  manrope: () => import("@fontsource-variable/manrope"),
+  "work-sans": () => import("@fontsource-variable/work-sans"),
+  outfit: () => import("@fontsource-variable/outfit"),
+  "space-grotesk": () => import("@fontsource-variable/space-grotesk"),
+  "plus-jakarta-sans": () => import("@fontsource-variable/plus-jakarta-sans"),
+  "dm-sans": () => import("@fontsource-variable/dm-sans"),
+  lexend: () => import("@fontsource-variable/lexend"),
+};
+
+const loadedUiFonts = new Set<UiFontId>();
+
+export function ensureUiFontLoaded(id: UiFontId): Promise<unknown> {
+  if (loadedUiFonts.has(id)) return Promise.resolve();
+  const load = UI_FONT_MODULES[id];
+  if (!load) return Promise.resolve();
+  loadedUiFonts.add(id);
+  return load();
+}
+
 export const UI_FONT_SIZE_MIN = 12;
 export const UI_FONT_SIZE_MAX = 20;
 export const UI_FONT_SIZES = Array.from(
@@ -64,14 +90,17 @@ export const useUiFontSettings = create<UiFontSettingsStore>((set) => ({
       settingsCommands.getSetting("ui_font_family"),
       settingsCommands.getSetting("ui_font_size"),
     ]);
+    const fontFamily = (ff as UiFontId | null) ?? "system";
+    await ensureUiFontLoaded(fontFamily);
     set({
-      fontFamily: (ff as UiFontId | null) ?? "system",
+      fontFamily,
       fontSize: fs ? Number(fs) : DEFAULT_UI_FONT_SIZE,
     });
   },
 
   setFontFamily: (id) => {
     set({ fontFamily: id });
+    void ensureUiFontLoaded(id);
     void settingsCommands.setSetting("ui_font_family", id);
   },
 

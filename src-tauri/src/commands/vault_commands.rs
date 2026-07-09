@@ -237,13 +237,7 @@ pub async fn store_credential(
     secret: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<String, AppError> {
-    let key = {
-        let guard = state.vault_key.lock().await;
-        match guard.as_ref() {
-            None => return Err(AppError::Vault("vault is locked".into())),
-            Some(k) => zeroize::Zeroizing::new(**k),
-        }
-    };
+    let key = state.require_vault_key().await?;
     let id = vault::store_credential(&state.db, &*key, &secret).await?;
     log::debug!("[vault] credential stored");
     Ok(id)
@@ -472,13 +466,7 @@ pub async fn retrieve_credential(
         ));
     }
 
-    let key = {
-        let guard = state.vault_key.lock().await;
-        match guard.as_ref() {
-            None => return Err(AppError::Vault("vault is locked".into())),
-            Some(k) => zeroize::Zeroizing::new(**k),
-        }
-    };
+    let key = state.require_vault_key().await?;
     vault::retrieve_credential(&state.db, &*key, &vault_credential_id).await
 }
 
@@ -498,13 +486,7 @@ pub async fn copy_credential_to_clipboard(
             "vault_credential_id does not belong to server_id".into(),
         ));
     }
-    let key = {
-        let guard = state.vault_key.lock().await;
-        match guard.as_ref() {
-            None => return Err(AppError::Vault("vault is locked".into())),
-            Some(k) => zeroize::Zeroizing::new(**k),
-        }
-    };
+    let key = state.require_vault_key().await?;
     let credential =
         zeroize::Zeroizing::new(vault::retrieve_credential(&state.db, &*key, &vault_credential_id).await?);
     use tauri_plugin_clipboard_manager::ClipboardExt;

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, memo } from "react";
 import { useServerStore } from "../../store/serverStore";
 import { useSnippetStore } from "../../store/snippetStore";
 import { usePlaybookStore } from "../../store/playbookStore";
@@ -242,18 +242,29 @@ function TagRow({
 }
 
 // ── Sidebar ────────────────────────────────────────────────────────────────────
-export default function Sidebar() {
+function Sidebar() {
   const servers = useServerStore((s) => s.servers);
   const groups = useServerStore((s) => s.groups);
   const tags = useServerStore((s) => s.tags);
   const deleteTag = useServerStore((s) => s.deleteTag);
   const deleteGroup = useServerStore((s) => s.deleteGroup);
-  const {
-    filterGroupId, filterTagId, filterFavourites,
-    setFilterGroup, setFilterTag, setFilterFavourites,
-    activeView, openAdd, closeForm, expandServerList, openImportSshConfig, openDiscoverHosts, openSnippets,
-    openPlaybooks, openTunnels, openKeys, openSettings,
-  } = useUiStore();
+  const filterGroupId = useUiStore((s) => s.filterGroupId);
+  const filterTagId = useUiStore((s) => s.filterTagId);
+  const filterFavourites = useUiStore((s) => s.filterFavourites);
+  const setFilterGroup = useUiStore((s) => s.setFilterGroup);
+  const setFilterTag = useUiStore((s) => s.setFilterTag);
+  const setFilterFavourites = useUiStore((s) => s.setFilterFavourites);
+  const activeView = useUiStore((s) => s.activeView);
+  const openAdd = useUiStore((s) => s.openAdd);
+  const closeForm = useUiStore((s) => s.closeForm);
+  const expandServerList = useUiStore((s) => s.expandServerList);
+  const openImportSshConfig = useUiStore((s) => s.openImportSshConfig);
+  const openDiscoverHosts = useUiStore((s) => s.openDiscoverHosts);
+  const openSnippets = useUiStore((s) => s.openSnippets);
+  const openPlaybooks = useUiStore((s) => s.openPlaybooks);
+  const openTunnels = useUiStore((s) => s.openTunnels);
+  const openKeys = useUiStore((s) => s.openKeys);
+  const openSettings = useUiStore((s) => s.openSettings);
 
   const snippetCount = useSnippetStore((s) => s.snippets.length);
   const playbookCount = usePlaybookStore((s) => s.playbooks.length);
@@ -673,3 +684,5 @@ export default function Sidebar() {
     </aside>
   );
 }
+
+export default memo(Sidebar);

@@ -12,15 +12,9 @@ import "@fontsource-variable/source-code-pro";
 import "@fontsource/ibm-plex-mono";
 import "@fontsource-variable/inconsolata";
 import "@fontsource/ubuntu-mono";
-import "@fontsource-variable/geist";
-import "@fontsource-variable/manrope";
-import "@fontsource-variable/inter";
-import "@fontsource-variable/work-sans";
-import "@fontsource-variable/outfit";
-import "@fontsource-variable/space-grotesk";
-import "@fontsource-variable/plus-jakarta-sans";
-import "@fontsource-variable/dm-sans";
-import "@fontsource-variable/lexend";
+// UI (non-terminal) fonts default to "system" and are otherwise a single
+// user choice — lazily imported by ensureUiFontLoaded() in uiFontSettings.ts
+// instead of bundled here, so app startup doesn't parse/register all of them.
 // Kick off ArrayBuffer-based font loading before any terminal renders.
 // See src/lib/canvasFonts.ts for why URL-based FontFace is insufficient in WKWebView.
 import "./lib/canvasFonts";

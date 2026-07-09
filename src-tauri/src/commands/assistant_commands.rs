@@ -157,13 +157,7 @@ pub async fn set_assistant_api_key(
     }
     let key_id_key = key_id_setting(&provider)?;
 
-    let vault_key = {
-        let guard = state.vault_key.lock().await;
-        match guard.as_ref() {
-            None => return Err(AppError::Vault("vault is locked".into())),
-            Some(k) => zeroize::Zeroizing::new(**k),
-        }
-    };
+    let vault_key = state.require_vault_key().await?;
 
     // Delete the old vault row for this provider before storing the new one.
     if let Some(old_id) = read_setting(&state.db, key_id_key).await? {
@@ -378,13 +372,7 @@ pub async fn save_assistant_chat_history(
         ));
     }
 
-    let vault_key = {
-        let guard = state.vault_key.lock().await;
-        match guard.as_ref() {
-            None => return Err(AppError::Vault("vault is locked".into())),
-            Some(k) => zeroize::Zeroizing::new(**k),
-        }
-    };
+    let vault_key = state.require_vault_key().await?;
 
     let existing: Option<String> =
         sqlx::query_scalar("SELECT credential_id FROM assistant_chat_archive WHERE server_id = ?")
@@ -453,13 +441,7 @@ pub async fn load_assistant_chat_history(
         return Ok(None);
     };
 
-    let vault_key = {
-        let guard = state.vault_key.lock().await;
-        match guard.as_ref() {
-            None => return Err(AppError::Vault("vault is locked".into())),
-            Some(k) => zeroize::Zeroizing::new(**k),
-        }
-    };
+    let vault_key = state.require_vault_key().await?;
 
     let payload = vault::retrieve_credential(&state.db, &*vault_key,&credential_id).await?;
     Ok(Some(payload))
@@ -498,13 +480,7 @@ pub async fn send_assistant_message(
         .await?
         .ok_or_else(|| AppError::Validation(format!("no API key configured for {provider_id}")))?;
 
-    let vault_key = {
-        let guard = state.vault_key.lock().await;
-        match guard.as_ref() {
-            None => return Err(AppError::Vault("vault is locked".into())),
-            Some(k) => zeroize::Zeroizing::new(**k),
-        }
-    };
+    let vault_key = state.require_vault_key().await?;
     let api_key =
         zeroize::Zeroizing::new(vault::retrieve_credential(&state.db, &*vault_key,&key_id).await?);
     let provider = assistant::provider_for(&provider_id)?;
