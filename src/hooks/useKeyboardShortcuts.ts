@@ -2,6 +2,7 @@ import { useEffect, useCallback } from "react";
 import { useUiStore } from "../store/uiStore";
 import { useTerminalStore } from "../store/terminalStore";
 import { useTerminalToolsStore } from "../store/terminalToolsStore";
+import { useVaultLocked } from "../store/vaultStore";
 
 interface Options {
   onNewTab?: () => void;
@@ -14,9 +15,11 @@ export function useKeyboardShortcuts({ onNewTab }: Options = {}) {
   const activeSessionId = useTerminalStore((s) => s.activeSessionId);
   const closeSession = useTerminalStore((s) => s.closeSession);
   const toggleTool = useTerminalToolsStore((s) => s.toggleTool);
+  const vaultLocked = useVaultLocked();
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      if (vaultLocked) return;
       const meta = e.metaKey || e.ctrlKey;
       if (!meta) return;
       switch (e.key) {
@@ -46,7 +49,7 @@ export function useKeyboardShortcuts({ onNewTab }: Options = {}) {
           break;
       }
     },
-    [openAdd, openSettings, openPalette, onNewTab, activeSessionId, closeSession, toggleTool],
+    [vaultLocked, openAdd, openSettings, openPalette, onNewTab, activeSessionId, closeSession, toggleTool],
   );
 
   useEffect(() => {

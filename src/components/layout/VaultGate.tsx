@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import { useVaultStore } from "../../store/vaultStore";
+import { useVaultStore, useVaultLocked } from "../../store/vaultStore";
 import VaultLockScreen from "../vault/VaultLockScreen";
 
 const VaultSetupModal = lazy(() => import("../vault/VaultSetupModal"));
@@ -13,9 +13,9 @@ const VaultSetupModal = lazy(() => import("../vault/VaultSetupModal"));
  */
 export default function VaultGate({ children }: { children: React.ReactNode }) {
   const isSetup = useVaultStore((s) => s.isSetup);
-  const isUnlocked = useVaultStore((s) => s.isUnlocked);
   const isChecking = useVaultStore((s) => s.isChecking);
   const isPasswordRequired = useVaultStore((s) => s.isPasswordRequired);
+  const locked = useVaultLocked();
 
   if (isChecking) {
     return (
@@ -31,7 +31,6 @@ export default function VaultGate({ children }: { children: React.ReactNode }) {
       </Suspense>
     );
   }
-  const locked = isSetup && !isUnlocked && isPasswordRequired;
 
   // Keep children mounted even while locked, so open terminal/SFTP sessions and their
   // in-progress UI state (split panes, hidden peer sessions, scroll position) survive

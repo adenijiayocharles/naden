@@ -19,6 +19,7 @@ import { useAppInit } from "../../hooks/useAppInit";
 import { useWakeReconnect } from "../../hooks/useWakeReconnect";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { useVaultHeartbeat } from "../../hooks/useVaultHeartbeat";
+import { useVaultLocked } from "../../store/vaultStore";
 import { useMenuEvents } from "../../hooks/useMenuEvents";
 import { useTrayEvents } from "../../hooks/useTrayEvents";
 import { trayCommands } from "../../lib/commands/tray";
@@ -151,6 +152,7 @@ export default function AppShell() {
   const fetchPlaybooks = usePlaybookStore((s) => s.fetchAll);
 
   const [activePanelType, setActivePanelType] = useState<PanelType>("terminal");
+  const vaultLocked = useVaultLocked();
 
   const activeTerminalSession = terminalSessions.find((t) => t.id === terminalActiveId);
   const linkedSftpSession = activeTerminalSession
@@ -818,7 +820,10 @@ export default function AppShell() {
                       <TerminalPane key={terminalActiveId} sessionId={terminalActiveId} />
                     )}
                     {sftpSessions.map((s) => {
-                      const isTabActive = activePanelType === "sftp" && s.id === sftpActiveId;
+                      // Gated on !vaultLocked too: a tab that was active when the vault
+                      // auto-locked must stop reacting to keystrokes (e.g. refresh/navigate
+                      // shortcuts) until the user unlocks again, even though it stays mounted.
+                      const isTabActive = !vaultLocked && activePanelType === "sftp" && s.id === sftpActiveId;
                       return (
                         <div key={s.id} className={isTabActive ? "h-full" : "hidden"}>
                           <SftpBrowser sessionId={s.id} isActive={isTabActive} />

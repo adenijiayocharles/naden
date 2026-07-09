@@ -81,3 +81,11 @@ export const useVaultStore = create<VaultStore>((set) => ({
 listen("vault_auto_locked", () => {
   useVaultStore.setState({ isUnlocked: false });
 }).catch((e) => console.error("[vault] failed to register auto-lock listener:", e));
+
+/** True while VaultGate is covering the app with VaultLockScreen. Shared so every
+ *  consumer that needs to suppress background activity during a lock (e.g. gating
+ *  which SFTP/terminal tab is allowed to react to input) agrees with VaultGate on
+ *  what "locked" means. */
+export function useVaultLocked(): boolean {
+  return useVaultStore((s) => s.isSetup && !s.isUnlocked && s.isPasswordRequired);
+}
