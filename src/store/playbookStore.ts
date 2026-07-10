@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { playbookCommands } from "../lib/commands/content";
+import { crudActions } from "./crudActions";
 import type { Playbook, CreatePlaybookPayload, UpdatePlaybookPayload } from "../types/playbook";
 
 interface PlaybookStore {
@@ -13,41 +14,29 @@ interface PlaybookStore {
   deletePlaybook: (id: string) => Promise<void>;
 }
 
-export const usePlaybookStore = create<PlaybookStore>((set) => ({
-  playbooks: [],
-  isLoading: false,
-  error: null,
+export const usePlaybookStore = create<PlaybookStore>((set) => {
+  const actions = crudActions<PlaybookStore, Playbook, CreatePlaybookPayload, UpdatePlaybookPayload>(set, {
+    commands: {
+      list: playbookCommands.listPlaybooks,
+      create: playbookCommands.createPlaybook,
+      update: playbookCommands.updatePlaybook,
+      remove: playbookCommands.deletePlaybook,
+    },
+    getItems: (s) => s.playbooks,
+    setItems: (playbooks) => ({ playbooks }),
+    setLoading: (isLoading) => ({ isLoading }),
+    setError: (error) => ({ error }),
+    sortKey: (p) => p.title,
+  });
 
-  fetchAll: async () => {
-    set({ isLoading: true, error: null });
-    try {
-      const playbooks = await playbookCommands.listPlaybooks();
-      set({ playbooks });
-    } catch (e) {
-      set({ error: String(e) });
-    } finally {
-      set({ isLoading: false });
-    }
-  },
+  return {
+    playbooks: [],
+    isLoading: false,
+    error: null,
 
-  createPlaybook: async (payload) => {
-    const playbook = await playbookCommands.createPlaybook(payload);
-    set((s) => ({ playbooks: [...s.playbooks, playbook].sort((a, b) => a.title.localeCompare(b.title)) }));
-    return playbook;
-  },
-
-  updatePlaybook: async (id, payload) => {
-    const updated = await playbookCommands.updatePlaybook(id, payload);
-    set((s) => ({
-      playbooks: s.playbooks
-        .map((pb) => (pb.id === id ? updated : pb))
-        .sort((a, b) => a.title.localeCompare(b.title)),
-    }));
-    return updated;
-  },
-
-  deletePlaybook: async (id) => {
-    await playbookCommands.deletePlaybook(id);
-    set((s) => ({ playbooks: s.playbooks.filter((pb) => pb.id !== id) }));
-  },
-}));
+    fetchAll: actions.fetchAll,
+    createPlaybook: actions.create,
+    updatePlaybook: actions.update,
+    deletePlaybook: actions.remove,
+  };
+});

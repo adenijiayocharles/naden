@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { snippetCommands } from "../lib/commands/content";
+import { crudActions } from "./crudActions";
 import type { Snippet, CreateSnippetPayload, UpdateSnippetPayload } from "../types/snippet";
 
 interface SnippetStore {
@@ -13,41 +14,29 @@ interface SnippetStore {
   deleteSnippet: (id: string) => Promise<void>;
 }
 
-export const useSnippetStore = create<SnippetStore>((set) => ({
-  snippets: [],
-  isLoading: false,
-  error: null,
+export const useSnippetStore = create<SnippetStore>((set) => {
+  const actions = crudActions<SnippetStore, Snippet, CreateSnippetPayload, UpdateSnippetPayload>(set, {
+    commands: {
+      list: snippetCommands.listSnippets,
+      create: snippetCommands.createSnippet,
+      update: snippetCommands.updateSnippet,
+      remove: snippetCommands.deleteSnippet,
+    },
+    getItems: (s) => s.snippets,
+    setItems: (snippets) => ({ snippets }),
+    setLoading: (isLoading) => ({ isLoading }),
+    setError: (error) => ({ error }),
+    sortKey: (s) => s.title,
+  });
 
-  fetchAll: async () => {
-    set({ isLoading: true, error: null });
-    try {
-      const snippets = await snippetCommands.listSnippets();
-      set({ snippets });
-    } catch (e) {
-      set({ error: String(e) });
-    } finally {
-      set({ isLoading: false });
-    }
-  },
+  return {
+    snippets: [],
+    isLoading: false,
+    error: null,
 
-  createSnippet: async (payload) => {
-    const snippet = await snippetCommands.createSnippet(payload);
-    set((s) => ({ snippets: [...s.snippets, snippet].sort((a, b) => a.title.localeCompare(b.title)) }));
-    return snippet;
-  },
-
-  updateSnippet: async (id, payload) => {
-    const updated = await snippetCommands.updateSnippet(id, payload);
-    set((s) => ({
-      snippets: s.snippets
-        .map((sn) => (sn.id === id ? updated : sn))
-        .sort((a, b) => a.title.localeCompare(b.title)),
-    }));
-    return updated;
-  },
-
-  deleteSnippet: async (id) => {
-    await snippetCommands.deleteSnippet(id);
-    set((s) => ({ snippets: s.snippets.filter((sn) => sn.id !== id) }));
-  },
-}));
+    fetchAll: actions.fetchAll,
+    createSnippet: actions.create,
+    updateSnippet: actions.update,
+    deleteSnippet: actions.remove,
+  };
+});
