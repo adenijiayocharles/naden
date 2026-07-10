@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useTerminalStore } from "../../store/terminalStore";
 import { terminalCommands } from "../../lib/commands/terminal";
 import { Button } from "../ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
 
 interface HostKeyPrompt {
   sessionId: string;
@@ -46,27 +47,31 @@ export default function GlobalHostKeyModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-surface-2 border border-stroke rounded-xl p-6 max-w-md w-full mx-4 shadow-overlay">
-        <h3 className="text-base font-semibold text-white mb-2">Unknown host key</h3>
-        <p className="text-sm text-text-muted mb-4">
-          This is the first connection to{" "}
-          <span className="text-white font-mono">{prompt.host}:{prompt.port}</span>.
-          Verify the fingerprint out of band before accepting.
-        </p>
-        <div className="bg-surface-1 rounded-lg p-3 mb-4 font-mono text-xs text-text-muted break-all">
+    // Deliberately no dismiss on Escape/outside click — accepting or rejecting
+    // an unknown host key is a security decision the user must make explicitly.
+    <Dialog open onOpenChange={() => {}}>
+      <DialogContent showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle>Unknown host key</DialogTitle>
+          <DialogDescription>
+            This is the first connection to{" "}
+            <span className="text-white font-mono">{prompt.host}:{prompt.port}</span>.
+            Verify the fingerprint out of band before accepting.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="bg-surface-1 rounded-lg p-3 font-mono text-xs text-text-muted break-all">
           <span className="text-text-subtle block mb-1">{prompt.keyType}</span>
           {prompt.fingerprint}
         </div>
-        <div className="flex gap-3 justify-end">
+        <DialogFooter>
           <Button variant="ghost" size="sm" onClick={() => { void confirm(false); }}>
             Reject
           </Button>
           <Button size="sm" onClick={() => { void confirm(true); }}>
             Accept &amp; Connect
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

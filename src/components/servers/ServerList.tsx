@@ -9,7 +9,7 @@ import { applyActiveFilter } from "../../lib/serverFilter";
 import ServerCard from "./ServerCard";
 import ServerRow from "./ServerRow";
 import EmptyState from "../shared/EmptyState";
-import { Button } from "../ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog";
 import type { Server, Group } from "../../types/server";
 
 function sortServers(list: Server[], mode: SortMode, lastConnectedMap: Record<string, string>): Server[] {
@@ -375,32 +375,12 @@ export default function ServerList() {
         />
 
         {showAddPicker && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 animate-backdrop-in"
-            onClick={() => setShowAddPicker(false)}
-          >
-            <div
-              className="bg-surface-2 border border-stroke rounded-xl shadow-overlay animate-overlay-in w-full max-w-sm mx-4 p-6 flex flex-col gap-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex flex-col gap-1">
-                  <h2 className="text-white font-semibold text-base">Add a server</h2>
-                  <p className="text-muted text-sm">How would you like to add it?</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => setShowAddPicker(false)}
-                  className="text-muted hover:text-white shrink-0"
-                  aria-label="Close"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
-                    <line x1="3" y1="3" x2="13" y2="13" />
-                    <line x1="13" y1="3" x2="3" y2="13" />
-                  </svg>
-                </Button>
-              </div>
+          <Dialog open onOpenChange={(open) => !open && setShowAddPicker(false)}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>Add a server</DialogTitle>
+                <DialogDescription>How would you like to add it?</DialogDescription>
+              </DialogHeader>
               <div className="flex flex-col gap-2">
                 <button
                   onClick={() => { setShowAddPicker(false); openAdd(); }}
@@ -432,8 +412,8 @@ export default function ServerList() {
                   </div>
                 </button>
               </div>
-            </div>
-          </div>
+            </DialogContent>
+          </Dialog>
         )}
       </>
     );
