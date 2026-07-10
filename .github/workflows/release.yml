@@ -11,8 +11,44 @@ on:
         required: true
 
 jobs:
-  test:
+  lint-rust:
     runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          cache-on-failure: true
+
+      - name: Lint (Rust)
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+
+  test-rust:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          cache-on-failure: true
+
+      - name: Test (Rust)
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+  test-frontend:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,28 +59,14 @@ jobs:
           node-version: 20
           cache: npm
 
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-
       - name: Install frontend dependencies
         run: npm ci
-
-      - name: Lint (Rust)
-        run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
-
-      - name: Test (Rust)
-        run: cargo test --manifest-path src-tauri/Cargo.toml
 
       - name: Test (frontend)
         run: npx vitest run
 
   release:
-    needs: test
+    needs: [lint-rust, test-rust, test-frontend]
     runs-on: macos-14
     permissions:
       contents: write
