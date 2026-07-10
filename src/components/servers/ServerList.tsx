@@ -1,4 +1,6 @@
 import React, { useMemo, useRef, useState } from "react";
+import { List, useDynamicRowHeight, type RowComponentProps } from "react-window";
+import { AutoSizer } from "react-virtualized-auto-sizer";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore, type SortMode } from "../../store/uiStore";
 import { useTerminalStore } from "../../store/terminalStore";
@@ -6,11 +8,17 @@ import { useSftpStore } from "../../store/sftpStore";
 import { useBroadcastStore } from "../../store/broadcastStore";
 import { useTunnelStore } from "../../store/tunnelStore";
 import { applyActiveFilter } from "../../lib/serverFilter";
+import { computeColumnCount, chunkIntoRows } from "../../lib/gridColumns";
 import ServerCard from "./ServerCard";
 import ServerRow from "./ServerRow";
 import EmptyState from "../shared/EmptyState";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog";
 import type { Server, Group } from "../../types/server";
+
+const MIN_CARD_WIDTH = 240;
+const CARD_GRID_GAP = 12; // gap-3
+
+const NO_SCROLLBAR_CLASS = "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]";
 
 function sortServers(list: Server[], mode: SortMode, lastConnectedMap: Record<string, string>): Server[] {
   if (mode === "default") return list;
@@ -47,6 +55,38 @@ const dragHandle = (
     </svg>
   </div>
 );
+
+interface RowData {
+  rows: Server[][];
+  viewMode: "row" | "card";
+  columns: number;
+  canDrag: boolean;
+  wrapDraggable: (s: Server, canDrag: boolean) => React.ReactNode;
+}
+
+// NOTE: defined outside ServerList so it doesn't get recreated on every render (see SftpFileList's Row).
+const Row = ({ index, style, rows, viewMode, columns, canDrag, wrapDraggable }: RowComponentProps<RowData>) => {
+  const rowItems = rows[index];
+  const isLastRow = index === rows.length - 1;
+
+  if (viewMode === "row") {
+    return <div style={style}>{wrapDraggable(rowItems[0], canDrag)}</div>;
+  }
+
+  return (
+    <div
+      style={{
+        ...style,
+        display: "grid",
+        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+        gap: CARD_GRID_GAP,
+        paddingBottom: isLastRow ? 0 : CARD_GRID_GAP,
+      }}
+    >
+      {rowItems.map((s) => wrapDraggable(s, canDrag))}
+    </div>
+  );
+};
 
 export default function ServerList() {
   const servers = useServerStore((s) => s.servers);
@@ -115,6 +155,14 @@ export default function ServerList() {
   const listClass = viewMode === "row"
     ? "border border-stroke-subtle rounded-lg"
     : "grid gap-3 grid-cols-[repeat(auto-fill,minmax(min(240px,100%),1fr))]";
+
+  // Cache key resets between row/card view — the two layouts have very
+  // different row heights, so a cache carried over from the other mode
+  // would just cause a scroll-jump on the first render.
+  const dynamicRowHeight = useDynamicRowHeight({
+    defaultRowHeight: viewMode === "row" ? 44 : 140,
+    key: viewMode,
+  });
 
   const renderItem = (s: Server, canDrag: boolean) => {
     const handle = canDrag ? dragHandle : undefined;
@@ -236,6 +284,37 @@ export default function ServerList() {
     );
   };
 
+  // Virtualizes off-screen rows so a 100+ server list doesn't render its
+  // entire DOM subtree at once (see the "row" viewMode branch in Row above
+  // for the single-column case, and the grid-chunking branch for card view).
+  const renderVirtualList = (list: Server[], canDragForList: boolean) => (
+    <div
+      className={
+        viewMode === "row"
+          ? "border border-stroke-subtle rounded-lg overflow-hidden flex-1 min-h-0 flex flex-col"
+          : "flex-1 min-h-0 flex flex-col"
+      }
+    >
+      <AutoSizer
+        renderProp={({ height, width }) => {
+          const columns = viewMode === "row" ? 1 : computeColumnCount(width ?? 0, MIN_CARD_WIDTH, CARD_GRID_GAP);
+          const rows = chunkIntoRows(list, columns);
+          const rowData: RowData = { rows, viewMode, columns, canDrag: canDragForList, wrapDraggable };
+          return (
+            <List
+              className={NO_SCROLLBAR_CLASS}
+              style={{ height: height ?? 0, width: width ?? 0 }}
+              rowCount={rows.length}
+              rowHeight={dynamicRowHeight}
+              rowComponent={Row}
+              rowProps={rowData}
+            />
+          );
+        }}
+      />
+    </div>
+  );
+
   // All hooks must be called before any early return.
   // Search results are scoped to the active group/tag/favourites filter, if any.
   const searchWithinFilter = useMemo(
@@ -310,11 +389,7 @@ export default function ServerList() {
         heading="No matches"
         subline={`No servers match "${searchQuery}"`}
       />
-    ) : (
-      <div className={listClass}>
-        {sortedSearch.map((s) => wrapDraggable(s, false))}
-      </div>
-    );
+    ) : renderVirtualList(sortedSearch, false);
   }
 
   if (filtered.length === 0) {
@@ -421,17 +496,9 @@ export default function ServerList() {
 
   // Filtered view (favourites, group, or tag active) — no sections
   if (filterFavourites || filterGroupId || filterTagId) {
-    return (
-      <div className={listClass}>
-        {sortedFiltered.map((s) => wrapDraggable(s, canDrag))}
-      </div>
-    );
+    return renderVirtualList(sortedFiltered, canDrag);
   }
 
   // ── Default view (All Servers) — flat list, no group sections ──────────────
-  return (
-    <div className={listClass}>
-      {sortedFiltered.map((s) => wrapDraggable(s, canDrag))}
-    </div>
-  );
+  return renderVirtualList(sortedFiltered, canDrag);
 }
