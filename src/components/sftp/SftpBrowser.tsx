@@ -251,12 +251,23 @@ function SftpBrowser({ sessionId, isActive }: Props) {
     if (peerSessionId) void sftpCommands.cancelSftpTransfer(peerSessionId);
   };
 
-  const handleCopyPeerToRemote = async (overwrite = false, startIndex = 0) => {
+  // Shared by both cross-copy directions below — only the source/destination
+  // session+path and which pane to refresh afterwards differ.
+  const runCrossCopy = async (
+    direction: "peerToRemote" | "remoteToPeer",
+    overwrite = false,
+    startIndex = 0,
+  ) => {
     // Guard on peerSessionId directly — effectivePeerId may be "__none__" if
     // called via a stale closure after the peer is cleared.
     if (!session || !peerPane.session || !peerSessionId) return;
-    const files = peerPane.selectedEntries.filter((e) => !e.isDir);
+    const toRemote = direction === "peerToRemote";
+    const files = (toRemote ? peerPane.selectedEntries : selectedEntries).filter((e) => !e.isDir);
     if (files.length === 0) return;
+    const srcSessionId = toRemote ? peerSessionId : sessionId;
+    const destSessionId = toRemote ? sessionId : peerSessionId;
+    const destPath = toRemote ? session.currentPath : peerPane.session.currentPath;
+
     setCrossTransferBusy(true);
     setCrossTransferProgress(null);
     for (let i = startIndex; i < files.length; i++) {
@@ -265,13 +276,13 @@ function SftpBrowser({ sessionId, isActive }: Props) {
         files.length > 1 ? `Copying ${file.name} (${i + 1}/${files.length})…` : `Copying ${file.name}…`,
       );
       try {
-        await sftpCommands.crossCopySftpFiles(peerSessionId, [file.path], sessionId, session.currentPath, overwrite);
+        await sftpCommands.crossCopySftpFiles(srcSessionId, [file.path], destSessionId, destPath, overwrite);
       } catch (e) {
         setCrossTransferProgress(null);
         setCrossTransferBusy(false);
         if (isCancelledError(e)) return;
         if (isAlreadyExistsError(e) && !overwrite) {
-          setCrossOverwriteConfirm({ message: formatError(e), onConfirm: () => { setCrossOverwriteConfirm(null); void handleCopyPeerToRemote(true, i); } });
+          setCrossOverwriteConfirm({ message: formatError(e), onConfirm: () => { setCrossOverwriteConfirm(null); void runCrossCopy(direction, true, i); } });
           return;
         }
         setError(formatError(e));
@@ -280,38 +291,14 @@ function SftpBrowser({ sessionId, isActive }: Props) {
     }
     setCrossTransferProgress(null);
     setCrossTransferBusy(false);
-    handleRefresh();
+    (toRemote ? handleRefresh : peerPane.handleRefresh)();
   };
 
-  const handleCopyRemoteToPeer = async (overwrite = false, startIndex = 0) => {
-    if (!session || !peerPane.session || !peerSessionId) return;
-    const files = selectedEntries.filter((e) => !e.isDir);
-    if (files.length === 0) return;
-    setCrossTransferBusy(true);
-    setCrossTransferProgress(null);
-    for (let i = startIndex; i < files.length; i++) {
-      const file = files[i];
-      setCrossTransferProgress(
-        files.length > 1 ? `Copying ${file.name} (${i + 1}/${files.length})…` : `Copying ${file.name}…`,
-      );
-      try {
-        await sftpCommands.crossCopySftpFiles(sessionId, [file.path], peerSessionId, peerPane.session.currentPath, overwrite);
-      } catch (e) {
-        setCrossTransferProgress(null);
-        setCrossTransferBusy(false);
-        if (isCancelledError(e)) return;
-        if (isAlreadyExistsError(e) && !overwrite) {
-          setCrossOverwriteConfirm({ message: formatError(e), onConfirm: () => { setCrossOverwriteConfirm(null); void handleCopyRemoteToPeer(true, i); } });
-          return;
-        }
-        setError(formatError(e));
-        return;
-      }
-    }
-    setCrossTransferProgress(null);
-    setCrossTransferBusy(false);
-    peerPane.handleRefresh();
-  };
+  const handleCopyPeerToRemote = (overwrite = false, startIndex = 0) =>
+    runCrossCopy("peerToRemote", overwrite, startIndex);
+
+  const handleCopyRemoteToPeer = (overwrite = false, startIndex = 0) =>
+    runCrossCopy("remoteToPeer", overwrite, startIndex);
 
   // ── Toolbar handler wrappers ───────────────────────────────────────────────
 
