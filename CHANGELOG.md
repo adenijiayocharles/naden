@@ -1,6 +1,13 @@
 # Changelog
 
 All notable changes to naden are documented here.
+## [v1.0.8] — 2026-07-10
+
+### Bug Fixes
+- Address pre-launch review findings (perf, duplication, silent errors)
+
+### Performance
+- Virtualize ServerList with react-window *(servers)*
 ## [v1.0.7] — 2026-07-09
 
 ### Bug Fixes
