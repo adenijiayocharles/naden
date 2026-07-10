@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState, useRef, useMemo, lazy, Suspense } from "react";
+import { useEffect, useState, useRef, useMemo, lazy, Suspense } from "react";
 import { ErrorBoundary } from "../shared/ErrorBoundary";
 import { useUiStore, type ViewMode, type SortMode } from "../../store/uiStore";
 import { Input } from "../ui/input";
@@ -22,11 +22,15 @@ import { useVaultHeartbeat } from "../../hooks/useVaultHeartbeat";
 import { useVaultLocked } from "../../store/vaultStore";
 import { useMenuEvents } from "../../hooks/useMenuEvents";
 import { useTrayEvents } from "../../hooks/useTrayEvents";
+import { useTabDragReorder } from "../../hooks/useTabDragReorder";
+import { useTabScrollFade } from "../../hooks/useTabScrollFade";
 import { trayCommands } from "../../lib/commands/tray";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import VaultGate from "./VaultGate";
-import TabItem from "./TabItem";
+import SessionTabStrip from "./SessionTabStrip";
+import NewSessionPicker from "./NewSessionPicker";
+import TerminalToolTriggers from "./TerminalToolTriggers";
 import ServerList from "../servers/ServerList";
 import ServerForm from "../servers/ServerForm";
 import BulkActionBar from "../servers/BulkActionBar";
@@ -34,9 +38,6 @@ import ClipboardClearBanner from "./ClipboardClearBanner";
 import SshConfigChangedBanner from "./SshConfigChangedBanner";
 import { useSnippetStore } from "../../store/snippetStore";
 import { usePlaybookStore } from "../../store/playbookStore";
-import type { SessionStatus } from "../../store/terminalStore";
-import SessionRecordingButton from "./SessionRecordingButton";
-import type { SftpStatus } from "../../store/sftpStore";
 
 // Lazy-loaded: these views/modals aren't needed for the initial paint, so
 // keeping them out of the main bundle cuts startup parse/exec time.
@@ -55,35 +56,6 @@ const KeysView = lazy(() => import("../keys/KeysView"));
 const CommandPalette = lazy(() => import("./CommandPalette"));
 
 type PanelType = "terminal" | "sftp";
-
-const TERMINAL_STATUS_COLORS: Record<SessionStatus, string> = {
-  connecting: "bg-yellow-500",
-  connected: "bg-green-500",
-  disconnected: "bg-dim",
-  error: "bg-red-500",
-};
-
-const SFTP_STATUS_COLORS: Record<SftpStatus, string> = {
-  connecting: "bg-yellow-500",
-  connected: "bg-green-500",
-  error: "bg-red-500",
-};
-
-const SFTP_FOLDER_ICON = (
-  <svg className="w-3 h-3 text-accent-fg shrink-0" fill="currentColor" viewBox="0 0 20 20">
-    <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-  </svg>
-);
-
-function reorderById<T extends { id: string }>(list: T[], fromId: string, toId: string): T[] {
-  const from = list.findIndex((s) => s.id === fromId);
-  const to = list.findIndex((s) => s.id === toId);
-  if (from === -1 || to === -1) return list;
-  const next = [...list];
-  next.splice(from, 1);
-  next.splice(to, 0, list[from]);
-  return next;
-}
 
 export default function AppShell() {
   useAppInit();
@@ -159,74 +131,26 @@ export default function AppShell() {
     ? sftpSessions.find((x) => x.serverId === activeTerminalSession.serverId)
     : undefined;
   const isSftpActive = activePanelType === "sftp" && linkedSftpSession?.id === sftpActiveId;
-  const [pickerQuery, setPickerQuery] = useState("");
-  const [pickerError, setPickerError] = useState<string | null>(null);
-  const newTabButtonRef = useRef<HTMLButtonElement>(null);
-  const newTabPickerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const tabBarRef = useRef<HTMLDivElement>(null);
-  const [tabFade, setTabFade] = useState({ left: false, right: false });
 
-  // Consolidated drag state — three separate atoms caused triple renders per drag-start.
-  const [drag, setDrag] = useState<{ id: string; type: PanelType } | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
-
-  const resetDrag = useCallback(() => {
-    setDrag(null);
-    setDragOverId(null);
-  }, []);
-
-  const handleDragStart = useCallback((id: string, type: PanelType, e: React.DragEvent) => {
-    setDrag({ id, type });
-    e.dataTransfer.effectAllowed = "move";
-  }, []);
-
-  const handleDragOver = useCallback(
-    (id: string, type: PanelType, e: React.DragEvent) => {
-      if (drag?.type !== type) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      setDragOverId(id);
-    },
-    [drag?.type],
-  );
-
-  const handleDrop = useCallback(
-    (targetId: string, type: PanelType, e: React.DragEvent) => {
-      e.preventDefault();
-      if (!drag || drag.type !== type || drag.id === targetId) {
-        resetDrag();
-        return;
-      }
-      if (type === "terminal") {
-        terminalReorder(reorderById(terminalSessions, drag.id, targetId));
-      } else {
-        sftpReorder(reorderById(sftpSessions, drag.id, targetId));
-      }
-      resetDrag();
-    },
-    [drag, terminalSessions, sftpSessions, terminalReorder, sftpReorder, resetDrag],
-  );
+  const { drag, dragOverId, resetDrag, handleDragStart, handleDragOver, handleDrop } =
+    useTabDragReorder(terminalSessions, sftpSessions, terminalReorder, sftpReorder);
 
   const hasTerminal = terminalSessions.length > 0;
   const hasSftp = sftpSessions.length > 0;
   const hasPanel = hasTerminal || hasSftp;
 
+  const { tabBarRef, tabFade } = useTabScrollFade(
+    terminalSessions.length,
+    sftpSessions.length,
+    terminalActiveId,
+    sftpActiveId,
+    activePanelType,
+  );
+
   const visibleTerminalSessions = useMemo(
     () => terminalSessions.filter((s) => !s.broadcastGroupId),
     [terminalSessions],
-  );
-
-  const pickerServers = useMemo(
-    () =>
-      !pickerQuery
-        ? servers
-        : servers.filter(
-            (s) =>
-              s.displayName.toLowerCase().includes(pickerQuery.toLowerCase()) ||
-              s.hostname.toLowerCase().includes(pickerQuery.toLowerCase()),
-          ),
-    [servers, pickerQuery],
   );
 
   // Bring a panel type to the foreground only when a NEW session is added
@@ -274,53 +198,14 @@ export default function AppShell() {
   }, [servers]);
 
   useEffect(() => {
-    if (!showNewTabPicker) return;
-    const close = (e: MouseEvent) => {
-      if (
-        !newTabPickerRef.current?.contains(e.target as Node) &&
-        !newTabButtonRef.current?.contains(e.target as Node)
-      ) {
-        setShowNewTabPicker(false);
-        setPickerQuery("");
-      }
-    };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [showNewTabPicker]);
-
-  const updateTabFade = useCallback(() => {
-    const el = tabBarRef.current;
-    if (!el) return;
-    setTabFade({
-      left: el.scrollLeft > 0,
-      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
-    });
-  }, []);
-
-  useEffect(() => {
-    const el = tabBarRef.current;
-    if (!el) return;
-    el.addEventListener("scroll", updateTabFade, { passive: true });
-    updateTabFade();
-    return () => el.removeEventListener("scroll", updateTabFade);
-  }, [updateTabFade]);
-
-  useEffect(() => {
-    requestAnimationFrame(updateTabFade);
-  }, [terminalSessions.length, sftpSessions.length, updateTabFade]);
-
-  useEffect(() => {
     closeTerminalTool();
   }, [terminalActiveId, sftpActiveId, activePanelType, closeTerminalTool]);
 
-  useEffect(() => {
-    const el = tabBarRef.current;
-    if (!el) return;
-    requestAnimationFrame(() => {
-      el.querySelector<HTMLElement>("[data-active='true']")?.scrollIntoView({ block: "nearest", inline: "nearest" });
-      updateTabFade();
-    });
-  }, [terminalActiveId, sftpActiveId, activePanelType, updateTabFade]);
+  const openNewTerminalSession = async (serverId: string, serverName: string) => {
+    const id = await terminalOpenSession(serverId, serverName);
+    if (id !== null) setActiveBroadcastGroup(null);
+    return id;
+  };
 
   return (
     <VaultGate>
@@ -497,316 +382,49 @@ export default function AppShell() {
                 }}
                 onDragEnd={resetDrag}
               >
-                <div className="relative flex-1 min-w-0">
-                  {tabFade.left && (
-                    <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-surface-1 to-transparent flex items-center justify-start pl-0.5">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => tabBarRef.current?.scrollBy({ left: -120, behavior: "smooth" })}
-                        className="pointer-events-auto text-muted hover:text-white leading-none"
-                        aria-label="Scroll tabs left"
-                      >‹</Button>
-                    </div>
-                  )}
-                  {tabFade.right && (
-                    <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-surface-1 to-transparent flex items-center justify-end pr-0.5">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => tabBarRef.current?.scrollBy({ left: 120, behavior: "smooth" })}
-                        className="pointer-events-auto text-muted hover:text-white leading-none"
-                        aria-label="Scroll tabs right"
-                      >›</Button>
-                    </div>
-                  )}
-                  <div ref={tabBarRef} className="flex items-center gap-1 px-2 overflow-x-auto [&::-webkit-scrollbar]:hidden">
-                  {visibleTerminalSessions.map((session) => (
-                    <TabItem
-                      key={session.id}
-                      serverName={session.customName ?? session.serverName}
-                      statusColor={TERMINAL_STATUS_COLORS[session.status]}
-                      isActive={!activeBroadcastGroupId && activePanelType === "terminal" && session.id === terminalActiveId}
-                      isDragging={drag?.id === session.id}
-                      isDragOver={dragOverId === session.id && drag?.id !== session.id}
-                      title={
-                        session.status === "error" && session.errorMessage
-                          ? `${session.serverName} — ${session.errorMessage}`
-                          : session.customName
-                            ? `${session.customName} (${session.serverName})`
-                            : session.serverName
-                      }
-                      closeLabel={`Close ${session.serverName}`}
-                      onActivate={() => {
-                        terminalSetActive(session.id);
-                        setActivePanelType("terminal");
-                        setActiveBroadcastGroup(null);
-                      }}
-                      onClose={() => void terminalClose(session.id)}
-                      onRename={(name) => terminalRename(session.id, name)}
-                      onDragStart={(e) => handleDragStart(session.id, "terminal", e)}
-                      onDragOver={(e) => handleDragOver(session.id, "terminal", e)}
-                      onDrop={(e) => handleDrop(session.id, "terminal", e)}
-                    />
-                  ))}
+                <SessionTabStrip
+                  tabBarRef={tabBarRef}
+                  tabFade={tabFade}
+                  visibleTerminalSessions={visibleTerminalSessions}
+                  activeBroadcastGroupId={activeBroadcastGroupId}
+                  activePanelType={activePanelType}
+                  terminalActiveId={terminalActiveId}
+                  terminalSetActive={terminalSetActive}
+                  terminalClose={terminalClose}
+                  terminalRename={terminalRename}
+                  broadcastGroups={broadcastGroups}
+                  disbandBroadcastGroup={disbandBroadcastGroup}
+                  setActiveBroadcastGroup={setActiveBroadcastGroup}
+                  hasSftp={hasSftp}
+                  sftpSessions={sftpSessions}
+                  sftpActiveId={sftpActiveId}
+                  sftpSetActive={sftpSetActive}
+                  sftpClose={sftpClose}
+                  onActivatePanel={setActivePanelType}
+                  drag={drag}
+                  dragOverId={dragOverId}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                />
 
-                  {/* Broadcast group tabs — one per in-memory group, clickable to switch */}
-                  {broadcastGroups.length > 0 && (
-                    <>
-                      {visibleTerminalSessions.length > 0 && <div className="w-px h-5 bg-stroke mx-1 shrink-0" />}
-                      {broadcastGroups.map((group) => {
-                        const isActive = group.id === activeBroadcastGroupId;
-                        return (
-                          <div
-                            key={group.id}
-                            data-active={isActive ? "true" : undefined}
-                            title={`Broadcast: ${group.name}`}
-                            onClick={() => setActiveBroadcastGroup(group.id)}
-                            className={`relative flex items-center gap-2 px-4 py-2.5 rounded text-base cursor-pointer shrink-0 transition-colors duration-200 ease-premium select-none ${
-                              isActive ? "bg-surface-2 text-accent-fg" : "text-muted hover:text-white hover:bg-surface-2"
-                            }`}
-                          >
-                            {isActive && <span aria-hidden="true" className="absolute inset-x-3 bottom-0.5 h-0.5 rounded-full bg-accent" />}
-                            <span className="inline-block w-2 h-2 rounded-full shrink-0 bg-yellow-500" />
-                            <span className="max-w-[120px] truncate">{group.name}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              onClick={(e) => { e.stopPropagation(); disbandBroadcastGroup(group.id); }}
-                              className="text-faint hover:text-white ml-1 leading-none text-base"
-                              aria-label={`Exit broadcast: ${group.name}`}
-                            >
-                              ×
-                            </Button>
-                          </div>
-                        );
-                      })}
-                    </>
-                  )}
+                <NewSessionPicker
+                  open={showNewTabPicker}
+                  onOpenChange={setShowNewTabPicker}
+                  servers={servers}
+                  onOpenSession={openNewTerminalSession}
+                />
 
-                  {/* Separator between terminal/broadcast side and SFTP tab groups */}
-                  {(visibleTerminalSessions.length > 0 || broadcastGroups.length > 0) && hasSftp && (
-                    <div className="w-px h-5 bg-stroke mx-1 shrink-0" />
-                  )}
-
-                  {sftpSessions.map((session) => (
-                    <TabItem
-                      key={session.id}
-                      serverName={session.serverName}
-                      statusColor={SFTP_STATUS_COLORS[session.status]}
-                      isActive={!activeBroadcastGroupId && activePanelType === "sftp" && session.id === sftpActiveId}
-                      isDragging={drag?.id === session.id}
-                      isDragOver={dragOverId === session.id && drag?.id !== session.id}
-                      title={session.serverName}
-                      icon={SFTP_FOLDER_ICON}
-                      closeLabel={`Close ${session.serverName} browser`}
-                      onActivate={() => {
-                        sftpSetActive(session.id);
-                        setActivePanelType("sftp");
-                        setActiveBroadcastGroup(null);
-                      }}
-                      onClose={() => void sftpClose(session.id)}
-                      onDragStart={(e) => handleDragStart(session.id, "sftp", e)}
-                      onDragOver={(e) => handleDragOver(session.id, "sftp", e)}
-                      onDrop={(e) => handleDrop(session.id, "sftp", e)}
-                    />
-                  ))}
-
-                  </div>
-                </div>
-
-                {/* New terminal session */}
-                <div className="px-1.5 shrink-0 relative">
-                  <Button
-                    ref={newTabButtonRef}
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => {
-                      setShowNewTabPicker((v) => !v);
-                      setPickerQuery("");
-                      setPickerError(null);
-                    }}
-                    title="New terminal session"
-                    aria-label="New terminal session"
-                    className="text-faint hover:text-white"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M8 3v10M3 8h10" />
-                    </svg>
-                  </Button>
-                  {showNewTabPicker && (
-                    <div
-                      ref={newTabPickerRef}
-                      className="absolute top-full right-0 mt-1 w-60 bg-surface-2/80 backdrop-blur-xl border border-stroke rounded-lg shadow-overlay z-50 overflow-hidden"
-                    >
-                      <div className="p-2 border-b border-stroke-subtle">
-                        <input
-                          autoFocus
-                          type="text"
-                          value={pickerQuery}
-                          onChange={(e) => setPickerQuery(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Escape") {
-                              setShowNewTabPicker(false);
-                              setPickerQuery("");
-                              setPickerError(null);
-                            }
-                          }}
-                          placeholder="Search servers…"
-                          className="w-full bg-surface-3 border border-stroke rounded px-2.5 py-1.5 text-sm text-white placeholder-faint outline-none focus:border-accent transition-colors"
-                        />
-                      </div>
-                      {pickerError && (
-                        <p className="px-3 py-2 text-xs text-error border-b border-stroke-subtle bg-error-subtle">
-                          {pickerError}
-                        </p>
-                      )}
-                      <div className="max-h-60 overflow-y-auto">
-                        {pickerServers.length > 0 ? (
-                          pickerServers.map((server) => (
-                            <button
-                              key={server.id}
-                              onClick={async () => {
-                                const id = await terminalOpenSession(server.id, server.displayName);
-                                if (id === null) {
-                                  setPickerError("Maximum terminal sessions (20) reached");
-                                } else {
-                                  setActiveBroadcastGroup(null);
-                                  setShowNewTabPicker(false);
-                                  setPickerQuery("");
-                                  setPickerError(null);
-                                }
-                              }}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-secondary hover:bg-surface-3 hover:text-white transition-colors text-left"
-                            >
-                              <span className="flex-1 truncate">{server.displayName}</span>
-                              <span className="text-meta text-dim truncate max-w-[90px]">{server.hostname}</span>
-                            </button>
-                          ))
-                        ) : (
-                          <p className="px-3 py-4 text-center text-sm text-dim">No servers</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* AI assistant, playbook, and snippet picker triggers for the active terminal session */}
                 {!activeBroadcastGroupId && activePanelType === "terminal" && terminalActiveId && (
-                  <div className="px-1.5 shrink-0 border-l border-stroke-subtle flex items-center gap-0.5">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      data-terminal-tool-trigger
-                      onClick={() => toggleTerminalTool("assistant")}
-                      title="AI assistant"
-                      aria-label="Open AI assistant"
-                      className={
-                        openTerminalTool === "assistant"
-                          ? "bg-accent/20 text-accent-fg"
-                          : "text-faint hover:text-white"
-                      }
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
-                        <path d="M20 3v4" />
-                        <path d="M22 5h-4" />
-                        <path d="M4 17v2" />
-                        <path d="M5 18H3" />
-                      </svg>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      data-terminal-tool-trigger
-                      onClick={() => toggleTerminalTool("playbooks")}
-                      title="Run a playbook"
-                      aria-label="Open playbook picker"
-                      className={
-                        openTerminalTool === "playbooks"
-                          ? "bg-accent/20 text-accent-fg"
-                          : "text-faint hover:text-white"
-                      }
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                        <polygon points="6,4 12,8 6,12" />
-                      </svg>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      data-terminal-tool-trigger
-                      onClick={() => toggleTerminalTool("snippets")}
-                      title="Run a snippet"
-                      aria-label="Open snippet picker"
-                      className={
-                        openTerminalTool === "snippets"
-                          ? "bg-accent/20 text-accent-fg"
-                          : "text-faint hover:text-white"
-                      }
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="2" y="2" width="12" height="12" rx="2" />
-                        <line x1="5" y1="5.5" x2="11" y2="5.5" />
-                        <line x1="5" y1="8" x2="11" y2="8" />
-                        <line x1="5" y1="10.5" x2="8" y2="10.5" />
-                      </svg>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      data-terminal-tool-trigger
-                      onClick={() => toggleTerminalTool("tunnels")}
-                      title="Manage port forwards"
-                      aria-label="Open port forward manager"
-                      className={
-                        openTerminalTool === "tunnels"
-                          ? "bg-accent/20 text-accent-fg"
-                          : "text-faint hover:text-white"
-                      }
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M2 8h4M10 8h4M6 5l-2 3 2 3M10 5l2 3-2 3" />
-                      </svg>
-                    </Button>
-                    <SessionRecordingButton
-                      sessionId={terminalActiveId}
-                      serverId={activeTerminalSession?.kind === "ssh" ? activeTerminalSession.serverId : undefined}
-                      serverName={activeTerminalSession?.serverName ?? "Unknown"}
-                    />
-                  </div>
-                )}
-
-                {/* Open SFTP browser for the active terminal session — not
-                    applicable to local-shell sessions, which have no remote server */}
-                {!activeBroadcastGroupId && activePanelType === "terminal" && terminalActiveId &&
-                  activeTerminalSession?.kind === "ssh" && (
-                  <div className="px-1.5 shrink-0 border-l border-stroke-subtle">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => {
-                        if (!activeTerminalSession) return;
-                        if (linkedSftpSession) {
-                          sftpSetActive(linkedSftpSession.id);
-                          setActivePanelType("sftp");
-                        } else {
-                          void sftpOpenSession(activeTerminalSession.serverId, activeTerminalSession.serverName);
-                        }
-                      }}
-                      title="Open SFTP browser"
-                      aria-label="Open SFTP browser for this session"
-                      className={
-                        isSftpActive
-                          ? "bg-accent/20 text-accent-fg"
-                          : "text-faint hover:text-white"
-                      }
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M2 4.5a1 1 0 0 1 1-1h2.5l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z" />
-                      </svg>
-                    </Button>
-                  </div>
+                  <TerminalToolTriggers
+                    activeTerminalSession={activeTerminalSession}
+                    openTerminalTool={openTerminalTool}
+                    toggleTerminalTool={toggleTerminalTool}
+                    linkedSftpSession={linkedSftpSession}
+                    isSftpActive={isSftpActive}
+                    onActivateSftp={(sessionId) => { sftpSetActive(sessionId); setActivePanelType("sftp"); }}
+                    onOpenSftpForSession={(serverId, serverName) => { void sftpOpenSession(serverId, serverName); }}
+                  />
                 )}
               </div>
 
