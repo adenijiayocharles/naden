@@ -89,6 +89,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          cache-on-failure: true
+
+      # Object-level compilation cache (complements rust-cache's target-dir
+      # cache): rust-cache misses whenever Cargo.lock changes at all, even if
+      # an unrelated dependency bumped and vendored OpenSSL's own inputs are
+      # untouched. sccache still gets a hit on those unchanged compilation
+      # units, so re-releases don't always pay the full vendored-OpenSSL
+      # compile cost twice (once per target triple).
+      - uses: mozilla-actions/sccache-action@v0.0.10
 
       - name: Install frontend dependencies
         run: npm ci
@@ -143,6 +152,8 @@ jobs:
           NADEN_SENTRY_DSN: ${{ secrets.NADEN_SENTRY_DSN }}
           VITE_SENTRY_DSN: ${{ secrets.NADEN_SENTRY_DSN }}
           MACOSX_DEPLOYMENT_TARGET: "11.0"
+          RUSTC_WRAPPER: sccache
+          SCCACHE_GHA_ENABLED: "true"
         with:
           tagName: ${{ github.event.inputs.tag || github.ref_name }}
           releaseName: "naden ${{ github.event.inputs.tag || github.ref_name }}"
