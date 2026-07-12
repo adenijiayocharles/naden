@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useState } from "react";
 import type { Server } from "../../types/server";
 import { useServerStore } from "../../store/serverStore";
 import { useUiStore } from "../../store/uiStore";
@@ -33,19 +33,6 @@ export function useServerActions(server: Server) {
   const [duplicating, setDuplicating] = useState(false);
   const [checkingReachability, setCheckingReachability] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [menuOpen]);
-
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const handleConnect = async () => {
@@ -158,7 +145,6 @@ export function useServerActions(server: Server) {
 
   return {
     canCopyPassword: isVaultUnlocked && server.authMethod === "password" && !!server.vaultCredentialId,
-    menuRef,
     menuOpen, setMenuOpen,
     deleteModalOpen, setDeleteModalOpen,
     connectionError, setConnectionError,
