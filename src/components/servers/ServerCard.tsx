@@ -39,9 +39,9 @@ export default function ServerCard({ server, groupColor, lastConnected, isHighli
       onClick={handleClick}
       style={groupColor && !isSelected ? { backgroundColor: `${groupColor}18` } : undefined}
       className={`bg-surface-1 border rounded-lg p-3 flex flex-col gap-3 select-none shadow-card
-        transition-[background-color,border-color,box-shadow,transform] duration-200 ease-premium
+        transition-[border-color,transform] duration-200 ease-premium
         ${isSelected ? "border-accent/50 bg-accent/5" : isHighlighted ? "border-accent/40 bg-accent/5" : "border-stroke-subtle"}
-        ${actions.connecting ? "opacity-60 cursor-wait" : "hover:border-stroke cursor-pointer hover:bg-surface-2 hover:shadow-card-hover hover:-translate-y-0.5"}`}
+        ${actions.connecting ? "opacity-60 cursor-wait" : "hover:border-stroke cursor-pointer hover:-translate-y-0.5"}`}
     >
       <div className="flex items-start gap-2">
         {bulkMode ? (

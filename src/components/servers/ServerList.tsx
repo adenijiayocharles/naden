@@ -44,7 +44,7 @@ function groupColorFor(groups: Group[], groupId: string | undefined): string | u
 
 const dragHandle = (
   <div
-    className="w-6 h-6 flex items-center justify-center shrink-0 opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-white/8 rounded-sm transition-[opacity,background-color] duration-150 cursor-grab active:cursor-grabbing"
+    className="w-6 h-6 flex items-center justify-center shrink-0 opacity-60 rounded-sm cursor-grab active:cursor-grabbing"
     title="Drag to reorder"
     aria-hidden="true"
   >
@@ -303,7 +303,13 @@ export default function ServerList() {
           return (
             <List
               className={NO_SCROLLBAR_CLASS}
-              style={{ height: height ?? 0, width: width ?? 0 }}
+              style={{
+                height: height ?? 0,
+                width: width ?? 0,
+                // Headroom for hover:-translate-y-0.5 on cards — without it, the
+                // top row's lift gets clipped by this container's own scroll edge.
+                paddingTop: viewMode === "row" ? 0 : 8,
+              }}
               rowCount={rows.length}
               rowHeight={dynamicRowHeight}
               rowComponent={Row}

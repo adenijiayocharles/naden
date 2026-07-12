@@ -34,14 +34,20 @@ export default function ServerRow({ server, groupColor, lastConnected, narrow, i
     void actions.handleConnect();
   };
 
+  // Group tint uses CSS custom properties (rather than a plain inline
+  // background-color) so the hover:bg-[var(...)] class can still win the
+  // cascade on hover — a directly-set inline background-color would always
+  // beat any class, silently swallowing the hover feedback.
+  const hasGroupTint = Boolean(groupColor) && !isSelected;
+
   return (
     <>
     <div
       onClick={handleClick}
-      style={groupColor && !isSelected ? { backgroundColor: `${groupColor}18` } : undefined}
+      style={hasGroupTint ? ({ "--row-bg": `${groupColor}18`, "--row-bg-hover": `${groupColor}30` } as React.CSSProperties) : undefined}
       className={`group flex items-center gap-3 px-3 py-2.5 border-b border-stroke-subtle last:border-b-0 first:rounded-t-lg last:rounded-b-lg select-none transition-colors
-        ${isSelected || isHighlighted ? "bg-accent/5" : ""}
-        ${actions.connecting ? "opacity-60 cursor-wait bg-surface-0" : "cursor-pointer hover:bg-surface-0"}`}
+        ${hasGroupTint ? "bg-[var(--row-bg)]" : isSelected || isHighlighted ? "bg-accent/5" : ""}
+        ${actions.connecting ? "opacity-60 cursor-wait bg-surface-0" : hasGroupTint ? "cursor-pointer hover:bg-[var(--row-bg-hover)]" : "cursor-pointer hover:bg-surface-0"}`}
     >
       {!bulkMode && dragHandle}
 
