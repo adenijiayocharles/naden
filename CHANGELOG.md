@@ -1,6 +1,11 @@
 # Changelog
 
 All notable changes to naden are documented here.
+## [v1.0.9] — 2026-07-12
+
+### Bug Fixes
+- Contain card hover lift and fix group-tint hover on rows *(servers)*
+- Stop kebab menu from being clipped by virtualized rows *(servers)*
 ## [v1.0.8] — 2026-07-10
 
 ### Bug Fixes
