@@ -52,6 +52,7 @@ pub struct Tag {
 /// Frontend-facing DTO: all Server fields flattened alongside the tag list and group name.
 /// Assembled in query functions; not derived from a single row.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ServerWithTags {
     #[serde(flatten)]
     pub server: Server,

@@ -1,4 +1,6 @@
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+use std::collections::BTreeMap;
+
+use tauri::menu::{IsMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -9,6 +11,8 @@ pub struct TrayServer {
     pub display_name: String,
     #[allow(dead_code)]
     pub hostname: String,
+    #[serde(rename = "groupName")]
+    pub group_name: Option<String>,
 }
 
 #[derive(serde::Serialize, Clone)]
@@ -67,37 +71,68 @@ fn server_menu(app: &AppHandle, servers: &[TrayServer]) -> tauri::Result<Menu<ta
 
     let sep_top = PredefinedMenuItem::separator(app)?;
 
+    // Group servers by group name (alphabetical, matching `list_groups_db`'s
+    // `ORDER BY name`); servers with no group stay flat, as before.
+    let mut grouped: BTreeMap<&str, Vec<&TrayServer>> = BTreeMap::new();
+    let mut ungrouped: Vec<&TrayServer> = Vec::new();
+    for s in servers {
+        match s.group_name.as_deref() {
+            Some(name) if !name.is_empty() => grouped.entry(name).or_default().push(s),
+            _ => ungrouped.push(s),
+        }
+    }
+
     // Build all submenus first so they live long enough for `Menu::with_items`.
-    let submenus: Result<Vec<Submenu<tauri::Wry>>, _> = servers
+    let group_submenus: Result<Vec<Submenu<tauri::Wry>>, _> = grouped
         .iter()
-        .map(|s| {
-            let term = MenuItem::with_id(
-                app,
-                format!("tray_term:{}", s.id),
-                "Connect (Terminal)",
-                true,
-                None::<&str>,
-            )?;
-            let sftp = MenuItem::with_id(
-                app,
-                format!("tray_sftp:{}", s.id),
-                "Open SFTP",
-                true,
-                None::<&str>,
-            )?;
-            Submenu::with_items(app, &s.display_name, true, &[&term, &sftp])
+        .map(|(group_name, group_servers)| {
+            let server_subs: Result<Vec<Submenu<tauri::Wry>>, _> = group_servers
+                .iter()
+                .map(|s| server_submenu(app, s))
+                .collect();
+            let server_subs = server_subs?;
+            let refs: Vec<&dyn IsMenuItem<tauri::Wry>> = server_subs
+                .iter()
+                .map(|s| s as &dyn IsMenuItem<tauri::Wry>)
+                .collect();
+            Submenu::with_items(app, *group_name, true, &refs)
         })
         .collect();
-    let submenus = submenus?;
+    let group_submenus = group_submenus?;
 
-    let mut items: Vec<&dyn tauri::menu::IsMenuItem<tauri::Wry>> = vec![&show, &sep_top];
-    for sub in &submenus {
+    let ungrouped_submenus: Result<Vec<Submenu<tauri::Wry>>, _> =
+        ungrouped.iter().map(|s| server_submenu(app, s)).collect();
+    let ungrouped_submenus = ungrouped_submenus?;
+
+    let mut items: Vec<&dyn IsMenuItem<tauri::Wry>> = vec![&show, &sep_top];
+    for sub in &group_submenus {
+        items.push(sub);
+    }
+    for sub in &ungrouped_submenus {
         items.push(sub);
     }
     items.push(&sep_bottom);
     items.push(&quit);
 
     Menu::with_items(app, &items)
+}
+
+fn server_submenu(app: &AppHandle, s: &TrayServer) -> tauri::Result<Submenu<tauri::Wry>> {
+    let term = MenuItem::with_id(
+        app,
+        format!("tray_term:{}", s.id),
+        "Connect (Terminal)",
+        true,
+        None::<&str>,
+    )?;
+    let sftp = MenuItem::with_id(
+        app,
+        format!("tray_sftp:{}", s.id),
+        "Open SFTP",
+        true,
+        None::<&str>,
+    )?;
+    Submenu::with_items(app, &s.display_name, true, &[&term, &sftp])
 }
 
 // ── Event handling ────────────────────────────────────────────────────────────

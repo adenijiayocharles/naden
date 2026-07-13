@@ -193,7 +193,12 @@ export default function AppShell() {
 
   useEffect(() => {
     void trayCommands.updateMenu(
-      servers.map((s) => ({ id: s.id, displayName: s.displayName, hostname: s.hostname })),
+      servers.map((s) => ({
+        id: s.id,
+        displayName: s.displayName,
+        hostname: s.hostname,
+        groupName: s.groupName,
+      })),
     );
   }, [servers]);
 
