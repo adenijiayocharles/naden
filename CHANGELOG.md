@@ -1,6 +1,14 @@
 # Changelog
 
 All notable changes to naden are documented here.
+## [v1.0.10] — 2026-07-13
+
+### Bug Fixes
+- Disable Lock Vault when no master password is set *(vault)*
+- Ignore connect clicks while the vault is locked *(tray)*
+
+### Features
+- Group menu bar server entries by their server group *(tray)*
 ## [v1.0.9] — 2026-07-12
 
 ### Bug Fixes
