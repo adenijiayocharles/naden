@@ -42,6 +42,9 @@ export const vaultCommands = {
 
   needsFormatUpgrade: () =>
     invoke<boolean>("vault_needs_format_upgrade"),
+
+  setLockMenuEnabled: (enabled: boolean) =>
+    invoke<void>("set_lock_vault_enabled", { enabled }),
 };
 
 export const backupCommands = {

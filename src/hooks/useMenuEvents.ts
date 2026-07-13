@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useUiStore } from "../store/uiStore";
 import { useVaultStore } from "../store/vaultStore";
+import { vaultCommands } from "../lib/commands/vault";
 
 // Vault state isn't read reactively here — menu events fire rarely, so
 // reading it fresh from the store on each event avoids re-subscribing
@@ -22,6 +23,14 @@ export function useMenuEvents() {
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const openImportSshConfig = useUiStore((s) => s.openImportSshConfig);
   const lockVault = useVaultStore((s) => s.lock);
+  const isPasswordRequired = useVaultStore((s) => s.isPasswordRequired);
+
+  // Keep the native "Lock Vault" item in sync with password-required state:
+  // without a master password there's no unlock screen to recover through
+  // (see set_lock_vault_menu_enabled in lib.rs), so it must stay disabled.
+  useEffect(() => {
+    void vaultCommands.setLockMenuEnabled(isPasswordRequired);
+  }, [isPasswordRequired]);
 
   useEffect(() => {
     // While the vault is locked, only "Lock Vault" should do anything —
@@ -34,7 +43,12 @@ export function useMenuEvents() {
     const unlisteners = [
       listen("menu:new_connection", whenUnlocked(() => openAdd())),
       listen("menu:import_ssh_config", whenUnlocked(() => openImportSshConfig())),
-      listen("menu:lock_vault", () => void lockVault()),
+      // Belt-and-suspenders: the native item is disabled via setLockMenuEnabled
+      // above, but re-check here in case the accelerator still fires (e.g. a
+      // stale menu state right after password protection is disabled).
+      listen("menu:lock_vault", () => {
+        if (useVaultStore.getState().isPasswordRequired) void lockVault();
+      }),
       listen("menu:settings", whenUnlocked(() => openSettings())),
       listen("menu:show_logs", whenUnlocked(() => openLogs())),
       listen("menu:show_snippets", whenUnlocked(() => openSnippets())),

@@ -65,6 +65,25 @@ fn update_tray_menu(app: tauri::AppHandle, servers: Vec<tray::TrayServer>) -> Re
     tray::rebuild(&app, &servers).map_err(|e| e.to_string())
 }
 
+/// Enables/disables the native "Lock Vault" File-menu item. Without a master
+/// password there's nothing to unlock with afterward — `vault_unlock` would
+/// silently re-open it, but the frontend never shows an unlock screen in that
+/// case (`useVaultLocked` requires `isPasswordRequired`), so locking would be
+/// a dead end until the app restarts. Called once at startup and again
+/// whenever the frontend's password-required state changes.
+fn set_lock_vault_menu_enabled(app: &tauri::AppHandle, enabled: bool) {
+    if let Some(item) = app.menu().and_then(|m| m.get("lock_vault")) {
+        if let Some(item) = item.as_menuitem() {
+            let _ = item.set_enabled(enabled);
+        }
+    }
+}
+
+#[tauri::command]
+fn set_lock_vault_enabled(app: tauri::AppHandle, enabled: bool) {
+    set_lock_vault_menu_enabled(&app, enabled);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Show a native alert and write a crash log instead of silently aborting.
@@ -210,6 +229,8 @@ pub fn run() {
             commands::discovery_commands::import_known_hosts,
             // Tray
             update_tray_menu,
+            // App menu
+            set_lock_vault_enabled,
             // Vault
             commands::vault_commands::vault_is_setup,
             commands::vault_commands::vault_setup,
@@ -295,6 +316,7 @@ pub fn run() {
 
             let initial_cache = cache_result.unwrap_or_default();
             let password_required = password_required_result.unwrap_or(true);
+            set_lock_vault_menu_enabled(app.handle(), password_required);
             let initial_vault_key = if !password_required {
                 // Resolve (or create) the real per-device key immediately so no
                 // credential is ever written under the all-zero placeholder key.
