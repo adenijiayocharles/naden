@@ -28,7 +28,7 @@ A fast, secure desktop application for managing SSH connections. Built for engin
 - **Wake reconnect** — automatically reconnects sessions and tunnels that drop when the machine sleeps
 - **Broadcast** — fan out terminal input to multiple sessions at once, with a confirmation guard for destructive commands; named, saved broadcast groups
 - **Playbooks** — save multi-step command sequences with per-step delays and `{{host}}`/`{{username}}`/`{{port}}` variable substitution; run from the session toolbar with live step progress
-- **AI assistant** — bring-your-own-key chat panel (Anthropic, OpenAI, or OpenRouter) with optional live terminal context per message; off by default, keys stored in OS keychain
+- **AI assistant** — bring-your-own-key chat panel (Anthropic, OpenAI, Gemini, or OpenRouter) with optional live terminal context per message; off by default, keys stored in the encrypted vault
 - **Local terminal** — open a local shell session inside the app without a remote connection
 
 ## Tech Stack
@@ -148,5 +148,5 @@ src-tauri/src/
 - Credentials (SSH passwords, key passphrases) are stored AES-256-GCM encrypted in the local SQLite database, keyed by a PBKDF2-HMAC-SHA256-derived master password at 600 000 rounds
 - Alternatively, the master password can be skipped — a random per-device key is generated and used instead; credentials remain encrypted at rest
 - The vault locks automatically after a configurable idle timeout; brute-force lockout applies after 5 failed unlock attempts (exponential backoff, up to 1 hour)
-- AI assistant API keys are stored in the OS keychain and never written to Naden's database
+- AI assistant API keys are stored in the same AES-256-GCM encrypted vault as SSH credentials, not the OS keychain
 - No credentials or session data are ever synced or uploaded
