@@ -163,7 +163,10 @@ fn proxy_loop(channel: &mut ssh2::Channel, sock: &mut UnixStream) {
         }
 
         if !active {
-            std::thread::sleep(std::time::Duration::from_millis(2));
+            // 15ms matches the terminal session idle sleep and keeps CPU burn
+            // proportional: ~67 wakeups/sec vs ~500 at 2ms, with no perceptible
+            // latency difference for interactive use (TCP receive buffers absorb it).
+            std::thread::sleep(std::time::Duration::from_millis(15));
         }
     }
 }
