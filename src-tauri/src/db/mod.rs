@@ -1,7 +1,7 @@
 pub mod queries;
 
 use crate::error::AppError;
-use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
+use sqlx::{sqlite::SqlitePoolOptions, Executor, SqlitePool};
 use std::path::{Path, PathBuf};
 
 /// Single source of truth for where the vault DB file lives, given the app's
@@ -29,16 +29,26 @@ pub async fn init_db(data_dir: PathBuf) -> Result<SqlitePool, AppError> {
 
     let db_url = format!("sqlite:{}?mode=rwc", db_path.display());
 
+    // Single-user local desktop app: a handful of concurrent Tauri commands is
+    // the realistic ceiling, not the sqlx default sizing meant for server workloads.
+    // Each connection costs a parked OS thread (sqlx-sqlite dedicates one per
+    // connection) plus its own page/statement cache, so keep this small for footprint.
+    // foreign_keys is a per-connection SQLite pragma (unlike journal_mode, it
+    // isn't persisted in the file) — every connection the pool ever opens needs
+    // it set individually, or ON DELETE CASCADE silently no-ops on that connection.
     let pool = SqlitePoolOptions::new()
-        .min_connections(2)
-        .max_connections(10)
+        .min_connections(1)
+        .max_connections(4)
+        .after_connect(|conn, _meta| {
+            Box::pin(async move {
+                conn.execute("PRAGMA foreign_keys = ON").await?;
+                Ok(())
+            })
+        })
         .connect(&db_url)
         .await?;
 
     sqlx::query("PRAGMA journal_mode = WAL")
-        .execute(&pool)
-        .await?;
-    sqlx::query("PRAGMA foreign_keys = ON")
         .execute(&pool)
         .await?;
 
