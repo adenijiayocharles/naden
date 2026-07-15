@@ -24,6 +24,7 @@ import { terminalCommands } from "../lib/commands/terminal";
 const mockListen = vi.mocked(listen);
 const mockOpenTerminalSession = vi.mocked(terminalCommands.openTerminalSession);
 const mockOpenLocalSession = vi.mocked(terminalCommands.openLocalSession);
+const mockCloseTerminalSession = vi.mocked(terminalCommands.closeTerminalSession);
 
 // Finds the callback the store registered via listen(`${prefix}:${sessionId}`, cb)
 // and invokes it, mirroring a Rust-side emit for that session.
@@ -170,5 +171,13 @@ describe("reconnectSession()", () => {
 
     expect(mockOpenTerminalSession).toHaveBeenCalledTimes(2);
     expect(mockOpenLocalSession).not.toHaveBeenCalled();
+  });
+
+  it("closes the old backend session so its thread doesn't leak", async () => {
+    const id = await useTerminalStore.getState().openSession("srv-1", "My Server");
+
+    await useTerminalStore.getState().reconnectSession(id!);
+
+    expect(mockCloseTerminalSession).toHaveBeenCalledWith(id);
   });
 });

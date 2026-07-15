@@ -148,6 +148,11 @@ export const useSftpStore = create<SftpStore>((set, get) => {
       if (!session) return;
       const { serverId, serverName, currentPath, hidden } = session;
       teardown(sessionId);
+      try {
+        await sftpCommands.closeSftpSession(sessionId);
+      } catch {
+        // already closed
+      }
       set((state) => dropFromState(state, sessionId));
       // Preserve the hidden flag so a reconnected peer session stays out of tabs.
       const newId = await openSessionImpl(serverId, serverName, hidden ?? false);

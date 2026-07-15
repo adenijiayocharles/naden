@@ -365,6 +365,11 @@ export const useTerminalStore = create<TerminalStore>((set, get) => {
       if (!session) return;
       const { kind, serverId, serverName, broadcastGroupId } = session;
       teardownResources(sessionId);
+      try {
+        await terminalCommands.closeTerminalSession(sessionId);
+      } catch (e) {
+        console.debug("[terminal] reconnectSession close:", e);
+      }
       set((state) => dropFromState(state, sessionId));
       if (kind === "local") {
         await get().openLocalSession();
