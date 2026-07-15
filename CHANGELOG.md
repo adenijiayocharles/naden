@@ -1,7 +1,12 @@
 # Changelog
 
 All notable changes to naden are documented here.
-## [v1.0.10] — 2026-07-13
+## [v1.0.11] — 2026-07-15
+
+### Bug Fixes
+- Close backend session on reconnect to stop thread leak
+- Reduce jump-host proxy loop idle poll from 2ms to 15ms
+## [v1.0.10] — 2026-07-14
 
 ### Bug Fixes
 - Disable Lock Vault when no master password is set *(vault)*
