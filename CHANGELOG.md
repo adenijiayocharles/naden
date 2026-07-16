@@ -1,6 +1,13 @@
 # Changelog
 
 All notable changes to naden are documented here.
+## [v1.0.12] — 2026-07-16
+
+### Bug Fixes
+- Shrink SQLite pool for footprint, enforce foreign_keys on every connection
+
+### Performance
+- Reduce idle CPU wakeups and bound assistant HTTP client
 ## [v1.0.11] — 2026-07-15
 
 ### Bug Fixes
