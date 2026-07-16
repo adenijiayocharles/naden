@@ -462,8 +462,10 @@ fn run_session(
         // Ceiling on how long the leading read below blocks when idle. libssh2
         // selects() on the real socket internally, so this read returns the instant
         // data arrives rather than waiting out a fixed poll interval — the wait only
-        // hits this ceiling when the connection is genuinely idle.
-        const IDLE_WAIT_MS: u32 = 8;
+        // hits this ceiling when the connection is genuinely idle. Kept in line with
+        // the tunnel proxy loop's 15ms idle sleep: ~20 wakeups/sec vs ~125 at 8ms,
+        // with no perceptible latency difference for interactive use.
+        const IDLE_WAIT_MS: u32 = 50;
 
         'io: loop {
             // Drain SSH channel output, coalescing all available chunks into one emit.

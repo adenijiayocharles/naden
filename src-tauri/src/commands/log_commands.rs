@@ -137,10 +137,15 @@ pub async fn export_logs_csv(
     end_date: Option<String>,
     state: tauri::State<'_, AppState>,
 ) -> Result<String, AppError> {
+    use std::fmt::Write as _;
+
     let end_ts = end_date.as_deref().map(|d| format!("{d}T23:59:59"));
     let entries = query_log_entries(&state.db, &server_id, &start_date, &end_ts, None).await?;
 
-    let mut csv = String::from("Time,Server,Host,Port,Username,Outcome,Duration (s),Error\n");
+    // Rough per-row width estimate so the buffer grows once instead of
+    // reallocating/copying on every row for large exports.
+    let mut csv = String::with_capacity(64 + entries.len() * 96);
+    csv.push_str("Time,Server,Host,Port,Username,Outcome,Duration (s),Error\n");
 
     for e in &entries {
         let duration_secs = match (&e.session_start, &e.session_end) {
@@ -155,8 +160,11 @@ pub async fn export_logs_csv(
             _ => String::new(),
         };
 
-        csv.push_str(&format!(
-            "{},{},{},{},{},{},{},{}\n",
+        // write! appends directly into the existing buffer instead of
+        // allocating a new String per row (as `format!` + `push_str` would).
+        let _ = writeln!(
+            csv,
+            "{},{},{},{},{},{},{},{}",
             csv_escape(&e.session_start),
             csv_escape(&e.server_display_name),
             csv_escape(&e.hostname),
@@ -165,7 +173,7 @@ pub async fn export_logs_csv(
             csv_escape(&e.outcome),
             duration_secs,
             csv_escape(e.error_message.as_deref().unwrap_or("")),
-        ));
+        );
     }
 
     Ok(csv)

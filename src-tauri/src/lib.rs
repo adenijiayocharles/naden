@@ -349,7 +349,14 @@ pub fn run() {
                 tunnel_manager: tunnel::TunnelManager::new(),
                 last_vault_activity: tokio::sync::Mutex::new(std::time::Instant::now()),
                 manually_locked: tokio::sync::Mutex::new(false),
-                http_client: reqwest::Client::new(),
+                // Bounded so a stalled AI-provider connection can't hang the
+                // assistant feature forever — without this, `assistant_in_flight`
+                // never resets and the feature stays locked until app restart.
+                http_client: reqwest::Client::builder()
+                    .connect_timeout(std::time::Duration::from_secs(10))
+                    .timeout(std::time::Duration::from_secs(120))
+                    .build()
+                    .expect("failed to build shared HTTP client"),
                 assistant_in_flight: Arc::new(std::sync::atomic::AtomicBool::new(false)),
             });
 
